@@ -3,9 +3,9 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import Header from '../header/Header';
 import Footer from '../footer/Footer';
 import { PageTransition, LoadingSpinner } from '../../theme/animation';
-import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import DebugContainer from '../debug/DebugContainer';
+import { useAuth } from '@/features/auth/useAuth';
 
 interface CustomerLayoutProps {
   children?: React.ReactNode;
@@ -13,7 +13,7 @@ interface CustomerLayoutProps {
 
 const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, loading, logout } = useAuth();
   const { t } = useTranslation();
 
   const handleLogin = () => {
@@ -28,7 +28,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
     logout();
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5">
         <div className="text-center space-y-4">
@@ -47,9 +47,9 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
         user={
           isAuthenticated && user
             ? {
-                name: user.name,
+                name: user.fullName,
                 email: user.email,
-                avatar: user.avatar,
+                avatar: user.avatarUrl,
               }
             : undefined
         }

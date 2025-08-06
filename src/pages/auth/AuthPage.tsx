@@ -7,8 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FadeIn, SlideInRight, ScaleIn } from '../../theme/animation';
 import useNavigation from '@/hooks/useNavigation';
-import { useAppDispatch, useAppSelector } from '@/store';
-import { clearError, loginStart, registerStart, selectAuth } from '@/store/slices/authSlice';
+import { useAuth } from '@/features/auth/useAuth';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import { useTranslation } from 'react-i18next';
 
@@ -17,8 +16,8 @@ interface AuthPageProps {
 }
 
 const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
-  const dispatch = useAppDispatch();
-  const { error, isAuthenticated, user, isLoading } = useAppSelector(selectAuth);
+  const { signIn, signUp, user, isAuthenticated, loading, error, clearError } = useAuth();
+
   const [isLogin, setIsLogin] = useState(true);
   const location = useLocation();
 
@@ -51,7 +50,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   // Xử lý khi authentication thành công
   useEffect(() => {
     if (isAuthenticated && user) {
-      showSuccess(t('auth_logoutSuccess'), t('home_welcome', { email: user.name }), 3000);
+      showSuccess(t('auth_logoutSuccess'), t('home_welcome', { email: user.fullName }), 3000);
       goToHome();
     }
   }, [isAuthenticated, user, goToHome, showSuccess, t]);
@@ -60,7 +59,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   useEffect(() => {
     if (error) {
       console.error('Authentication thất bại:', error);
-      showError(isLogin ? t('auth_loginTitle') : t('auth_registerTitle'), error, 5000);
+      showError(isLogin ? t('auth_loginTitle') : t('auth_registerTitle'), error.message, 5000);
     }
   }, [error, isLogin, showError, t]);
 
@@ -100,35 +99,35 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     return errors.length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Clear previous errors
-    dispatch(clearError());
-    // setValidationErrors([]);
+    clearError();
 
     // Validate form
     if (!validateForm()) {
       return;
     }
 
-    // Dispatch appropriate action
-    if (isLogin) {
-      dispatch(
-        loginStart({
+    try {
+      // Dispatch appropriate action
+      if (isLogin) {
+        await signIn({
           email: formData.email,
           password: formData.password,
-        })
-      );
-    } else {
-      dispatch(
-        registerStart({
-          name: formData.fullName,
+        });
+      } else {
+        await signUp({
           email: formData.email,
           password: formData.password,
-          confirmPassword: formData.confirmPassword,
-        })
-      );
+          fullname: formData.fullName,
+          phoneNumber: formData.phone,
+        });
+      }
+    } catch (error) {
+      // Error is handled by useAuth hook
+      console.error('Auth error:', error);
     }
   };
 
@@ -319,8 +318,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                 </div>
               )}
 
-              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                {isLoading ? (
+              <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                {loading ? (
                   <div className="flex items-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-foreground border-t-transparent mr-2"></div>
                     {isLogin ? t('auth_loggingIn') : t('auth_registering')}

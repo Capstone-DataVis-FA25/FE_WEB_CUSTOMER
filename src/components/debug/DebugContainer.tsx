@@ -1,21 +1,34 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import type { RootState } from '@/store';
-import { getRouteByPath, getRoutesByRole, UserRole } from '@/config/routes';
+import { getRouteByPath, getRoutesByRole, UserRole as RouteUserRole } from '@/config/routes';
 import { useDebug, useDebugShortcut } from '@/hooks/useDebug';
+import { useAuth } from '@/features/auth/useAuth';
+import { UserRole as AuthUserRole } from '@/features/auth/authType';
 import { ChevronUp, ChevronDown, Bug, Route, User, List } from 'lucide-react';
 
 interface DebugContainerProps {
   showInProduction?: boolean;
 }
 
+// Map auth roles to route roles
+const mapAuthRoleToRouteRole = (authRole: AuthUserRole): RouteUserRole => {
+  switch (authRole) {
+    case AuthUserRole.Admin:
+      return RouteUserRole.ADMIN;
+    case AuthUserRole.Customer:
+      return RouteUserRole.CUSTOMER;
+    case AuthUserRole.Guest:
+    default:
+      return RouteUserRole.GUEST;
+  }
+};
+
 const DebugContainer: React.FC<DebugContainerProps> = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'current' | 'routes' | 'user' | 'system'>('current');
 
   const location = useLocation();
-  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { user, isAuthenticated, userRole: authUserRole } = useAuth();
   const { shouldShow, toggleDebug } = useDebug();
 
   // Thiết lập shortcut để toggle debug
@@ -27,8 +40,8 @@ const DebugContainer: React.FC<DebugContainerProps> = () => {
   }
 
   const currentRoute = getRouteByPath(location.pathname);
-  const userRole = isAuthenticated ? (user?.role as UserRole) || UserRole.CUSTOMER : UserRole.GUEST;
-  const availableRoutes = getRoutesByRole(userRole);
+  const routeUserRole = mapAuthRoleToRouteRole(authUserRole);
+  const availableRoutes = getRoutesByRole(routeUserRole);
 
   const getCurrentRouteInfo = () => {
     if (!currentRoute) {
@@ -130,7 +143,9 @@ const DebugContainer: React.FC<DebugContainerProps> = () => {
 
             {activeTab === 'routes' && (
               <div className="space-y-2">
-                <div className="text-yellow-400 font-semibold">Available Routes ({userRole})</div>
+                <div className="text-yellow-400 font-semibold">
+                  Available Routes ({authUserRole})
+                </div>
                 <div className="space-y-1 max-h-64 overflow-y-auto">
                   {availableRoutes.map(route => (
                     <div
@@ -162,23 +177,31 @@ const DebugContainer: React.FC<DebugContainerProps> = () => {
                   </div>
                   <div>
                     <span className="text-blue-400">Role:</span>
-                    <span className="text-yellow-300">{userRole}</span>
+                    <span className="text-yellow-300">{authUserRole}</span>
                   </div>
                   {user && (
                     <>
                       <div>
-                        <span className="text-blue-400">ID:</span> {user.id}
+                        <span className="text-blue-400">ID:</span> {user._id}
                       </div>
                       <div>
-                        <span className="text-blue-400">Name:</span> {user.name}
+                        <span className="text-blue-400">Name:</span> {user.fullName}
                       </div>
                       <div>
                         <span className="text-blue-400">Email:</span> {user.email}
                       </div>
                       <div>
-                        <span className="text-blue-400">Verified:</span>
-                        <span className={user.isVerified ? 'text-green-400' : 'text-red-400'}>
-                          {user.isVerified ? 'Yes' : 'No'}
+                        <span className="text-blue-400">Active:</span>
+                        <span className={user.isActive ? 'text-green-400' : 'text-red-400'}>
+                          {user.isActive ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-blue-400">Status:</span>
+                        <span
+                          className={user.status === 'ACTIVE' ? 'text-green-400' : 'text-red-400'}
+                        >
+                          {user.status}
                         </span>
                       </div>
                     </>

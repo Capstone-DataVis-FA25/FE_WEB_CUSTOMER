@@ -1,10 +1,33 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { allRoutes, type RouteConfig, hasRouteAccess } from '@/config/routes';
+import {
+  allRoutes,
+  type RouteConfig,
+  hasRouteAccess,
+  UserRole as RouteUserRole,
+} from '@/config/routes';
 import CustomerLayout from '../components/layout/CustomerLayout';
 import { FadeIn } from '../theme/animation';
-import { useAuth } from '@/hooks/useAuth';
 import { ErrorBoundaryClass } from '@/components/error/ErrorBoundary';
+import { useAuth } from '@/features/auth/useAuth';
+import { UserRole as AuthUserRole } from '@/features/auth/authType';
+
+// ================================
+// UTILITY FUNCTIONS
+// ================================
+
+// Map auth roles to route roles
+const mapAuthRoleToRouteRole = (authRole: AuthUserRole): RouteUserRole => {
+  switch (authRole) {
+    case AuthUserRole.Admin:
+      return RouteUserRole.ADMIN;
+    case AuthUserRole.Customer:
+      return RouteUserRole.CUSTOMER;
+    case AuthUserRole.Guest:
+    default:
+      return RouteUserRole.GUEST;
+  }
+};
 
 // ================================
 // LAZY LOAD COMPONENTS
@@ -38,9 +61,9 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, loading, userRole } = useAuth();
 
-  if (isLoading) {
+  if (loading) {
     return <LoadingSpinner />;
   }
 
@@ -50,7 +73,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
   }
 
   // Kiểm tra quyền truy cập dựa trên role và permission
-  if (user && !hasRouteAccess(user.role, route)) {
+  if (user && !hasRouteAccess(mapAuthRoleToRouteRole(userRole), route)) {
     return <Navigate to="/403" replace />;
   }
 
@@ -58,9 +81,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
 };
 
 // Layout wrapper component
-const LayoutWrapper: React.FC<{ 
-  route: RouteConfig; 
-  children: React.ReactNode 
+const LayoutWrapper: React.FC<{
+  route: RouteConfig;
+  children: React.ReactNode;
 }> = ({ route, children }) => {
   switch (route.layout) {
     case 'CUSTOMER':
@@ -106,14 +129,10 @@ const AppRouter: React.FC = () => {
       <BrowserRouter>
         <Routes>
           {/* Render all routes dynamically */}
-          {allRoutes.map((route) => (
-            <Route 
-              key={route.name}
-              path={route.path} 
-              element={<RouteRenderer route={route} />}
-            />
+          {allRoutes.map(route => (
+            <Route key={route.name} path={route.path} element={<RouteRenderer route={route} />} />
           ))}
-          
+
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
