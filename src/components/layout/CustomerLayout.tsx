@@ -5,6 +5,7 @@ import Footer from '../footer/Footer';
 import { PageTransition, LoadingSpinner } from '../../theme/animation';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
+import DebugContainer from '../debug/DebugContainer';
 
 interface CustomerLayoutProps {
   children?: React.ReactNode;
@@ -68,6 +69,9 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
 
       {/* Footer */}
       <Footer />
+
+      {/* Debug Container - chỉ hiển thị trong development */}
+      <DebugContainer />
     </div>
   );
 };
