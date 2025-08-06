@@ -1,0 +1,8 @@
+dist/
+node_modules/
+*.d.ts
+vite.config.ts
+tailwind.config.js
+postcss.config.js
+src/theme/animation/
+src/theme/colors.ts
