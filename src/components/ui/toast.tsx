@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 import { SlideInRight } from '@/theme/animation';
 
@@ -16,12 +16,12 @@ export interface ToastProps {
 const Toast: React.FC<ToastProps> = ({ id, type, title, message, duration = 5000, onClose }) => {
   const [isVisible, setIsVisible] = useState(true);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsVisible(false);
     setTimeout(() => {
       onClose(id);
     }, 300); // Wait for animation to complete
-  };
+  }, [id, onClose]);
 
   useEffect(() => {
     if (duration > 0) {

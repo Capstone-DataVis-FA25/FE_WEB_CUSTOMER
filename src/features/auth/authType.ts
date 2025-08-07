@@ -55,7 +55,11 @@ export interface SignUpRequest {
 
 // ## RESPONSE
 export interface AuthResponse {
-  data: any;
+  data: {
+    user: User;
+    access_token: string;
+    refresh_token: string;
+  };
   user: User;
   access_token: string;
   refresh_token: string;

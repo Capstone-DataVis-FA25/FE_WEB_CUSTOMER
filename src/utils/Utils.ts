@@ -1,7 +1,7 @@
 import moment from "moment-timezone";
 
 export default class Utils {
-  static getDate(timestamp: any, type = 1, timezone = "Asia/Ho_Chi_Minh") {
+  static getDate(timestamp: string | number | Date | null, type = 1, timezone = "Asia/Ho_Chi_Minh") {
     if (timestamp === null) {
       return "";
     }
@@ -71,7 +71,7 @@ export default class Utils {
   }
 
 
-  static getFormattedMessageTime = (timestamp: any) => {
+  static getFormattedMessageTime = (timestamp: string | number | Date | null) => {
     if (!timestamp) return "";
 
     const timezone = "Asia/Ho_Chi_Minh";

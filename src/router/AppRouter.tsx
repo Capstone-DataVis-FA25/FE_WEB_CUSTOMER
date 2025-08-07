@@ -46,7 +46,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
   console.log("user:", user);
   console.log("isAuthenticated:", isAuthenticated);
   console.log("isLoading:", isLoading);
-  
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
@@ -59,7 +59,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
   // Kiểm tra quyền truy cập dựa trên role
   if (user && route.roles) {
     const userRole = user.role || 'GUEST';
-    if (!route.roles.includes(userRole as any)) {
+    if (!route.roles.includes(userRole as 'ADMIN' | 'CUSTOMER' | 'GUEST')) {
       return <Navigate to="/403" replace />;
     }
   }

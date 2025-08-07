@@ -4,7 +4,7 @@ import Routers from '@/router/routers';
 
 export interface NavigationOptions {
   replace?: boolean;
-  state?: any;
+  state?: Record<string, unknown>;
 }
 
 export const useNavigation = () => {

@@ -54,7 +54,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     if (isAuthenticated && user) {
       goToHome();
     }
-  }, [isAuthenticated, user]); 
+  }, [isAuthenticated, user, goToHome]); 
 
   // Không show toast ở đây nữa, chỉ log error
   useEffect(() => {
@@ -143,7 +143,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     // Kiểm tra kết quả
     if (result.type.endsWith('/fulfilled')) {
       // Thành công
-      const user = (result.payload as any)?.user;
+      const user = (result.payload as { user?: { name?: string } })?.user;
       showSuccess(
         isLogin ? 'Đăng nhập thành công' : 'Đăng ký thành công', 
         `Chào mừng ${user?.name || formData.email}!`, 
@@ -151,7 +151,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
       );
     } else if (result.type.endsWith('/rejected')) {
       // Thất bại
-      const errorMessage = (result as any).payload?.message || 'Authentication failed';
+      const errorMessage = (result as { payload?: { message?: string } })?.payload?.message || 'Authentication failed';
       showError(
         isLogin ? 'Đăng nhập thất bại' : 'Đăng ký thất bại', 
         errorMessage, 

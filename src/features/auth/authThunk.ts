@@ -10,8 +10,8 @@ export const signInThunk = createAsyncThunk<
   try {
     const response = await authAPI.signInWithEmailPassword(signInData);
     return response;
-  } catch (error: any) {
-    const errorMessage = error.response?.data?.message || 'Đăng nhập thất bại';
+  } catch (error: unknown) {
+    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Đăng nhập thất bại';
     return rejectWithValue({ message: errorMessage });
   }
 });
@@ -24,8 +24,8 @@ export const signUpThunk = createAsyncThunk<
   try {
     const response = await authAPI.signUpWithEmailPassword(signUpData);
     return response;
-  } catch (error: any) {
-    const errorMessage = error.response?.data?.message || 'Đăng ký thất bại';
+  } catch (error: unknown) {
+    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Đăng ký thất bại';
     return rejectWithValue({ message: errorMessage });
   }
 });
