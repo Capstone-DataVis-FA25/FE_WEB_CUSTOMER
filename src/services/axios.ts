@@ -4,21 +4,10 @@ import axios, {
   type AxiosResponse,
   AxiosError,
 } from 'axios';
+import getApiBackendUrl from '@/utils/apiConfig'; // <-- Thêm dòng này
 
-// Get base URL dựa theo environment
-const getBaseURL = (): string => {
-  const environment = import.meta.env.VITE_APP_ENVIRONMENT || 'development';
-
-  if (environment === 'production') {
-    return (
-      import.meta.env.VITE_APP_BACKEND_CUSTOMER_URL_PRODUCTION || 'https://api.production.com/'
-    );
-  }
-
-  return import.meta.env.VITE_APP_BACKEND_CUSTOMER_URL_DEVELOPMENT || 'http://localhost:5000/';
-};
-
-const API_BASE_URL = getBaseURL();
+// Lấy baseURL từ apiConfig
+const API_BASE_URL = getApiBackendUrl();
 
 // Tạo axios instance public (không cần authentication)
 export const axiosPublic: AxiosInstance = axios.create({

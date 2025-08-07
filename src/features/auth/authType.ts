@@ -1,7 +1,9 @@
+// ## ENUM VALUE
+
 export const UserRole = {
-  Admin: 'admin',
-  Customer: 'customer',
-  Guest: 'guest',
+  ADMIN: 'ADMIN',
+  CUSTOMER: 'CUSTOMER',
+  GUEST: 'GUEST',
 } as const;
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
@@ -21,24 +23,50 @@ export const UserStatus = {
 
 export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
 
+// ## MODEL
 export interface User {
   _id: string;
+  name: string;
   email: string;
-  fullName: string;
-  avatarUrl?: string;
-  role: UserRole;
-  gender?: UserGender;
-  dob?: string;
-  phoneNumber?: string;
+  phone?: string;
   address?: string;
+  dateOfBirth?: string;
+  avatar?: string;
+  role: 'CUSTOMER' | 'ADMIN';
+  isVerified: boolean;
   status: UserStatus;
-  createdAt: Date;
-  isActive: true;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
+// ## REQUEST
+export interface SignInRequest {
+  email: string;
+  password: string;
+}
+
+export interface SignUpRequest {
+  email: string;
+  password: string;
+  name: string;
+  phone?: string;
+}
+
+// ## RESPONSE
 export interface AuthResponse {
   data: any;
   user: User;
   access_token: string;
   refresh_token: string;
+}
+
+// ## INITSTATE - Dựa theo initialState trong authSlice
+export interface AuthState {
+  user: User | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
 }

@@ -1,6 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { AuthState, User } from './authType';
-import type { ErrorResponse } from '../errorType';
 import { signInThunk, signUpThunk } from './authThunk';
 
 // Helper function để lấy user từ localStorage an toàn
@@ -14,66 +13,36 @@ const getStoredUser = (): User | null => {
 };
 
 const initialState: AuthState = {
-  _id: getStoredUser()?._id || null,
   user: getStoredUser(),
-  token: localStorage.getItem('token') || null,
-  loading: false,
+  accessToken: localStorage.getItem('accessToken'),
+  refreshToken: localStorage.getItem('refreshToken'),
+  isAuthenticated: !!localStorage.getItem('accessToken'),
+  isLoading: false,
   error: null,
-  verifyStatus: undefined,
-  verifyMessage: '',
-};
-
-// Helper functions cho extraReducers
-const handlePending = (state: AuthState) => {
-  state.loading = true;
-  state.error = null;
-};
-
-const handleAuthSuccess = (state: AuthState, action: PayloadAction<any>) => {
-  state.loading = false;
-  state.user = action.payload.user;
-  state._id = action.payload.user._id;
-  state.token = action.payload.access_token;
-  state.error = null;
-};
-
-const handleAuthReject = (state: AuthState, action: PayloadAction<ErrorResponse | undefined>) => {
-  state.loading = false;
-  state.error = action.payload || null;
-  state.user = null;
-  state._id = null;
-  state.token = null;
 };
 
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    // Logout - chỉ cần xóa localStorage
-    logout: state => {
-      state._id = null;
+    // Logout - xóa all data và localStorage
+    logout: (state) => {
       state.user = null;
-      state.token = null;
-      state.loading = false;
+      state.accessToken = null;
+      state.refreshToken = null;
+      state.isAuthenticated = false;
+      state.isLoading = false;
       state.error = null;
-      state.verifyStatus = undefined;
-      state.verifyMessage = '';
 
       // Xóa localStorage
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
     },
 
     // Clear error
-    clearError: state => {
+    clearError: (state) => {
       state.error = null;
-    },
-
-    // Clear verify status
-    clearVerifyStatus: state => {
-      state.verifyStatus = undefined;
-      state.verifyMessage = '';
     },
 
     // Update user profile
@@ -86,43 +55,88 @@ const authSlice = createSlice({
 
     // Set loading manually
     setLoading: (state, action: PayloadAction<boolean>) => {
-      state.loading = action.payload;
+      state.isLoading = action.payload;
     },
 
-    // Set verify status
-    setVerifyStatus: (
-      state,
-      action: PayloadAction<{
-        status: 'pending' | 'success' | 'error';
-        message?: string;
-      }>
-    ) => {
-      state.verifyStatus = action.payload.status;
-      state.verifyMessage = action.payload.message || '';
+    // Set tokens manually (for refresh token flow)
+    setTokens: (state, action: PayloadAction<{ accessToken: string; refreshToken?: string }>) => {
+      state.accessToken = action.payload.accessToken;
+      if (action.payload.refreshToken) {
+        state.refreshToken = action.payload.refreshToken;
+      }
+      state.isAuthenticated = true;
+      
+      localStorage.setItem('accessToken', action.payload.accessToken);
+      if (action.payload.refreshToken) {
+        localStorage.setItem('refreshToken', action.payload.refreshToken);
+      }
     },
   },
-  extraReducers: builder => {
+  extraReducers: (builder) => {
     // Sign In
     builder
-      .addCase(signInThunk.pending, handlePending)
-      .addCase(signInThunk.fulfilled, handleAuthSuccess)
-      .addCase(signInThunk.rejected, handleAuthReject);
+      .addCase(signInThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(signInThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.access_token;
+        state.refreshToken = action.payload.refresh_token;
+        state.isAuthenticated = true;
+        state.error = null;
+
+        // Lưu vào localStorage
+        localStorage.setItem('user', JSON.stringify(action.payload.user));
+        localStorage.setItem('accessToken', action.payload.access_token);
+        localStorage.setItem('refreshToken', action.payload.refresh_token);
+      })
+      .addCase(signInThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || action.error?.message || 'Sign in failed';
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.isAuthenticated = false;
+      });
 
     // Sign Up
     builder
-      .addCase(signUpThunk.pending, handlePending)
-      .addCase(signUpThunk.fulfilled, handleAuthSuccess)
-      .addCase(signUpThunk.rejected, handleAuthReject);
+      .addCase(signUpThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(signUpThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.access_token;
+        state.refreshToken = action.payload.refresh_token;
+        state.isAuthenticated = true;
+        state.error = null;
+
+        // Lưu vào localStorage
+        localStorage.setItem('user', JSON.stringify(action.payload.user));
+        localStorage.setItem('accessToken', action.payload.access_token);
+        localStorage.setItem('refreshToken', action.payload.refresh_token);
+      })
+      .addCase(signUpThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || action.error?.message || 'Sign up failed';
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.isAuthenticated = false;
+      });
   },
 });
 
 export const {
   logout,
   clearError,
-  clearVerifyStatus,
   updateUserProfile,
   setLoading,
-  setVerifyStatus,
+  setTokens,
 } = authSlice.actions;
 
 export default authSlice.reducer;

@@ -4,7 +4,6 @@ import Header from '../header/Header';
 import Footer from '../footer/Footer';
 import { PageTransition, LoadingSpinner } from '../../theme/animation';
 import { useTranslation } from 'react-i18next';
-import DebugContainer from '../debug/DebugContainer';
 import { useAuth } from '@/features/auth/useAuth';
 
 interface CustomerLayoutProps {
@@ -13,7 +12,7 @@ interface CustomerLayoutProps {
 
 const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, loading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const { t } = useTranslation();
 
   const handleLogin = () => {
@@ -28,7 +27,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
     logout();
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5">
         <div className="text-center space-y-4">
@@ -47,9 +46,9 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
         user={
           isAuthenticated && user
             ? {
-                name: user.fullName,
+                name: user.name,
                 email: user.email,
-                avatar: user.avatarUrl,
+                avatar: user.avatar,
               }
             : undefined
         }
@@ -69,9 +68,6 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
 
       {/* Footer */}
       <Footer />
-
-      {/* Debug Container - chỉ hiển thị trong development */}
-      <DebugContainer />
     </div>
   );
 };

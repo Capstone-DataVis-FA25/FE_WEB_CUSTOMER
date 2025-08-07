@@ -3,31 +3,12 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import {
   allRoutes,
   type RouteConfig,
-  hasRouteAccess,
-  UserRole as RouteUserRole,
 } from '@/config/routes';
 import CustomerLayout from '../components/layout/CustomerLayout';
 import { FadeIn } from '../theme/animation';
 import { ErrorBoundaryClass } from '@/components/error/ErrorBoundary';
 import { useAuth } from '@/features/auth/useAuth';
-import { UserRole as AuthUserRole } from '@/features/auth/authType';
-
-// ================================
-// UTILITY FUNCTIONS
-// ================================
-
-// Map auth roles to route roles
-const mapAuthRoleToRouteRole = (authRole: AuthUserRole): RouteUserRole => {
-  switch (authRole) {
-    case AuthUserRole.Admin:
-      return RouteUserRole.ADMIN;
-    case AuthUserRole.Customer:
-      return RouteUserRole.CUSTOMER;
-    case AuthUserRole.Guest:
-    default:
-      return RouteUserRole.GUEST;
-  }
-};
+import DebugContainer from '@/components/debug/DebugContainer';
 
 // ================================
 // LAZY LOAD COMPONENTS
@@ -61,9 +42,12 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
-  const { user, isAuthenticated, loading, userRole } = useAuth();
-
-  if (loading) {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  console.log("user:", user);
+  console.log("isAuthenticated:", isAuthenticated);
+  console.log("isLoading:", isLoading);
+  
+  if (isLoading) {
     return <LoadingSpinner />;
   }
 
@@ -72,9 +56,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
     return <Navigate to="/auth" replace state={{ from: route.path }} />;
   }
 
-  // Kiểm tra quyền truy cập dựa trên role và permission
-  if (user && !hasRouteAccess(mapAuthRoleToRouteRole(userRole), route)) {
-    return <Navigate to="/403" replace />;
+  // Kiểm tra quyền truy cập dựa trên role
+  if (user && route.roles) {
+    const userRole = user.role || 'GUEST';
+    if (!route.roles.includes(userRole as any)) {
+      return <Navigate to="/403" replace />;
+    }
   }
 
   return <>{children}</>;
@@ -136,6 +123,7 @@ const AppRouter: React.FC = () => {
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
+        <DebugContainer/>
       </BrowserRouter>
     </ErrorBoundaryClass>
   );

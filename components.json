@@ -22,8 +22,8 @@
     "services": "@/services",
     "store": "@/store",
     "theme": "@/theme",
-    "utils": "@/lib/utils",
-    "ui": "@/components/ui"
+    "ui": "@/components/ui",
+    "utils": "@/utils"
   },
   "iconLibrary": "lucide"
 }

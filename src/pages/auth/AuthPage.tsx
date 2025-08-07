@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,9 +16,11 @@ interface AuthPageProps {
 }
 
 const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
-  const { signIn, signUp, user, isAuthenticated, loading, error, clearError } = useAuth();
+  const { signIn, signUp, user, isAuthenticated, isLoading, error, clearError } = useAuth();
 
   const [isLogin, setIsLogin] = useState(true);
+  const hasShownSuccessToast = useRef(false);
+  const hasShownErrorToast = useRef(false);
   const location = useLocation();
 
   // Lấy mode từ query string
@@ -47,21 +49,31 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   const { showSuccess, showError } = useToastContext();
   const { t } = useTranslation();
 
-  // Xử lý khi authentication thành công
+  // Chỉ điều hướng khi thành công, không show toast ở đây
   useEffect(() => {
     if (isAuthenticated && user) {
-      showSuccess(t('auth_logoutSuccess'), t('home_welcome', { email: user.fullName }), 3000);
       goToHome();
     }
-  }, [isAuthenticated, user, goToHome, showSuccess, t]);
+  }, [isAuthenticated, user]); 
 
-  // Xử lý khi có lỗi
+  // Không show toast ở đây nữa, chỉ log error
   useEffect(() => {
     if (error) {
       console.error('Authentication thất bại:', error);
-      showError(isLogin ? t('auth_loginTitle') : t('auth_registerTitle'), error.message, 5000);
     }
-  }, [error, isLogin, showError, t]);
+  }, [error]); 
+
+  // Reset toast flags khi chuyển đổi mode
+  useEffect(() => {
+    hasShownErrorToast.current = false;
+  }, [isLogin]);
+
+  // Reset success toast flag khi logout
+  useEffect(() => {
+    if (!isAuthenticated) {
+      hasShownSuccessToast.current = false;
+    }
+  }, [isAuthenticated]);
 
   // Validation form
   const validateForm = (): boolean => {
@@ -102,32 +114,49 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Clear previous errors
+    // Clear previous errors and reset toast flags
     clearError();
+    hasShownErrorToast.current = false;
+    hasShownSuccessToast.current = false;
 
     // Validate form
     if (!validateForm()) {
       return;
     }
 
-    try {
-      // Dispatch appropriate action
-      if (isLogin) {
-        await signIn({
-          email: formData.email,
-          password: formData.password,
-        });
-      } else {
-        await signUp({
-          email: formData.email,
-          password: formData.password,
-          fullname: formData.fullName,
-          phoneNumber: formData.phone,
-        });
-      }
-    } catch (error) {
-      // Error is handled by useAuth hook
-      console.error('Auth error:', error);
+    let result;
+    // Dispatch appropriate action
+    if (isLogin) {
+      result = await signIn({
+        email: formData.email,
+        password: formData.password,
+      });
+    } else {
+      result = await signUp({
+        email: formData.email,
+        password: formData.password,
+        name: formData.fullName,
+        phone: formData.phone,
+      });
+    }
+
+    // Kiểm tra kết quả
+    if (result.type.endsWith('/fulfilled')) {
+      // Thành công
+      const user = (result.payload as any)?.user;
+      showSuccess(
+        isLogin ? 'Đăng nhập thành công' : 'Đăng ký thành công', 
+        `Chào mừng ${user?.name || formData.email}!`, 
+        3000
+      );
+    } else if (result.type.endsWith('/rejected')) {
+      // Thất bại
+      const errorMessage = (result as any).payload?.message || 'Authentication failed';
+      showError(
+        isLogin ? 'Đăng nhập thất bại' : 'Đăng ký thất bại', 
+        errorMessage, 
+        5000
+      );
     }
   };
 
@@ -318,8 +347,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                 </div>
               )}
 
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading ? (
+              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                {isLoading ? (
                   <div className="flex items-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-foreground border-t-transparent mr-2"></div>
                     {isLogin ? t('auth_loggingIn') : t('auth_registering')}

@@ -1,27 +1,13 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { getRouteByPath, getRoutesByRole, UserRole as RouteUserRole } from '@/config/routes';
+import { getRouteByPath, getRoutesByRole, UserRole } from '@/config/routes';
 import { useDebug, useDebugShortcut } from '@/hooks/useDebug';
 import { useAuth } from '@/features/auth/useAuth';
-import { UserRole as AuthUserRole } from '@/features/auth/authType';
 import { ChevronUp, ChevronDown, Bug, Route, User, List } from 'lucide-react';
 
 interface DebugContainerProps {
   showInProduction?: boolean;
 }
-
-// Map auth roles to route roles
-const mapAuthRoleToRouteRole = (authRole: AuthUserRole): RouteUserRole => {
-  switch (authRole) {
-    case AuthUserRole.Admin:
-      return RouteUserRole.ADMIN;
-    case AuthUserRole.Customer:
-      return RouteUserRole.CUSTOMER;
-    case AuthUserRole.Guest:
-    default:
-      return RouteUserRole.GUEST;
-  }
-};
 
 const DebugContainer: React.FC<DebugContainerProps> = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -40,7 +26,8 @@ const DebugContainer: React.FC<DebugContainerProps> = () => {
   }
 
   const currentRoute = getRouteByPath(location.pathname);
-  const routeUserRole = mapAuthRoleToRouteRole(authUserRole);
+  // Convert auth role to route role (they have the same string values)
+  const routeUserRole = authUserRole as UserRole;
   const availableRoutes = getRoutesByRole(routeUserRole);
 
   const getCurrentRouteInfo = () => {
@@ -185,7 +172,7 @@ const DebugContainer: React.FC<DebugContainerProps> = () => {
                         <span className="text-blue-400">ID:</span> {user._id}
                       </div>
                       <div>
-                        <span className="text-blue-400">Name:</span> {user.fullName}
+                        <span className="text-blue-400">Name:</span> {user.name}
                       </div>
                       <div>
                         <span className="text-blue-400">Email:</span> {user.email}
