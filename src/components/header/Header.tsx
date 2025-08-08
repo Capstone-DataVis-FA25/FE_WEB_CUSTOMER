@@ -13,6 +13,7 @@ import {
 import { FadeIn, SlideInDown, AnimatedButton, ScaleIn } from '../../theme/animation';
 import useNavigation from '@/hooks/useNavigation';
 import { LanguageSwitcher } from '../language-switcher';
+import ThemeSwitcher from '../ui/ThemeSwitcher';
 import { useTranslation } from 'react-i18next';
 
 interface HeaderProps {
@@ -66,10 +67,10 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <SlideInDown className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold text-xl">D</span>
               </div>
-              <span className="text-xl font-bold text-primary hidden sm:block">DataVis</span>
+              <span className="text-xl font-bold text-accent hidden sm:block">DataVis</span>
             </SlideInDown>
 
             {/* Navigation - Desktop */}
@@ -108,6 +109,11 @@ const Header: React.FC<HeaderProps> = ({
               {/* Language Switcher */}
               <FadeIn delay={0.2}>
                 <LanguageSwitcher />
+              </FadeIn>
+
+              {/* Theme Switcher */}
+              <FadeIn delay={0.25}>
+                <ThemeSwitcher />
               </FadeIn>
 
               {isAuthenticated ? (
