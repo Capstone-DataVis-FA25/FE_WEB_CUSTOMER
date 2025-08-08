@@ -1,0 +1,90 @@
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch } from '@/store/store';
+import {
+  selectAuthInfo,
+  selectUser,
+  selectUserRole,
+  selectIsAuthenticated,
+  selectAuthLoading,
+  selectAuthError,
+  selectUserProfile,
+  selectIsAdmin,
+  selectIsCustomer,
+  selectIsGuest,
+  selectVerifyStatus,
+  selectVerifyMessage,
+} from './authSelector';
+import { logout, clearError, updateUserProfile, setLoading } from './authSlice';
+import { signInThunk, signUpThunk } from './authThunk';
+import type { SignInRequest, SignUpRequest, User } from './authType';
+
+export const useAuth = () => {
+  const dispatch = useDispatch<AppDispatch>();
+
+  // Selectors
+  const authInfo = useSelector(selectAuthInfo);
+  const user = useSelector(selectUser);
+  const userRole = useSelector(selectUserRole);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const isLoading = useSelector(selectAuthLoading);
+  const error = useSelector(selectAuthError);
+  const userProfile = useSelector(selectUserProfile);
+  const verifyStatus = useSelector(selectVerifyStatus);
+  const verifyMessage = useSelector(selectVerifyMessage);
+
+  // Role checks
+  const isAdmin = useSelector(selectIsAdmin);
+  const isCustomer = useSelector(selectIsCustomer);
+  const isGuest = useSelector(selectIsGuest);
+
+  // Actions
+  const signIn = (data: SignInRequest) => {
+    return dispatch(signInThunk(data));
+  };
+
+  const signUp = (data: SignUpRequest) => {
+    return dispatch(signUpThunk(data));
+  };
+
+  const logoutUser = () => {
+    dispatch(logout());
+  };
+
+  const clearAuthError = () => {
+    dispatch(clearError());
+  };
+
+  const updateProfile = (data: Partial<User>) => {
+    dispatch(updateUserProfile(data));
+  };
+
+  const setAuthLoading = (loading: boolean) => {
+    dispatch(setLoading(loading));
+  };
+
+  return {
+    // State - Trạng thái hiện tại
+    user, // User object hoặc null
+    token: authInfo.token, // JWT token hoặc null
+    isLoading, // Boolean - đang loading API call
+    error, // Error string hoặc null
+    isAuthenticated, // Boolean - user đã login chưa
+    userRole, // String - role của user (admin/customer/guest)
+    userProfile, // Formatted user profile object
+    verifyStatus, // undefined (legacy)
+    verifyMessage, // '' (legacy)
+
+    // Role checks - Boolean flags
+    isAdmin, // Boolean - user có phải admin không
+    isCustomer, // Boolean - user có phải customer không
+    isGuest, // Boolean - user có phải guest không
+
+    // Actions - Functions để thực hiện actions
+    signIn, // Function(data: SignInRequest) => Promise
+    signUp, // Function(data: SignUpRequest) => Promise
+    logout: logoutUser, // Function() => void - logout và clear localStorage
+    clearError: clearAuthError, // Function() => void - clear error state
+    updateUserProfile: updateProfile, // Function(data: Partial<User>) => void
+    setLoading: setAuthLoading, // Function(boolean) => void - set loading manually
+  };
+};
