@@ -78,10 +78,10 @@ const Header: React.FC<HeaderProps> = ({
                 <FadeIn key={item.name} delay={index * 0.1}>
                   <a
                     href={item.href}
-                    className="text-gray-700 hover:text-primary transition-colors duration-200 font-medium relative group"
+                    className="text-gray-700 hover:text-secondary transition-colors duration-200 font-medium relative group"
                   >
                     {item.name}
-                    <span className="absolute inset-x-0 -bottom-1 h-0.5 bg-primary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200" />
+                    <span className="absolute inset-x-0 -bottom-1 h-0.5 bg-secondary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200" />
                   </a>
                 </FadeIn>
               ))}
@@ -186,13 +186,13 @@ const Header: React.FC<HeaderProps> = ({
                 <FadeIn delay={0.3} className="flex items-center space-x-3">
                   <AnimatedButton
                     onClick={() => goToAuth('login')}
-                    className="px-4 py-2 text-primary hover:text-primary/80 font-medium transition-colors duration-200"
+                    className="px-4 py-2 rounded-md text-primary bg-accent hover:text-primary hover:bg-secondary border font-medium transition-colors duration-200"
                   >
                     {t('auth_login')}
                   </AnimatedButton>
                   <AnimatedButton
                     onClick={() => goToAuth('register')}
-                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 font-medium transition-colors duration-200 shadow-sm"
+                    className="px-4 py-2 rounded-md text-primary bg-secondary hover:text-primary hover:bg-accent font-medium transition-colors duration-200 shadow-sm"
                   >
                     {t('auth_register')}
                   </AnimatedButton>
