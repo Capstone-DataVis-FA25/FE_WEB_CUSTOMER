@@ -52,6 +52,10 @@ export interface SignUpRequest {
   phone?: string;
 }
 
+export interface GoogleAuthRequest {
+  idToken: string;
+}
+
 // ## RESPONSE
 export interface AuthResponse {
   user: User;

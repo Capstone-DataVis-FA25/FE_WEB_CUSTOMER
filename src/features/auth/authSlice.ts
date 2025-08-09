@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { AuthState, User } from './authType';
-import { signInThunk, signUpThunk } from './authThunk';
+import { signInThunk, signUpThunk, signInWithGoogleThunk } from './authThunk';
 
 // Helper function để lấy user từ localStorage an toàn
 const getStoredUser = (): User | null => {
@@ -130,6 +130,41 @@ const authSlice = createSlice({
       .addCase(signUpThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload?.message || action.error?.message || 'Sign up failed';
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.isAuthenticated = false;
+      });
+
+    // Google Sign In
+    builder
+      .addCase(signInWithGoogleThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(signInWithGoogleThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.access_token;
+        state.refreshToken = action.payload.refresh_token;
+        state.isAuthenticated = true;
+        state.error = null;
+
+        // Lưu vào localStorage
+        localStorage.setItem('user', JSON.stringify(action.payload.user));
+        localStorage.setItem('accessToken', action.payload.access_token);
+        localStorage.setItem('refreshToken', action.payload.refresh_token);
+
+        // Debug: Check if tokens are saved
+        console.log('✅ Google Auth tokens saved to localStorage:', {
+          user: action.payload.user,
+          accessToken: action.payload.access_token,
+          refreshToken: action.payload.refresh_token
+        });
+      })
+      .addCase(signInWithGoogleThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || action.error?.message || 'Google sign in failed';
         state.user = null;
         state.accessToken = null;
         state.refreshToken = null;
