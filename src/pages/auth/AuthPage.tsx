@@ -36,8 +36,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    email: 'cus1@gm.com',
-    password: '12345678',
+    email: '',
+    password: '',
     confirmPassword: '',
     fullName: '',
     phone: '',
@@ -54,14 +54,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     if (isAuthenticated && user) {
       goToHome();
     }
-  }, [isAuthenticated, user, goToHome]); 
+  }, [isAuthenticated, user, goToHome]);
 
   // Không show toast ở đây nữa, chỉ log error
   useEffect(() => {
     if (error) {
       console.error('Authentication thất bại:', error);
     }
-  }, [error]); 
+  }, [error]);
 
   // Reset toast flags khi chuyển đổi mode
   useEffect(() => {
@@ -143,20 +143,20 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     // Kiểm tra kết quả
     if (result.type.endsWith('/fulfilled')) {
       // Thành công
-      const user = (result.payload as { user?: { name?: string } })?.user;
+      const user = (
+        result.payload as { user?: { firstName?: string; lastName?: string; email?: string } }
+      )?.user;
+
       showSuccess(
-        isLogin ? 'Đăng nhập thành công' : 'Đăng ký thành công', 
-        `Chào mừng ${user?.name || formData.email}!`, 
+        isLogin ? 'Đăng nhập thành công' : 'Đăng ký thành công',
+        `Chào mừng ${user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.email}!`,
         3000
       );
     } else if (result.type.endsWith('/rejected')) {
       // Thất bại
-      const errorMessage = (result as { payload?: { message?: string } })?.payload?.message || 'Authentication failed';
-      showError(
-        isLogin ? 'Đăng nhập thất bại' : 'Đăng ký thất bại', 
-        errorMessage, 
-        5000
-      );
+      const errorMessage =
+        (result as { payload?: { message?: string } })?.payload?.message || 'Authentication failed';
+      showError(isLogin ? 'Đăng nhập thất bại' : 'Đăng ký thất bại', errorMessage, 5000);
     }
   };
 
@@ -425,3 +425,4 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
 };
 
 export default AuthPage;
+  

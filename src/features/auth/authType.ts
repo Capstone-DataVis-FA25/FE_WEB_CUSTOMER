@@ -25,16 +25,15 @@ export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
 
 // ## MODEL
 export interface User {
-  _id: string;
-  name: string;
+  id: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone?: string;
   address?: string;
   dateOfBirth?: string;
   avatar?: string;
-  role: 'CUSTOMER' | 'ADMIN';
-  isVerified: boolean;
-  status: UserStatus;
+  role: 'USER' | 'ADMIN';
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -55,11 +54,6 @@ export interface SignUpRequest {
 
 // ## RESPONSE
 export interface AuthResponse {
-  data: {
-    user: User;
-    access_token: string;
-    refresh_token: string;
-  };
   user: User;
   access_token: string;
   refresh_token: string;

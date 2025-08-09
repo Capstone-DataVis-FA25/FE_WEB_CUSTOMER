@@ -65,7 +65,7 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.refreshToken;
       }
       state.isAuthenticated = true;
-      
+
       localStorage.setItem('accessToken', action.payload.accessToken);
       if (action.payload.refreshToken) {
         localStorage.setItem('refreshToken', action.payload.refreshToken);
@@ -91,6 +91,13 @@ const authSlice = createSlice({
         localStorage.setItem('user', JSON.stringify(action.payload.user));
         localStorage.setItem('accessToken', action.payload.access_token);
         localStorage.setItem('refreshToken', action.payload.refresh_token);
+
+        // Debug: Check if tokens are saved
+        console.log('✅ Auth tokens saved to localStorage:', {
+          user: action.payload.user,
+          accessToken: action.payload.access_token,
+          refreshToken: action.payload.refresh_token
+        });
       })
       .addCase(signInThunk.rejected, (state, action) => {
         state.isLoading = false;
