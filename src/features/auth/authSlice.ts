@@ -26,7 +26,7 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     // Logout - xóa all data và localStorage
-    logout: (state) => {
+    logout: state => {
       state.user = null;
       state.accessToken = null;
       state.refreshToken = null;
@@ -41,7 +41,7 @@ const authSlice = createSlice({
     },
 
     // Clear error
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
     },
 
@@ -65,78 +65,68 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.refreshToken;
       }
       state.isAuthenticated = true;
-      
+
       localStorage.setItem('accessToken', action.payload.accessToken);
       if (action.payload.refreshToken) {
         localStorage.setItem('refreshToken', action.payload.refreshToken);
       }
     },
   },
-  extraReducers: (builder) => {
+  extraReducers: builder => {
     // Sign In
     builder
-      .addCase(signInThunk.pending, (state) => {
+      .addCase(signInThunk.pending, state => {
         state.isLoading = true;
         state.error = null;
       })
       .addCase(signInThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
-        state.accessToken = action.payload.access_token;
-        state.refreshToken = action.payload.refresh_token;
+        state.user = action.payload.data.user;
+        state.accessToken = action.payload.data.tokens.access_token;
+        state.refreshToken = action.payload.data.tokens.refresh_token;
         state.isAuthenticated = true;
         state.error = null;
 
         // Lưu vào localStorage
-        localStorage.setItem('user', JSON.stringify(action.payload.user));
-        localStorage.setItem('accessToken', action.payload.access_token);
-        localStorage.setItem('refreshToken', action.payload.refresh_token);
+        localStorage.setItem('user', JSON.stringify(action.payload.data.user));
+        localStorage.setItem('accessToken', action.payload.data.tokens.access_token);
+        localStorage.setItem('refreshToken', action.payload.data.tokens.refresh_token);
       })
       .addCase(signInThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload?.message || action.error?.message || 'Sign in failed';
-        state.user = null;
-        state.accessToken = null;
-        state.refreshToken = null;
-        state.isAuthenticated = false;
+        // state.user = null;
+        // state.accessToken = null;
+        // state.refreshToken = null;
+        // state.isAuthenticated = false;
       });
 
     // Sign Up
     builder
-      .addCase(signUpThunk.pending, (state) => {
+      .addCase(signUpThunk.pending, state => {
         state.isLoading = true;
         state.error = null;
       })
       .addCase(signUpThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
-        state.accessToken = action.payload.access_token;
-        state.refreshToken = action.payload.refresh_token;
+        state.user = action.payload.data.user;
+        state.accessToken = action.payload.data.tokens.access_token;
+        state.refreshToken = action.payload.data.tokens.refresh_token;
         state.isAuthenticated = true;
         state.error = null;
 
         // Lưu vào localStorage
-        localStorage.setItem('user', JSON.stringify(action.payload.user));
-        localStorage.setItem('accessToken', action.payload.access_token);
-        localStorage.setItem('refreshToken', action.payload.refresh_token);
+        localStorage.setItem('user', JSON.stringify(action.payload.data.user));
+        localStorage.setItem('accessToken', action.payload.data.tokens.access_token);
+        localStorage.setItem('refreshToken', action.payload.data.tokens.refresh_token);
       })
       .addCase(signUpThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload?.message || action.error?.message || 'Sign up failed';
-        state.user = null;
-        state.accessToken = null;
-        state.refreshToken = null;
-        state.isAuthenticated = false;
       });
   },
 });
 
-export const {
-  logout,
-  clearError,
-  updateUserProfile,
-  setLoading,
-  setTokens,
-} = authSlice.actions;
+export const { logout, clearError, updateUserProfile, setLoading, setTokens } = authSlice.actions;
 
 export default authSlice.reducer;

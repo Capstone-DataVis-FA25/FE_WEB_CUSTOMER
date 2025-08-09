@@ -2,7 +2,8 @@
 
 export const UserRole = {
   ADMIN: 'ADMIN',
-  CUSTOMER: 'CUSTOMER',
+  USER: 'USER', // Updated to match API response
+  CUSTOMER: 'CUSTOMER', // Keep for backward compatibility
   GUEST: 'GUEST',
 } as const;
 
@@ -10,13 +11,14 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 // ## MODEL
 export interface User {
-  _id: string;
+  _id?: string; // Optional for backward compatibility
+  id: string; // New primary ID field
   firstName: string;
   lastName: string;
   email: string;
   role: UserRole;
-  isVerified: boolean;
-  currentHashedRefreshToken: string;
+  isVerified?: boolean; // Optional since not in response
+  currentHashedRefreshToken: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -37,14 +39,15 @@ export interface SignUpRequest {
 
 // ## RESPONSE
 export interface AuthResponse {
+  code: number;
+  message: string;
   data: {
     user: User;
-    access_token: string;
-    refresh_token: string;
+    tokens: {
+      access_token: string;
+      refresh_token: string;
+    };
   };
-  user: User;
-  access_token: string;
-  refresh_token: string;
 }
 
 // ## INITSTATE - Dựa theo initialState trong authSlice

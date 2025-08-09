@@ -1,9 +1,30 @@
 import { useAuth } from '@/features/auth/useAuth';
 import { useTranslation } from 'react-i18next';
+import { useToastContext } from '@/components/providers/ToastProvider';
+import { useEffect, useRef } from 'react';
 
 function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { showSuccess } = useToastContext();
+  const hasShownWelcomeToast = useRef(false);
+
+  // Show welcome toast khi vừa login thành công
+  useEffect(() => {
+    if (user && !hasShownWelcomeToast.current) {
+      const userName = user.firstName || user.email || 'người dùng';
+      showSuccess('Đăng nhập thành công', `Chào mừng ${userName} đến với hệ thống!`, 4000);
+      hasShownWelcomeToast.current = true;
+    }
+  }, [user, showSuccess]);
+
+  // Reset welcome toast flag khi logout
+  useEffect(() => {
+    if (!user) {
+      hasShownWelcomeToast.current = false;
+    }
+  }, [user]);
+
   console.log('user', user);
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">

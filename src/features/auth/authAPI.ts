@@ -1,8 +1,8 @@
 import { axiosPublic } from '@/services/axios';
 import type { SignInRequest, SignUpRequest, AuthResponse } from './authType';
 
-const SIGN_IN = '/auth/sign-in';
-const SIGN_UP = '/auth/sign-up';
+const SIGN_IN = '/auth/signin';
+const SIGN_UP = '/auth/signup';
 // const GOOGLE_AUTH = '/auth/google/callback';
 // const GOOGLE_SIGN_UP = '/auth/google';
 
