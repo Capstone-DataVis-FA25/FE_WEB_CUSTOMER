@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,8 +41,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     email: '',
     password: '',
     confirmPassword: '',
-    fullName: '',
-    phone: '',
+    firstName: '',
+    lastName: '',
     role: 'customer', // Default role
   });
   // const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -94,14 +94,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     }
 
     if (!isLogin) {
-      if (!formData.fullName) {
+      if (!formData.firstName) {
         errors.push(t('validation_required'));
       }
-
-      if (!formData.phone) {
+      if (!formData.lastName) {
         errors.push(t('validation_required'));
-      } else if (!/^[0-9]{10,11}$/.test(formData.phone)) {
-        errors.push('Số điện thoại không hợp lệ');
       }
 
       if (formData.password !== formData.confirmPassword) {
@@ -137,8 +134,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
       result = await signUp({
         email: formData.email,
         password: formData.password,
-        name: formData.fullName,
-        phone: formData.phone,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
       });
     }
 
@@ -262,7 +259,27 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                         id="fullName"
                         type="text"
                         name="fullName"
-                        value={formData.fullName}
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        className="pl-10"
+                        placeholder={t('auth_enterFullName')}
+                        required={!isLogin}
+                      />
+                    </div>
+                  </div>
+                </FadeIn>
+              )}
+              {!isLogin && (
+                <FadeIn>
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">{t('auth_fullName')}</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <Input
+                        id="fullName"
+                        type="text"
+                        name="fullName"
+                        value={formData.lastName}
                         onChange={handleInputChange}
                         className="pl-10"
                         placeholder={t('auth_enterFullName')}
@@ -289,27 +306,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                   />
                 </div>
               </div>
-
-              {!isLogin && (
-                <FadeIn>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">{t('auth_phone')}</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <Input
-                        id="phone"
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        className="pl-10"
-                        placeholder={t('auth_enterPhone')}
-                        required={!isLogin}
-                      />
-                    </div>
-                  </div>
-                </FadeIn>
-              )}
 
               <div className="space-y-2">
                 <Label htmlFor="password">{t('auth_password')}</Label>

@@ -87,17 +87,17 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  /* Primary color: #3F7D58 */
-  --primary: oklch(0.48 0.12 148);
-  --primary-foreground: oklch(0.985 0 0);
-  /* Secondary color: #73946B */
-  --secondary: oklch(0.58 0.08 135);
+  /* Primary color: #ffffff */
+  --primary: oklch(1 0 0);
+  --primary-foreground: oklch(0.145 0 0);
+  /* Secondary color: #f97d32 */
+  --secondary: oklch(0.72 0.15 45);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  /* Third color: #9EBC8A */
-  --accent: oklch(0.72 0.06 125);
-  --accent-foreground: oklch(0.145 0 0);
+  /* Third color: #204188 */
+  --accent: oklch(0.35 0.12 250);
+  --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
@@ -124,16 +124,16 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  /* Primary color - darker shade for dark mode */
-  --primary: oklch(0.6 0.15 148);
+  /* Primary color - white in dark mode */
+  --primary: oklch(0.95 0 0);
   --primary-foreground: oklch(0.145 0 0);
-  /* Secondary color - darker shade for dark mode */
-  --secondary: oklch(0.4 0.1 135);
+  /* Secondary color - orange in dark mode */
+  --secondary: oklch(0.65 0.18 45);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  /* Third color - darker shade for dark mode */
-  --accent: oklch(0.5 0.08 125);
+  /* Third color - blue in dark mode */
+  --accent: oklch(0.45 0.15 250);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
@@ -160,7 +160,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Roboto', 'Inter', system-ui, sans-serif;
+    font-family: 'Avenir', system-ui, sans-serif;
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
@@ -173,6 +173,6 @@
   h4,
   h5,
   h6 {
-    font-family: 'Miso', system-ui, sans-serif;
+    font-family: 'Avenir', system-ui, sans-serif;
   }
 }

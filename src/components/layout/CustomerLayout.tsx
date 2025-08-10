@@ -46,9 +46,8 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
         user={
           isAuthenticated && user
             ? {
-                name: user.name,
+                name: `${user.firstName} ${user.lastName}`,
                 email: user.email,
-                avatar: user.avatar,
               }
             : undefined
         }

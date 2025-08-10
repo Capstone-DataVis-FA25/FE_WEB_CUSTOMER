@@ -3,56 +3,56 @@
 export const colors = {
   // Brand colors
   brand: {
-    primary: '#3F7D58', // Primary green
-    secondary: '#73946B', // Secondary green
-    tertiary: '#9EBC8A', // Third green (accent)
+    primary: '#ffffff', // Primary white
+    secondary: '#f97d32', // Secondary orange
+    tertiary: '#204188', // Tertiary blue
   },
 
   // Color variations for different use cases
   primary: {
-    50: '#f0f9f4',
-    100: '#dcf2e4',
-    200: '#bce4cb',
-    300: '#8dd0a7',
-    400: '#57b37c',
-    500: '#3F7D58', // Main primary color
-    600: '#2d5940',
-    700: '#254733',
-    800: '#1f3a2b',
-    900: '#1a3024',
-    950: '#0d1a12',
+    50: '#ffffff',
+    100: '#fefefe',
+    200: '#fdfdfd',
+    300: '#fcfcfc',
+    400: '#fafafa',
+    500: '#ffffff', // Main primary color (white)
+    600: '#f5f5f5',
+    700: '#e5e5e5',
+    800: '#d4d4d4',
+    900: '#a3a3a3',
+    950: '#525252',
   },
 
   secondary: {
-    50: '#f4f6f3',
-    100: '#e6ebe3',
-    200: '#ced7c8',
-    300: '#adbba4',
-    400: '#73946B', // Main secondary color
-    500: '#5a7553',
-    600: '#475d41',
-    700: '#3a4b35',
-    800: '#303e2c',
-    900: '#283426',
-    950: '#141c13',
+    50: '#fef7f0',
+    100: '#fdede0',
+    200: '#fad8bf',
+    300: '#f6bc94',
+    400: '#f19657',
+    500: '#f97d32', // Main secondary color (orange)
+    600: '#e6622a',
+    700: '#c04d1f',
+    800: '#9b3e1d',
+    900: '#7d351c',
+    950: '#43190c',
   },
 
   tertiary: {
-    50: '#f6f8f4',
-    100: '#e9f2e4',
-    200: '#d4e4cb',
-    300: '#b6d0a7',
-    400: '#9EBC8A', // Main tertiary color
-    500: '#7ca068',
-    600: '#5f7e4f',
-    700: '#4c6340',
-    800: '#3e5035',
-    900: '#34432e',
-    950: '#1a2416',
+    50: '#eff6ff',
+    100: '#dbeafe',
+    200: '#bfdbfe',
+    300: '#93c5fd',
+    400: '#60a5fa',
+    500: '#204188', // Main tertiary color (blue)
+    600: '#1d3a7a',
+    700: '#1a336b',
+    800: '#172c5c',
+    900: '#14254d',
+    950: '#0f1d3e',
   },
 
   // Extended palette
-  success: '#3F7D58',
+  success: '#22c55e',
   warning: '#f59e0b',
   error: '#ef4444',
   info: '#3b82f6',

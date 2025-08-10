@@ -8,21 +8,6 @@ export const UserRole = {
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
-export const UserGender = {
-  Male: 'Male',
-  Female: 'Female',
-  Other: 'Other',
-} as const;
-
-export type UserGender = (typeof UserGender)[keyof typeof UserGender];
-
-export const UserStatus = {
-  Active: 'ACTIVE',
-  Locked: 'LOCKED',
-} as const;
-
-export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
-
 // ## MODEL
 export interface User {
   id: string;
@@ -33,7 +18,9 @@ export interface User {
   address?: string;
   dateOfBirth?: string;
   avatar?: string;
-  role: 'USER' | 'ADMIN';
+  role: UserRole;
+  isVerified: boolean;
+  currentHashedRefreshToken: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -48,8 +35,8 @@ export interface SignInRequest {
 export interface SignUpRequest {
   email: string;
   password: string;
-  name: string;
-  phone?: string;
+  firstName: string;
+  lastName: string;
 }
 
 export interface GoogleAuthRequest {
