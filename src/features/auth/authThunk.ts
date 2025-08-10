@@ -1,6 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { AuthResponse, SignInRequest, SignUpRequest, GoogleAuthRequest } from './authType';
 import { authAPI } from './authAPI';
+import { t } from 'i18next';
 
 export const signInThunk = createAsyncThunk<
   AuthResponse,
@@ -11,7 +12,7 @@ export const signInThunk = createAsyncThunk<
     const response = await authAPI.signInWithEmailPassword(signInData);
     return response;
   } catch (error: unknown) {
-    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Đăng nhập thất bại';
+    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth_signInFailed');
     return rejectWithValue({ message: errorMessage });
   }
 });
@@ -25,7 +26,7 @@ export const signUpThunk = createAsyncThunk<
     const response = await authAPI.signUpWithEmailPassword(signUpData);
     return response;
   } catch (error: unknown) {
-    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Đăng ký thất bại';
+    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth_signUpFailed');
     return rejectWithValue({ message: errorMessage });
   }
 });
@@ -39,7 +40,7 @@ export const signInWithGoogleThunk = createAsyncThunk<
     const response = await authAPI.signInWithGoogleToken(googleData);
     return response;
   } catch (error: unknown) {
-    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Google đăng nhập thất bại';
+    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth_googleSignInFailed');
     return rejectWithValue({ message: errorMessage });
   }
 });

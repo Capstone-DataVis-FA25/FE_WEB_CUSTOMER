@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { AuthState, User } from './authType';
 import { signInThunk, signUpThunk, signInWithGoogleThunk } from './authThunk';
+import { t } from 'i18next';
 
 // Helper function để lấy user từ localStorage an toàn
 const getStoredUser = (): User | null => {
@@ -91,17 +92,10 @@ const authSlice = createSlice({
         localStorage.setItem('user', JSON.stringify(action.payload.user));
         localStorage.setItem('accessToken', action.payload.access_token);
         localStorage.setItem('refreshToken', action.payload.refresh_token);
-
-        // Debug: Check if tokens are saved
-        console.log('✅ Auth tokens saved to localStorage:', {
-          user: action.payload.user,
-          accessToken: action.payload.access_token,
-          refreshToken: action.payload.refresh_token
-        });
       })
       .addCase(signInThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload?.message || action.error?.message || 'Sign in failed';
+        state.error = action.payload?.message || action.error?.message || t('auth_signInFailed');
         state.user = null;
         state.accessToken = null;
         state.refreshToken = null;
@@ -129,7 +123,7 @@ const authSlice = createSlice({
       })
       .addCase(signUpThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload?.message || action.error?.message || 'Sign up failed';
+        state.error = action.payload?.message || action.error?.message || t('auth_signUpFailed');
         state.user = null;
         state.accessToken = null;
         state.refreshToken = null;
@@ -154,17 +148,10 @@ const authSlice = createSlice({
         localStorage.setItem('user', JSON.stringify(action.payload.user));
         localStorage.setItem('accessToken', action.payload.access_token);
         localStorage.setItem('refreshToken', action.payload.refresh_token);
-
-        // Debug: Check if tokens are saved
-        console.log('✅ Google Auth tokens saved to localStorage:', {
-          user: action.payload.user,
-          accessToken: action.payload.access_token,
-          refreshToken: action.payload.refresh_token
-        });
       })
       .addCase(signInWithGoogleThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload?.message || action.error?.message || 'Google sign in failed';
+        state.error = action.payload?.message || action.error?.message || t('auth_googleSignInFailed');
         state.user = null;
         state.accessToken = null;
         state.refreshToken = null;

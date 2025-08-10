@@ -409,9 +409,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                     useOneTap
                     theme="outline"
                     size="large"
-                    text="signin_with"
+                    text="signin"
                     shape="rectangular"
-                    locale={t('language') === 'vi' ? 'vi' : 'en'}
+                    i18nIsDynamicList
                   />
                 </div>
                 <Button variant="outline" className="w-full">
