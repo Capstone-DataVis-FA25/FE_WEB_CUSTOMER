@@ -124,5 +124,8 @@
   "profile_confirmCancel": "Confirm Cancel",
   "profile_confirmCancelMessage": "Unsaved changes will be lost. Are you sure you want to cancel?",
   "profile_updateErrorDesc": "An error occurred while updating information. Please try again.",
-  "common_confirm": "Confirm"
+  "common_confirm": "Confirm",
+  "light": "Light",
+  "dark": "Dark",
+  "footer_copyright": "DataVis Capstone. All rights reserved."
 }

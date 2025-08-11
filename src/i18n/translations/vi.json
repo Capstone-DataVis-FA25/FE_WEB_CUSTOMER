@@ -126,5 +126,8 @@
   "profile_confirmCancel": "Xác nhận hủy bỏ",
   "profile_confirmCancelMessage": "Các thay đổi chưa lưu sẽ bị mất. Bạn có chắc chắn muốn hủy bỏ?",
   "profile_updateErrorDesc": "Đã xảy ra lỗi khi cập nhật thông tin. Vui lòng thử lại.",
-  "common_confirm": "Xác nhận"
+  "common_confirm": "Xác nhận",
+  "light": "Sáng",
+  "dark": "Tối",
+  "footer_copyright": "DataVis Capstone. Bảo lưu mọi quyền."
 }
