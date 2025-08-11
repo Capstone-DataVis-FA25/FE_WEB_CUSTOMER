@@ -67,7 +67,7 @@ export const selectUserProfile = createSelector([selectUser], user => {
   if (!user) return null;
 
   return {
-    id: user._id,
+    id: user.id,
     email: user.email,
     role: user.role,
     isVerified: user.isVerified,
