@@ -67,8 +67,12 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <SlideInDown className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-xl">D</span>
+              <div className="w-10 h-10  rounded-xl flex items-center justify-center">
+                <img
+                  src="https://res.cloudinary.com/dfvy81evi/image/upload/v1754728440/share_logo_jtixd7.jpg"
+                  alt="Logo"
+                  className="rounded-xl"
+                />
               </div>
               <span className="text-xl font-bold text-accent hidden sm:block">DataVis</span>
             </SlideInDown>

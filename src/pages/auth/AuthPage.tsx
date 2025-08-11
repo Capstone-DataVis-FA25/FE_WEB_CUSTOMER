@@ -16,13 +16,10 @@ interface AuthPageProps {
 }
 
 const AuthPage: React.FC<AuthPageProps> = memo(({ onBack }) => {
-  console.log('🚀 AuthPage component mounting/re-mounting');
-
   const { signIn, signUp, isLoading } = useAuth();
   const { user, isAuthenticated } = useAuth();
 
   const [isLogin, setIsLogin] = useState(true);
-  // const [localError, setLocalError] = useState<string>(''); // Local error state
   const hasShownSuccessToast = useRef(false);
   const location = useLocation();
 
@@ -74,10 +71,7 @@ const AuthPage: React.FC<AuthPageProps> = memo(({ onBack }) => {
   // Chỉ điều hướng khi thành công
   useEffect(() => {
     if (isAuthenticated && user && !hasShownSuccessToast.current) {
-      const timer = setTimeout(() => {
-        goToHome();
-      }, 500);
-      return () => clearTimeout(timer);
+      goToHome();
     }
   }, [isAuthenticated, user, goToHome]);
 

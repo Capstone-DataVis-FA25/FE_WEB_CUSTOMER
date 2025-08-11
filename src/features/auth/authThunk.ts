@@ -11,7 +11,9 @@ export const signInThunk = createAsyncThunk<
     const response = await authAPI.signInWithEmailPassword(signInData);
     return response;
   } catch (error: unknown) {
-    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Đăng nhập thất bại';
+    const errorMessage =
+      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      'Đăng nhập thất bại';
     return rejectWithValue({ message: errorMessage });
   }
 });
@@ -23,9 +25,12 @@ export const signUpThunk = createAsyncThunk<
 >('auth/signUp', async (signUpData, { rejectWithValue }) => {
   try {
     const response = await authAPI.signUpWithEmailPassword(signUpData);
+    console.log(`Giá trị response: ${JSON.stringify(response, null, 2)}`);
     return response;
   } catch (error: unknown) {
-    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Đăng ký thất bại';
+    const errorMessage =
+      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      'Đăng ký thất bại';
     return rejectWithValue({ message: errorMessage });
   }
 });

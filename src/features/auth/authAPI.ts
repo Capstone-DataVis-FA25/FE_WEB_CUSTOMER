@@ -13,6 +13,7 @@ export const authAPI = {
   },
   signUpWithEmailPassword: async (data: SignUpRequest): Promise<AuthResponse> => {
     const response = await axiosPublic.post(`${SIGN_UP}`, data);
+    console.log(`Data response trong API: ${JSON.stringify(response.data, null, 2)}`);
     return response.data;
   },
 };
