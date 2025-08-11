@@ -104,6 +104,63 @@ export const authRoutes: RouteConfig[] = [
 
 // Protected routes (cần đăng nhập)
 export const protectedRoutes: RouteConfig[] = [
+  // Profile routes
+  {
+    path: Routers.PROFILE,
+    name: 'profile',
+    component: 'ProfilePage',
+    layout: 'CUSTOMER',
+    isProtected: true,
+    roles: [UserRole.CUSTOMER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Thông tin cá nhân',
+      description: 'Quản lý thông tin cá nhân',
+    },
+  },
+  {
+    path: Routers.PROFILE_CHANGE_PASSWORD,
+    name: 'change-password',
+    component: 'ChangePasswordPage',
+    layout: 'CUSTOMER',
+    isProtected: true,
+    roles: [UserRole.CUSTOMER],
+    permissions: [Permission.EDIT_PROFILE],
+    meta: {
+      title: 'Đổi mật khẩu',
+      description: 'Thay đổi mật khẩu tài khoản',
+      hideFromNav: true,
+    },
+  },
+  {
+    path: Routers.PROFILE_NOTIFICATIONS,
+    name: 'notification-settings',
+    component: 'NotificationSettingsPage',
+    layout: 'CUSTOMER',
+    isProtected: true,
+    roles: [UserRole.CUSTOMER],
+    permissions: [Permission.EDIT_PROFILE],
+    meta: {
+      title: 'Cài đặt thông báo',
+      description: 'Quản lý cài đặt thông báo',
+      hideFromNav: true,
+    },
+  },
+  {
+    path: Routers.PROFILE_SETTINGS,
+    name: 'general-settings',
+    component: 'GeneralSettingsPage',
+    layout: 'CUSTOMER',
+    isProtected: true,
+    roles: [UserRole.CUSTOMER],
+    permissions: [Permission.EDIT_PROFILE],
+    meta: {
+      title: 'Cài đặt chung',
+      description: 'Cài đặt chung của ứng dụng',
+      hideFromNav: true,
+    },
+  },
+  // Demo routes
   {
     path: Routers.TOAST_DEMO,
     name: 'toast-demo',

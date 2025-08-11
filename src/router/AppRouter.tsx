@@ -22,6 +22,11 @@ const componentMap = {
   ToastDemoPage: lazy(() => import('../pages/demo/ToastDemo')),
   ModalConfirmDemoPage: lazy(() => import('../pages/demo/ModalConfirmDemo')),
   PaginationDemoPage: lazy(() => import('../pages/demo/PaginationDemo')),
+  // Profile pages
+  ProfilePage: lazy(() => import('../pages/profile/ProfilePage')),
+  ChangePasswordPage: lazy(() => import('../pages/profile/ChangePasswordPage')),
+  NotificationSettingsPage: lazy(() => import('../pages/profile/NotificationSettingsPage')),
+  GeneralSettingsPage: lazy(() => import('../pages/profile/GeneralSettingsPage')),
 };
 
 // ================================

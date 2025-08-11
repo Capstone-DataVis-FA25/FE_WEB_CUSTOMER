@@ -62,15 +62,22 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <FadeIn>
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
+      <header className="sticky top-0 z-50 bg-gradient-to-r from-white/95 via-blue-50/95 to-purple-50/95 dark:from-gray-900/95 dark:via-gray-900/95 dark:to-gray-800/95 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg dark:shadow-gray-900/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <SlideInDown className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded-xl flex items-center justify-center">
+            <SlideInDown className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20 dark:ring-blue-400/30">
                 <span className="text-white font-bold text-xl">D</span>
               </div>
-              <span className="text-xl font-bold text-accent hidden sm:block">DataVis</span>
+              <div className="hidden sm:block">
+                <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  DataVis
+                </span>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                  {t('common_platform')}
+                </p>
+              </div>
             </SlideInDown>
 
             {/* Navigation - Desktop */}
@@ -79,10 +86,10 @@ const Header: React.FC<HeaderProps> = ({
                 <FadeIn key={item.name} delay={index * 0.1}>
                   <a
                     href={item.href}
-                    className="text-gray-700 hover:text-secondary transition-colors duration-200 font-medium relative group"
+                    className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 font-medium relative group px-3 py-2 rounded-lg hover:bg-blue-50/50 dark:hover:bg-blue-900/20"
                   >
                     {item.name}
-                    <span className="absolute inset-x-0 -bottom-1 h-0.5 bg-secondary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200" />
+                    <span className="absolute inset-x-0 -bottom-1 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200 rounded-full" />
                   </a>
                 </FadeIn>
               ))}
@@ -96,33 +103,37 @@ const Header: React.FC<HeaderProps> = ({
                 <input
                   type="text"
                   placeholder={t('common_searchPlaceholder')}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300/50 dark:border-gray-600/50 rounded-xl bg-white/80 dark:bg-gray-800/80 focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-blue-400/30 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 shadow-sm"
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => setIsSearchFocused(false)}
                 />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
               </div>
             </SlideInDown>
 
             {/* Right Side Actions */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               {/* Language Switcher */}
               <FadeIn delay={0.2}>
-                <LanguageSwitcher />
+                <div className="p-1 rounded-lg bg-white/50 dark:bg-gray-800/50 shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50">
+                  <LanguageSwitcher />
+                </div>
               </FadeIn>
 
               {/* Theme Switcher */}
               <FadeIn delay={0.25}>
-                <ThemeSwitcher />
+                <div className="p-1 rounded-lg bg-white/50 dark:bg-gray-800/50 shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50">
+                  <ThemeSwitcher />
+                </div>
               </FadeIn>
 
               {isAuthenticated ? (
                 <FadeIn delay={0.3} className="flex items-center space-x-3">
                   {/* Notifications */}
-                  <AnimatedButton className="relative p-2 text-gray-600 hover:text-primary hover:bg-primary/10 rounded-full transition-colors duration-200">
+                  <AnimatedButton className="relative p-2.5 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 ring-1 ring-gray-200/50 dark:ring-gray-700/50 bg-white/50 dark:bg-gray-800/50 shadow-sm">
                     <Bell className="w-5 h-5" />
                     {notificationCount > 0 && (
-                      <ScaleIn className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                      <ScaleIn className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full flex items-center justify-center shadow-md ring-2 ring-white dark:ring-gray-900">
                         {notificationCount > 9 ? '9+' : notificationCount}
                       </ScaleIn>
                     )}
@@ -132,55 +143,51 @@ const Header: React.FC<HeaderProps> = ({
                   <div className="relative" ref={dropdownRef}>
                     <AnimatedButton
                       onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                      className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                      className="flex items-center space-x-2 p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 ring-1 ring-gray-200/50 dark:ring-gray-700/50 bg-white/50 dark:bg-gray-800/50 shadow-sm"
                     >
-                      {user?.avatar ? (
-                        <img
-                          src={user.avatar}
-                          alt={user.name}
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-white" />
-                        </div>
-                      )}
-                      <span className="hidden sm:block text-sm font-medium text-gray-700">
+                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-600 rounded-full flex items-center justify-center shadow-md">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300">
                         {user?.name || 'User'}
                       </span>
                       <ChevronDown
-                        className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isUserDropdownOpen ? 'rotate-180' : ''}`}
+                        className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isUserDropdownOpen ? 'rotate-180' : ''}`}
                       />
                     </AnimatedButton>
 
                     {/* Dropdown Menu */}
                     {isUserDropdownOpen && (
-                      <SlideInDown className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
-                        <div className="px-4 py-3 border-b border-gray-100">
-                          <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                          <p className="text-sm text-gray-500 truncate">{user?.email}</p>
+                      <SlideInDown className="absolute right-0 mt-2 w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-2 z-50 ring-1 ring-black/5 dark:ring-white/5">
+                        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700/50 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-900/20 dark:to-purple-900/20 mx-2 rounded-xl">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            {user?.name}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                            {user?.email}
+                          </p>
                         </div>
 
-                        <div className="py-1">
+                        <div className="py-1 px-2">
                           <a
                             href="/profile"
-                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                            className="flex items-center px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 rounded-xl mx-1 group"
                           >
-                            <UserCircle className="w-4 h-4 mr-3" />
+                            <UserCircle className="w-4 h-4 mr-3 group-hover:scale-110 transition-transform duration-200" />
                             {t('navigation_profile')}
                           </a>
                           <a
-                            href="/settings"
-                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                            href="/profile/settings"
+                            className="flex items-center px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200 rounded-xl mx-1 group"
                           >
-                            <Settings className="w-4 h-4 mr-3" />
+                            <Settings className="w-4 h-4 mr-3 group-hover:rotate-90 transition-transform duration-200" />
                             {t('navigation_settings')}
                           </a>
                           <button
                             onClick={onLogout}
-                            className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200"
+                            className="flex items-center w-full px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 rounded-xl mx-1 group"
                           >
-                            <LogOut className="w-4 h-4 mr-3" />
+                            <LogOut className="w-4 h-4 mr-3 group-hover:scale-110 transition-transform duration-200" />
                             {t('auth_logout')}
                           </button>
                         </div>
@@ -192,13 +199,13 @@ const Header: React.FC<HeaderProps> = ({
                 <FadeIn delay={0.3} className="flex items-center space-x-3">
                   <AnimatedButton
                     onClick={() => goToAuth('login')}
-                    className="px-4 py-2 rounded-md text-primary bg-accent hover:text-primary hover:bg-secondary border font-medium transition-colors duration-200"
+                    className="px-4 py-2 rounded-xl text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-blue-200/50 dark:border-blue-700/50 font-medium transition-all duration-200 shadow-sm hover:shadow-md"
                   >
                     {t('auth_login')}
                   </AnimatedButton>
                   <AnimatedButton
                     onClick={() => goToAuth('register')}
-                    className="px-4 py-2 rounded-md text-primary bg-secondary hover:text-primary hover:bg-accent font-medium transition-colors duration-200 shadow-sm"
+                    className="px-4 py-2 rounded-xl text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 font-medium transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 border border-blue-500/20"
                   >
                     {t('auth_register')}
                   </AnimatedButton>
@@ -208,7 +215,7 @@ const Header: React.FC<HeaderProps> = ({
               {/* Mobile Menu Button */}
               <AnimatedButton
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="lg:hidden p-2 text-gray-600 hover:text-primary hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                className="lg:hidden p-2.5 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 ring-1 ring-gray-200/50 dark:ring-gray-700/50 bg-white/50 dark:bg-gray-800/50 shadow-sm"
               >
                 {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </AnimatedButton>
@@ -217,16 +224,16 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Mobile Menu */}
           {isMenuOpen && (
-            <SlideInDown className="lg:hidden border-t border-gray-200 bg-white">
+            <SlideInDown className="lg:hidden border-t border-gray-200/50 dark:border-gray-700/50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md">
               <div className="px-2 pt-4 pb-3 space-y-1">
                 {/* Search Bar - Mobile */}
                 <div className="relative mb-4">
                   <input
                     type="text"
                     placeholder={t('common_searchPlaceholder')}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300/50 dark:border-gray-600/50 rounded-xl bg-white/80 dark:bg-gray-800/80 focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-blue-400/30 focus:border-blue-500 dark:focus:border-blue-400 transition-all duration-200 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 shadow-sm"
                   />
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
                 </div>
 
                 {/* Navigation Items */}
@@ -234,7 +241,7 @@ const Header: React.FC<HeaderProps> = ({
                   <FadeIn key={item.name} delay={index * 0.05}>
                     <a
                       href={item.href}
-                      className="block px-3 py-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg transition-colors duration-200 font-medium"
+                      className="block px-3 py-3 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 font-medium"
                     >
                       {item.name}
                     </a>
@@ -243,16 +250,16 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* Mobile Actions */}
                 {!isAuthenticated && (
-                  <div className="pt-4 space-y-2">
+                  <div className="pt-4 space-y-3">
                     <AnimatedButton
                       onClick={onLogin}
-                      className="w-full px-3 py-2 text-center text-primary hover:bg-primary/10 rounded-lg font-medium transition-colors duration-200"
+                      className="w-full px-3 py-3 text-center text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl font-medium transition-all duration-200 border border-blue-200/50 dark:border-blue-700/50"
                     >
                       {t('auth_login')}
                     </AnimatedButton>
                     <AnimatedButton
                       onClick={onRegister}
-                      className="w-full px-3 py-2 bg-primary text-white text-center rounded-lg hover:bg-primary/90 font-medium transition-colors duration-200"
+                      className="w-full px-3 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center rounded-xl hover:from-blue-700 hover:to-purple-700 font-medium transition-all duration-200 shadow-lg"
                     >
                       {t('auth_register')}
                     </AnimatedButton>
