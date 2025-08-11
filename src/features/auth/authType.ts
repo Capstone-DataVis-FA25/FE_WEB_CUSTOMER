@@ -11,11 +11,14 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 // ## MODEL
 export interface User {
-  _id?: string; // Optional for backward compatibility
-  id: string; // New primary ID field
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
+  address?: string;
+  dateOfBirth?: string;
+  avatar?: string;
   role: UserRole;
   isVerified?: boolean; // Optional since not in response
   currentHashedRefreshToken: string | null;
@@ -37,17 +40,15 @@ export interface SignUpRequest {
   lastName: string;
 }
 
+export interface GoogleAuthRequest {
+  idToken: string;
+}
+
 // ## RESPONSE
 export interface AuthResponse {
-  code: number;
-  message: string;
-  data: {
-    user: User;
-    tokens: {
-      access_token: string;
-      refresh_token: string;
-    };
-  };
+  user: User;
+  access_token: string;
+  refresh_token: string;
 }
 
 // ## INITSTATE - Dựa theo initialState trong authSlice

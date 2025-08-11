@@ -15,8 +15,8 @@ import {
   selectVerifyMessage,
 } from './authSelector';
 import { logout, clearError, updateUserProfile, setLoading } from './authSlice';
-import { signInThunk, signUpThunk } from './authThunk';
-import type { SignInRequest, SignUpRequest, User } from './authType';
+import { signInThunk, signUpThunk, signInWithGoogleThunk } from './authThunk';
+import type { SignInRequest, SignUpRequest, GoogleAuthRequest, User } from './authType';
 
 export const useAuth = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -44,6 +44,10 @@ export const useAuth = () => {
 
   const signUp = (data: SignUpRequest) => {
     return dispatch(signUpThunk(data));
+  };
+
+  const signInWithGoogle = (data: GoogleAuthRequest) => {
+    return dispatch(signInWithGoogleThunk(data));
   };
 
   const logoutUser = () => {
@@ -82,6 +86,7 @@ export const useAuth = () => {
     // Actions - Functions để thực hiện actions
     signIn, // Function(data: SignInRequest) => Promise
     signUp, // Function(data: SignUpRequest) => Promise
+    signInWithGoogle, // Function(data: GoogleAuthRequest) => Promise
     logout: logoutUser, // Function() => void - logout và clear localStorage
     clearError: clearAuthError, // Function() => void - clear error state
     updateUserProfile: updateProfile, // Function(data: Partial<User>) => void

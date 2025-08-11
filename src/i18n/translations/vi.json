@@ -25,5 +25,8 @@
   "error_reload": "Tải lại trang",
   "loading": "Đang tải...",
   "confirm": "Xác nhận",
-  "cancel": "Hủy bỏ"
+  "cancel": "Hủy bỏ",
+  "auth_signInFailed": "Đăng nhập thất bại",
+  "auth_signUpFailed": "Đăng ký thất bại",
+  "auth_googleSignInFailed": "Google đăng nhập thất bại"
 }
