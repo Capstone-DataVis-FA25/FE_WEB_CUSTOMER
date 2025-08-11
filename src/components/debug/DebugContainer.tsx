@@ -169,10 +169,10 @@ const DebugContainer: React.FC<DebugContainerProps> = () => {
                   {user && (
                     <>
                       <div>
-                        <span className="text-blue-400">ID:</span> {user._id}
+                        <span className="text-blue-400">ID:</span> {user.id}
                       </div>
                       <div>
-                        <span className="text-blue-400">Name:</span> {user.name}
+                        <span className="text-blue-400">Name:</span> {user.firstName} {user.lastName}
                       </div>
                       <div>
                         <span className="text-blue-400">Email:</span> {user.email}
@@ -186,9 +186,9 @@ const DebugContainer: React.FC<DebugContainerProps> = () => {
                       <div>
                         <span className="text-blue-400">Status:</span>
                         <span
-                          className={user.status === 'ACTIVE' ? 'text-green-400' : 'text-red-400'}
+                          className={user.isActive ? 'text-green-400' : 'text-red-400'}
                         >
-                          {user.status}
+                          {user.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </div>
                     </>

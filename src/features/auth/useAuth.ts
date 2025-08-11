@@ -9,13 +9,13 @@ import {
   selectAuthError,
   selectUserProfile,
   selectIsAdmin,
-  selectIsCustomer,
+  selectIsUser,
   selectIsGuest,
   selectVerifyStatus,
   selectVerifyMessage,
 } from './authSelector';
-import { logout, clearError, updateUserProfile, setLoading } from './authSlice';
-import { signInThunk, signUpThunk, signInWithGoogleThunk } from './authThunk';
+import { logout, clearError, setLoading } from './authSlice';
+import { signInThunk, signUpThunk, signInWithGoogleThunk, updateProfileThunk } from './authThunk';
 import type { SignInRequest, SignUpRequest, GoogleAuthRequest, User } from './authType';
 
 export const useAuth = () => {
@@ -34,7 +34,7 @@ export const useAuth = () => {
 
   // Role checks
   const isAdmin = useSelector(selectIsAdmin);
-  const isCustomer = useSelector(selectIsCustomer);
+  const isUser = useSelector(selectIsUser);
   const isGuest = useSelector(selectIsGuest);
 
   // Actions
@@ -59,7 +59,7 @@ export const useAuth = () => {
   };
 
   const updateProfile = (data: Partial<User>) => {
-    dispatch(updateUserProfile(data));
+    dispatch(updateProfileThunk(data));
   };
 
   const setAuthLoading = (loading: boolean) => {
@@ -73,14 +73,14 @@ export const useAuth = () => {
     isLoading, // Boolean - đang loading API call
     error, // Error string hoặc null
     isAuthenticated, // Boolean - user đã login chưa
-    userRole, // String - role của user (admin/customer/guest)
+    userRole, // String - role của user (admin/user/guest)
     userProfile, // Formatted user profile object
     verifyStatus, // undefined (legacy)
     verifyMessage, // '' (legacy)
 
     // Role checks - Boolean flags
     isAdmin, // Boolean - user có phải admin không
-    isCustomer, // Boolean - user có phải customer không
+    isUser, // Boolean - user có phải user không
     isGuest, // Boolean - user có phải guest không
 
     // Actions - Functions để thực hiện actions

@@ -43,14 +43,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
       {/* Header */}
       <Header
         isAuthenticated={isAuthenticated}
-        user={
-          isAuthenticated && user
-            ? {
-                name: `${user.firstName} ${user.lastName}`,
-                email: user.email,
-              }
-            : undefined
-        }
+        user={user || undefined}
         onLogin={handleLogin}
         onRegister={handleRegister}
         onLogout={handleLogout}
