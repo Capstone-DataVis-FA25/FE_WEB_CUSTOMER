@@ -48,9 +48,6 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
-  console.log("user:", user);
-  console.log("isAuthenticated:", isAuthenticated);
-  console.log("isLoading:", isLoading);
 
   if (isLoading) {
     return <LoadingSpinner />;

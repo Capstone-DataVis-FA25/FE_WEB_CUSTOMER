@@ -13,7 +13,6 @@ interface CustomerLayoutProps {
 const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
-  console.log("user:", user);
   const { t } = useTranslation();
 
   const handleLogin = () => {

@@ -219,9 +219,9 @@ const ProfilePage: React.FC = () => {
           <div className="lg:col-span-8">
             <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
               <CardHeader className="pb-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <Avatar className="w-16 h-16 border-4 border-white/30">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0 text-center sm:text-left">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 items-center w-full">
+                    <Avatar className="w-16 h-16 border-4 border-white/30 mb-2 sm:mb-0">
                       <AvatarFallback className="text-xl font-semibold bg-white/20 text-white">
                         {userProfile.firstName.charAt(0)}
                         {userProfile.lastName.charAt(0)}
@@ -236,37 +236,39 @@ const ProfilePage: React.FC = () => {
                       </CardDescription>
                     </div>
                   </div>
-                  {!isEditing ? (
-                    <Button
-                      onClick={handleEdit}
-                      variant="outline"
-                      size="sm"
-                      className="bg-white/20 border-white/30 text-white hover:bg-white/30"
-                    >
-                      <Edit3 className="w-4 h-4 mr-2" />
-                      {t('profile_edit')}
-                    </Button>
-                  ) : (
-                    <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                    {!isEditing ? (
                       <Button
-                        onClick={handleSaveWithConfirm}
-                        size="sm"
-                        className="bg-green-500 hover:bg-green-600 text-white border-0"
-                      >
-                        <Save className="w-4 h-4 mr-2" />
-                        {t('profile_save')}
-                      </Button>
-                      <Button
-                        onClick={handleCancelWithConfirm}
+                        onClick={handleEdit}
                         variant="outline"
                         size="sm"
-                        className="bg-white/20 border-white/30 text-white hover:bg-white/30"
+                        className="bg-white/20 border-white/30 text-white hover:bg-white/30 w-full sm:w-auto"
                       >
-                        <X className="w-4 h-4 mr-2" />
-                        {t('profile_cancel')}
+                        <Edit3 className="w-4 h-4 mr-2" />
+                        {t('profile_edit')}
                       </Button>
-                    </div>
-                  )}
+                    ) : (
+                      <>
+                        <Button
+                          onClick={handleSaveWithConfirm}
+                          size="sm"
+                          className="bg-green-500 hover:bg-green-600 text-white border-0 w-full sm:w-auto"
+                        >
+                          <Save className="w-4 h-4 mr-2" />
+                          {t('profile_save')}
+                        </Button>
+                        <Button
+                          onClick={handleCancelWithConfirm}
+                          variant="outline"
+                          size="sm"
+                          className="bg-white/20 border-white/30 text-white hover:bg-white/30 w-full sm:w-auto"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          {t('profile_cancel')}
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
 
