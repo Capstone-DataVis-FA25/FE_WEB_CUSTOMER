@@ -8,9 +8,8 @@ const GOOGLE_AUTH = '/auth/google/token';
 export const authAPI = {
   signInWithEmailPassword: async (data: SignInRequest): Promise<AuthResponse> => {
     const response = await axiosPublic.post(`${SIGN_IN}`, data);
-    const responseData = response.data.data; // Extract from nested data property
+    const responseData = response.data.data;
 
-    // Return in the format expected by the slice
     return {
       user: responseData.user,
       access_token: responseData.tokens.access_token,
@@ -19,9 +18,8 @@ export const authAPI = {
   },
   signUpWithEmailPassword: async (data: SignUpRequest): Promise<AuthResponse> => {
     const response = await axiosPublic.post(`${SIGN_UP}`, data);
-    const responseData = response.data.data; // Extract from nested data property
+    const responseData = response.data.data;
 
-    // Return in the format expected by the slice
     return {
       user: responseData.user,
       access_token: responseData.tokens.access_token,
@@ -32,7 +30,7 @@ export const authAPI = {
   // Google OAuth2 with ID Token
   signInWithGoogleToken: async (data: GoogleAuthRequest): Promise<AuthResponse> => {
     const response = await axiosPublic.post(`${GOOGLE_AUTH}`, data);
-    const responseData = response.data.data; // Extract from nested data property
+    const responseData = response.data.data;
 
     return {
       user: responseData.user,
