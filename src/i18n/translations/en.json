@@ -25,5 +25,8 @@
   "error_reload": "Reload Page",
   "loading": "Loading...",
   "confirm": "Confirm",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "auth_signInFailed": "Sign in failed",
+  "auth_signUpFailed": "Sign up failed",
+  "auth_googleSignInFailed": "Google sign in failed"
 }
