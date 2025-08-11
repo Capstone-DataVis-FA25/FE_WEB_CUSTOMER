@@ -1,18 +1,41 @@
 import { axiosPublic } from '@/services/axios';
-import type { SignInRequest, SignUpRequest, AuthResponse } from './authType';
+import type { SignInRequest, SignUpRequest, GoogleAuthRequest, AuthResponse } from './authType';
 
-const SIGN_IN = '/auth/sign-in';
-const SIGN_UP = '/auth/sign-up';
-// const GOOGLE_AUTH = '/auth/google/callback';
-// const GOOGLE_SIGN_UP = '/auth/google';
+const SIGN_IN = '/auth/signin';
+const SIGN_UP = '/auth/signup';
+const GOOGLE_AUTH = '/auth/google/token';
 
 export const authAPI = {
   signInWithEmailPassword: async (data: SignInRequest): Promise<AuthResponse> => {
     const response = await axiosPublic.post(`${SIGN_IN}`, data);
-    return response.data;
+    const responseData = response.data.data;
+
+    return {
+      user: responseData.user,
+      access_token: responseData.tokens.access_token,
+      refresh_token: responseData.tokens.refresh_token,
+    };
   },
   signUpWithEmailPassword: async (data: SignUpRequest): Promise<AuthResponse> => {
     const response = await axiosPublic.post(`${SIGN_UP}`, data);
-    return response.data;
+    const responseData = response.data.data;
+
+    return {
+      user: responseData.user,
+      access_token: responseData.tokens.access_token,
+      refresh_token: responseData.tokens.refresh_token,
+    };
+  },
+
+  // Google OAuth2 with ID Token
+  signInWithGoogleToken: async (data: GoogleAuthRequest): Promise<AuthResponse> => {
+    const response = await axiosPublic.post(`${GOOGLE_AUTH}`, data);
+    const responseData = response.data.data;
+
+    return {
+      user: responseData.user,
+      access_token: responseData.tokens.access_token,
+      refresh_token: responseData.tokens.refresh_token,
+    };
   },
 };

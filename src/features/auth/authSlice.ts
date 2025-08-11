@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { AuthState, User } from './authType';
-import { signInThunk, signUpThunk } from './authThunk';
+import { signInThunk, signUpThunk, signInWithGoogleThunk } from './authThunk';
+import { t } from 'i18next';
 
 // Helper function để lấy user từ localStorage an toàn
 const getStoredUser = (): User | null => {
@@ -65,7 +66,7 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.refreshToken;
       }
       state.isAuthenticated = true;
-      
+
       localStorage.setItem('accessToken', action.payload.accessToken);
       if (action.payload.refreshToken) {
         localStorage.setItem('refreshToken', action.payload.refreshToken);
@@ -94,7 +95,7 @@ const authSlice = createSlice({
       })
       .addCase(signInThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload?.message || action.error?.message || 'Sign in failed';
+        state.error = action.payload?.message || action.error?.message || t('auth_signInFailed');
         state.user = null;
         state.accessToken = null;
         state.refreshToken = null;
@@ -122,7 +123,35 @@ const authSlice = createSlice({
       })
       .addCase(signUpThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload?.message || action.error?.message || 'Sign up failed';
+        state.error = action.payload?.message || action.error?.message || t('auth_signUpFailed');
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.isAuthenticated = false;
+      });
+
+    // Google Sign In
+    builder
+      .addCase(signInWithGoogleThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(signInWithGoogleThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.access_token;
+        state.refreshToken = action.payload.refresh_token;
+        state.isAuthenticated = true;
+        state.error = null;
+
+        // Lưu vào localStorage
+        localStorage.setItem('user', JSON.stringify(action.payload.user));
+        localStorage.setItem('accessToken', action.payload.access_token);
+        localStorage.setItem('refreshToken', action.payload.refresh_token);
+      })
+      .addCase(signInWithGoogleThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || action.error?.message || t('auth_googleSignInFailed');
         state.user = null;
         state.accessToken = null;
         state.refreshToken = null;

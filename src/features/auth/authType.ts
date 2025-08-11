@@ -10,10 +10,14 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 // ## MODEL
 export interface User {
-  _id: string;
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
+  address?: string;
+  dateOfBirth?: string;
+  avatar?: string;
   role: UserRole;
   isVerified: boolean;
   currentHashedRefreshToken: string;
@@ -35,13 +39,12 @@ export interface SignUpRequest {
   lastName: string;
 }
 
+export interface GoogleAuthRequest {
+  idToken: string;
+}
+
 // ## RESPONSE
 export interface AuthResponse {
-  data: {
-    user: User;
-    access_token: string;
-    refresh_token: string;
-  };
   user: User;
   access_token: string;
   refresh_token: string;

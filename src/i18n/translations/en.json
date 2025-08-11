@@ -71,5 +71,8 @@
   "generalSettings_title": "General Settings",
   "generalSettings_subtitle": "Customize interface and app setting options",
   "navigation_settings": "Settings",
-  "profile_emailUneditable": "Email cannot be changed"
+  "profile_emailUneditable": "Email cannot be changed",
+  "auth_signInFailed": "Sign in failed",
+  "auth_signUpFailed": "Sign up failed",
+  "auth_googleSignInFailed": "Google sign in failed"
 }

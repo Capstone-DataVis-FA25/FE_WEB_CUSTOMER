@@ -71,5 +71,8 @@
   "generalSettings_title": "Cài đặt chung",
   "generalSettings_subtitle": "Tùy chỉnh giao diện và các tùy chọn cài đặt ứng dụng",
   "navigation_settings": "Cài đặt",
-  "profile_emailUneditable": "Email không thể thay đổi"
+  "profile_emailUneditable": "Email không thể thay đổi",
+  "auth_signInFailed": "Đăng nhập thất bại",
+  "auth_signUpFailed": "Đăng ký thất bại",
+  "auth_googleSignInFailed": "Google đăng nhập thất bại"
 }
