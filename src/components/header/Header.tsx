@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  User,
   Bell,
   Menu,
   X,
@@ -15,14 +14,12 @@ import useNavigation from '@/hooks/useNavigation';
 import { LanguageSwitcher } from '../language-switcher';
 import ThemeSwitcher from '../ui/ThemeSwitcher';
 import { useTranslation } from 'react-i18next';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import type { User } from '@/features/auth/authType';
 
 interface HeaderProps {
   isAuthenticated?: boolean;
-  user?: {
-    name: string;
-    email: string;
-    avatar?: string;
-  };
+  user?: User;
   onLogin?: () => void;
   onRegister?: () => void;
   onLogout?: () => void;
@@ -145,11 +142,14 @@ const Header: React.FC<HeaderProps> = ({
                       onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
                       className="flex items-center space-x-2 p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 ring-1 ring-gray-200/50 dark:ring-gray-700/50 bg-white/50 dark:bg-gray-800/50 shadow-sm"
                     >
-                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-600 rounded-full flex items-center justify-center shadow-md">
-                        <User className="w-4 h-4 text-white" />
-                      </div>
+                      <Avatar className="w-8 h-8 ring-4 ring-blue-500/20">
+                        <AvatarImage src={user?.avatar} alt={user?.firstName} />
+                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xxl font-bold">
+                          {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
                       <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {user?.name || 'User'}
+                        {user?.firstName} {user?.lastName}
                       </span>
                       <ChevronDown
                         className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isUserDropdownOpen ? 'rotate-180' : ''}`}
@@ -161,7 +161,7 @@ const Header: React.FC<HeaderProps> = ({
                       <SlideInDown className="absolute right-0 mt-2 w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-2 z-50 ring-1 ring-black/5 dark:ring-white/5">
                         <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700/50 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-900/20 dark:to-purple-900/20 mx-2 rounded-xl">
                           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                            {user?.name}
+                            {user?.firstName} {user?.lastName}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                             {user?.email}

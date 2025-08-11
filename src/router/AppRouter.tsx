@@ -64,7 +64,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
   // Kiểm tra quyền truy cập dựa trên role
   if (user && route.roles) {
     const userRole = user.role || 'GUEST';
-    if (!route.roles.includes(userRole as 'ADMIN' | 'CUSTOMER' | 'GUEST')) {
+    if (!route.roles.includes(userRole as 'ADMIN' | 'USER' | 'GUEST')) {
       return <Navigate to="/403" replace />;
     }
   }
@@ -78,7 +78,7 @@ const LayoutWrapper: React.FC<{
   children: React.ReactNode;
 }> = ({ route, children }) => {
   switch (route.layout) {
-    case 'CUSTOMER':
+    case 'USER':
       return (
         <CustomerLayout>
           <FadeIn>{children}</FadeIn>

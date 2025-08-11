@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   User,
@@ -11,43 +11,80 @@ import {
   Edit3,
   Save,
   X,
-  ShieldCheck,
   Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import LanguageSwitcher from '@/components/language-switcher/LanguageSwitcher';
 import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
 import { useNavigation } from '@/hooks/useNavigation';
+import { updateProfileThunk } from '@/features/auth/authThunk';
+import { useAuth } from '@/features/auth/useAuth';
+import { ModalConfirm } from '@/components/ui/modal-confirm';
+import { useModal } from '@/hooks/useModal';
 import { useToast } from '@/hooks/useToast';
+import { useAppDispatch } from '@/store/hooks';
+import { useToastContext } from '@/components/providers/ToastProvider';
 
 interface UserProfile {
   id: string;
   firstName: string;
   lastName: string;
+  createdAt: string;
+  isActive: boolean;
   email: string;
-  avatar: string;
-  joinDate: string;
-  verified: boolean;
 }
 
 const ProfilePage: React.FC = () => {
   const { t } = useTranslation();
   const { goTo } = useNavigation();
-  const { showToast } = useToast();
+  const { user } = useAuth();
+  const dispatch = useAppDispatch();
+  const toast = useToast();
+  const modalConfirm = useModal();
+  const { showSuccess, showError } = useToastContext();
+  // Modal state for different actions
+  const [modalConfig, setModalConfig] = useState({
+    title: '',
+    message: '',
+    confirmText: '',
+    cancelText: '',
+    onConfirm: () => {},
+  });
 
+  useEffect(() => {
+    // Initialize form data when user changes
+    if (user) {
+      setUserProfile({
+        id: user.id || '',
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        createdAt: user.createdAt || new Date().toISOString(),
+        isActive: user.isActive || true,
+      });
+      setEditForm({
+        id: user.id || '',
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        createdAt: user.createdAt || new Date().toISOString(),
+        isActive: user.isActive || true,
+      });
+    }
+  }, [user]);
+  
   // Mock user data - in real app, this would come from auth state or API
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    id: '1',
-    firstName: 'Nguyễn',
-    lastName: 'Văn A',
-    email: 'nguyenvana@example.com',
-    avatar: '',
-    joinDate: '2023-01-01',
-    verified: true,
+    id: user?.id || '',
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    email: user?.email || '',
+    createdAt: user?.createdAt || new Date().toISOString(),
+    isActive: user?.isActive || true,
   });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -63,14 +100,24 @@ const ProfilePage: React.FC = () => {
     setEditForm(userProfile);
   };
 
-  const handleSave = () => {
-    // In real app, this would call an API to update user profile
-    setUserProfile(editForm);
-    setIsEditing(false);
-    showToast({
-      title: t('profile_updateSuccess'),
-      options: { type: 'success', message: t('profile_updateSuccessDesc') },
-    });
+  const handleSave = async () => {
+    try {
+      // Call the thunk with dispatch
+      const result = await dispatch(updateProfileThunk({
+        firstName: editForm.firstName,
+        lastName: editForm.lastName,
+      }));
+      
+      if (updateProfileThunk.fulfilled.match(result)) {
+        setUserProfile(editForm);
+        setIsEditing(false);
+        showSuccess(t('profile_updateSuccess'), t('profile_updateSuccessDesc'));
+      } else {
+        showError(t('profile_updateError'), t('profile_updateErrorDesc'));
+      }
+    } catch (_error) {
+      toast.showError(t('profile_updateError'), t('profile_updateErrorDesc'));
+    }
   };
 
   const handleInputChange = (field: keyof UserProfile, value: string) => {
@@ -78,6 +125,29 @@ const ProfilePage: React.FC = () => {
       ...prev,
       [field]: value,
     }));
+  };
+
+  // Modal action handlers
+  const handleSaveWithConfirm = () => {
+    setModalConfig({
+      title: t('profile_confirmSave'),
+      message: t('profile_confirmSaveMessage'),
+      confirmText: t('common_save'),
+      cancelText: t('common_cancel'),
+      onConfirm: handleSave,
+    });
+    modalConfirm.open();
+  };
+
+  const handleCancelWithConfirm = () => {
+    setModalConfig({
+      title: t('profile_confirmCancel'),
+      message: t('profile_confirmCancelMessage'),
+      confirmText: t('common_confirm'),
+      cancelText: t('common_cancel'),
+      onConfirm: handleCancel,
+    });
+    modalConfirm.open();
   };
 
   const navigationItems = [
@@ -141,9 +211,7 @@ const ProfilePage: React.FC = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
             {t('profile_title')}
           </h1>
-          <p className="text-gray-600 dark:text-gray-300 text-lg">
-            {t('profile_subtitle')}
-          </p>
+          <p className="text-gray-600 dark:text-gray-300 text-lg">{t('profile_subtitle')}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -154,7 +222,6 @@ const ProfilePage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <Avatar className="w-16 h-16 border-4 border-white/30">
-                      <AvatarImage src={userProfile.avatar} alt="Avatar" />
                       <AvatarFallback className="text-xl font-semibold bg-white/20 text-white">
                         {userProfile.firstName.charAt(0)}
                         {userProfile.lastName.charAt(0)}
@@ -170,9 +237,9 @@ const ProfilePage: React.FC = () => {
                     </div>
                   </div>
                   {!isEditing ? (
-                    <Button 
-                      onClick={handleEdit} 
-                      variant="outline" 
+                    <Button
+                      onClick={handleEdit}
+                      variant="outline"
                       size="sm"
                       className="bg-white/20 border-white/30 text-white hover:bg-white/30"
                     >
@@ -181,17 +248,17 @@ const ProfilePage: React.FC = () => {
                     </Button>
                   ) : (
                     <div className="flex gap-2">
-                      <Button 
-                        onClick={handleSave} 
+                      <Button
+                        onClick={handleSaveWithConfirm}
                         size="sm"
                         className="bg-green-500 hover:bg-green-600 text-white border-0"
                       >
                         <Save className="w-4 h-4 mr-2" />
                         {t('profile_save')}
                       </Button>
-                      <Button 
-                        onClick={handleCancel} 
-                        variant="outline" 
+                      <Button
+                        onClick={handleCancelWithConfirm}
+                        variant="outline"
                         size="sm"
                         className="bg-white/20 border-white/30 text-white hover:bg-white/30"
                       >
@@ -208,7 +275,6 @@ const ProfilePage: React.FC = () => {
                 <div className="mb-8 flex items-center justify-center">
                   <div className="text-center">
                     <Avatar className="w-24 h-24 mx-auto mb-4 ring-4 ring-blue-500/20">
-                      <AvatarImage src={userProfile.avatar} alt="Avatar" />
                       <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-blue-500 to-purple-500 text-white">
                         {userProfile.firstName.charAt(0)}
                         {userProfile.lastName.charAt(0)}
@@ -218,10 +284,12 @@ const ProfilePage: React.FC = () => {
                       {userProfile.firstName} {userProfile.lastName}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-300 mb-3">{userProfile.email}</p>
-                    {userProfile.verified && (
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                        <ShieldCheck className="w-3 h-3 mr-1" />
-                        {t('profile_verified')}
+                    {userProfile.isActive && (
+                      <Badge
+                        variant={userProfile.isActive ? 'default' : 'secondary'}
+                        className={userProfile.isActive ? 'bg-green-500 text-white' : ''}
+                      >
+                        {userProfile.isActive ? t('profile_active') : t('profile_inactive')}
                       </Badge>
                     )}
                   </div>
@@ -307,18 +375,18 @@ const ProfilePage: React.FC = () => {
                       {t('profile_joinDate')}
                     </span>
                     <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                      {new Date(userProfile.joinDate).toLocaleDateString('vi-VN')}
+                      {new Date(userProfile.createdAt).toLocaleDateString('vi-VN')}
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                     <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">
                       {t('profile_status')}
                     </span>
-                    <Badge 
-                      variant={userProfile.verified ? 'default' : 'secondary'}
-                      className={userProfile.verified ? 'bg-green-500 text-white' : ''}
+                    <Badge
+                      variant={userProfile.isActive ? 'default' : 'secondary'}
+                      className={userProfile.isActive ? 'bg-green-500 text-white' : ''}
                     >
-                      {userProfile.verified ? t('profile_verified') : t('profile_notVerified')}
+                      {userProfile.isActive ? t('profile_active') : t('profile_inactive')}
                     </Badge>
                   </div>
                 </div>
@@ -345,7 +413,7 @@ const ProfilePage: React.FC = () => {
                         <div className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm">
                           <item.icon className={`w-5 h-5 ${item.color}`} />
                         </div>
-                        <div>
+                        <div className="me-1 Platform">
                           <h4 className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-gray-700 dark:group-hover:text-gray-100">
                             {item.title}
                           </h4>
@@ -376,6 +444,20 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ModalConfirm
+        isOpen={modalConfirm.isOpen}
+        onClose={modalConfirm.close}
+        onConfirm={() => {
+          modalConfig.onConfirm();
+          modalConfirm.close();
+        }}
+        type="warning"
+        title={modalConfig.title}
+        message={modalConfig.message}
+        confirmText={modalConfig.confirmText}
+        cancelText={modalConfig.cancelText}
+      />
     </div>
   );
 };

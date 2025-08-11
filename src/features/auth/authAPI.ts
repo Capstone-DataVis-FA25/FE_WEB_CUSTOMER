@@ -1,9 +1,10 @@
-import { axiosPublic } from '@/services/axios';
-import type { SignInRequest, SignUpRequest, GoogleAuthRequest, AuthResponse } from './authType';
+import { axiosPrivate, axiosPublic } from '@/services/axios';
+import type { SignInRequest, SignUpRequest, GoogleAuthRequest, AuthResponse, UpdateProfileRequest, UpdateProfileResponse } from './authType';
 
 const SIGN_IN = '/auth/signin';
 const SIGN_UP = '/auth/signup';
 const GOOGLE_AUTH = '/auth/google/token';
+const UPDATE_PROFILE = '/auth/profile';
 
 export const authAPI = {
   signInWithEmailPassword: async (data: SignInRequest): Promise<AuthResponse> => {
@@ -36,6 +37,15 @@ export const authAPI = {
       user: responseData.user,
       access_token: responseData.tokens.access_token,
       refresh_token: responseData.tokens.refresh_token,
+    };
+  },
+
+  //Update Profile
+  updateProfile: async (data: UpdateProfileRequest): Promise<UpdateProfileResponse> => {
+    const response = await axiosPrivate.put(`${UPDATE_PROFILE}`, data);
+    const responseData = response.data.data;
+    return {
+      user: responseData.user,
     };
   },
 };

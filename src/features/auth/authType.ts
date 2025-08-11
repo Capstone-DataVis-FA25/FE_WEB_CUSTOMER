@@ -2,7 +2,7 @@
 
 export const UserRole = {
   ADMIN: 'ADMIN',
-  CUSTOMER: 'CUSTOMER',
+  USER: 'USER',
   GUEST: 'GUEST',
 } as const;
 
@@ -14,9 +14,6 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
-  phone?: string;
-  address?: string;
-  dateOfBirth?: string;
   avatar?: string;
   role: UserRole;
   isVerified: boolean;
@@ -58,4 +55,14 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+}
+
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+export interface UpdateProfileResponse {
+  user: User;
 }

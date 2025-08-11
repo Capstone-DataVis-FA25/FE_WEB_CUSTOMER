@@ -5,7 +5,7 @@ import Routers from '@/router/routers';
 // ================================
 
 export const UserRole = {
-  CUSTOMER: 'CUSTOMER',
+  USER: 'USER',
   ADMIN: 'ADMIN',
   GUEST: 'GUEST', // Thêm guest role
 } as const;
@@ -16,7 +16,7 @@ export const Permission = {
   // Public permissions
   VIEW_PUBLIC: 'view_public',
   
-  // Customer permissions
+  // USER permissions
   VIEW_PROFILE: 'view_profile',
   EDIT_PROFILE: 'edit_profile',
   DEMO_TEST: 'demo_test',
@@ -31,7 +31,7 @@ export type Permission = (typeof Permission)[keyof typeof Permission];
 // Role permissions mapping
 export const rolePermissions: Record<UserRole, Permission[]> = {
   [UserRole.GUEST]: [Permission.VIEW_PUBLIC],
-  [UserRole.CUSTOMER]: [
+  [UserRole.USER]: [
     Permission.VIEW_PUBLIC, 
     Permission.VIEW_PROFILE, 
     Permission.EDIT_PROFILE,
@@ -52,7 +52,7 @@ export interface RouteConfig {
   path: string;
   name: string;
   component: string;
-  layout: 'CUSTOMER' | 'ADMIN' | 'AUTH' | 'NONE';
+  layout: 'USER' | 'ADMIN' | 'AUTH' | 'NONE';
   isProtected?: boolean;
   roles?: UserRole[];
   permissions?: Permission[];
@@ -75,7 +75,7 @@ export const publicRoutes: RouteConfig[] = [
     path: Routers.HOME,
     name: 'home',
     component: 'HomePage',
-    layout: 'CUSTOMER',
+    layout: 'USER',
     isProtected: false,
     permissions: [Permission.VIEW_PUBLIC],
     meta: {
@@ -109,9 +109,9 @@ export const protectedRoutes: RouteConfig[] = [
     path: Routers.PROFILE,
     name: 'profile',
     component: 'ProfilePage',
-    layout: 'CUSTOMER',
+    layout: 'USER',
     isProtected: true,
-    roles: [UserRole.CUSTOMER],
+    roles: [UserRole.USER],
     permissions: [Permission.VIEW_PROFILE],
     meta: {
       title: 'Thông tin cá nhân',
@@ -122,9 +122,9 @@ export const protectedRoutes: RouteConfig[] = [
     path: Routers.PROFILE_CHANGE_PASSWORD,
     name: 'change-password',
     component: 'ChangePasswordPage',
-    layout: 'CUSTOMER',
+    layout: 'USER',
     isProtected: true,
-    roles: [UserRole.CUSTOMER],
+    roles: [UserRole.USER],
     permissions: [Permission.EDIT_PROFILE],
     meta: {
       title: 'Đổi mật khẩu',
@@ -136,9 +136,9 @@ export const protectedRoutes: RouteConfig[] = [
     path: Routers.PROFILE_NOTIFICATIONS,
     name: 'notification-settings',
     component: 'NotificationSettingsPage',
-    layout: 'CUSTOMER',
+    layout: 'USER',
     isProtected: true,
-    roles: [UserRole.CUSTOMER],
+    roles: [UserRole.USER],
     permissions: [Permission.EDIT_PROFILE],
     meta: {
       title: 'Cài đặt thông báo',
@@ -150,9 +150,9 @@ export const protectedRoutes: RouteConfig[] = [
     path: Routers.PROFILE_SETTINGS,
     name: 'general-settings',
     component: 'GeneralSettingsPage',
-    layout: 'CUSTOMER',
+    layout: 'USER',
     isProtected: true,
-    roles: [UserRole.CUSTOMER],
+    roles: [UserRole.USER],
     permissions: [Permission.EDIT_PROFILE],
     meta: {
       title: 'Cài đặt chung',
@@ -165,9 +165,9 @@ export const protectedRoutes: RouteConfig[] = [
     path: Routers.TOAST_DEMO,
     name: 'toast-demo',
     component: 'ToastDemoPage',
-    layout: 'CUSTOMER',
+    layout: 'USER',
     isProtected: true,
-    roles: [UserRole.CUSTOMER],
+    roles: [UserRole.USER],
     permissions: [Permission.VIEW_PROFILE],
     meta: {
       title: 'Demo Toast',
@@ -179,9 +179,9 @@ export const protectedRoutes: RouteConfig[] = [
     path: Routers.MODAL_DEMO,
     name: 'modal-demo',
     component: 'ModalConfirmDemoPage',
-    layout: 'CUSTOMER',
+    layout: 'USER',
     isProtected: true,
-    roles: [UserRole.CUSTOMER],
+    roles: [UserRole.USER],
     permissions: [Permission.DEMO_TEST],
     meta: {
       title: 'Demo Modal',
@@ -192,9 +192,9 @@ export const protectedRoutes: RouteConfig[] = [
     path: Routers.PAGINATION_DEMO,
     name: 'pagination-demo',
     component: 'PaginationDemoPage',
-    layout: 'CUSTOMER',
+    layout: 'USER',
     isProtected: true,
-    roles: [UserRole.CUSTOMER],
+    roles: [UserRole.USER],
     permissions: [Permission.DEMO_TEST],
     meta: {
       title: 'Demo Pagination',
