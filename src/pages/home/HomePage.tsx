@@ -3,14 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FadeIn, SlideInUp } from '@/theme/animation';
-import {
-  User,
-  BarChart3,
-  Activity,
-  Heart,
-  Star,
-  CheckCircle,
-} from 'lucide-react';
+import { User, BarChart3, Activity, Heart, Star, CheckCircle } from 'lucide-react';
 
 function HomePage() {
   const { t } = useTranslation();
@@ -31,7 +24,7 @@ function HomePage() {
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed mb-8">
             {t('home_subtitle')}
           </p>
-          
+
           {isAuthenticated && user && (
             <SlideInUp delay={0.2}>
               <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-2xl border border-blue-200/50 dark:border-blue-700/50 shadow-sm">
@@ -73,7 +66,7 @@ function HomePage() {
                 </div>
               </div>
             </CardHeader>
-            
+
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Usage Instructions */}

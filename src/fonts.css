@@ -1,3 +1,10 @@
+@font-face {
+  font-family: 'ShopeeDisplay';
+  src: url('./assets/fonts/ShopeeDisplay-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 /* Custom Fonts */
 
 /* Digital-7 Font */

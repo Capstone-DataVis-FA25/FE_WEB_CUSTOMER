@@ -64,9 +64,13 @@ const Header: React.FC<HeaderProps> = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <SlideInDown className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-500/20 dark:ring-blue-400/30">
-                <span className="text-white font-bold text-xl">D</span>
+            <SlideInDown className="flex items-center space-x-2">
+              <div className="w-10 h-10  rounded-xl flex items-center justify-center">
+                <img
+                  src="https://res.cloudinary.com/dfvy81evi/image/upload/v1754728440/share_logo_jtixd7.jpg"
+                  alt="Logo"
+                  className="rounded-xl"
+                />
               </div>
               <div className="hidden sm:block">
                 <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -95,8 +99,6 @@ const Header: React.FC<HeaderProps> = ({
 
             {/* Right Side Actions */}
             <div className="flex items-center space-x-3">
-
-
               {isAuthenticated ? (
                 <FadeIn delay={0.3} className="flex items-center space-x-3">
                   {/* Notifications */}
@@ -118,7 +120,8 @@ const Header: React.FC<HeaderProps> = ({
                       <Avatar className="w-8 h-8 ring-4 ring-blue-500/20">
                         <AvatarImage src={user?.avatar} alt={user?.firstName} />
                         <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xxl font-bold">
-                          {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                          {user?.firstName?.charAt(0)}
+                          {user?.lastName?.charAt(0)}
                         </AvatarFallback>
                       </Avatar>
                       <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -172,14 +175,18 @@ const Header: React.FC<HeaderProps> = ({
                           <div className="flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl transition-all duration-200 group">
                             <div className="flex items-center">
                               <Globe className="w-4 h-4 mr-3 text-emerald-500 group-hover:scale-110 transition-transform duration-200" />
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('language_title')}</span>
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {t('language_title')}
+                              </span>
                             </div>
                             <LanguageSwitcher />
                           </div>
                           <div className="flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl transition-all duration-200 group">
                             <div className="flex items-center">
                               <Palette className="w-4 h-4 mr-3 text-orange-500 group-hover:scale-110 transition-transform duration-200" />
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('theme_title')}</span>
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {t('theme_title')}
+                              </span>
                             </div>
                             <ThemeSwitcher />
                           </div>
