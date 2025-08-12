@@ -58,3 +58,4 @@ export const updateProfileThunk = createAsyncThunk<
     return rejectWithValue({ message: errorMessage });
   }
 });
+
