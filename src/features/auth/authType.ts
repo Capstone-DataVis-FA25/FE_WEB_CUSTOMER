@@ -3,7 +3,6 @@
 export const UserRole = {
   ADMIN: 'ADMIN',
   USER: 'USER', // Updated to match API response
-  CUSTOMER: 'CUSTOMER', // Keep for backward compatibility
   GUEST: 'GUEST',
 } as const;
 
@@ -15,9 +14,6 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
-  phone?: string;
-  address?: string;
-  dateOfBirth?: string;
   avatar?: string;
   role: UserRole;
   isVerified?: boolean; // Optional since not in response
@@ -62,4 +58,14 @@ export interface AuthState {
   isLoading: boolean;
   error: string | null;
   successMessage?: string | null;
+}
+
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+export interface UpdateProfileResponse {
+  user: User;
 }

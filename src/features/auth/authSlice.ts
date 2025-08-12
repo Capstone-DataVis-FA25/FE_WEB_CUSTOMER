@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { AuthState, User } from './authType';
-import { signInThunk, signUpThunk, signInWithGoogleThunk } from './authThunk';
+import { signInThunk, signUpThunk, signInWithGoogleThunk, updateProfileThunk } from './authThunk';
 import { t } from 'i18next';
 
 // Helper function để lấy user từ localStorage an toàn
@@ -45,14 +45,6 @@ const authSlice = createSlice({
     // Clear error
     clearError: state => {
       state.error = null;
-    },
-
-    // Update user profile
-    updateUserProfile: (state, action: PayloadAction<Partial<User>>) => {
-      if (state.user) {
-        state.user = { ...state.user, ...action.payload };
-        localStorage.setItem('user', JSON.stringify(state.user));
-      }
     },
 
     // Set loading manually
@@ -152,9 +144,31 @@ const authSlice = createSlice({
         state.refreshToken = null;
         state.isAuthenticated = false;
       });
+
+    // Update Profile
+    builder
+      .addCase(updateProfileThunk.pending, state => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateProfileThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.error = null;
+
+        // Lưu vào localStorage
+        localStorage.setItem('user', JSON.stringify(action.payload.user));
+      })
+      .addCase(updateProfileThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error =
+          action.payload?.message || action.error?.message || t('auth_updateProfileFailed');
+      });
   },
 });
 
-export const { logout, clearError, updateUserProfile, setLoading, setTokens } = authSlice.actions;
+export const { logout, clearError, setLoading, setTokens } = authSlice.actions;
+
+// TODO: Lỗi cái này chưa dám xóa updateUserProfile (note)
 
 export default authSlice.reducer;

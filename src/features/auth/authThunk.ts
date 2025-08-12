@@ -1,5 +1,5 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import type { AuthResponse, SignInRequest, SignUpRequest, GoogleAuthRequest } from './authType';
+import type { AuthResponse, SignInRequest, SignUpRequest, GoogleAuthRequest, UpdateProfileResponse, UpdateProfileRequest } from './authType';
 import { authAPI } from './authAPI';
 import { t } from 'i18next';
 
@@ -47,6 +47,20 @@ export const signInWithGoogleThunk = createAsyncThunk<
     const errorMessage =
       (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
       t('auth_googleSignInFailed');
+    return rejectWithValue({ message: errorMessage });
+  }
+});
+
+export const updateProfileThunk = createAsyncThunk<
+  UpdateProfileResponse,
+  UpdateProfileRequest,
+  { rejectValue: { message: string } }
+>('auth/profile', async (updateData, { rejectWithValue }) => {
+  try {
+    const response = await authAPI.updateProfile(updateData);
+    return response;
+  } catch (error: unknown) {
+    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth_updateProfileFailed');
     return rejectWithValue({ message: errorMessage });
   }
 });

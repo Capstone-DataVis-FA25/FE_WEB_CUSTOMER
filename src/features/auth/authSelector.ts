@@ -45,7 +45,7 @@ export const selectIsUserVerified = createSelector([selectUser], user => user?.i
 // ========================
 export const selectIsAdmin = createSelector([selectUserRole], role => role === 'ADMIN');
 
-export const selectIsCustomer = createSelector([selectUserRole], role => role === 'CUSTOMER');
+export const selectIsUser = createSelector([selectUserRole], role => role === 'USER');
 
 export const selectIsGuest = createSelector([selectUserRole], role => !role || role === 'GUEST');
 

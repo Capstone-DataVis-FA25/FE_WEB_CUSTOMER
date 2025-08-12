@@ -39,6 +39,35 @@ export const useNavigation = () => {
     [navigate]
   );
 
+  // Profile navigation
+  const goToProfile = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.PROFILE, options);
+    },
+    [navigate]
+  );
+
+  const goToChangePassword = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.PROFILE_CHANGE_PASSWORD, options);
+    },
+    [navigate]
+  );
+
+  const goToNotificationSettings = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.PROFILE_NOTIFICATIONS, options);
+    },
+    [navigate]
+  );
+
+  const goToGeneralSettings = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.PROFILE_SETTINGS, options);
+    },
+    [navigate]
+  );
+
   // Error page navigation
   const goToNotFound = useCallback(
     (options?: NavigationOptions) => {
@@ -74,6 +103,12 @@ export const useNavigation = () => {
     // Public routes
     goToHome,
     goToAuth,
+
+    // Profile routes
+    goToProfile,
+    goToChangePassword,
+    goToNotificationSettings,
+    goToGeneralSettings,
 
     // Error routes
     goToNotFound,

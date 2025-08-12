@@ -3,6 +3,12 @@ const Routers = {
   HOME: '/',
   AUTH: '/auth',
 
+  // Profile routes
+  PROFILE: '/profile',
+  PROFILE_CHANGE_PASSWORD: '/profile/change-password',
+  PROFILE_NOTIFICATIONS: '/profile/notifications',
+  PROFILE_SETTINGS: '/profile/settings',
+
   // Demo routes
   TOAST_DEMO: '/demo/toast',
   MODAL_DEMO: '/demo/modal',
