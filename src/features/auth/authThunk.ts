@@ -55,7 +55,7 @@ export const updateProfileThunk = createAsyncThunk<
   UpdateProfileResponse,
   UpdateProfileRequest,
   { rejectValue: { message: string } }
->('auth/profile', async (updateData, { rejectWithValue }) => {
+>('users/me/update-profile', async (updateData, { rejectWithValue }) => {
   try {
     const response = await authAPI.updateProfile(updateData);
     return response;
@@ -64,3 +64,4 @@ export const updateProfileThunk = createAsyncThunk<
     return rejectWithValue({ message: errorMessage });
   }
 });
+
