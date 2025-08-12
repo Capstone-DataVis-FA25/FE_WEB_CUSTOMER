@@ -11,6 +11,8 @@
   "home_subtitle": "Khám phá các component UI tương tác được xây dựng với React & TypeScript",
   "auth_login": "Đăng Nhập",
   "auth_register": "Đăng Ký",
+  "auth_welcomeback": "Chào mừng trở lại",
+  "auth_createAccount": "Tham gia cùng DataVis",
   "common_searchPlaceholder": "Tìm kiếm...",
   "forbidden_title": "Truy cập bị từ chối",
   "forbidden_description": "Bạn không có quyền truy cập vào trang này. Vui lòng kiểm tra tài khoản hoặc liên hệ hỗ trợ.",

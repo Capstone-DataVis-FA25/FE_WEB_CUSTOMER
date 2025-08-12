@@ -15,7 +15,7 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 export const Permission = {
   // Public permissions
   VIEW_PUBLIC: 'view_public',
-  
+
   // Customer permissions
   VIEW_PROFILE: 'view_profile',
   EDIT_PROFILE: 'edit_profile',
@@ -32,16 +32,12 @@ export type Permission = (typeof Permission)[keyof typeof Permission];
 export const rolePermissions: Record<UserRole, Permission[]> = {
   [UserRole.GUEST]: [Permission.VIEW_PUBLIC],
   [UserRole.CUSTOMER]: [
-    Permission.VIEW_PUBLIC, 
-    Permission.VIEW_PROFILE, 
-    Permission.EDIT_PROFILE,
-    Permission.DEMO_TEST
-  ],
-  [UserRole.ADMIN]: [
     Permission.VIEW_PUBLIC,
-    Permission.ADMIN_ACCESS,
-    Permission.MANAGE_USERS
+    Permission.VIEW_PROFILE,
+    Permission.EDIT_PROFILE,
+    Permission.DEMO_TEST,
   ],
+  [UserRole.ADMIN]: [Permission.VIEW_PUBLIC, Permission.ADMIN_ACCESS, Permission.MANAGE_USERS],
 };
 
 // ================================
@@ -97,6 +93,38 @@ export const authRoutes: RouteConfig[] = [
     meta: {
       title: 'Đăng nhập / Đăng ký',
       description: 'Đăng nhập hoặc tạo tài khoản mới',
+      hideFromNav: true,
+    },
+  },
+];
+
+export const sendEmailVerifySuccess: RouteConfig[] = [
+  {
+    path: Routers.SEND_EMAIL_SUCCESS,
+    name: 'sendverify',
+    component: 'SendEmailSuccessPage',
+    layout: 'NONE',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: '',
+      description: '',
+      hideFromNav: true,
+    },
+  },
+];
+
+export const verifyEmailSuccess: RouteConfig[] = [
+  {
+    path: Routers.VERIFY_EMAIL_SUCCESS,
+    name: 'verify',
+    component: 'VerifyEmailSuccessPage',
+    layout: 'NONE',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: '',
+      description: '',
       hideFromNav: true,
     },
   },
@@ -183,6 +211,8 @@ export const allRoutes: RouteConfig[] = [
   ...authRoutes,
   ...protectedRoutes,
   ...errorRoutes,
+  ...verifyEmailSuccess,
+  ...sendEmailVerifySuccess,
 ];
 
 // ================================
@@ -194,9 +224,7 @@ export const getRouteByPath = (path: string): RouteConfig | undefined => {
 };
 
 export const getRoutesByRole = (role: UserRole): RouteConfig[] => {
-  return allRoutes.filter(route => 
-    !route.roles || route.roles.includes(role)
-  );
+  return allRoutes.filter(route => !route.roles || route.roles.includes(role));
 };
 
 export const hasPermission = (userRole: UserRole, permission: Permission): boolean => {
@@ -211,9 +239,7 @@ export const hasRouteAccess = (userRole: UserRole, route: RouteConfig): boolean 
 
   // Kiểm tra permission
   if (route.permissions) {
-    return route.permissions.some(permission => 
-      hasPermission(userRole, permission)
-    );
+    return route.permissions.some(permission => hasPermission(userRole, permission));
   }
 
   // Nếu không có permission, chỉ kiểm tra role
@@ -221,9 +247,7 @@ export const hasRouteAccess = (userRole: UserRole, route: RouteConfig): boolean 
 };
 
 export const getNavigationItems = (userRole: UserRole): RouteConfig[] => {
-  return allRoutes.filter(route => 
-    !route.meta?.hideFromNav && hasRouteAccess(userRole, route)
-  );
+  return allRoutes.filter(route => !route.meta?.hideFromNav && hasRouteAccess(userRole, route));
 };
 
 export default allRoutes;

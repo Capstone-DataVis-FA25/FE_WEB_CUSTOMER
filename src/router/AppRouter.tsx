@@ -1,9 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import {
-  allRoutes,
-  type RouteConfig,
-} from '@/config/routes';
+import { allRoutes, type RouteConfig } from '@/config/routes';
 import CustomerLayout from '../components/layout/CustomerLayout';
 import { FadeIn } from '../theme/animation';
 import { ErrorBoundaryClass } from '@/components/error/ErrorBoundary';
@@ -22,6 +19,8 @@ const componentMap = {
   ToastDemoPage: lazy(() => import('../pages/demo/ToastDemo')),
   ModalConfirmDemoPage: lazy(() => import('../pages/demo/ModalConfirmDemo')),
   PaginationDemoPage: lazy(() => import('../pages/demo/PaginationDemo')),
+  VerifyEmailSuccessPage: lazy(() => import('../pages/verify/VerifyEmailSuccessPage')),
+  SendEmailSuccessPage: lazy(() => import('../pages/verify/SendEmailSuccessPage')),
 };
 
 // ================================
@@ -43,9 +42,9 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
-  console.log("user:", user);
-  console.log("isAuthenticated:", isAuthenticated);
-  console.log("isLoading:", isLoading);
+  console.log('user:', user);
+  console.log('isAuthenticated:', isAuthenticated);
+  console.log('isLoading:', isLoading);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -123,7 +122,7 @@ const AppRouter: React.FC = () => {
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
-        <DebugContainer/>
+        <DebugContainer />
       </BrowserRouter>
     </ErrorBoundaryClass>
   );

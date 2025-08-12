@@ -18,6 +18,20 @@ export const useNavigation = () => {
     [navigate]
   );
 
+  const goToSendEmailVerify = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.SEND_EMAIL_SUCCESS, options);
+    },
+    [navigate]
+  );
+
+  const goToVerifyEmailSuccess = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.VERIFY_EMAIL_SUCCESS, options);
+    },
+    [navigate]
+  );
+
   const goToAuth = useCallback(
     (mode: 'login' | 'register' = 'login', options?: NavigationOptions) => {
       navigate(`${Routers.AUTH}?mode=${mode}`, options);
@@ -69,6 +83,10 @@ export const useNavigation = () => {
     goBack,
     goForward,
     goTo,
+
+    // Verify
+    goToSendEmailVerify,
+    goToVerifyEmailSuccess,
   };
 };
 

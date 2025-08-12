@@ -31,7 +31,7 @@ export const LanguageSwitcher: React.FC = () => {
       <Button
         variant="outline"
         size="sm"
-        className="flex items-center gap-2 bg-white border-gray-200 text-gray-700 hover:bg-gray-50 transition-all duration-200"
+        className="flex items-center gap-2 bg-primary border-gray-200 text-accent hover:bg-primary transition-all duration-200"
         onClick={() => setIsOpen(!isOpen)}
       >
         <Globe className="w-4 h-4 text-accent hover:text-secondary" />

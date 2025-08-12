@@ -49,6 +49,8 @@ export interface AuthResponse {
   user: User;
   access_token: string;
   refresh_token: string;
+  verify_token?: string;
+  message?: string;
 }
 
 // ## INITSTATE - Dựa theo initialState trong authSlice
@@ -59,4 +61,5 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  successMessage?: string | null;
 }

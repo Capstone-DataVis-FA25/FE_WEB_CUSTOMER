@@ -20,6 +20,7 @@ const initialState: AuthState = {
   isAuthenticated: !!localStorage.getItem('accessToken'),
   isLoading: false,
   error: null,
+  successMessage: null,
 };
 
 const authSlice = createSlice({
@@ -96,10 +97,6 @@ const authSlice = createSlice({
       .addCase(signInThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload?.message || action.error?.message || 'Sign in failed';
-        // state.user = null;
-        // state.accessToken = null;
-        // state.refreshToken = null;
-        // state.isAuthenticated = false;
       });
 
     // Sign Up
@@ -115,6 +112,7 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.refresh_token;
         state.isAuthenticated = true;
         state.error = null;
+        state.successMessage = action.payload.message;
 
         // Lưu vào localStorage
         localStorage.setItem('user', JSON.stringify(action.payload.user));

@@ -26,7 +26,6 @@ export const signUpThunk = createAsyncThunk<
 >('auth/signUp', async (signUpData, { rejectWithValue }) => {
   try {
     const response = await authAPI.signUpWithEmailPassword(signUpData);
-    console.log(`Giá trị response: ${JSON.stringify(response, null, 2)}`);
     return response;
   } catch (error: unknown) {
     const errorMessage =

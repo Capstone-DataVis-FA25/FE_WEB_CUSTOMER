@@ -11,6 +11,8 @@
   "home_subtitle": "Explore interactive UI components built with React & TypeScript",
   "auth_login": "Login",
   "auth_register": "Register",
+  "auth_welcomeback": "Welcome back",
+  "auth_createAccount": "Join with DataVis",
   "common_searchPlaceholder": "Search...",
   "forbidden_title": "Access Forbidden",
   "forbidden_description": "You do not have permission to access this page. Please check your account or contact support.",

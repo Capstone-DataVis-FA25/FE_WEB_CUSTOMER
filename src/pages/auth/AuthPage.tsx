@@ -11,13 +11,15 @@ import { useAuth } from '@/features/auth/useAuth';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import { useTranslation } from 'react-i18next';
 import { GoogleLogin } from '@react-oauth/google';
+import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
+import LanguageSwitcher from '@/components/language-switcher';
 
 interface AuthPageProps {
   onBack?: () => void;
 }
 
 const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
-  const { signIn, signUp, signInWithGoogle, user, isAuthenticated, isLoading, error, clearError } =
+  const { signIn, signUp, signInWithGoogle, user, isAuthenticated, isLoading, successMessage } =
     useAuth();
 
   const [isLogin, setIsLogin] = useState(true);
@@ -63,16 +65,20 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   };
 
   const [formData, setFormData] = useState(getPersistedFormData());
-  // const [validationErrors, setValidationErrors] = useState<string[]>([]);
-
-  const { goToHome } = useNavigation();
+  const { goToHome, goToSendEmailVerify, goToAuth } = useNavigation();
   const { showError, showSuccess } = useToastContext();
   const { t } = useTranslation();
 
   // Chỉ điều hướng khi thành công
   useEffect(() => {
     if (isAuthenticated && user && !hasShownSuccessToast.current) {
-      goToHome();
+      if (user.isVerified) {
+        goToHome();
+      } else if (successMessage != null) {
+        goToSendEmailVerify();
+      } else {
+        goToAuth();
+      }
     }
   }, [isAuthenticated, user, goToHome]);
 
@@ -125,7 +131,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     const validationError = validateForm();
     if (validationError) {
       showError('Lỗi xác thực', validationError, 3000);
-      return; // Dừng ngay, không set state gì
+      return;
     }
 
     try {
@@ -225,6 +231,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
         }}
       >
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 "></div>
+        {/* Switcher buttons fixed top right */}
+        <div className="absolute top-6 left-8 flex gap-4 z-50">
+          <FadeIn delay={0.25}>
+            <ThemeSwitcher />
+          </FadeIn>
+          <FadeIn delay={0.25}>
+            <LanguageSwitcher />
+          </FadeIn>
+        </div>
       </div>
 
       {/* Form Side - Right */}
@@ -251,10 +266,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                 </div>
               </ScaleIn>
               <h2 className="text-3xl font-bold text-foreground mb-2 transition-all duration-300">
-                {isLogin ? t('auth_loginTitle') : t('auth_registerTitle')}
+                {isLogin ? t('auth_login') : t('auth_register')}
               </h2>
               <p className="text-muted-foreground transition-colors duration-300">
-                {isLogin ? t('auth_welcomeBack') : t('auth_createAccount')}
+                {isLogin ? t('auth_welcomeback') : t('auth_createAccount')}
               </p>
             </div>
 
@@ -269,7 +284,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                       <Input
                         id="firstName"
                         type="text"
-                        name="firstName" // ✅ ĐÚNG!
+                        name="firstName"
                         value={formData.firstName}
                         onChange={handleInputChange}
                         className="pl-10 transition-all duration-200 hover:border-secondary/50 focus:border-secondary"
@@ -464,7 +479,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                   setIsLogin(!isLogin);
                   // setLocalError(''); // Clear error khi chuyển mode
                 }}
-                className="p-0 ml-2 h-auto font-semibold transition-colors duration-200 hover:text-secondary"
+                className="p-0 ml-2 h-auto font-semibold transition-colors duration-200 text-accent hover:text-secondary"
                 disabled={isLoading}
               >
                 {isLogin ? t('auth_registerNow') : t('auth_loginNow')}
