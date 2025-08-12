@@ -7,9 +7,7 @@ const getApiBackendUrl = () => {
     );
   }
 
-  return (
-    import.meta.env.VITE_APP_BACKEND_CUSTOMER_URL_DEVELOPMENT || 'http://localhost:4000/'
-  );
+  return import.meta.env.VITE_APP_BACKEND_CUSTOMER_URL_DEVELOPMENT || 'http://localhost:4000/';
 };
 
 export default getApiBackendUrl;
