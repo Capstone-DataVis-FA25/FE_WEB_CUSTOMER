@@ -15,6 +15,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
 import LanguageSwitcher from '@/components/language-switcher/LanguageSwitcher';
 import { useToast } from '@/hooks/useToast';
+import { useModalConfirm } from '@/hooks/useModal';
+import { ModalConfirm } from '@/components/ui/modal-confirm';
+import { useToastContext } from '@/components/providers/ToastProvider';
+import { useAuth } from '@/features/auth/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 interface GeneralSettings {
   timezone: string;
@@ -27,6 +32,10 @@ interface GeneralSettings {
 
 const GeneralSettingsPage: React.FC = () => {
   const { showToast } = useToast();
+  const modalConfirm = useModalConfirm();
+  const { showSuccess, showError } = useToastContext();
+  const { user, deleteUser, deleteUserStatus, deleteUserError, logout } = useAuth();
+  const navigate = useNavigate();
 
   const [settings, setSettings] = useState<GeneralSettings>({
     timezone: 'Asia/Ho_Chi_Minh',
@@ -38,6 +47,7 @@ const GeneralSettingsPage: React.FC = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [canDelete, setCanDelete] = useState(false);
 
   const timezones = [
     { value: 'Asia/Ho_Chi_Minh', label: 'Việt Nam (UTC+7)' },
@@ -119,13 +129,20 @@ const GeneralSettingsPage: React.FC = () => {
   };
 
   const handleDeleteAccount = () => {
-    showToast({
-      title: 'Cảnh báo',
-      options: { 
-        type: 'warning', 
-        message: 'Chức năng này sẽ được triển khai sau. Vui lòng liên hệ hỗ trợ.' 
-      },
+    setCanDelete(false);
+    modalConfirm.openConfirm(async () => {
+      if (user?.id) {
+        const result = await deleteUser(user.id);
+        if (result.type.endsWith('/fulfilled')) {
+          showSuccess('Tài khoản đã được xóa', 'Tài khoản và dữ liệu của bạn đã bị xóa vĩnh viễn');
+          logout();
+          navigate('/');
+        } else {
+          showError('Lỗi', deleteUserError || 'Không thể xóa tài khoản');
+        }
+      }
     });
+    setTimeout(() => setCanDelete(true), 10000);
   };
 
   const ToggleSwitch: React.FC<{ checked: boolean; onChange: () => void; disabled?: boolean }> = ({
@@ -422,6 +439,19 @@ const GeneralSettingsPage: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Modal xác nhận xóa tài khoản */}
+      <ModalConfirm
+        isOpen={modalConfirm.isOpen}
+        onClose={modalConfirm.close}
+        onConfirm={modalConfirm.confirm}
+        loading={modalConfirm.isLoading || !canDelete}
+        type="danger"
+        title="Xác nhận xóa tài khoản"
+        message="Bạn có chắc chắn muốn xóa tài khoản? Hành động này sẽ không thể hoàn tác. Bạn có 10 giây để suy nghĩ trước khi xác nhận."
+        confirmText="Xóa"
+        cancelText="Hủy"
+      />
     </div>
   );
 };

@@ -49,4 +49,16 @@ export const authAPI = {
       user: responseData.user,
     };
   },
+
+  deleteUser: async (userId: string): Promise<{ message: string }> => {
+    // Lấy accessToken từ localStorage
+    const accessToken = localStorage.getItem('accessToken');
+    const response = await axiosPublic.delete(`/users/${userId}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    return { message: response.data.message };
+
+  },
 };
