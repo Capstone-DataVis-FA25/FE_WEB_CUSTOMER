@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FadeIn, SlideInRight, ScaleIn } from '../../theme/animation';
-import useNavigation from '@/hooks/useNavigation';
+import { useNavigation } from '@/hooks/useNavigation';
 import { useAuth } from '@/features/auth/useAuth';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import { useTranslation } from 'react-i18next';
@@ -47,7 +47,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   });
   // const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  const { goToHome } = useNavigation();
+  const { goTo, goToHome } = useNavigation();
   const { showSuccess, showError } = useToastContext();
   const { t } = useTranslation();
 
@@ -366,6 +366,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                     type="button"
                     variant="link"
                     className="p-0 h-auto text-sm text-primary hover:text-primary/80"
+                    onClick={() => goTo('/auth/forgot-password')}
                   >
                     {t('auth_forgotPasswordLink')}
                   </Button>

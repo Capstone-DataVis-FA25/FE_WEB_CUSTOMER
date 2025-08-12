@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Shield, CheckCircle, X } from 'lucide-react';
+import { Eye, EyeOff, Lock, Shield, CheckCircle, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/features/auth/useAuth';
+import { changePasswordThunk } from '@/features/auth/authThunk';
+import { useDispatch } from 'react-redux';
+import type { AppDispatch } from '@/store/store';
 
 interface PasswordFormData {
   currentPassword: string;
@@ -15,6 +19,7 @@ interface PasswordFormData {
 const ChangePasswordPage: React.FC = () => {
   const { goTo } = useNavigation();
   const { showToast } = useToast();
+  const dispatch = useDispatch<AppDispatch>();
 
   const [formData, setFormData] = useState<PasswordFormData>({
     currentPassword: '',
@@ -110,8 +115,13 @@ const ChangePasswordPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Gọi API thực để đổi mật khẩu
+      await dispatch(
+        changePasswordThunk({
+          oldPassword: formData.currentPassword,
+          newPassword: formData.newPassword,
+        })
+      ).unwrap();
 
       showToast({
         title: 'Thành công',
@@ -129,10 +139,15 @@ const ChangePasswordPage: React.FC = () => {
       setTimeout(() => {
         goTo('/profile');
       }, 1500);
-    } catch (_error) {
+    } catch (error: unknown) {
       showToast({
         title: 'Lỗi',
-        options: { type: 'error', message: 'Có lỗi xảy ra khi đổi mật khẩu' },
+        options: {
+          type: 'error',
+          message:
+            (error as { message?: string })?.message ||
+            'Có lỗi xảy ra khi đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu hiện tại.',
+        },
       });
     } finally {
       setIsLoading(false);
@@ -152,9 +167,7 @@ const ChangePasswordPage: React.FC = () => {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Đổi mật khẩu
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Đổi mật khẩu</h1>
           <p className="text-gray-600 dark:text-gray-300">
             Cập nhật mật khẩu để bảo mật tài khoản của bạn
           </p>
@@ -242,8 +255,8 @@ const ChangePasswordPage: React.FC = () => {
                               passwordStrength.color === 'red'
                                 ? 'text-red-600'
                                 : passwordStrength.color === 'yellow'
-                                ? 'text-yellow-600'
-                                : 'text-green-600'
+                                  ? 'text-yellow-600'
+                                  : 'text-green-600'
                             }`}
                           >
                             {passwordStrength.text}
@@ -255,8 +268,8 @@ const ChangePasswordPage: React.FC = () => {
                               passwordStrength.color === 'red'
                                 ? 'bg-red-500 w-1/3'
                                 : passwordStrength.color === 'yellow'
-                                ? 'bg-yellow-500 w-2/3'
-                                : 'bg-green-500 w-full'
+                                  ? 'bg-yellow-500 w-2/3'
+                                  : 'bg-green-500 w-full'
                             }`}
                           />
                         </div>
@@ -311,14 +324,10 @@ const ChangePasswordPage: React.FC = () => {
 
                   {/* Submit Button */}
                   <div className="flex gap-4 pt-4">
-                    <Button
-                      type="submit"
-                      disabled={isLoading}
-                      className="flex-1"
-                    >
+                    <Button type="submit" disabled={isLoading} className="flex-1">
                       {isLoading ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                           Đang cập nhật...
                         </>
                       ) : (

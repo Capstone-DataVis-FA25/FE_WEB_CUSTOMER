@@ -15,7 +15,7 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 export const Permission = {
   // Public permissions
   VIEW_PUBLIC: 'view_public',
-  
+
   // USER permissions
   VIEW_PROFILE: 'view_profile',
   EDIT_PROFILE: 'edit_profile',
@@ -32,8 +32,8 @@ export type Permission = (typeof Permission)[keyof typeof Permission];
 export const rolePermissions: Record<UserRole, Permission[]> = {
   [UserRole.GUEST]: [Permission.VIEW_PUBLIC],
   [UserRole.USER]: [
-    Permission.VIEW_PUBLIC, 
-    Permission.VIEW_PROFILE, 
+    Permission.VIEW_PUBLIC,
+    Permission.VIEW_PROFILE,
     Permission.EDIT_PROFILE,
     Permission.DEMO_TEST
   ],
@@ -97,6 +97,32 @@ export const authRoutes: RouteConfig[] = [
     meta: {
       title: 'Đăng nhập / Đăng ký',
       description: 'Đăng nhập hoặc tạo tài khoản mới',
+      hideFromNav: true,
+    },
+  },
+  {
+    path: Routers.FORGOT_PASSWORD,
+    name: 'forgot-password',
+    component: 'ForgotPasswordPage',
+    layout: 'AUTH',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Quên mật khẩu',
+      description: 'Yêu cầu reset mật khẩu',
+      hideFromNav: true,
+    },
+  },
+  {
+    path: Routers.RESET_PASSWORD,
+    name: 'reset-password',
+    component: 'ResetPasswordPage',
+    layout: 'AUTH',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Reset mật khẩu',
+      description: 'Tạo mật khẩu mới',
       hideFromNav: true,
     },
   },
@@ -251,7 +277,7 @@ export const getRouteByPath = (path: string): RouteConfig | undefined => {
 };
 
 export const getRoutesByRole = (role: UserRole): RouteConfig[] => {
-  return allRoutes.filter(route => 
+  return allRoutes.filter(route =>
     !route.roles || route.roles.includes(role)
   );
 };
@@ -268,7 +294,7 @@ export const hasRouteAccess = (userRole: UserRole, route: RouteConfig): boolean 
 
   // Kiểm tra permission
   if (route.permissions) {
-    return route.permissions.some(permission => 
+    return route.permissions.some(permission =>
       hasPermission(userRole, permission)
     );
   }
@@ -278,7 +304,7 @@ export const hasRouteAccess = (userRole: UserRole, route: RouteConfig): boolean 
 };
 
 export const getNavigationItems = (userRole: UserRole): RouteConfig[] => {
-  return allRoutes.filter(route => 
+  return allRoutes.filter(route =>
     !route.meta?.hideFromNav && hasRouteAccess(userRole, route)
   );
 };

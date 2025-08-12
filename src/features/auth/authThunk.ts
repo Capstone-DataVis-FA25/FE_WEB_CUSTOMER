@@ -58,3 +58,43 @@ export const updateProfileThunk = createAsyncThunk<
     return rejectWithValue({ message: errorMessage });
   }
 });
+
+export const changePasswordThunk = createAsyncThunk<
+  { message: string },
+  { oldPassword: string; newPassword: string },
+  { rejectValue: { message: string } }
+>('auth/changePassword', async (changeData, { rejectWithValue }) => {
+  try {
+    await authAPI.changePassword(changeData);
+    return { message: 'Mật khẩu đã được thay đổi thành công' };
+  } catch (error: unknown) {
+    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth_changePasswordFailed');
+    return rejectWithValue({ message: errorMessage });
+  }
+});
+
+export const forgotPasswordThunk = createAsyncThunk<
+  void,
+  { email: string },
+  { rejectValue: { message: string } }
+>('auth/forgotPassword', async (forgotData, { rejectWithValue }) => {
+  try {
+    await authAPI.forgotPassword(forgotData);
+  } catch (error: unknown) {
+    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth_forgotPasswordFailed');
+    return rejectWithValue({ message: errorMessage });
+  }
+});
+
+export const resetPasswordThunk = createAsyncThunk<
+  void,
+  { password: string; token: string },
+  { rejectValue: { message: string } }
+>('auth/resetPassword', async (resetData, { rejectWithValue }) => {
+  try {
+    await authAPI.resetPassword(resetData);
+  } catch (error: unknown) {
+    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth_resetPasswordFailed');
+    return rejectWithValue({ message: errorMessage });
+  }
+});

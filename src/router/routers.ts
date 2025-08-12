@@ -2,6 +2,8 @@ const Routers = {
   // Public routes
   HOME: '/',
   AUTH: '/auth',
+  FORGOT_PASSWORD: '/auth/forgot-password',
+  RESET_PASSWORD: '/auth/reset-password',
 
   // Profile routes
   PROFILE: '/profile',

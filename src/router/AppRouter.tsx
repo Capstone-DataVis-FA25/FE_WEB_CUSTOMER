@@ -1,9 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import {
-  allRoutes,
-  type RouteConfig,
-} from '@/config/routes';
+import { allRoutes, type RouteConfig } from '@/config/routes';
 import CustomerLayout from '../components/layout/CustomerLayout';
 import { FadeIn } from '../theme/animation';
 import { ErrorBoundaryClass } from '@/components/error/ErrorBoundary';
@@ -17,6 +14,8 @@ import DebugContainer from '@/components/debug/DebugContainer';
 const componentMap = {
   HomePage: lazy(() => import('../pages/home/HomePage')),
   AuthPage: lazy(() => import('../pages/auth/AuthPage')),
+  ForgotPasswordPage: lazy(() => import('../pages/auth/ForgotPasswordPage')),
+  ResetPasswordPage: lazy(() => import('../pages/auth/ResetPasswordPage')),
   NotFoundPage: lazy(() => import('../pages/not-found/NotFoundPage')),
   ForbiddenPage: lazy(() => import('../pages/forbidden/ForbiddenPage')),
   ToastDemoPage: lazy(() => import('../pages/demo/ToastDemo')),
@@ -125,7 +124,7 @@ const AppRouter: React.FC = () => {
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
-        <DebugContainer/>
+        <DebugContainer />
       </BrowserRouter>
     </ErrorBoundaryClass>
   );
