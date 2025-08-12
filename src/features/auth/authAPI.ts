@@ -4,6 +4,9 @@ import type { SignInRequest, SignUpRequest, GoogleAuthRequest, AuthResponse, Upd
 const SIGN_IN = '/auth/signin';
 const SIGN_UP = '/auth/signup';
 const GOOGLE_AUTH = '/auth/google/token';
+const CHANGE_PASSWORD = '/users/me/change-password';
+const FORGOT_PASSWORD = '/auth/forgot-password';
+const RESET_PASSWORD = '/auth/reset-password';
 const UPDATE_PROFILE = 'users/me/update-profile';
 
 export const authAPI = {
@@ -49,4 +52,25 @@ export const authAPI = {
       user: responseData.user,
     };
   },
+  //Change password
+  changePassword: async (data: { oldPassword: string; newPassword: string }): Promise<void> => {
+    await axiosPrivate.patch(`${CHANGE_PASSWORD}`, {
+      old_password: data.oldPassword,
+      new_password: data.newPassword,
+      confirm_password: data.newPassword,
+    });
+  },
+  // Forgot Password
+  forgotPassword: async (data: { email: string }): Promise<void> => {
+    await axiosPublic.post(`${FORGOT_PASSWORD}`, data);
+  },
+
+  // Reset Password
+  resetPassword: async (data: { password: string; token: string }): Promise<void> => {
+    await axiosPublic.post(`${RESET_PASSWORD}`, {
+      newPassword: data.password,
+      token: data.token,
+    });
+  },
 };
+

@@ -1,6 +1,14 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { AuthState, User } from './authType';
-import { signInThunk, signUpThunk, signInWithGoogleThunk, updateProfileThunk } from './authThunk';
+import {
+  signInThunk,
+  signUpThunk,
+  signInWithGoogleThunk,
+  updateProfileThunk,
+  changePasswordThunk,
+  forgotPasswordThunk,
+  resetPasswordThunk
+} from './authThunk';
 import { t } from 'i18next';
 
 // Helper function để lấy user từ localStorage an toàn
@@ -163,6 +171,51 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error =
           action.payload?.message || action.error?.message || t('auth_updateProfileFailed');
+      });
+
+    // Change Password
+    builder
+      .addCase(changePasswordThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(changePasswordThunk.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(changePasswordThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || action.error?.message || t('auth_changePasswordFailed');
+      });
+
+    // Forgot Password
+    builder
+      .addCase(forgotPasswordThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(forgotPasswordThunk.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(forgotPasswordThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || action.error?.message || t('auth_forgotPasswordFailed');
+      });
+
+    // Reset Password
+    builder
+      .addCase(resetPasswordThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(resetPasswordThunk.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(resetPasswordThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || action.error?.message || t('auth_resetPasswordFailed');
       });
   },
 });
