@@ -39,7 +39,7 @@ const ResetPasswordPage: React.FC = () => {
 
   useEffect(() => {
     if (!token) {
-      setTokenError('Token reset password không hợp lệ hoặc đã hết hạn');
+      setTokenError(t('reset_password_invalid_token'));
     }
   }, [token]);
 
