@@ -1,4 +1,4 @@
-import { MdEmail, MdCheckCircle, MdOpenInNew } from 'react-icons/md';
+import { MdEmail, MdCheckCircle } from 'react-icons/md';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { SlideInDown } from '@/theme/animation';
