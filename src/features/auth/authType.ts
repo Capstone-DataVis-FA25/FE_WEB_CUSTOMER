@@ -2,7 +2,7 @@
 
 export const UserRole = {
   ADMIN: 'ADMIN',
-  USER: 'USER',
+  USER: 'USER', // Updated to match API response
   GUEST: 'GUEST',
 } as const;
 
@@ -16,8 +16,8 @@ export interface User {
   email: string;
   avatar?: string;
   role: UserRole;
-  isVerified: boolean;
-  currentHashedRefreshToken: string;
+  isVerified?: boolean; // Optional since not in response
+  currentHashedRefreshToken: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -45,6 +45,8 @@ export interface AuthResponse {
   user: User;
   access_token: string;
   refresh_token: string;
+  verify_token?: string;
+  message?: string;
 }
 
 // ## INITSTATE - Dựa theo initialState trong authSlice
@@ -55,6 +57,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  successMessage?: string | null;
 }
 
 export interface UpdateProfileRequest {

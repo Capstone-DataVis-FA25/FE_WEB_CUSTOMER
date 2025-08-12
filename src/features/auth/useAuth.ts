@@ -13,6 +13,7 @@ import {
   selectIsGuest,
   selectVerifyStatus,
   selectVerifyMessage,
+  selectAuthSuccessMessage,
 } from './authSelector';
 import { logout, clearError, setLoading } from './authSlice';
 import { signInThunk, signUpThunk, signInWithGoogleThunk, updateProfileThunk } from './authThunk';
@@ -31,6 +32,7 @@ export const useAuth = () => {
   const userProfile = useSelector(selectUserProfile);
   const verifyStatus = useSelector(selectVerifyStatus);
   const verifyMessage = useSelector(selectVerifyMessage);
+  const successMessage = useSelector(selectAuthSuccessMessage);
 
   // Role checks
   const isAdmin = useSelector(selectIsAdmin);
@@ -77,6 +79,7 @@ export const useAuth = () => {
     userProfile, // Formatted user profile object
     verifyStatus, // undefined (legacy)
     verifyMessage, // '' (legacy)
+    successMessage,
 
     // Role checks - Boolean flags
     isAdmin, // Boolean - user có phải admin không

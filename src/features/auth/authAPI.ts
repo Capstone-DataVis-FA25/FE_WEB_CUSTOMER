@@ -23,11 +23,12 @@ export const authAPI = {
   signUpWithEmailPassword: async (data: SignUpRequest): Promise<AuthResponse> => {
     const response = await axiosPublic.post(`${SIGN_UP}`, data);
     const responseData = response.data.data;
-
+    console.log(`Dữ liệu response data: ${JSON.stringify(responseData, null, 2)}`);
     return {
       user: responseData.user,
       access_token: responseData.tokens.access_token,
       refresh_token: responseData.tokens.refresh_token,
+      message: responseData.message,
     };
   },
 

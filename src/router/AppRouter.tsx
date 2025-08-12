@@ -21,7 +21,8 @@ const componentMap = {
   ToastDemoPage: lazy(() => import('../pages/demo/ToastDemo')),
   ModalConfirmDemoPage: lazy(() => import('../pages/demo/ModalConfirmDemo')),
   PaginationDemoPage: lazy(() => import('../pages/demo/PaginationDemo')),
-  // Profile pages
+  VerifyEmailSuccessPage: lazy(() => import('../pages/verify/VerifyEmailSuccessPage')),
+  SendEmailSuccessPage: lazy(() => import('../pages/verify/SendEmailSuccessPage')),
   ProfilePage: lazy(() => import('../pages/profile/ProfilePage')),
   ChangePasswordPage: lazy(() => import('../pages/profile/ChangePasswordPage')),
   NotificationSettingsPage: lazy(() => import('../pages/profile/NotificationSettingsPage')),
@@ -47,6 +48,10 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
+
+  console.log('user:', user);
+  console.log('isAuthenticated:', isAuthenticated);
+  console.log('isLoading:', isLoading);
 
   if (isLoading) {
     return <LoadingSpinner />;
