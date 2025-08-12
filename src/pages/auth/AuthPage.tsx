@@ -6,11 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FadeIn, SlideInRight, ScaleIn } from '../../theme/animation';
-import { useNavigation } from '@/hooks/useNavigation';
 import { useAuth } from '@/features/auth/useAuth';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import { useTranslation } from 'react-i18next';
 import { GoogleLogin } from '@react-oauth/google';
+import useNavigation from '@/hooks/useNavigation';
 
 interface AuthPageProps {
   onBack?: () => void;

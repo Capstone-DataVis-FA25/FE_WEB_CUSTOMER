@@ -10,6 +10,7 @@ import { forgotPasswordThunk } from '@/features/auth/authThunk';
 import { validateEmail } from '@/utils/validation';
 import { useAuth } from '@/features/auth/useAuth';
 import { useToastContext } from '@/components/providers/ToastProvider';
+import { useTranslation } from 'react-i18next';
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -17,27 +18,28 @@ const ForgotPasswordPage: React.FC = () => {
   const { showSuccess, showError } = useToastContext();
   const { isLoading } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate email
     if (!email) {
-      showError('Vui lòng nhập email');
+      showError(t('validation_required'));
       return;
     }
 
     if (!validateEmail(email)) {
-      showError('Email không hợp lệ');
+      showError(t('validation_email'));
       return;
     }
 
     try {
       await dispatch(forgotPasswordThunk({ email })).unwrap();
       setIsSuccess(true);
-      showSuccess('Nếu email tồn tại trong hệ thống, bạn sẽ nhận được hướng dẫn reset mật khẩu');
+      showSuccess(t('forgot_password_success'));
     } catch (error: unknown) {
-      showError(`Có lỗi xảy ra. Vui lòng thử lại.${error}`);
+      showError(t('error_occurred'));
     }
   };
 
@@ -50,21 +52,20 @@ const ForgotPasswordPage: React.FC = () => {
               <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                 <Mail className="w-8 h-8 text-green-600" />
               </div>
-              <CardTitle className="text-2xl font-bold">Email đã được gửi</CardTitle>
+              <CardTitle className="text-2xl font-bold">{t('email_sent')}</CardTitle>
               <CardDescription>
-                Chúng tôi đã gửi hướng dẫn reset mật khẩu đến email của bạn
+                {t('forgot_password_description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
-                Vui lòng kiểm tra hộp thư của bạn và làm theo hướng dẫn để reset mật khẩu. Nếu không
-                thấy email, hãy kiểm tra thư mục spam.
+                {t('forgot_password_check_email')}
               </p>
               <div className="flex gap-4">
                 <Button asChild variant="outline" className="flex-1">
                   <Link to="/auth/signin">
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Quay lại đăng nhập
+                    {t('forgot_password_back_to_login')}
                   </Link>
                 </Button>
                 <Button
@@ -74,7 +75,7 @@ const ForgotPasswordPage: React.FC = () => {
                   }}
                   className="flex-1"
                 >
-                  Gửi lại email
+                  {t('forgot_password_resend_email')}
                 </Button>
               </div>
             </CardContent>
@@ -89,9 +90,9 @@ const ForgotPasswordPage: React.FC = () => {
       <div className="max-w-md w-full space-y-8">
         <Card className="shadow-lg">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Quên mật khẩu?</CardTitle>
+            <CardTitle className="text-2xl font-bold">{t('forgot_password_title')}</CardTitle>
             <CardDescription>
-              Nhập email của bạn và chúng tôi sẽ gửi hướng dẫn reset mật khẩu
+              {t('forgot_password_subtitle')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -114,12 +115,12 @@ const ForgotPasswordPage: React.FC = () => {
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Đang gửi...
+                    {t('submiting')}
                   </>
                 ) : (
                   <>
                     <Mail className="w-4 h-4 mr-2" />
-                    Gửi hướng dẫn reset
+                    {t('reset_help')}
                   </>
                 )}
               </Button>
@@ -130,7 +131,7 @@ const ForgotPasswordPage: React.FC = () => {
                   className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 flex items-center justify-center"
                 >
                   <ArrowLeft className="w-4 h-4 mr-1" />
-                  Quay lại đăng nhập
+                  {t('forgot_password_back_to_login')}
                 </Link>
               </div>
             </form>

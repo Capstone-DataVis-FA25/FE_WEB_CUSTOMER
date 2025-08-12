@@ -9,6 +9,7 @@ import type { AppDispatch } from '@/store/store';
 import { resetPasswordThunk } from '@/features/auth/authThunk';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useToastContext } from '@/components/providers/ToastProvider';
+import { useTranslation } from 'node_modules/react-i18next';
 
 interface PasswordFormData {
   password: string;
@@ -32,6 +33,7 @@ const ResetPasswordPage: React.FC = () => {
   const { showSuccess, showError } = useToastContext();
   const dispatch = useDispatch<AppDispatch>();
   const { goTo } = useNavigation();
+  const { t } = useTranslation();
 
   const token = searchParams.get('token');
 
@@ -78,17 +80,17 @@ const ResetPasswordPage: React.FC = () => {
 
   const validateForm = () => {
     if (!token) {
-      showError('Token reset password không hợp lệ');
+      showError(t('reset_password_invalid_token'));
       return false;
     }
 
     if (formData.password.length < 8) {
-      showError('Mật khẩu phải có ít nhất 8 ký tự');
+      showError(t('reset_password_min_length'));
       return false;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      showError('Mật khẩu xác nhận không khớp');
+      showError(t('reset_password_confirm_mismatch'));
       return false;
     }
 
@@ -111,14 +113,14 @@ const ResetPasswordPage: React.FC = () => {
       ).unwrap();
 
       setIsSuccess(true);
-      showSuccess('Mật khẩu đã được reset thành công');
+      showSuccess(t('reset_password_success'));
 
       // Redirect to login after 3 seconds
       setTimeout(() => {
         goTo('/auth');
       }, 2000);
     } catch (error: unknown) {
-      showError(`Có lỗi xảy ra. Token có thể đã hết hạn.${error}`);
+      showError(`${t('error_occurred')} ${t('reset_password_invalid_token')}`);
     } finally {
       setIsLoading(false);
     }
@@ -134,16 +136,16 @@ const ResetPasswordPage: React.FC = () => {
               <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
                 <AlertCircle className="w-8 h-8 text-red-600" />
               </div>
-              <CardTitle className="text-2xl font-bold">Token không hợp lệ</CardTitle>
+              <CardTitle className="text-2xl font-bold">{t('reset_password_invalid_token')}</CardTitle>
               <CardDescription>{tokenError}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-4">
                 <Button asChild variant="outline" className="flex-1">
-                  <Link to="/auth/forgot-password">Yêu cầu reset lại</Link>
+                  <Link to="/auth/forgot-password">{t('forgot_password_resend_email')}</Link>
                 </Button>
                 <Button asChild className="flex-1">
-                  <Link to="/auth/signin">Đăng nhập</Link>
+                  <Link to="/auth/signin">{t('forgot_password_back_to_login')}</Link>
                 </Button>
               </div>
             </CardContent>
@@ -163,15 +165,15 @@ const ResetPasswordPage: React.FC = () => {
               <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
-              <CardTitle className="text-2xl font-bold">Reset mật khẩu thành công</CardTitle>
-              <CardDescription>Mật khẩu của bạn đã được cập nhật thành công</CardDescription>
+              <CardTitle className="text-2xl font-bold">{t('reset_password_success')}</CardTitle>
+              <CardDescription>{t('reset_password_success_description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
-                Bạn sẽ được chuyển hướng đến trang đăng nhập trong 3 giây...
+                {t('reset_password_redirect_message')}
               </p>
               <Button asChild className="w-full">
-                <Link to="/auth/signin">Đăng nhập ngay</Link>
+                <Link to="/auth/signin">{t('auth_loginNow')}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -185,22 +187,22 @@ const ResetPasswordPage: React.FC = () => {
       <div className="max-w-md w-full space-y-8">
         <Card className="shadow-lg">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Tạo mật khẩu mới</CardTitle>
-            <CardDescription>Nhập mật khẩu mới cho tài khoản của bạn</CardDescription>
+            <CardTitle className="text-2xl font-bold">{t('reset_password_title')}</CardTitle>
+            <CardDescription>{t('reset_password_description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* New Password */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Mật khẩu mới
+                  {t('reset_password_new_password')}
                 </label>
                 <div className="relative">
                   <Input
                     type={showPasswords.password ? 'text' : 'password'}
                     value={formData.password}
                     onChange={e => handleInputChange('password', e.target.value)}
-                    placeholder="Nhập mật khẩu mới"
+                    placeholder={t('reset_password_new_password')}
                     className="pr-10"
                     disabled={isLoading}
                     required
@@ -224,7 +226,7 @@ const ResetPasswordPage: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-600 dark:text-gray-400">
-                        Độ mạnh mật khẩu:
+                        {t('reset_password_strength')}
                       </span>
                       <span
                         className={`text-xs font-medium ${
@@ -256,14 +258,14 @@ const ResetPasswordPage: React.FC = () => {
               {/* Confirm Password */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Xác nhận mật khẩu
+                  {t('reset_password_confirm')}
                 </label>
                 <div className="relative">
                   <Input
                     type={showPasswords.confirm ? 'text' : 'password'}
                     value={formData.confirmPassword}
                     onChange={e => handleInputChange('confirmPassword', e.target.value)}
-                    placeholder="Nhập lại mật khẩu mới"
+                    placeholder={t('reset_password_confirm')}
                     className="pr-10"
                     disabled={isLoading}
                     required
@@ -288,12 +290,12 @@ const ResetPasswordPage: React.FC = () => {
                     {formData.password === formData.confirmPassword ? (
                       <div className="flex items-center text-green-600">
                         <CheckCircle className="w-4 h-4 mr-1" />
-                        <span className="text-xs">Mật khẩu khớp</span>
+                        <span className="text-xs">{t('reset_password_confirm_match')}</span>
                       </div>
                     ) : (
                       <div className="flex items-center text-red-600">
                         <AlertCircle className="w-4 h-4 mr-1" />
-                        <span className="text-xs">Mật khẩu không khớp</span>
+                        <span className="text-xs">{t('reset_password_confirm_mismatch')}</span>
                       </div>
                     )}
                   </div>
@@ -304,12 +306,12 @@ const ResetPasswordPage: React.FC = () => {
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Đang cập nhật...
+                    {t('reset_password_updating')}
                   </>
                 ) : (
                   <>
                     <Lock className="w-4 h-4 mr-2" />
-                    Cập nhật mật khẩu
+                    {t('reset_password_update')}
                   </>
                 )}
               </Button>
@@ -319,7 +321,7 @@ const ResetPasswordPage: React.FC = () => {
                   to="/auth/signin"
                   className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
                 >
-                  Quay lại đăng nhập
+                  {t('forgot_password_back_to_login')}
                 </Link>
               </div>
             </form>
