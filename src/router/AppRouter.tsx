@@ -34,7 +34,8 @@ const componentMap = {
 const LoadingSpinner: React.FC = () => (
   <div className="flex items-center justify-center min-h-screen bg-background">
     <div className="flex flex-col items-center space-y-4">
-      <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+      <div className="animate-spin rounded-full h-12 w-12 border-4 border-accent border-t-transparent"></div>
+      <span className="text-foreground text-lg font-medium">Loading...</span>
     </div>
   </div>
 );
