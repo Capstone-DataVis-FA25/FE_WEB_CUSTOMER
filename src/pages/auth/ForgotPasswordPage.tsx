@@ -53,9 +53,7 @@ const ForgotPasswordPage: React.FC = () => {
                 <Mail className="w-8 h-8 text-green-600" />
               </div>
               <CardTitle className="text-2xl font-bold">{t('email_sent')}</CardTitle>
-              <CardDescription>
-                {t('forgot_password_description')}
-              </CardDescription>
+              <CardDescription>{t('forgot_password_description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
@@ -91,9 +89,7 @@ const ForgotPasswordPage: React.FC = () => {
         <Card className="shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">{t('forgot_password_title')}</CardTitle>
-            <CardDescription>
-              {t('forgot_password_subtitle')}
-            </CardDescription>
+            <CardDescription>{t('forgot_password_subtitle')}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -127,7 +123,7 @@ const ForgotPasswordPage: React.FC = () => {
 
               <div className="text-center">
                 <Link
-                  to="/auth/signin"
+                  to="/auth?mode=login"
                   className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 flex items-center justify-center"
                 >
                   <ArrowLeft className="w-4 h-4 mr-1" />

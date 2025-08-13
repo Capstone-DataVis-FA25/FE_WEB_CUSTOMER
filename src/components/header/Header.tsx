@@ -67,9 +67,9 @@ const Header: React.FC<HeaderProps> = ({
             <SlideInDown className="flex items-center space-x-2">
               <div className="w-10 h-10  rounded-xl flex items-center justify-center">
                 <img
-                  src="https://res.cloudinary.com/dfvy81evi/image/upload/v1754728440/share_logo_jtixd7.jpg"
+                  src="https://res.cloudinary.com/dfvy81evi/image/upload/v1754983215/only_logo-removebg-preview_ncdidg.png"
                   alt="Logo"
-                  className="rounded-xl"
+                  className="rounded-sm"
                 />
               </div>
               <div className="hidden sm:block">
