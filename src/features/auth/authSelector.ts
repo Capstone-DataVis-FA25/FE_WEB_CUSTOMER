@@ -102,3 +102,8 @@ export const selectAuthErrorMessage = createSelector([selectAuthError], error =>
 // Legacy selectors for backward compatibility
 export const selectVerifyStatus = createSelector([selectAuthState], () => undefined);
 export const selectVerifyMessage = createSelector([selectAuthState], () => '');
+
+// New selectors for delete user feature
+export const selectDeleteUserStatus = createSelector([selectAuthState], auth => auth.deleteUserStatus);
+
+export const selectDeleteUserError = createSelector([selectAuthState], auth => auth.deleteUserError || '');

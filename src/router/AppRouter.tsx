@@ -6,6 +6,7 @@ import { FadeIn } from '../theme/animation';
 import { ErrorBoundaryClass } from '@/components/error/ErrorBoundary';
 import { useAuth } from '@/features/auth/useAuth';
 import DebugContainer from '@/components/debug/DebugContainer';
+import { useTranslation } from 'react-i18next';
 
 // ================================
 // LAZY LOAD COMPONENTS
@@ -14,6 +15,8 @@ import DebugContainer from '@/components/debug/DebugContainer';
 const componentMap = {
   HomePage: lazy(() => import('../pages/home/HomePage')),
   AuthPage: lazy(() => import('../pages/auth/AuthPage')),
+  ForgotPasswordPage: lazy(() => import('../pages/auth/ForgotPasswordPage')),
+  ResetPasswordPage: lazy(() => import('../pages/auth/ResetPasswordPage')),
   NotFoundPage: lazy(() => import('../pages/not-found/NotFoundPage')),
   ForbiddenPage: lazy(() => import('../pages/forbidden/ForbiddenPage')),
   ToastDemoPage: lazy(() => import('../pages/demo/ToastDemo')),
@@ -31,13 +34,17 @@ const componentMap = {
 // COMPONENTS
 // ================================
 
-const LoadingSpinner: React.FC = () => (
-  <div className="flex items-center justify-center min-h-screen bg-background">
-    <div className="flex flex-col items-center space-y-4">
-      <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+const LoadingSpinner: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-accent border-t-transparent"></div>
+        <span className="text-foreground text-lg font-medium">{t('loading')}</span>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

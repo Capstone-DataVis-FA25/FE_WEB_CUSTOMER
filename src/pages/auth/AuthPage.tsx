@@ -6,13 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FadeIn, SlideInRight, ScaleIn } from '../../theme/animation';
-import useNavigation from '@/hooks/useNavigation';
 import { useAuth } from '@/features/auth/useAuth';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import { useTranslation } from 'react-i18next';
 import { GoogleLogin } from '@react-oauth/google';
+import useNavigation from '@/hooks/useNavigation';
 import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
 import LanguageSwitcher from '@/components/language-switcher';
+
+import PasswordStrengthChecker from '@/components/ui/password-strength-checker';
 
 interface AuthPageProps {
   onBack?: () => void;
@@ -65,7 +67,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   };
 
   const [formData, setFormData] = useState(getPersistedFormData());
-  const { goToHome, goToSendEmailVerify, goToAuth } = useNavigation();
+  const { goToHome, goToSendEmailVerify, goToAuth, goToForgotPassword } = useNavigation();
   const { showError, showSuccess } = useToastContext();
   const { t } = useTranslation();
 
@@ -352,6 +354,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                     required
                     disabled={isLoading}
                   />
+                  {/* Chỉ hiện password strength checker khi đăng ký */}
+                  {!isLogin && formData.password && (
+                    <PasswordStrengthChecker password={formData.password} />
+                  )}
                   <Button
                     type="button"
                     variant="ghost"
@@ -402,6 +408,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                     type="button"
                     variant="link"
                     className="p-0 h-auto text-sm text-primary hover:text-primary/80"
+                    onClick={() => goToForgotPassword()}
                   >
                     {t('auth_forgotPasswordLink')}
                   </Button>
