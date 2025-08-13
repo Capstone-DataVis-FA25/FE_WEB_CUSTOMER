@@ -20,6 +20,7 @@ const initialState: AuthState = {
   isAuthenticated: !!localStorage.getItem('accessToken'),
   isLoading: false,
   error: null,
+  successMessage: null,
 };
 
 const authSlice = createSlice({
@@ -27,7 +28,7 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     // Logout - xóa all data và localStorage
-    logout: (state) => {
+    logout: state => {
       state.user = null;
       state.accessToken = null;
       state.refreshToken = null;
@@ -42,7 +43,7 @@ const authSlice = createSlice({
     },
 
     // Clear error
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
     },
 
@@ -65,10 +66,10 @@ const authSlice = createSlice({
       }
     },
   },
-  extraReducers: (builder) => {
+  extraReducers: builder => {
     // Sign In
     builder
-      .addCase(signInThunk.pending, (state) => {
+      .addCase(signInThunk.pending, state => {
         state.isLoading = true;
         state.error = null;
       })
@@ -87,16 +88,12 @@ const authSlice = createSlice({
       })
       .addCase(signInThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload?.message || action.error?.message || t('auth_signInFailed');
-        state.user = null;
-        state.accessToken = null;
-        state.refreshToken = null;
-        state.isAuthenticated = false;
+        state.error = action.payload?.message || action.error?.message || 'Sign in failed';
       });
 
     // Sign Up
     builder
-      .addCase(signUpThunk.pending, (state) => {
+      .addCase(signUpThunk.pending, state => {
         state.isLoading = true;
         state.error = null;
       })
@@ -107,6 +104,7 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.refresh_token;
         state.isAuthenticated = true;
         state.error = null;
+        state.successMessage = action.payload.message;
 
         // Lưu vào localStorage
         localStorage.setItem('user', JSON.stringify(action.payload.user));
@@ -116,15 +114,11 @@ const authSlice = createSlice({
       .addCase(signUpThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload?.message || action.error?.message || t('auth_signUpFailed');
-        state.user = null;
-        state.accessToken = null;
-        state.refreshToken = null;
-        state.isAuthenticated = false;
       });
 
     // Google Sign In
     builder
-      .addCase(signInWithGoogleThunk.pending, (state) => {
+      .addCase(signInWithGoogleThunk.pending, state => {
         state.isLoading = true;
         state.error = null;
       })
@@ -143,16 +137,17 @@ const authSlice = createSlice({
       })
       .addCase(signInWithGoogleThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload?.message || action.error?.message || t('auth_googleSignInFailed');
+        state.error =
+          action.payload?.message || action.error?.message || t('auth_googleSignInFailed');
         state.user = null;
         state.accessToken = null;
         state.refreshToken = null;
         state.isAuthenticated = false;
       });
-    
+
     // Update Profile
     builder
-      .addCase(updateProfileThunk.pending, (state) => {
+      .addCase(updateProfileThunk.pending, state => {
         state.isLoading = true;
         state.error = null;
       })
@@ -166,16 +161,14 @@ const authSlice = createSlice({
       })
       .addCase(updateProfileThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload?.message || action.error?.message || t('auth_updateProfileFailed');
+        state.error =
+          action.payload?.message || action.error?.message || t('auth_updateProfileFailed');
       });
   },
 });
 
-export const {
-  logout,
-  clearError,
-  setLoading,
-  setTokens,
-} = authSlice.actions;
+export const { logout, clearError, setLoading, setTokens } = authSlice.actions;
+
+// TODO: Lỗi cái này chưa dám xóa updateUserProfile (note)
 
 export default authSlice.reducer;
