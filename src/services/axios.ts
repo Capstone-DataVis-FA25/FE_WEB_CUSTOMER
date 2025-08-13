@@ -23,55 +23,9 @@ export const axiosPrivate: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
   headers: {
-    'Content-Type': 'application/json', // Dữ liệu gửi đi dạng JSON
+    'Content-Type': 'application/json',
   },
 });
-
-axiosPrivate.interceptors.request.use(
-  (config) => {
-    const accessToken = localStorage.getItem('token');
-    console.log('accessToken', accessToken);
-    if (accessToken && config.headers) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
-    }
-
-    // Debug request data
-    if (config.url?.includes('/batch')) {
-      console.log('Axios interceptor - Request config:', {
-        url: config.url,
-        method: config.method,
-        data: config.data,
-        dataType: typeof config.data,
-        dataStringified: JSON.stringify(config.data),
-      });
-    }
-
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-axiosPrivate.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    if (
-      error.response &&
-      (error.response.status === 401 || error.response.status === 403)
-    ) {
-      // Clear token and user data
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-
-      // Redirect to login page -> Login page
-      window.location.href = '/';
-    }
-    return Promise.reject(error);
-  }
-);
 
 // Token management
 export const tokenStorage = {
@@ -95,6 +49,66 @@ export const tokenStorage = {
     localStorage.removeItem('refreshToken');
   },
 };
+
+// Request interceptor cho axiosPrivate - tự động thêm token
+axiosPrivate.interceptors.request.use(
+  (config: import('axios').InternalAxiosRequestConfig) => {
+    const token = tokenStorage.getAccessToken();
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error: AxiosError) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor cho axiosPrivate - xử lý token hết hạn
+axiosPrivate.interceptors.response.use(
+  (response: AxiosResponse) => {
+    return response;
+  },
+  async (error: AxiosError) => {
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+
+    // Nếu lỗi 401 và chưa retry
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      const refreshToken = tokenStorage.getRefreshToken();
+      if (refreshToken) {
+        try {
+          // Gọi API refresh token
+          const response = await axiosPublic.post('/auth/refresh', {
+            refreshToken,
+          });
+
+          const { accessToken, refreshToken: newRefreshToken } = response.data;
+          tokenStorage.setTokens(accessToken, newRefreshToken);
+
+          // Retry request với token mới
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          }
+
+          return axiosPrivate(originalRequest);
+        } catch (refreshError) {
+          // Refresh token cũng hết hạn, logout user
+          tokenStorage.clearTokens();
+          window.location.href = '/auth';
+          return Promise.reject(refreshError);
+        }
+      } else {
+        // Không có refresh token, redirect đến login
+        tokenStorage.clearTokens();
+        window.location.href = '/auth';
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 // Request interceptor cho axiosPublic - log requests
 axiosPublic.interceptors.request.use(
