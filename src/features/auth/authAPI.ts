@@ -4,7 +4,10 @@ import type { SignInRequest, SignUpRequest, GoogleAuthRequest, AuthResponse, Upd
 const SIGN_IN = '/auth/signin';
 const SIGN_UP = '/auth/signup';
 const GOOGLE_AUTH = '/auth/google/token';
-const UPDATE_PROFILE = '/auth/profile';
+const CHANGE_PASSWORD = '/users/me/change-password';
+const FORGOT_PASSWORD = '/auth/forgot-password';
+const RESET_PASSWORD = '/auth/reset-password';
+const UPDATE_PROFILE = 'users/me/update-profile';
 
 export const authAPI = {
   signInWithEmailPassword: async (data: SignInRequest): Promise<AuthResponse> => {
@@ -43,12 +46,13 @@ export const authAPI = {
 
   //Update Profile
   updateProfile: async (data: UpdateProfileRequest): Promise<UpdateProfileResponse> => {
-    const response = await axiosPrivate.put(`${UPDATE_PROFILE}`, data);
+    const response = await axiosPrivate.patch(`${UPDATE_PROFILE}`, data);
     const responseData = response.data.data;
     return {
       user: responseData.user,
     };
   },
+
 
   deleteUser: async (userId: string): Promise<{ message: string }> => {
     // Lấy accessToken từ localStorage
@@ -59,6 +63,26 @@ export const authAPI = {
       },
     });
     return { message: response.data.message };
+  },
+  //Change password
+  changePassword: async (data: { oldPassword: string; newPassword: string }): Promise<void> => {
+    await axiosPrivate.patch(`${CHANGE_PASSWORD}`, {
+      old_password: data.oldPassword,
+      new_password: data.newPassword,
+      confirm_password: data.newPassword,
+    });
+  },
+  // Forgot Password
+  forgotPassword: async (data: { email: string }): Promise<void> => {
+    await axiosPublic.post(`${FORGOT_PASSWORD}`, data);
+  },
 
+  // Reset Password
+  resetPassword: async (data: { password: string; token: string }): Promise<void> => {
+    await axiosPublic.post(`${RESET_PASSWORD}`, {
+      newPassword: data.password,
+      token: data.token,
+    });
   },
 };
+
