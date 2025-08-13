@@ -15,6 +15,7 @@ import {
   selectVerifyMessage,
   selectDeleteUserStatus,
   selectDeleteUserError,
+  selectAuthSuccessMessage,
 } from './authSelector';
 import { logout, clearError, setLoading  } from './authSlice';
 import { signInThunk, signUpThunk, signInWithGoogleThunk, updateProfileThunk,deleteUserThunk } from './authThunk';
@@ -33,6 +34,7 @@ export const useAuth = () => {
   const userProfile = useSelector(selectUserProfile);
   const verifyStatus = useSelector(selectVerifyStatus);
   const verifyMessage = useSelector(selectVerifyMessage);
+  const successMessage = useSelector(selectAuthSuccessMessage);
   const deleteUserStatus = useSelector(selectDeleteUserStatus);
   const deleteUserError = useSelector(selectDeleteUserError);
 
@@ -87,7 +89,7 @@ export const useAuth = () => {
     verifyMessage, // '' (legacy)
     deleteUserStatus, // Trạng thái xóa user
     deleteUserError, // Lỗi xóa user
-
+    successMessage, // Thông báo thành công
     // Role checks - Boolean flags
     isAdmin, // Boolean - user có phải admin không
     isUser, // Boolean - user có phải user không
