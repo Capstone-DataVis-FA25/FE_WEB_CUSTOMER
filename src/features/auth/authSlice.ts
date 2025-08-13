@@ -10,6 +10,7 @@ import {
   resetPasswordThunk,
   deleteUserThunk
 } from './authThunk';
+
 import { t } from 'i18next';
 
 // Helper function để lấy user từ localStorage an toàn
@@ -175,6 +176,7 @@ const authSlice = createSlice({
         state.error =
           action.payload?.message || action.error?.message || t('auth_updateProfileFailed');
       });
+
     // Delete User
     builder
       .addCase(deleteUserThunk.pending, state => {

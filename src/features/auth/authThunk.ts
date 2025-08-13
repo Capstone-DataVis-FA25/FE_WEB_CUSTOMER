@@ -80,6 +80,7 @@ export const deleteUserThunk = createAsyncThunk<
     return rejectWithValue({ message: errorMessage });
   }
 });
+
 export const changePasswordThunk = createAsyncThunk<
   { message: string },
   { oldPassword: string; newPassword: string },
