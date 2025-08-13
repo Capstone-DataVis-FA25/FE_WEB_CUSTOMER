@@ -14,6 +14,8 @@ import useNavigation from '@/hooks/useNavigation';
 import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
 import LanguageSwitcher from '@/components/language-switcher';
 
+import PasswordStrengthChecker from '@/components/ui/password-strength-checker';
+
 interface AuthPageProps {
   onBack?: () => void;
 }
@@ -352,6 +354,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                     required
                     disabled={isLoading}
                   />
+                  {/* Chỉ hiện password strength checker khi đăng ký */}
+                  {!isLogin && formData.password && (
+                    <PasswordStrengthChecker password={formData.password} />
+                  )}
                   <Button
                     type="button"
                     variant="ghost"

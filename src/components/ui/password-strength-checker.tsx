@@ -1,6 +1,11 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Check, X, Info } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
+import { MotionWrapper } from '@/theme/animation';
+import { motion } from 'framer-motion';
+import { progressVariants } from '@/theme/animation/animation.config';
+import { usePasswordStrength } from '@/hooks/usePasswordStrength';
 
 interface PasswordStrengthRule {
   label: string;
@@ -25,26 +30,27 @@ export const PasswordStrengthTooltip: React.FC<PasswordStrengthTooltipProps> = (
 }) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
 
-  // Kiểm tra các quy tắc mật khẩu mạnh
+  const { t } = useTranslation();
+  // Password strength rules with i18n
   const rules: PasswordStrengthRule[] = [
     {
-      label: 'Ít nhất 6 ký tự',
+      label: t('password_strength_rule_minLength'),
       isValid: password.length >= 6,
     },
     {
-      label: 'Có chữ hoa (A-Z)',
+      label: t('password_strength_rule_uppercase'),
       isValid: /[A-Z]/.test(password),
     },
     {
-      label: 'Có chữ thường (a-z)',
+      label: t('password_strength_rule_lowercase'),
       isValid: /[a-z]/.test(password),
     },
     {
-      label: 'Có số (0-9)',
+      label: t('password_strength_rule_number'),
       isValid: /\d/.test(password),
     },
     {
-      label: 'Có ký tự đặc biệt (!@#$%^&*)',
+      label: t('password_strength_rule_special'),
       isValid: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
     },
   ];
@@ -53,16 +59,32 @@ export const PasswordStrengthTooltip: React.FC<PasswordStrengthTooltipProps> = (
   const validRulesCount = rules.filter(rule => rule.isValid).length;
   const strengthPercentage = (validRulesCount / rules.length) * 100;
 
-  // Xác định màu sắc và nhãn độ mạnh
+  // Strength info with i18n
   const getStrengthInfo = () => {
     if (strengthPercentage < 40) {
-      return { color: 'bg-destructive', label: 'Yếu', textColor: 'text-destructive' };
+      return {
+        color: 'bg-destructive',
+        label: t('password_strength_weak'),
+        textColor: 'text-destructive',
+      };
     } else if (strengthPercentage < 60) {
-      return { color: 'bg-yellow-500', label: 'Trung bình', textColor: 'text-yellow-500' };
+      return {
+        color: 'bg-yellow-500',
+        label: t('password_strength_medium'),
+        textColor: 'text-yellow-500',
+      };
     } else if (strengthPercentage < 80) {
-      return { color: 'bg-secondary', label: 'Tốt', textColor: 'text-secondary' };
+      return {
+        color: 'bg-secondary',
+        label: t('password_strength_good'),
+        textColor: 'text-secondary',
+      };
     } else {
-      return { color: 'bg-green-500', label: 'Mạnh', textColor: 'text-green-500' };
+      return {
+        color: 'bg-green-500',
+        label: t('password_strength_strong'),
+        textColor: 'text-green-500',
+      };
     }
   };
 
@@ -83,103 +105,82 @@ export const PasswordStrengthTooltip: React.FC<PasswordStrengthTooltipProps> = (
       {/* Tooltip */}
       <AnimatePresence>
         {isVisible && password && (
-          <motion.div
-            ref={tooltipRef}
-            initial={{ opacity: 0, x: -10, scale: 0.95 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -10, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+          <MotionWrapper
+            animation="slideLeft"
             className="absolute left-0 top-0 -translate-x-full -translate-y-2 w-80 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-4 z-50"
+            ref={tooltipRef}
           >
             {/* Arrow pointing to input */}
             <div className="absolute right-0 top-1/2 transform translate-x-1 -translate-y-1/2 w-2 h-2 bg-background border-r border-t border-border rotate-45"></div>
 
             <div className="space-y-3">
               {/* Header */}
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-foreground">Độ mạnh mật khẩu</span>
-                <motion.span
+              <MotionWrapper animation="fade" className="flex justify-between items-center">
+                <span className="text-sm font-medium text-foreground">
+                  {t('password_strength_title')}
+                </span>
+                <MotionWrapper
+                  animation="fade"
                   className={`text-sm font-semibold ${strengthInfo.textColor}`}
                   key={strengthInfo.label}
-                  initial={{ opacity: 0, x: 5 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3 }}
                 >
                   {strengthInfo.label}
-                </motion.span>
-              </div>
+                </MotionWrapper>
+              </MotionWrapper>
 
               {/* Progress Bar */}
               <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                 <motion.div
+                  variants={progressVariants}
+                  initial="initial"
+                  animate="animate"
+                  custom={strengthPercentage}
                   className={`h-2 rounded-full ${strengthInfo.color}`}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${strengthPercentage}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  style={{ minWidth: 8 }}
                 />
               </div>
 
               {/* Rules List */}
               <div className="space-y-2">
                 {rules.map((rule, index) => (
-                  <motion.div
+                  <MotionWrapper
+                    animation="fade"
+                    delay={0.05 + index * 0.05}
                     key={index}
                     className="flex items-center space-x-2 text-xs"
-                    initial={{ opacity: 0, x: -5 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.05 + index * 0.05, duration: 0.2 }}
                   >
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{
-                        delay: 0.1 + index * 0.05,
-                        duration: 0.3,
-                        type: 'spring',
-                        stiffness: 200,
-                      }}
-                    >
+                    <MotionWrapper animation="scale" delay={0.1 + index * 0.05}>
                       {rule.isValid ? (
                         <Check className="h-3 w-3 text-green-500" />
                       ) : (
                         <X className="h-3 w-3 text-muted-foreground" />
                       )}
-                    </motion.div>
+                    </MotionWrapper>
                     <span
-                      className={`${
-                        rule.isValid ? 'text-green-500' : 'text-muted-foreground'
-                      } transition-colors duration-200`}
+                      className={`${rule.isValid ? 'text-green-500' : 'text-muted-foreground'} transition-colors duration-200`}
                     >
                       {rule.label}
                     </span>
-                  </motion.div>
+                  </MotionWrapper>
                 ))}
               </div>
 
               {/* Success Message */}
               <AnimatePresence>
                 {validRulesCount === rules.length && (
-                  <motion.div
+                  <MotionWrapper
+                    animation="scale"
                     className="flex items-center space-x-2 p-2 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800"
-                    initial={{ opacity: 0, scale: 0.8, y: 5 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.8, y: -5 }}
-                    transition={{
-                      duration: 0.3,
-                      type: 'spring',
-                      stiffness: 200,
-                      damping: 20,
-                    }}
                   >
                     <Check className="h-3 w-3 text-green-500" />
                     <span className="text-xs font-medium text-green-700 dark:text-green-400">
-                      Mật khẩu đủ mạnh!
+                      {t('password_strength_success')}
                     </span>
-                  </motion.div>
+                  </MotionWrapper>
                 )}
               </AnimatePresence>
             </div>
-          </motion.div>
+          </MotionWrapper>
         )}
       </AnimatePresence>
     </>
@@ -220,22 +221,6 @@ export const PasswordStrengthChecker: React.FC<PasswordStrengthCheckerProps> = (
       />
     </div>
   );
-};
-
-// Hook để kiểm tra mật khẩu có đủ mạnh không
-export const usePasswordStrength = (password: string) => {
-  const isStrong = React.useMemo(() => {
-    if (password.length < 6) return false;
-    if (!/[A-Z]/.test(password)) return false;
-    if (!/[a-z]/.test(password)) return false;
-    if (!/\d/.test(password)) return false;
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) return false;
-    return true;
-  }, [password]);
-
-  const isValid = password.length >= 6; // Tối thiểu 6 ký tự
-
-  return { isValid, isStrong };
 };
 
 export default PasswordStrengthChecker;
