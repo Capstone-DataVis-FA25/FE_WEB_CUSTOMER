@@ -19,7 +19,7 @@ import { useModalConfirm } from '@/hooks/useModal';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import { useAuth } from '@/features/auth/useAuth';
-import { useNavigate } from 'react-router-dom';
+import useNavigation from '@/hooks/useNavigation';
 
 interface GeneralSettings {
   timezone: string;
@@ -35,7 +35,7 @@ const GeneralSettingsPage: React.FC = () => {
   const modalConfirm = useModalConfirm();
   const { showSuccess, showError } = useToastContext();
   const { user, deleteUser, deleteUserStatus, deleteUserError, logout } = useAuth();
-  const navigate = useNavigate();
+  const { goToHome } = useNavigation();
 
   const [settings, setSettings] = useState<GeneralSettings>({
     timezone: 'Asia/Ho_Chi_Minh',
@@ -136,7 +136,7 @@ const GeneralSettingsPage: React.FC = () => {
         if (result.type.endsWith('/fulfilled')) {
           showSuccess('Tài khoản đã được xóa', 'Tài khoản và dữ liệu của bạn đã bị xóa vĩnh viễn');
           logout();
-          navigate('/');
+          goToHome();
         } else {
           showError('Lỗi', deleteUserError || 'Không thể xóa tài khoản');
         }
