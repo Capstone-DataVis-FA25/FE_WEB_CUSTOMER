@@ -1,6 +1,16 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { AuthState, User } from './authType';
-import { signInThunk, signUpThunk, signInWithGoogleThunk, updateProfileThunk } from './authThunk';
+import {
+  signInThunk,
+  signUpThunk,
+  signInWithGoogleThunk,
+  updateProfileThunk,
+  changePasswordThunk,
+  forgotPasswordThunk,
+  resetPasswordThunk,
+  deleteUserThunk
+} from './authThunk';
+
 import { t } from 'i18next';
 
 // Helper function để lấy user từ localStorage an toàn
@@ -21,6 +31,8 @@ const initialState: AuthState = {
   isLoading: false,
   error: null,
   successMessage: null,
+  deleteUserStatus: 'idle',
+  deleteUserError: null,
 };
 
 const authSlice = createSlice({
@@ -163,6 +175,76 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error =
           action.payload?.message || action.error?.message || t('auth_updateProfileFailed');
+      });
+
+    // Delete User
+    builder
+      .addCase(deleteUserThunk.pending, state => {
+        state.deleteUserStatus = 'pending';
+        state.deleteUserError = null;
+      })
+      .addCase(deleteUserThunk.fulfilled, (state, action) => {
+        state.deleteUserStatus = 'success';
+        state.deleteUserError = null;
+        // Nếu user tự xóa chính mình thì logout
+        if (state.user && state.user.id === action.payload.id) {
+          state.user = null;
+          state.accessToken = null;
+          state.refreshToken = null;
+          state.isAuthenticated = false;
+          localStorage.removeItem('user');
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+        }
+      })
+      .addCase(deleteUserThunk.rejected, (state, action) => {
+        state.deleteUserStatus = 'error';
+        state.deleteUserError = action.payload?.message || 'Delete user failed';
+      });
+
+    // Change Password
+    builder
+      .addCase(changePasswordThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(changePasswordThunk.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(changePasswordThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || action.error?.message || t('auth_changePasswordFailed');
+      });
+
+    // Forgot Password
+    builder
+      .addCase(forgotPasswordThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(forgotPasswordThunk.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(forgotPasswordThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || action.error?.message || t('auth_forgotPasswordFailed');
+      });
+
+    // Reset Password
+    builder
+      .addCase(resetPasswordThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(resetPasswordThunk.fulfilled, (state) => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(resetPasswordThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || action.error?.message || t('auth_resetPasswordFailed');
       });
   },
 });

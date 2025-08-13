@@ -58,6 +58,8 @@ export interface AuthState {
   isLoading: boolean;
   error: string | null;
   successMessage?: string | null;
+  deleteUserStatus?: 'idle' | 'pending' | 'success' | 'error';
+  deleteUserError?: string | null;
 }
 
 export interface UpdateProfileRequest {

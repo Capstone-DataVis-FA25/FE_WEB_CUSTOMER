@@ -14,6 +14,8 @@ import DebugContainer from '@/components/debug/DebugContainer';
 const componentMap = {
   HomePage: lazy(() => import('../pages/home/HomePage')),
   AuthPage: lazy(() => import('../pages/auth/AuthPage')),
+  ForgotPasswordPage: lazy(() => import('../pages/auth/ForgotPasswordPage')),
+  ResetPasswordPage: lazy(() => import('../pages/auth/ResetPasswordPage')),
   NotFoundPage: lazy(() => import('../pages/not-found/NotFoundPage')),
   ForbiddenPage: lazy(() => import('../pages/forbidden/ForbiddenPage')),
   ToastDemoPage: lazy(() => import('../pages/demo/ToastDemo')),

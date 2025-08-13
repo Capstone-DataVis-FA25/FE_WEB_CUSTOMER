@@ -6,18 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FadeIn, SlideInRight, ScaleIn } from '../../theme/animation';
-import { AnimatePresence } from 'framer-motion';
-import useNavigation from '@/hooks/useNavigation';
 import { useAuth } from '@/features/auth/useAuth';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import { useTranslation } from 'react-i18next';
 import { GoogleLogin } from '@react-oauth/google';
+import useNavigation from '@/hooks/useNavigation';
 import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
 import LanguageSwitcher from '@/components/language-switcher';
-import {
-  PasswordStrengthChecker,
-  usePasswordStrength,
-} from '@/components/ui/password-strength-checker';
 
 interface AuthPageProps {
   onBack?: () => void;
@@ -70,14 +65,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   };
 
   const [formData, setFormData] = useState(getPersistedFormData());
-  const { goToHome, goToSendEmailVerify, goToAuth } = useNavigation();
+  const { goToHome, goToSendEmailVerify, goToAuth, goToForgotPassword } = useNavigation();
   const { showError, showSuccess } = useToastContext();
   const { t } = useTranslation();
-
-  // Password strength validation
-  const { isValid: isPasswordValid, isStrong: isPasswordStrong } = usePasswordStrength(
-    formData.password
-  );
 
   // Chỉ điều hướng khi thành công
   useEffect(() => {
@@ -113,20 +103,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
       return 'Mật khẩu không được để trống';
     }
 
-    // Kiểm tra độ mạnh mật khẩu khi đăng ký
-    if (!isLogin) {
-      if (!isPasswordValid) {
-        return 'Mật khẩu phải có ít nhất 6 ký tự';
-      }
-
-      if (!isPasswordStrong) {
-        return 'Mật khẩu chưa đủ mạnh. Vui lòng đáp ứng tất cả các yêu cầu bên dưới';
-      }
-    } else {
-      // Đăng nhập chỉ cần tối thiểu 6 ký tự
-      if (formData.password.length < 6) {
-        return 'Mật khẩu phải có ít nhất 6 ký tự';
-      }
+    if (formData.password.length < 6) {
+      return 'Mật khẩu phải có ít nhất 6 ký tự';
     }
 
     if (!isLogin) {
@@ -362,25 +340,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
               <div className="space-y-2">
                 <Label htmlFor="password">{t('auth_password')}</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground z-20" />
-
-                  {/* Password Strength Tooltip - chỉ hiển thị khi đăng ký */}
-                  <AnimatePresence>
-                    {!isLogin && formData.password && (
-                      <PasswordStrengthChecker
-                        password={formData.password}
-                        className="absolute left-10 top-1/2 transform -translate-y-1/2 z-30"
-                      />
-                    )}
-                  </AnimatePresence>
-
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className={`${!isLogin && formData.password ? 'pl-16' : 'pl-10'} pr-12 transition-all duration-200 hover:border-secondary/50 focus:border-secondary`}
+                    className="pl-10 pr-12 transition-all duration-200 hover:border-secondary/50 focus:border-secondary"
                     placeholder={t('auth_enterPassword')}
                     required
                     disabled={isLoading}
@@ -389,7 +356,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent transition-colors duration-200 hover:text-secondary z-20"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent transition-colors duration-200 hover:text-secondary"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
                   >
@@ -435,6 +402,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                     type="button"
                     variant="link"
                     className="p-0 h-auto text-sm text-primary hover:text-primary/80"
+                    onClick={() => goToForgotPassword()}
                   >
                     {t('auth_forgotPasswordLink')}
                   </Button>
