@@ -13,10 +13,12 @@ import {
   selectIsGuest,
   selectVerifyStatus,
   selectVerifyMessage,
+  selectDeleteUserStatus,
+  selectDeleteUserError,
   selectAuthSuccessMessage,
 } from './authSelector';
-import { logout, clearError, setLoading } from './authSlice';
-import { signInThunk, signUpThunk, signInWithGoogleThunk, updateProfileThunk } from './authThunk';
+import { logout, clearError, setLoading  } from './authSlice';
+import { signInThunk, signUpThunk, signInWithGoogleThunk, updateProfileThunk,deleteUserThunk } from './authThunk';
 import type { SignInRequest, SignUpRequest, GoogleAuthRequest, User } from './authType';
 
 export const useAuth = () => {
@@ -33,6 +35,8 @@ export const useAuth = () => {
   const verifyStatus = useSelector(selectVerifyStatus);
   const verifyMessage = useSelector(selectVerifyMessage);
   const successMessage = useSelector(selectAuthSuccessMessage);
+  const deleteUserStatus = useSelector(selectDeleteUserStatus);
+  const deleteUserError = useSelector(selectDeleteUserError);
 
   // Role checks
   const isAdmin = useSelector(selectIsAdmin);
@@ -44,12 +48,16 @@ export const useAuth = () => {
     return dispatch(signInThunk(data));
   };
 
+  const signInWithGoogle = (data: GoogleAuthRequest) => {
+    return dispatch(signInWithGoogleThunk(data));
+  };
+
   const signUp = (data: SignUpRequest) => {
     return dispatch(signUpThunk(data));
   };
 
-  const signInWithGoogle = (data: GoogleAuthRequest) => {
-    return dispatch(signInWithGoogleThunk(data));
+  const deleteUser = (userId: string) => {
+    return dispatch(deleteUserThunk(userId));
   };
 
   const logoutUser = () => {
@@ -79,8 +87,9 @@ export const useAuth = () => {
     userProfile, // Formatted user profile object
     verifyStatus, // undefined (legacy)
     verifyMessage, // '' (legacy)
-    successMessage,
-
+    deleteUserStatus, // Trạng thái xóa user
+    deleteUserError, // Lỗi xóa user
+    successMessage, // Thông báo thành công
     // Role checks - Boolean flags
     isAdmin, // Boolean - user có phải admin không
     isUser, // Boolean - user có phải user không
@@ -89,7 +98,8 @@ export const useAuth = () => {
     // Actions - Functions để thực hiện actions
     signIn, // Function(data: SignInRequest) => Promise
     signUp, // Function(data: SignUpRequest) => Promise
-    signInWithGoogle, // Function(data: GoogleAuthRequest) => Promise
+    deleteUser,// Function(userId: string) => Promise
+    signInWithGoogle,// Function(data: GoogleAuthRequest) => Promise 
     logout: logoutUser, // Function() => void - logout và clear localStorage
     clearError: clearAuthError, // Function() => void - clear error state
     updateUserProfile: updateProfile, // Function(data: Partial<User>) => void

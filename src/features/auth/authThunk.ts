@@ -65,6 +65,22 @@ export const updateProfileThunk = createAsyncThunk<
   }
 });
 
+export const deleteUserThunk = createAsyncThunk<
+  { message: string; id: string },
+  string,
+  { rejectValue: { message: string } }
+>('auth/deleteUser', async (userId, { rejectWithValue }) => {
+  try {
+    const response = await authAPI.deleteUser(userId);
+    return { message: response.message, id: userId };
+  } catch (error: unknown) {
+    const errorMessage =
+      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      t('auth_deleteUserFailed');
+    return rejectWithValue({ message: errorMessage });
+  }
+});
+
 export const changePasswordThunk = createAsyncThunk<
   { message: string },
   { oldPassword: string; newPassword: string },
