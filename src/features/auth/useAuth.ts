@@ -46,6 +46,10 @@ export const useAuth = () => {
     return dispatch(signInThunk(data));
   };
 
+  const signInWithGoogle = (data: GoogleAuthRequest) => {
+    return dispatch(signInWithGoogleThunk(data));
+  };
+
   const signUp = (data: SignUpRequest) => {
     return dispatch(signUpThunk(data));
   };
@@ -92,7 +96,8 @@ export const useAuth = () => {
     // Actions - Functions để thực hiện actions
     signIn, // Function(data: SignInRequest) => Promise
     signUp, // Function(data: SignUpRequest) => Promise
-    deleteUser, // Function(userId: string) => Promise
+    deleteUser,// Function(userId: string) => Promise
+    signInWithGoogle,// Function(data: GoogleAuthRequest) => Promise 
     logout: logoutUser, // Function() => void - logout và clear localStorage
     clearError: clearAuthError, // Function() => void - clear error state
     updateUserProfile: updateProfile, // Function(data: Partial<User>) => void

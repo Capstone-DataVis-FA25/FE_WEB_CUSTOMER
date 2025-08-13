@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Shield, CheckCircle, X } from 'lucide-react';
+import { Eye, EyeOff, Lock, Shield, CheckCircle, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useToast } from '@/hooks/useToast';
+import { changePasswordThunk } from '@/features/auth/authThunk';
+import { useDispatch } from 'react-redux';
+import type { AppDispatch } from '@/store/store';
+import { useTranslation } from 'react-i18next';
 
 interface PasswordFormData {
   currentPassword: string;
@@ -15,6 +19,8 @@ interface PasswordFormData {
 const ChangePasswordPage: React.FC = () => {
   const { goTo } = useNavigation();
   const { showToast } = useToast();
+  const dispatch = useDispatch<AppDispatch>();
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState<PasswordFormData>({
     currentPassword: '',
@@ -70,7 +76,7 @@ const ChangePasswordPage: React.FC = () => {
     if (!formData.currentPassword) {
       showToast({
         title: 'Lỗi',
-        options: { type: 'error', message: 'Vui lòng nhập mật khẩu hiện tại' },
+        options: { type: 'error', message: t('change_password_current_required') },
       });
       return false;
     }
@@ -78,7 +84,7 @@ const ChangePasswordPage: React.FC = () => {
     if (formData.newPassword.length < 8) {
       showToast({
         title: 'Lỗi',
-        options: { type: 'error', message: 'Mật khẩu mới phải có ít nhất 8 ký tự' },
+        options: { type: 'error', message: t('change_password_new_required') },
       });
       return false;
     }
@@ -86,7 +92,7 @@ const ChangePasswordPage: React.FC = () => {
     if (formData.newPassword !== formData.confirmPassword) {
       showToast({
         title: 'Lỗi',
-        options: { type: 'error', message: 'Mật khẩu xác nhận không khớp' },
+        options: { type: 'error', message: t('change_password_confirm_mismatch') },
       });
       return false;
     }
@@ -94,7 +100,7 @@ const ChangePasswordPage: React.FC = () => {
     if (formData.currentPassword === formData.newPassword) {
       showToast({
         title: 'Lỗi',
-        options: { type: 'error', message: 'Mật khẩu mới phải khác mật khẩu hiện tại' },
+        options: { type: 'error', message: t('change_password_current_mismatch') },
       });
       return false;
     }
@@ -110,12 +116,17 @@ const ChangePasswordPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Gọi API thực để đổi mật khẩu
+      await dispatch(
+        changePasswordThunk({
+          oldPassword: formData.currentPassword,
+          newPassword: formData.newPassword,
+        })
+      ).unwrap();
 
       showToast({
         title: 'Thành công',
-        options: { type: 'success', message: 'Mật khẩu đã được thay đổi thành công' },
+        options: { type: 'success', message: t('change_password_success') },
       });
 
       // Reset form
@@ -129,10 +140,15 @@ const ChangePasswordPage: React.FC = () => {
       setTimeout(() => {
         goTo('/profile');
       }, 1500);
-    } catch (_error) {
+    } catch (error: unknown) {
       showToast({
         title: 'Lỗi',
-        options: { type: 'error', message: 'Có lỗi xảy ra khi đổi mật khẩu' },
+        options: {
+          type: 'error',
+          message:
+            (error as { message?: string })?.message ||
+            t('change_password_current_mismatch'),
+        },
       });
     } finally {
       setIsLoading(false);
@@ -140,11 +156,13 @@ const ChangePasswordPage: React.FC = () => {
   };
 
   const securityTips = [
-    'Sử dụng ít nhất 8 ký tự',
-    'Bao gồm chữ hoa và chữ thường',
-    'Thêm số và ký tự đặc biệt',
-    'Không sử dụng thông tin cá nhân',
-    'Không tái sử dụng mật khẩu cũ',
+    t('change_password_security_tip_length'),
+    t('change_password_security_tip_lowercase'),
+    t('change_password_security_tip_uppercase'),
+    t('change_password_security_tip_number'),
+    t('change_password_security_tip_special'),
+    t('change_password_security_tip_personal'),
+    t('change_password_security_tip_reuse'),
   ];
 
   return (
@@ -152,11 +170,9 @@ const ChangePasswordPage: React.FC = () => {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Đổi mật khẩu
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Đổi mật khẩu</h1>
           <p className="text-gray-600 dark:text-gray-300">
-            Cập nhật mật khẩu để bảo mật tài khoản của bạn
+            {t('change_password_description')}
           </p>
         </div>
 
@@ -167,10 +183,10 @@ const ChangePasswordPage: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Lock className="w-5 h-5 mr-2" />
-                  Thay đổi mật khẩu
+                  {t('change_password_title')}
                 </CardTitle>
                 <CardDescription>
-                  Nhập mật khẩu hiện tại và mật khẩu mới để cập nhật
+                  {t('change_password_input')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -178,14 +194,14 @@ const ChangePasswordPage: React.FC = () => {
                   {/* Current Password */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Mật khẩu hiện tại
+                      {t('change_password_current')}
                     </label>
                     <div className="relative">
                       <Input
                         type={showPasswords.current ? 'text' : 'password'}
                         value={formData.currentPassword}
                         onChange={e => handleInputChange('currentPassword', e.target.value)}
-                        placeholder="Nhập mật khẩu hiện tại"
+                        placeholder={t('change_password_current_placeholder')}
                         className="pr-10"
                         required
                       />
@@ -206,14 +222,14 @@ const ChangePasswordPage: React.FC = () => {
                   {/* New Password */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Mật khẩu mới
+                      {t('change_password_new')}
                     </label>
                     <div className="relative">
                       <Input
                         type={showPasswords.new ? 'text' : 'password'}
                         value={formData.newPassword}
                         onChange={e => handleInputChange('newPassword', e.target.value)}
-                        placeholder="Nhập mật khẩu mới"
+                        placeholder={t('change_password_new_placeholder')}
                         className="pr-10"
                         required
                       />
@@ -235,15 +251,15 @@ const ChangePasswordPage: React.FC = () => {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-gray-600 dark:text-gray-400">
-                            Độ mạnh mật khẩu:
+                            {t('change_password_strength')}
                           </span>
                           <span
                             className={`text-xs font-medium ${
                               passwordStrength.color === 'red'
                                 ? 'text-red-600'
                                 : passwordStrength.color === 'yellow'
-                                ? 'text-yellow-600'
-                                : 'text-green-600'
+                                  ? 'text-yellow-600'
+                                  : 'text-green-600'
                             }`}
                           >
                             {passwordStrength.text}
@@ -255,8 +271,8 @@ const ChangePasswordPage: React.FC = () => {
                               passwordStrength.color === 'red'
                                 ? 'bg-red-500 w-1/3'
                                 : passwordStrength.color === 'yellow'
-                                ? 'bg-yellow-500 w-2/3'
-                                : 'bg-green-500 w-full'
+                                  ? 'bg-yellow-500 w-2/3'
+                                  : 'bg-green-500 w-full'
                             }`}
                           />
                         </div>
@@ -267,7 +283,7 @@ const ChangePasswordPage: React.FC = () => {
                   {/* Confirm Password */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Xác nhận mật khẩu mới
+                      {t('change_password_confirm')}
                     </label>
                     <div className="relative">
                       <Input
@@ -297,12 +313,12 @@ const ChangePasswordPage: React.FC = () => {
                         {formData.newPassword === formData.confirmPassword ? (
                           <div className="flex items-center text-green-600">
                             <CheckCircle className="w-4 h-4 mr-1" />
-                            <span className="text-xs">Mật khẩu khớp</span>
+                            <span className="text-xs">{t('change_password_confirm_match')}</span>
                           </div>
                         ) : (
                           <div className="flex items-center text-red-600">
                             <X className="w-4 h-4 mr-1" />
-                            <span className="text-xs">Mật khẩu không khớp</span>
+                            <span className="text-xs">{t('change_password_confirm_mismatch')}</span>
                           </div>
                         )}
                       </div>
@@ -311,20 +327,16 @@ const ChangePasswordPage: React.FC = () => {
 
                   {/* Submit Button */}
                   <div className="flex gap-4 pt-4">
-                    <Button
-                      type="submit"
-                      disabled={isLoading}
-                      className="flex-1"
-                    >
+                    <Button type="submit" disabled={isLoading} className="flex-1">
                       {isLoading ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                          Đang cập nhật...
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          {t('reset_password_updating')}
                         </>
                       ) : (
                         <>
                           <Lock className="w-4 h-4 mr-2" />
-                          Cập nhật mật khẩu
+                          {t('reset_password_update')}
                         </>
                       )}
                     </Button>
@@ -334,7 +346,7 @@ const ChangePasswordPage: React.FC = () => {
                       onClick={() => goTo('/profile')}
                       disabled={isLoading}
                     >
-                      Hủy bỏ
+                      {t('common_cancel')}
                     </Button>
                   </div>
                 </form>
@@ -347,7 +359,7 @@ const ChangePasswordPage: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center text-lg">
                   <Shield className="w-5 h-5 mr-2" />
-                  Bảo mật mật khẩu
+                  {t('profile_security_tips')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
