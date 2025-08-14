@@ -18,9 +18,66 @@ export const useNavigation = () => {
     [navigate]
   );
 
+  const goToSendEmailVerify = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.SEND_EMAIL_SUCCESS, options);
+    },
+    [navigate]
+  );
+
+  const goToVerifyEmailSuccess = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.VERIFY_EMAIL_SUCCESS, options);
+    },
+    [navigate]
+  );
+
   const goToAuth = useCallback(
     (mode: 'login' | 'register' = 'login', options?: NavigationOptions) => {
       navigate(`${Routers.AUTH}?mode=${mode}`, options);
+    },
+    [navigate]
+  );
+
+  // Profile navigation
+  const goToProfile = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.PROFILE, options);
+    },
+    [navigate]
+  );
+
+  const goToForgotPassword = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.FORGOT_PASSWORD, options);
+    },
+    [navigate]
+  );
+
+  const goToAboutUs = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.ABOUT_US, options);
+    },
+    [navigate]
+  );
+
+  const goToChangePassword = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.PROFILE_CHANGE_PASSWORD, options);
+    },
+    [navigate]
+  );
+
+  const goToNotificationSettings = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.PROFILE_NOTIFICATIONS, options);
+    },
+    [navigate]
+  );
+
+  const goToGeneralSettings = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.PROFILE_SETTINGS, options);
     },
     [navigate]
   );
@@ -60,6 +117,13 @@ export const useNavigation = () => {
     // Public routes
     goToHome,
     goToAuth,
+    goToForgotPassword,
+
+    // Profile routes
+    goToProfile,
+    goToChangePassword,
+    goToNotificationSettings,
+    goToGeneralSettings,
 
     // Error routes
     goToNotFound,
@@ -69,6 +133,10 @@ export const useNavigation = () => {
     goBack,
     goForward,
     goTo,
+
+    // Verify
+    goToSendEmailVerify,
+    goToVerifyEmailSuccess,
   };
 };
 

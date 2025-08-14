@@ -17,26 +17,26 @@ export const selectAuthLoading = createSelector([selectAuthState], auth => auth.
 
 export const selectAuthError = createSelector([selectAuthState], auth => auth.error);
 
-export const selectIsAuthenticated = createSelector([selectAuthState], auth => auth.isAuthenticated);
+export const selectAuthSuccessMessage = createSelector(
+  [selectAuthState],
+  auth => auth.successMessage
+);
+
+export const selectIsAuthenticated = createSelector(
+  [selectAuthState],
+  auth => auth.isAuthenticated
+);
 
 // ========================
 // COMPUTED SELECTORS - Tính toán từ state
 // ========================
 export const selectUserRole = createSelector([selectUser], user => user?.role || 'GUEST');
 
-export const selectUserFullName = createSelector([selectUser], user => user?.name || '');
+export const selectUserFirstName = createSelector([selectUser], user => user?.firstName || '');
+
+export const selectUserLastName = createSelector([selectUser], user => user?.firstName || '');
 
 export const selectUserEmail = createSelector([selectUser], user => user?.email || '');
-
-export const selectUserAvatar = createSelector([selectUser], user => user?.avatar || '');
-
-export const selectUserPhone = createSelector([selectUser], user => user?.phone || '');
-
-export const selectUserAddress = createSelector([selectUser], user => user?.address || '');
-
-export const selectUserDateOfBirth = createSelector([selectUser], user => user?.dateOfBirth);
-
-export const selectUserStatus = createSelector([selectUser], user => user?.status);
 
 export const selectIsUserVerified = createSelector([selectUser], user => user?.isVerified || false);
 
@@ -45,7 +45,7 @@ export const selectIsUserVerified = createSelector([selectUser], user => user?.i
 // ========================
 export const selectIsAdmin = createSelector([selectUserRole], role => role === 'ADMIN');
 
-export const selectIsCustomer = createSelector([selectUserRole], role => role === 'CUSTOMER');
+export const selectIsUser = createSelector([selectUserRole], role => role === 'USER');
 
 export const selectIsGuest = createSelector([selectUserRole], role => !role || role === 'GUEST');
 
@@ -72,16 +72,10 @@ export const selectUserProfile = createSelector([selectUser], user => {
   if (!user) return null;
 
   return {
-    id: user._id,
+    id: user.id,
     email: user.email,
-    name: user.name,
-    avatar: user.avatar,
     role: user.role,
-    phone: user.phone,
-    address: user.address,
-    dateOfBirth: user.dateOfBirth,
     isVerified: user.isVerified,
-    status: user.status,
     isActive: user.isActive,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
@@ -89,7 +83,7 @@ export const selectUserProfile = createSelector([selectUser], user => {
 });
 
 export const selectUserSummary = createSelector(
-  [selectUserFullName, selectUserEmail, selectUserRole, selectIsAuthenticated],
+  [selectUserFirstName, selectUserLastName, selectUserEmail, selectUserRole, selectIsAuthenticated],
   (name, email, role, isAuthenticated) => ({
     name,
     email,
@@ -108,3 +102,8 @@ export const selectAuthErrorMessage = createSelector([selectAuthError], error =>
 // Legacy selectors for backward compatibility
 export const selectVerifyStatus = createSelector([selectAuthState], () => undefined);
 export const selectVerifyMessage = createSelector([selectAuthState], () => '');
+
+// New selectors for delete user feature
+export const selectDeleteUserStatus = createSelector([selectAuthState], auth => auth.deleteUserStatus);
+
+export const selectDeleteUserError = createSelector([selectAuthState], auth => auth.deleteUserError || '');

@@ -1,14 +1,12 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import {
-  allRoutes,
-  type RouteConfig,
-} from '@/config/routes';
+import { allRoutes, type RouteConfig } from '@/config/routes';
 import CustomerLayout from '../components/layout/CustomerLayout';
 import { FadeIn } from '../theme/animation';
 import { ErrorBoundaryClass } from '@/components/error/ErrorBoundary';
 import { useAuth } from '@/features/auth/useAuth';
 import DebugContainer from '@/components/debug/DebugContainer';
+import { useTranslation } from 'react-i18next';
 
 // ================================
 // LAZY LOAD COMPONENTS
@@ -17,24 +15,37 @@ import DebugContainer from '@/components/debug/DebugContainer';
 const componentMap = {
   HomePage: lazy(() => import('../pages/home/HomePage')),
   AuthPage: lazy(() => import('../pages/auth/AuthPage')),
+  ForgotPasswordPage: lazy(() => import('../pages/auth/ForgotPasswordPage')),
+  ResetPasswordPage: lazy(() => import('../pages/auth/ResetPasswordPage')),
   NotFoundPage: lazy(() => import('../pages/not-found/NotFoundPage')),
   ForbiddenPage: lazy(() => import('../pages/forbidden/ForbiddenPage')),
   ToastDemoPage: lazy(() => import('../pages/demo/ToastDemo')),
   ModalConfirmDemoPage: lazy(() => import('../pages/demo/ModalConfirmDemo')),
   PaginationDemoPage: lazy(() => import('../pages/demo/PaginationDemo')),
+  VerifyEmailSuccessPage: lazy(() => import('../pages/verify/VerifyEmailSuccessPage')),
+  SendEmailSuccessPage: lazy(() => import('../pages/verify/SendEmailSuccessPage')),
+  ProfilePage: lazy(() => import('../pages/profile/ProfilePage')),
+  ChangePasswordPage: lazy(() => import('../pages/profile/ChangePasswordPage')),
+  NotificationSettingsPage: lazy(() => import('../pages/profile/NotificationSettingsPage')),
+  GeneralSettingsPage: lazy(() => import('../pages/profile/GeneralSettingsPage')),
+  AboutPage: lazy(() => import('../pages/about-us/AboutUsPage')),
 };
 
 // ================================
 // COMPONENTS
 // ================================
 
-const LoadingSpinner: React.FC = () => (
-  <div className="flex items-center justify-center min-h-screen bg-background">
-    <div className="flex flex-col items-center space-y-4">
-      <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+const LoadingSpinner: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-accent border-t-transparent"></div>
+        <span className="text-foreground text-lg font-medium">{t('loading')}</span>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -43,9 +54,10 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
-  console.log("user:", user);
-  console.log("isAuthenticated:", isAuthenticated);
-  console.log("isLoading:", isLoading);
+
+  console.log('user:', user);
+  console.log('isAuthenticated:', isAuthenticated);
+  console.log('isLoading:', isLoading);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -59,7 +71,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
   // Kiểm tra quyền truy cập dựa trên role
   if (user && route.roles) {
     const userRole = user.role || 'GUEST';
-    if (!route.roles.includes(userRole as 'ADMIN' | 'CUSTOMER' | 'GUEST')) {
+    if (!route.roles.includes(userRole as 'ADMIN' | 'USER' | 'GUEST')) {
       return <Navigate to="/403" replace />;
     }
   }
@@ -73,7 +85,7 @@ const LayoutWrapper: React.FC<{
   children: React.ReactNode;
 }> = ({ route, children }) => {
   switch (route.layout) {
-    case 'CUSTOMER':
+    case 'USER':
       return (
         <CustomerLayout>
           <FadeIn>{children}</FadeIn>
@@ -123,7 +135,7 @@ const AppRouter: React.FC = () => {
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
-        <DebugContainer/>
+        <DebugContainer />
       </BrowserRouter>
     </ErrorBoundaryClass>
   );

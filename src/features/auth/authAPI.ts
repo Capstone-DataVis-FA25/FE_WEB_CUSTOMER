@@ -1,18 +1,88 @@
-import { axiosPublic } from '@/services/axios';
-import type { SignInRequest, SignUpRequest, AuthResponse } from './authType';
+import { axiosPrivate, axiosPublic } from '@/services/axios';
+import type { SignInRequest, SignUpRequest, GoogleAuthRequest, AuthResponse, UpdateProfileRequest, UpdateProfileResponse } from './authType';
 
-const SIGN_IN = '/auth/sign-in';
-const SIGN_UP = '/auth/sign-up';
-// const GOOGLE_AUTH = '/auth/google/callback';
-// const GOOGLE_SIGN_UP = '/auth/google';
+const SIGN_IN = '/auth/signin';
+const SIGN_UP = '/auth/signup';
+const GOOGLE_AUTH = '/auth/google/token';
+const CHANGE_PASSWORD = '/users/me/change-password';
+const FORGOT_PASSWORD = '/auth/forgot-password';
+const RESET_PASSWORD = '/auth/reset-password';
+const UPDATE_PROFILE = 'users/me/update-profile';
 
 export const authAPI = {
   signInWithEmailPassword: async (data: SignInRequest): Promise<AuthResponse> => {
     const response = await axiosPublic.post(`${SIGN_IN}`, data);
-    return response.data;
+    const responseData = response.data.data;
+
+    return {
+      user: responseData.user,
+      access_token: responseData.tokens.access_token,
+      refresh_token: responseData.tokens.refresh_token,
+    };
   },
   signUpWithEmailPassword: async (data: SignUpRequest): Promise<AuthResponse> => {
     const response = await axiosPublic.post(`${SIGN_UP}`, data);
-    return response.data;
+    const responseData = response.data.data;
+    console.log(`Dữ liệu response data: ${JSON.stringify(responseData, null, 2)}`);
+    return {
+      user: responseData.user,
+      access_token: responseData.tokens.access_token,
+      refresh_token: responseData.tokens.refresh_token,
+      message: responseData.message,
+    };
+  },
+
+  // Google OAuth2 with ID Token
+  signInWithGoogleToken: async (data: GoogleAuthRequest): Promise<AuthResponse> => {
+    const response = await axiosPublic.post(`${GOOGLE_AUTH}`, data);
+    const responseData = response.data.data;
+
+    return {
+      user: responseData.user,
+      access_token: responseData.tokens.access_token,
+      refresh_token: responseData.tokens.refresh_token,
+    };
+  },
+
+  //Update Profile
+  updateProfile: async (data: UpdateProfileRequest): Promise<UpdateProfileResponse> => {
+    const response = await axiosPrivate.patch(`${UPDATE_PROFILE}`, data);
+    const responseData = response.data.data;
+    return {
+      user: responseData.user,
+    };
+  },
+
+
+  deleteUser: async (userId: string): Promise<{ message: string }> => {
+    // Lấy accessToken từ localStorage
+    const accessToken = localStorage.getItem('accessToken');
+    const response = await axiosPrivate.delete(`/users/${userId}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    return { message: response.data.message };
+  },
+  //Change password
+  changePassword: async (data: { oldPassword: string; newPassword: string }): Promise<void> => {
+    await axiosPrivate.patch(`${CHANGE_PASSWORD}`, {
+      old_password: data.oldPassword,
+      new_password: data.newPassword,
+      confirm_password: data.newPassword,
+    });
+  },
+  // Forgot Password
+  forgotPassword: async (data: { email: string }): Promise<void> => {
+    await axiosPublic.post(`${FORGOT_PASSWORD}`, data);
+  },
+
+  // Reset Password
+  resetPassword: async (data: { password: string; token: string }): Promise<void> => {
+    await axiosPublic.post(`${RESET_PASSWORD}`, {
+      newPassword: data.password,
+      token: data.token,
+    });
   },
 };
+

@@ -1,6 +1,17 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { AuthState, User } from './authType';
-import { signInThunk, signUpThunk } from './authThunk';
+import {
+  signInThunk,
+  signUpThunk,
+  signInWithGoogleThunk,
+  updateProfileThunk,
+  changePasswordThunk,
+  forgotPasswordThunk,
+  resetPasswordThunk,
+  deleteUserThunk,
+} from './authThunk';
+
+import { t } from 'i18next';
 
 // Helper function để lấy user từ localStorage an toàn
 const getStoredUser = (): User | null => {
@@ -19,6 +30,9 @@ const initialState: AuthState = {
   isAuthenticated: !!localStorage.getItem('accessToken'),
   isLoading: false,
   error: null,
+  successMessage: null,
+  deleteUserStatus: 'idle',
+  deleteUserError: null,
 };
 
 const authSlice = createSlice({
@@ -26,7 +40,7 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     // Logout - xóa all data và localStorage
-    logout: (state) => {
+    logout: state => {
       state.user = null;
       state.accessToken = null;
       state.refreshToken = null;
@@ -41,16 +55,8 @@ const authSlice = createSlice({
     },
 
     // Clear error
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
-    },
-
-    // Update user profile
-    updateUserProfile: (state, action: PayloadAction<Partial<User>>) => {
-      if (state.user) {
-        state.user = { ...state.user, ...action.payload };
-        localStorage.setItem('user', JSON.stringify(state.user));
-      }
     },
 
     // Set loading manually
@@ -65,17 +71,17 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.refreshToken;
       }
       state.isAuthenticated = true;
-      
+
       localStorage.setItem('accessToken', action.payload.accessToken);
       if (action.payload.refreshToken) {
         localStorage.setItem('refreshToken', action.payload.refreshToken);
       }
     },
   },
-  extraReducers: (builder) => {
+  extraReducers: builder => {
     // Sign In
     builder
-      .addCase(signInThunk.pending, (state) => {
+      .addCase(signInThunk.pending, state => {
         state.isLoading = true;
         state.error = null;
       })
@@ -95,19 +101,34 @@ const authSlice = createSlice({
       .addCase(signInThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload?.message || action.error?.message || 'Sign in failed';
-        state.user = null;
-        state.accessToken = null;
-        state.refreshToken = null;
-        state.isAuthenticated = false;
       });
 
     // Sign Up
     builder
-      .addCase(signUpThunk.pending, (state) => {
+      .addCase(signUpThunk.pending, state => {
         state.isLoading = true;
         state.error = null;
       })
       .addCase(signUpThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.access_token;
+        state.refreshToken = action.payload.refresh_token;
+        state.error = null;
+        state.successMessage = action.payload.message;
+      })
+      .addCase(signUpThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload?.message || action.error?.message || t('auth_signUpFailed');
+      });
+
+    // Google Sign In
+    builder
+      .addCase(signInWithGoogleThunk.pending, state => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(signInWithGoogleThunk.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload.user;
         state.accessToken = action.payload.access_token;
@@ -120,23 +141,113 @@ const authSlice = createSlice({
         localStorage.setItem('accessToken', action.payload.access_token);
         localStorage.setItem('refreshToken', action.payload.refresh_token);
       })
-      .addCase(signUpThunk.rejected, (state, action) => {
+      .addCase(signInWithGoogleThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload?.message || action.error?.message || 'Sign up failed';
+        state.error =
+          action.payload?.message || action.error?.message || t('auth_googleSignInFailed');
         state.user = null;
         state.accessToken = null;
         state.refreshToken = null;
         state.isAuthenticated = false;
       });
+
+    // Update Profile
+    builder
+      .addCase(updateProfileThunk.pending, state => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateProfileThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.error = null;
+
+        // Lưu vào localStorage
+        localStorage.setItem('user', JSON.stringify(action.payload.user));
+      })
+      .addCase(updateProfileThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error =
+          action.payload?.message || action.error?.message || t('auth_updateProfileFailed');
+      });
+
+    // Delete User
+    builder
+      .addCase(deleteUserThunk.pending, state => {
+        state.deleteUserStatus = 'pending';
+        state.deleteUserError = null;
+      })
+      .addCase(deleteUserThunk.fulfilled, (state, action) => {
+        state.deleteUserStatus = 'success';
+        state.deleteUserError = null;
+        // Nếu user tự xóa chính mình thì logout
+        if (state.user && state.user.id === action.payload.id) {
+          state.user = null;
+          state.accessToken = null;
+          state.refreshToken = null;
+          state.isAuthenticated = false;
+          localStorage.removeItem('user');
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+        }
+      })
+      .addCase(deleteUserThunk.rejected, (state, action) => {
+        state.deleteUserStatus = 'error';
+        state.deleteUserError = action.payload?.message || 'Delete user failed';
+      });
+
+    // Change Password
+    builder
+      .addCase(changePasswordThunk.pending, state => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(changePasswordThunk.fulfilled, state => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(changePasswordThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error =
+          action.payload?.message || action.error?.message || t('auth_changePasswordFailed');
+      });
+
+    // Forgot Password
+    builder
+      .addCase(forgotPasswordThunk.pending, state => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(forgotPasswordThunk.fulfilled, state => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(forgotPasswordThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error =
+          action.payload?.message || action.error?.message || t('auth_forgotPasswordFailed');
+      });
+
+    // Reset Password
+    builder
+      .addCase(resetPasswordThunk.pending, state => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(resetPasswordThunk.fulfilled, state => {
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(resetPasswordThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error =
+          action.payload?.message || action.error?.message || t('auth_resetPasswordFailed');
+      });
   },
 });
 
-export const {
-  logout,
-  clearError,
-  updateUserProfile,
-  setLoading,
-  setTokens,
-} = authSlice.actions;
+export const { logout, clearError, setLoading, setTokens } = authSlice.actions;
+
+// TODO: Lỗi cái này chưa dám xóa updateUserProfile (note)
 
 export default authSlice.reducer;

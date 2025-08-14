@@ -31,14 +31,16 @@ export const LanguageSwitcher: React.FC = () => {
       <Button
         variant="outline"
         size="sm"
-        className="flex items-center gap-2 bg-white border-gray-200 text-gray-700 hover:bg-gray-50 transition-all duration-200"
+        className="flex items-center gap-2 bg-primary border-gray-200 text-accent hover:bg-primary transition-all duration-200"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <Globe className="w-4 h-4" />
-        <span className="text-lg">{currentLangInfo.flag}</span>
-        <span className="hidden sm:inline text-sm font-medium">{currentLangInfo.nativeName}</span>
+        <Globe className="w-4 h-4 text-accent hover:text-secondary" />
+        <span className="text-lg text-accent hover:text-secondary">{currentLangInfo.flag}</span>
+        <span className="hidden sm:inline text-accent hover:text-secondary text-sm font-medium">
+          {currentLangInfo.nativeName}
+        </span>
         <ChevronDown
-          className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-accent hover:text-secondary transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
         />
       </Button>
 
@@ -56,7 +58,9 @@ export const LanguageSwitcher: React.FC = () => {
             >
               <span className="text-lg">{lang.flag}</span>
               <div className="flex flex-col">
-                <span className="text-sm font-medium">{lang.nativeName}</span>
+                <span className="text-sm text-accent hover:text-accent font-medium">
+                  {lang.nativeName}
+                </span>
                 <span className="text-xs text-gray-500">{lang.name}</span>
               </div>
               {currentLanguage === lang.code && (

@@ -9,14 +9,17 @@ import {
   selectAuthError,
   selectUserProfile,
   selectIsAdmin,
-  selectIsCustomer,
+  selectIsUser,
   selectIsGuest,
   selectVerifyStatus,
   selectVerifyMessage,
+  selectDeleteUserStatus,
+  selectDeleteUserError,
+  selectAuthSuccessMessage,
 } from './authSelector';
-import { logout, clearError, updateUserProfile, setLoading } from './authSlice';
-import { signInThunk, signUpThunk } from './authThunk';
-import type { SignInRequest, SignUpRequest, User } from './authType';
+import { logout, clearError, setLoading  } from './authSlice';
+import { signInThunk, signUpThunk, signInWithGoogleThunk, updateProfileThunk,deleteUserThunk } from './authThunk';
+import type { SignInRequest, SignUpRequest, GoogleAuthRequest, User } from './authType';
 
 export const useAuth = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -31,10 +34,13 @@ export const useAuth = () => {
   const userProfile = useSelector(selectUserProfile);
   const verifyStatus = useSelector(selectVerifyStatus);
   const verifyMessage = useSelector(selectVerifyMessage);
+  const successMessage = useSelector(selectAuthSuccessMessage);
+  const deleteUserStatus = useSelector(selectDeleteUserStatus);
+  const deleteUserError = useSelector(selectDeleteUserError);
 
   // Role checks
   const isAdmin = useSelector(selectIsAdmin);
-  const isCustomer = useSelector(selectIsCustomer);
+  const isUser = useSelector(selectIsUser);
   const isGuest = useSelector(selectIsGuest);
 
   // Actions
@@ -42,8 +48,16 @@ export const useAuth = () => {
     return dispatch(signInThunk(data));
   };
 
+  const signInWithGoogle = (data: GoogleAuthRequest) => {
+    return dispatch(signInWithGoogleThunk(data));
+  };
+
   const signUp = (data: SignUpRequest) => {
     return dispatch(signUpThunk(data));
+  };
+
+  const deleteUser = (userId: string) => {
+    return dispatch(deleteUserThunk(userId));
   };
 
   const logoutUser = () => {
@@ -55,7 +69,7 @@ export const useAuth = () => {
   };
 
   const updateProfile = (data: Partial<User>) => {
-    dispatch(updateUserProfile(data));
+    dispatch(updateProfileThunk(data));
   };
 
   const setAuthLoading = (loading: boolean) => {
@@ -69,19 +83,23 @@ export const useAuth = () => {
     isLoading, // Boolean - đang loading API call
     error, // Error string hoặc null
     isAuthenticated, // Boolean - user đã login chưa
-    userRole, // String - role của user (admin/customer/guest)
+    userRole, // String - role của user (admin/user/guest)
     userProfile, // Formatted user profile object
     verifyStatus, // undefined (legacy)
     verifyMessage, // '' (legacy)
-
+    deleteUserStatus, // Trạng thái xóa user
+    deleteUserError, // Lỗi xóa user
+    successMessage, // Thông báo thành công
     // Role checks - Boolean flags
     isAdmin, // Boolean - user có phải admin không
-    isCustomer, // Boolean - user có phải customer không
+    isUser, // Boolean - user có phải user không
     isGuest, // Boolean - user có phải guest không
 
     // Actions - Functions để thực hiện actions
     signIn, // Function(data: SignInRequest) => Promise
     signUp, // Function(data: SignUpRequest) => Promise
+    deleteUser,// Function(userId: string) => Promise
+    signInWithGoogle,// Function(data: GoogleAuthRequest) => Promise 
     logout: logoutUser, // Function() => void - logout và clear localStorage
     clearError: clearAuthError, // Function() => void - clear error state
     updateUserProfile: updateProfile, // Function(data: Partial<User>) => void
