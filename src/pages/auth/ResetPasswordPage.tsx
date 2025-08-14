@@ -9,7 +9,7 @@ import type { AppDispatch } from '@/store/store';
 import { resetPasswordThunk } from '@/features/auth/authThunk';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useToastContext } from '@/components/providers/ToastProvider';
-import { useTranslation } from 'node_modules/react-i18next';
+import { useTranslation } from 'react-i18next';
 
 interface PasswordFormData {
   password: string;
@@ -136,7 +136,9 @@ const ResetPasswordPage: React.FC = () => {
               <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
                 <AlertCircle className="w-8 h-8 text-red-600" />
               </div>
-              <CardTitle className="text-2xl font-bold">{t('reset_password_invalid_token')}</CardTitle>
+              <CardTitle className="text-2xl font-bold">
+                {t('reset_password_invalid_token')}
+              </CardTitle>
               <CardDescription>{tokenError}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
