@@ -54,6 +54,13 @@ export const useNavigation = () => {
     [navigate]
   );
 
+  const goToAboutUs = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.ABOUT_US, options);
+    },
+    [navigate]
+  );
+
   const goToChangePassword = useCallback(
     (options?: NavigationOptions) => {
       navigate(Routers.PROFILE_CHANGE_PASSWORD, options);

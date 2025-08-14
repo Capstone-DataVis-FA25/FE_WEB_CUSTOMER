@@ -44,7 +44,10 @@ const Header: React.FC<HeaderProps> = ({
   const { goToAuth } = useNavigation();
 
   // Navigation items
-  const navItems = [{ name: t('navigation_home'), href: '/' }];
+  const navItems = [
+    { name: t('navigation_home'), href: '/' },
+    { name: t('navigation_about'), href: '/about-us' },
+  ];
 
   // Close dropdown when clicking outside
   useEffect(() => {

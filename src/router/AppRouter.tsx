@@ -28,6 +28,7 @@ const componentMap = {
   ChangePasswordPage: lazy(() => import('../pages/profile/ChangePasswordPage')),
   NotificationSettingsPage: lazy(() => import('../pages/profile/NotificationSettingsPage')),
   GeneralSettingsPage: lazy(() => import('../pages/profile/GeneralSettingsPage')),
+  AboutPage: lazy(() => import('../pages/about-us/AboutUsPage')),
 };
 
 // ================================

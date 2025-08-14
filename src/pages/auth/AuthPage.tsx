@@ -15,6 +15,7 @@ import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
 import LanguageSwitcher from '@/components/language-switcher';
 
 import PasswordStrengthChecker from '@/components/ui/password-strength-checker';
+import { usePasswordStrength } from '@/hooks/usePasswordStrength';
 
 interface AuthPageProps {
   onBack?: () => void;
@@ -23,7 +24,6 @@ interface AuthPageProps {
 const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   const { signIn, signUp, signInWithGoogle, user, isAuthenticated, isLoading, successMessage } =
     useAuth();
-
   const [isLogin, setIsLogin] = useState(true);
   const hasShownSuccessToast = useRef(false);
   const location = useLocation();
@@ -67,6 +67,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   };
 
   const [formData, setFormData] = useState(getPersistedFormData());
+  const { isStrong: isPasswordStrong } = usePasswordStrength(formData.password);
   const { goToHome, goToSendEmailVerify, goToAuth, goToForgotPassword } = useNavigation();
   const { showError, showSuccess } = useToastContext();
   const { t } = useTranslation();
@@ -110,14 +111,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     }
 
     if (!isLogin) {
+      if (!isPasswordStrong) {
+        return 'Mật khẩu chưa đủ mạnh';
+      }
       if (!formData.firstName.trim()) {
         return 'Tên không được để trống';
       }
-
       if (!formData.lastName.trim()) {
         return 'Họ không được để trống';
       }
-
       if (formData.password !== formData.confirmPassword) {
         return 'Mật khẩu xác nhận không khớp';
       }
@@ -407,7 +409,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                   <Button
                     type="button"
                     variant="link"
-                    className="p-0 h-auto text-sm text-primary hover:text-primary/80"
+                    className="p-0 h-auto text-sm text-accent hover:text-accent[800]"
                     onClick={() => goToForgotPassword()}
                   >
                     {t('auth_forgotPasswordLink')}
@@ -419,7 +421,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                 type="submit"
                 className="w-full transition-all duration-200"
                 size="lg"
-                disabled={isLoading}
+                disabled={isLoading || (!isLogin && !isPasswordStrong)}
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center space-x-2">

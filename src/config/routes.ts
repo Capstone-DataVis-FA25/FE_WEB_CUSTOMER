@@ -85,6 +85,18 @@ export const publicRoutes: RouteConfig[] = [
       description: 'Trang chủ website',
     },
   },
+  {
+    path: Routers.ABOUT_US,
+    name: 'about-us',
+    component: 'AboutPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Về chúng tôi',
+      description: 'Về chúng tôi website',
+    },
+  },
 ];
 
 // Auth routes
@@ -313,9 +325,7 @@ export const getRouteByPath = (path: string): RouteConfig | undefined => {
 };
 
 export const getRoutesByRole = (role: UserRole): RouteConfig[] => {
-  return allRoutes.filter(route =>
-    !route.roles || route.roles.includes(role)
-  );
+  return allRoutes.filter(route => !route.roles || route.roles.includes(role));
 };
 
 export const hasPermission = (userRole: UserRole, permission: Permission): boolean => {

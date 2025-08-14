@@ -2,15 +2,26 @@ import { MdEmail, MdCheckCircle } from 'react-icons/md';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { SlideInDown } from '@/theme/animation';
+import { useTranslation } from 'react-i18next';
+import { FaSignInAlt } from 'react-icons/fa';
+import { logout } from '@/features/auth/authSlice';
+import useNavigation from '@/hooks/useNavigation';
 
 const EmailConfirmation = () => {
+  const { t } = useTranslation();
+  const { goToAuth } = useNavigation();
+
   const handleOpenGmail = () => {
     window.open('https://mail.google.com', '_blank');
   };
 
   const handleResendEmail = () => {
-    // Logic để gửi lại email
     console.log('Resending email...');
+  };
+
+  const handleContinueLogin = () => {
+    logout();
+    goToAuth();
   };
 
   return (
@@ -22,14 +33,13 @@ const EmailConfirmation = () => {
             {/* Header with gradient */}
             <div className="bg-accent px-8 py-12 text-center">
               <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg ">
-                {/* <MdEmail className="w-10 h-10 text-accent" /> */}
                 <img
                   src="https://res.cloudinary.com/dfvy81evi/image/upload/v1754886570/circle_logo_uresgo.png"
                   className="p-2"
                 />
               </div>
-              <h1 className="text-2xl font-bold text-white mb-2">Email Đã Được Gửi!</h1>
-              <p className="text-blue-100 text-sm">Vui lòng kiểm tra hộp thư của bạn</p>
+              <h1 className="text-2xl font-bold text-white mb-2">{t('sendEmail_title')}</h1>
+              <p className="text-blue-100 text-sm">{t('sendEmail_subtitle')}</p>
             </div>
 
             {/* Content */}
@@ -37,18 +47,15 @@ const EmailConfirmation = () => {
               <div className="text-center mb-8">
                 <div className="flex items-center justify-center mb-4">
                   <MdCheckCircle className="w-6 h-6 text-green-800 mr-2" />
-                  <span className="text-green-800 font-semibold">Email xác nhận đã được gửi</span>
+                  <span className="text-green-800 font-semibold">{t('sendEmail_sent')}</span>
                 </div>
 
-                <p className="text-gray-600 text-sm leading-relaxed mb-6">
-                  Chúng tôi đã gửi email xác nhận tài khoản đến địa chỉ email của bạn. Vui lòng kiểm
-                  tra hộp thư và nhấp vào liên kết xác nhận để hoàn tất quá trình đăng ký.
-                </p>
+                <p className="text-gray-600 text-sm leading-relaxed mb-6">{t('sendEmail_check')}</p>
 
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
                   <p className="text-green-800 text-sm font-medium flex items-center justify-center gap-2">
                     <span>💡</span>
-                    Mẹo: Kiểm tra cả thư mục spam nếu không thấy email
+                    {t('sendEmail_tip')}
                   </p>
                 </div>
               </div>
@@ -58,22 +65,32 @@ const EmailConfirmation = () => {
                 onClick={handleOpenGmail}
                 variant="default"
                 size="lg"
-                className="w-full bg-accent text-primary hover:bg-secondary hover:text-primary py-4 text-base font-semibold transition-all duration-300 transform hover:shadow-lg group"
+                className="w-full bg-accent text-primary hover:bg-secondary hover:text-primary py-4 text-base font-semibold transition-all duration-300 transform hover:shadow-lg group mb-4"
               >
                 <MdEmail className="w-5 h-5 mr-3" />
-                Mở Gmail
+                {t('sendEmail_openGmail')}
+              </Button>
+
+              <Button
+                onClick={handleContinueLogin}
+                variant="default"
+                size="lg"
+                className="w-full bg-accent text-primary hover:bg-secondary hover:text-primary py-4 text-base font-semibold transition-all duration-300 transform hover:shadow-lg group mb-4"
+              >
+                <FaSignInAlt className="w-5 h-5 mr-3" />
+                {t('verifyEmail_continueLogin')}
               </Button>
 
               {/* Additional Info */}
-              <div className="mt-8 pt-6 border-t border-gray-100">
+              <div className="mt-3 pt-6 border-t border-gray-100">
                 <div className="text-center">
-                  <p className="text-gray-500 text-xs mb-3">Không nhận được email?</p>
+                  <p className="text-gray-500 text-xs mb-3">{t('sendEmail_notReceived')}</p>
                   <Button
                     onClick={handleResendEmail}
                     variant="default"
                     className="text-black hover:text-accent text-sm font-medium underline"
                   >
-                    Gửi lại email xác nhận
+                    {t('sendEmail_resend')}
                   </Button>
                 </div>
               </div>
@@ -83,7 +100,7 @@ const EmailConfirmation = () => {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-gray-400 text-xs">© 2024 DataVis. Tất cả quyền được bảo lưu.</p>
+          <p className="text-gray-400 text-xs">{t('sendEmail_footer')}</p>
         </div>
       </div>
     </div>
