@@ -9,6 +9,8 @@ import {
   CardTitle,
 } from '../../components/ui/card';
 import useNavigation from '@/hooks/useNavigation';
+import { useAuth } from '@/features/auth/useAuth';
+import { useTranslation } from 'react-i18next';
 
 interface EmailVerificationSuccessProps {
   onBackToConfirmation?: () => void;
@@ -17,9 +19,12 @@ interface EmailVerificationSuccessProps {
 const EmailVerificationSuccess: React.FC<EmailVerificationSuccessProps> = ({
   onBackToConfirmation,
 }) => {
+  const { t } = useTranslation();
   const { goToAuth } = useNavigation();
+  const { logout } = useAuth();
 
   const handleContinueLogin = () => {
+    logout();
     goToAuth();
   };
 
@@ -32,11 +37,10 @@ const EmailVerificationSuccess: React.FC<EmailVerificationSuccessProps> = ({
               <FaCheckCircle className="text-white text-4xl" />
             </div>
             <CardTitle className="text-2xl font-bold text-gray-800 mb-2">
-              Xác thực thành công!
+              {t('verifyEmail_title')}
             </CardTitle>
             <CardDescription className="text-gray-600 text-base">
-              Tài khoản của bạn đã được xác thực thành công. Bạn có thể tiếp tục đăng nhập để sử
-              dụng dịch vụ.
+              {t('verifyEmail_subtitle')}
             </CardDescription>
           </CardHeader>
 
@@ -45,8 +49,8 @@ const EmailVerificationSuccess: React.FC<EmailVerificationSuccessProps> = ({
               <div className="flex items-center space-x-3">
                 <FaCheckCircle className="text-green-600 text-xl flex-shrink-0" />
                 <div>
-                  <p className="text-green-800 font-medium">Email đã được xác thực</p>
-                  <p className="text-green-600 text-sm">Tài khoản của bạn đã sẵn sàng sử dụng</p>
+                  <p className="text-green-800 font-medium">{t('verifyEmail_success')}</p>
+                  <p className="text-green-600 text-sm">{t('verifyEmail_ready')}</p>
                 </div>
               </div>
             </div>
@@ -59,7 +63,7 @@ const EmailVerificationSuccess: React.FC<EmailVerificationSuccessProps> = ({
                 className="w-full py-3 px-6 font-semibold bg-accent text-primary hover:bg-secondary hover:text-primary shadow-lg  transition-all duration-200 flex items-center justify-center space-x-2"
               >
                 <FaSignInAlt className="text-lg" />
-                <span>Tiếp tục đăng nhập</span>
+                <span>{t('verifyEmail_continueLogin')}</span>
               </Button>
 
               <Button
@@ -69,13 +73,11 @@ const EmailVerificationSuccess: React.FC<EmailVerificationSuccessProps> = ({
                 className="w-full py-3 px-6 font-semibold text-[#204188] hover:text-[#1a3470] flex items-center justify-center space-x-2"
               >
                 <FaArrowLeft className="text-sm" />
-                <span>Quay lại trang xác nhận</span>
+                <span>{t('verifyEmail_back')}</span>
               </Button>
 
               <div className="text-center">
-                <p className="text-sm text-gray-500">
-                  Bạn sẽ được chuyển hướng đến trang đăng nhập
-                </p>
+                <p className="text-sm text-gray-500">{t('verifyEmail_redirect')}</p>
               </div>
             </div>
           </CardContent>
@@ -83,12 +85,12 @@ const EmailVerificationSuccess: React.FC<EmailVerificationSuccessProps> = ({
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-500">
-            Cần hỗ trợ?{' '}
+            {t('verifyEmail_support')}{' '}
             <a
               href="mailto:support@datavis.com"
               className="text-[#204188] hover:text-[#1a3470] font-medium hover:underline transition-colors"
             >
-              Liên hệ với chúng tôi
+              {t('verifyEmail_contact')}
             </a>
           </p>
         </div>

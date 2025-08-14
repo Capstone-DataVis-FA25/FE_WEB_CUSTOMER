@@ -8,7 +8,7 @@ import {
   changePasswordThunk,
   forgotPasswordThunk,
   resetPasswordThunk,
-  deleteUserThunk
+  deleteUserThunk,
 } from './authThunk';
 
 import { t } from 'i18next';
@@ -114,14 +114,8 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.accessToken = action.payload.access_token;
         state.refreshToken = action.payload.refresh_token;
-        state.isAuthenticated = true;
         state.error = null;
         state.successMessage = action.payload.message;
-
-        // Lưu vào localStorage
-        localStorage.setItem('user', JSON.stringify(action.payload.user));
-        localStorage.setItem('accessToken', action.payload.access_token);
-        localStorage.setItem('refreshToken', action.payload.refresh_token);
       })
       .addCase(signUpThunk.rejected, (state, action) => {
         state.isLoading = false;
@@ -204,47 +198,50 @@ const authSlice = createSlice({
 
     // Change Password
     builder
-      .addCase(changePasswordThunk.pending, (state) => {
+      .addCase(changePasswordThunk.pending, state => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(changePasswordThunk.fulfilled, (state) => {
+      .addCase(changePasswordThunk.fulfilled, state => {
         state.isLoading = false;
         state.error = null;
       })
       .addCase(changePasswordThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload?.message || action.error?.message || t('auth_changePasswordFailed');
+        state.error =
+          action.payload?.message || action.error?.message || t('auth_changePasswordFailed');
       });
 
     // Forgot Password
     builder
-      .addCase(forgotPasswordThunk.pending, (state) => {
+      .addCase(forgotPasswordThunk.pending, state => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(forgotPasswordThunk.fulfilled, (state) => {
+      .addCase(forgotPasswordThunk.fulfilled, state => {
         state.isLoading = false;
         state.error = null;
       })
       .addCase(forgotPasswordThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload?.message || action.error?.message || t('auth_forgotPasswordFailed');
+        state.error =
+          action.payload?.message || action.error?.message || t('auth_forgotPasswordFailed');
       });
 
     // Reset Password
     builder
-      .addCase(resetPasswordThunk.pending, (state) => {
+      .addCase(resetPasswordThunk.pending, state => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(resetPasswordThunk.fulfilled, (state) => {
+      .addCase(resetPasswordThunk.fulfilled, state => {
         state.isLoading = false;
         state.error = null;
       })
       .addCase(resetPasswordThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload?.message || action.error?.message || t('auth_resetPasswordFailed');
+        state.error =
+          action.payload?.message || action.error?.message || t('auth_resetPasswordFailed');
       });
   },
 });
