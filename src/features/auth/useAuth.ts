@@ -56,8 +56,8 @@ export const useAuth = () => {
     return dispatch(signUpThunk(data));
   };
 
-  const deleteUser = (userId: string) => {
-    return dispatch(deleteUserThunk(userId));
+  const deleteUser = (userId: string, password: string) => {
+    return dispatch(deleteUserThunk({ id: userId, password }));
   };
 
   const logoutUser = () => {
