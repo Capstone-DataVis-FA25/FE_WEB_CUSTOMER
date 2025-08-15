@@ -102,6 +102,7 @@
   "validation_passwordMatch": "Mật khẩu xác nhận không khớp",
   "profile_title": "Thông tin cá nhân",
   "profile_subtitle": "Quản lý thông tin cá nhân và cài đặt tài khoản của bạn",
+  "profile_loading": "Đang tải thông tin cá nhân...",
   "profile_personalInfo": "Thông tin cá nhân",
   "profile_personalInfoDesc": "Cập nhật thông tin để giữ tài khoản của bạn luôn chính xác",
   "profile_edit": "Chỉnh sửa",
@@ -207,5 +208,6 @@
   "common_confirm": "Xác nhận",
   "light": "Sáng",
   "dark": "Tối",
-  "footer_copyright": "DataVis Capstone. Bảo lưu mọi quyền."
+  "footer_copyright": "DataVis Capstone. Bảo lưu mọi quyền.",
+  "auth_viewProfileFailed": "Xem hồ sơ không thành công"
 }

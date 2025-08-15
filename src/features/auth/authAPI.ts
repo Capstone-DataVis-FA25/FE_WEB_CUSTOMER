@@ -8,6 +8,7 @@ const CHANGE_PASSWORD = '/users/me/change-password';
 const FORGOT_PASSWORD = '/auth/forgot-password';
 const RESET_PASSWORD = '/auth/reset-password';
 const UPDATE_PROFILE = 'users/me/update-profile';
+const VIEW_PROFILE = 'users/me';
 
 export const authAPI = {
   signInWithEmailPassword: async (data: SignInRequest): Promise<AuthResponse> => {
@@ -53,6 +54,15 @@ export const authAPI = {
     };
   },
 
+  //View Profile
+  viewProfile: async (): Promise<UpdateProfileResponse> => {
+    const response = await axiosPrivate.get(`${VIEW_PROFILE}`);
+    const responseData = response.data.data;
+    console.log(responseData);
+    return {
+      user: responseData,
+    };
+  },
 
   deleteUser: async (userId: string): Promise<{ message: string }> => {
     // Lấy accessToken từ localStorage

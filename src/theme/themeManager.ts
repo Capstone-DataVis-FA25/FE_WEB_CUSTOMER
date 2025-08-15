@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 
 // Định nghĩa các loại theme có thể sử dụng
-export type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark' | 'system';
 
 // Interface cho context props của theme
 interface ThemeContextProps {

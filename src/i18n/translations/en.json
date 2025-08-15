@@ -102,6 +102,7 @@
   "validation_passwordMatch": "Passwords do not match",
   "profile_title": "Profile",
   "profile_subtitle": "Manage your personal information and account settings",
+  "profile_loading": "Loading profile information...",
   "profile_personalInfo": "Personal Information",
   "profile_personalInfoDesc": "Update your information to keep your account accurate",
   "profile_edit": "Edit",
@@ -205,5 +206,6 @@
   "common_confirm": "Confirm",
   "light": "Light",
   "dark": "Dark",
-  "footer_copyright": "DataVis Capstone. All rights reserved."
+  "footer_copyright": "DataVis Capstone. All rights reserved.",
+  "auth_viewProfileFailed": "Failed to view profile"
 }
