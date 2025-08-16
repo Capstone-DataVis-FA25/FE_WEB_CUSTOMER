@@ -15,6 +15,7 @@ const CHANGE_PASSWORD = '/users/me/change-password';
 const FORGOT_PASSWORD = '/auth/forgot-password';
 const RESET_PASSWORD = '/auth/reset-password';
 const UPDATE_PROFILE = 'users/me/update-profile';
+const DELETE_USER = '/users';
 
 export const authAPI = {
   signInWithEmailPassword: async (data: SignInRequest): Promise<AuthResponse> => {
@@ -60,13 +61,17 @@ export const authAPI = {
     };
   },
 
-  deleteUser: async (userId: string): Promise<{ message: string }> => {
-    // Lấy accessToken từ localStorage
+  deleteUser: async (userId: string, email: string): Promise<{ message: string }> => {
     const accessToken = localStorage.getItem('accessToken');
-    const response = await axiosPrivate.delete(`/users/${userId}`, {
+    if (!accessToken) throw new Error('Access token is missing. Vui lòng đăng nhập lại.');
+    const response = await axiosPrivate.request({
+      url: `${DELETE_USER}/${userId}`,
+      method: 'DELETE',
       headers: {
         Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
       },
+      data: { email },
     });
     return { message: response.data.message };
   },
