@@ -9,6 +9,7 @@ import {
   forgotPasswordThunk,
   resetPasswordThunk,
   deleteUserThunk,
+  viewProfileThunk,
 } from './authThunk';
 
 import { t } from 'i18next';
@@ -149,6 +150,20 @@ const authSlice = createSlice({
         state.accessToken = null;
         state.refreshToken = null;
         state.isAuthenticated = false;
+      });
+
+    //View Profile
+    builder
+      .addCase(viewProfileThunk.pending, state => {
+        state.error = null;
+      })
+      .addCase(viewProfileThunk.fulfilled, (state, action) => {
+        state.user = action.payload.user;
+        state.error = null;
+      })
+      .addCase(viewProfileThunk.rejected, (state, action) => {
+        state.error =
+        action.payload?.message || action.error?.message || t('auth_viewProfileFailed');
       });
 
     // Update Profile
