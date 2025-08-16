@@ -81,12 +81,12 @@ export const viewProfileThunk = createAsyncThunk<
 
 export const deleteUserThunk = createAsyncThunk<
   { message: string; id: string },
-  string,
+  { id: string; password: string },
   { rejectValue: { message: string } }
->('auth/deleteUser', async (userId, { rejectWithValue }) => {
+>('auth/deleteUser', async ({ id, password }, { rejectWithValue }) => {
   try {
-    const response = await authAPI.deleteUser(userId);
-    return { message: response.message, id: userId };
+    const response = await authAPI.deleteUser(id, password);
+    return { message: response.message, id };
   } catch (error: unknown) {
     const errorMessage =
       (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||

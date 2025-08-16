@@ -20,6 +20,7 @@ import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import { useAuth } from '@/features/auth/useAuth';
 import useNavigation from '@/hooks/useNavigation';
+import { ModalConfirmForm } from '@/components/ui/modal-confirm-form';
 
 interface GeneralSettings {
   timezone: string;
@@ -33,7 +34,7 @@ interface GeneralSettings {
 const GeneralSettingsPage: React.FC = () => {
   const { showToast } = useToast();
   const modalConfirm = useModalConfirm();
-  const { showSuccess, showError } = useToastContext();
+  const { showSuccess } = useToastContext();
   const { user, deleteUser, deleteUserStatus, deleteUserError, logout } = useAuth();
   const { goToHome } = useNavigation();
 
@@ -48,6 +49,8 @@ const GeneralSettingsPage: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [canDelete, setCanDelete] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   const timezones = [
     { value: 'Asia/Ho_Chi_Minh', label: 'Việt Nam (UTC+7)' },
@@ -129,20 +132,27 @@ const GeneralSettingsPage: React.FC = () => {
   };
 
   const handleDeleteAccount = () => {
-    setCanDelete(false);
-    modalConfirm.openConfirm(async () => {
-      if (user?.id) {
-        const result = await deleteUser(user.id);
-        if (result.type.endsWith('/fulfilled')) {
-          showSuccess('Tài khoản đã được xóa', 'Tài khoản và dữ liệu của bạn đã bị xóa vĩnh viễn');
-          logout();
-          goToHome();
-        } else {
-          showError('Lỗi', deleteUserError || 'Không thể xóa tài khoản');
-        }
-      }
-    });
+    modalConfirm.openConfirm(() => {});
     setTimeout(() => setCanDelete(true), 10000);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteEmail) {
+      setDeleteError('Vui lòng nhập email để xác nhận xóa tài khoản');
+      return;
+    }
+    if (user?.id) {
+      const result = await deleteUser(user.id, deleteEmail);
+      console.log(['Delete result:', result]);
+      if (result.type && result.type.endsWith('/fulfilled')) {
+        showSuccess('Tài khoản đã được xóa', 'Tài khoản và dữ liệu của bạn đã bị xóa vĩnh viễn');
+        modalConfirm.close();
+        logout();
+        goToHome();
+      } else {
+        setDeleteError('Email không đúng hoặc không thể xóa tài khoản');
+      }
+    }
   };
 
   const ToggleSwitch: React.FC<{ checked: boolean; onChange: () => void; disabled?: boolean }> = ({
@@ -441,16 +451,21 @@ const GeneralSettingsPage: React.FC = () => {
       </div>
 
       {/* Modal xác nhận xóa tài khoản */}
-      <ModalConfirm
+      <ModalConfirmForm
         isOpen={modalConfirm.isOpen}
         onClose={modalConfirm.close}
-        onConfirm={modalConfirm.confirm}
-        loading={modalConfirm.isLoading || !canDelete}
+        onConfirm={handleConfirmDelete}
+        loading={modalConfirm.isLoading}
         type="danger"
         title="Xác nhận xóa tài khoản"
-        message="Bạn có chắc chắn muốn xóa tài khoản? Hành động này sẽ không thể hoàn tác. Bạn có 10 giây để suy nghĩ trước khi xác nhận."
+        message="Nhập email của bạn để xác nhận xóa tài khoản. Hành động này sẽ không thể hoàn tác."
         confirmText="Xóa"
         cancelText="Hủy"
+        inputValue={deleteEmail}
+        inputType="email"
+        inputPlaceholder="Nhập email"
+        inputError={deleteError}
+        onInputChange={e => { setDeleteEmail(e.target.value); setDeleteError(''); }}
       />
     </div>
   );
