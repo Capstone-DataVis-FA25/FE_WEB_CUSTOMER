@@ -59,6 +59,7 @@
   "auth_loginNow": "Đăng nhập ngay",
   "auth_googleLoginFailed": "Đăng nhập Google thất bại",
   "auth_welcomeback": "Chào mừng đã trở lại với DataVis",
+  "auth_registerSuccess": "Đăng ký thành công! Kiểm tra mail để xác thực tài khoản",
   "sendEmail_title": "Email Đã Được Gửi!",
   "sendEmail_subtitle": "Vui lòng kiểm tra hộp thư của bạn",
   "sendEmail_sent": "Email xác nhận đã được gửi",

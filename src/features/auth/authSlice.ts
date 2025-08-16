@@ -115,6 +115,8 @@ const authSlice = createSlice({
         state.accessToken = action.payload.access_token;
         state.refreshToken = action.payload.refresh_token;
         state.error = null;
+        state.isAuthenticated = true;
+        console.log(`Message đăng ký thành công [SLICE]: ${action.payload.message}`);
         state.successMessage = action.payload.message;
       })
       .addCase(signUpThunk.rejected, (state, action) => {

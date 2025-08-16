@@ -75,7 +75,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   // Chỉ điều hướng khi thành công
   useEffect(() => {
     if (isAuthenticated && user && !hasShownSuccessToast.current) {
-      if (user.isVerified) {
+      console.log(`User trong auth-page: ${JSON.stringify(user, null, 2)}`);
+      if (user.isVerified == true && successMessage == null) {
         goToHome();
       } else if (successMessage != null) {
         goToSendEmailVerify();
@@ -158,22 +159,20 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
 
       // Kiểm tra kết quả
       if (result.type.endsWith('/fulfilled')) {
-        // Thành công - KHÔNG show toast ở đây, sẽ show ở HomePage
         hasShownSuccessToast.current = true;
-
-        // Clear persisted form data khi thành công
+        if (!isLogin) {
+          showSuccess(t('auth_registerSuccess'));
+        }
         try {
           delete (window as any).__authFormData__;
         } catch (error) {
           console.warn('Could not clear persisted form data:', error);
         }
-
         // useEffect sẽ tự động navigate
       } else if (result.type.endsWith('/rejected')) {
         const errorMessage =
           (result as { payload?: { message?: string } })?.payload?.message ||
           (isLogin ? 'Email hoặc mật khẩu không đúng' : 'Đăng ký thất bại');
-
         showError(isLogin ? 'Đăng nhập thất bại' : 'Đăng ký thất bại', errorMessage, 5000);
       }
     } catch (error) {

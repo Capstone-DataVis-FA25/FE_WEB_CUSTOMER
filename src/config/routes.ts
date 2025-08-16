@@ -15,6 +15,7 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 export const Permission = {
   // Public permissions
   VIEW_PUBLIC: 'view_public',
+  
   // USER permissions
   VIEW_PROFILE: 'view_profile',
   EDIT_PROFILE: 'edit_profile',

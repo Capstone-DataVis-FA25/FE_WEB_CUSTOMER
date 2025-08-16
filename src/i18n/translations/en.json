@@ -59,6 +59,7 @@
   "auth_loginNow": "Login now",
   "auth_firstName": "First Name",
   "auth_welcomeback": "Welcome back with DataVis",
+  "auth_registerSuccess": "Register success! Please check mail to verify account",
   "sendEmail_title": "Email Sent!",
   "sendEmail_subtitle": "Please check your inbox",
   "sendEmail_sent": "Confirmation email has been sent",
