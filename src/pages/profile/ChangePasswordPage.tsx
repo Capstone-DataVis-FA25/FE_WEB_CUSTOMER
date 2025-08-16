@@ -170,7 +170,7 @@ const ChangePasswordPage: React.FC = () => {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Đổi mật khẩu</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('change_password_title')}</h1>
           <p className="text-gray-600 dark:text-gray-300">
             {t('change_password_description')}
           </p>
@@ -359,7 +359,7 @@ const ChangePasswordPage: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center text-lg">
                   <Shield className="w-5 h-5 mr-2" />
-                  {t('profile_security_tips')}
+                  {t('profile_security')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
