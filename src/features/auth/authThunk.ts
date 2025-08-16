@@ -65,6 +65,20 @@ export const updateProfileThunk = createAsyncThunk<
   }
 });
 
+export const viewProfileThunk = createAsyncThunk<
+  UpdateProfileResponse,
+  void,
+  { rejectValue: { message: string } }
+>('users/me/view-profile', async (_, { rejectWithValue }) => {
+  try {
+    const response = await authAPI.viewProfile();
+    return response;
+  } catch (error: unknown) {
+    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth_viewProfileFailed');
+    return rejectWithValue({ message: errorMessage });
+  }
+});
+
 export const deleteUserThunk = createAsyncThunk<
   { message: string; id: string },
   { id: string; password: string },

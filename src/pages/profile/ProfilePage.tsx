@@ -21,13 +21,14 @@ import { Badge } from '@/components/ui/badge';
 import LanguageSwitcher from '@/components/language-switcher/LanguageSwitcher';
 import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
 import { useNavigation } from '@/hooks/useNavigation';
-import { updateProfileThunk } from '@/features/auth/authThunk';
+import { updateProfileThunk, viewProfileThunk } from '@/features/auth/authThunk';
 import { useAuth } from '@/features/auth/useAuth';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModal } from '@/hooks/useModal';
 import { useToast } from '@/hooks/useToast';
 import { useAppDispatch } from '@/store/hooks';
 import { useToastContext } from '@/components/providers/ToastProvider';
+import { AvatarImage } from '@radix-ui/react-avatar';
 
 interface UserProfile {
   id: string;
@@ -55,28 +56,22 @@ const ProfilePage: React.FC = () => {
     onConfirm: () => {},
   });
 
+  // Load user profile data when component mounts
   useEffect(() => {
-    // Initialize form data when user changes
-    if (user) {
-      setUserProfile({
-        id: user.id || '',
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        createdAt: user.createdAt || new Date().toISOString(),
-        isActive: user.isActive || true,
-      });
-      setEditForm({
-        id: user.id || '',
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        createdAt: user.createdAt || new Date().toISOString(),
-        isActive: user.isActive || true,
-      });
+    const loadProfile = async () => {
+      try {
+        await dispatch(viewProfileThunk());
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+      }
+    };
+
+    // Only call API if we have authentication token
+    if (user?.id) {
+      loadProfile();
     }
-  }, [user]);
-  
+  }, [dispatch, user?.id]);
+
   // Mock user data - in real app, this would come from auth state or API
   const [userProfile, setUserProfile] = useState<UserProfile>({
     id: user?.id || '',
@@ -103,11 +98,13 @@ const ProfilePage: React.FC = () => {
   const handleSave = async () => {
     try {
       // Call the thunk with dispatch
-      const result = await dispatch(updateProfileThunk({
-        firstName: editForm.firstName,
-        lastName: editForm.lastName,
-      }));
-      
+      const result = await dispatch(
+        updateProfileThunk({
+          firstName: editForm.firstName,
+          lastName: editForm.lastName,
+        })
+      );
+
       if (updateProfileThunk.fulfilled.match(result)) {
         setUserProfile(editForm);
         setIsEditing(false);
@@ -218,13 +215,14 @@ const ProfilePage: React.FC = () => {
           {/* Profile Card - Main Content */}
           <div className="lg:col-span-8">
             <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-              <CardHeader className="pb-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
+              <CardHeader className="pb-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-lg">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0 text-center sm:text-left">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 items-center w-full">
-                    <Avatar className="w-16 h-16 border-4 border-white/30 mb-2 sm:mb-0">
-                      <AvatarFallback className="text-xl font-semibold bg-white/20 text-white">
-                        {userProfile.firstName.charAt(0)}
-                        {userProfile.lastName.charAt(0)}
+                    <Avatar className="w-16 h-16 ring-4 ring-blue-500/20">
+                      <AvatarImage src={user?.avatar} alt={user?.firstName} />
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-xl font-bold ">
+                        {user?.firstName?.charAt(0)}
+                        {user?.lastName?.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
@@ -277,7 +275,7 @@ const ProfilePage: React.FC = () => {
                 <div className="mb-8 flex items-center justify-center">
                   <div className="text-center">
                     <Avatar className="w-24 h-24 mx-auto mb-4 ring-4 ring-blue-500/20">
-                      <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                      <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-blue-500 to-purple-500 text-4xl">
                         {userProfile.firstName.charAt(0)}
                         {userProfile.lastName.charAt(0)}
                       </AvatarFallback>

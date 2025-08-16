@@ -15,6 +15,7 @@ const CHANGE_PASSWORD = '/users/me/change-password';
 const FORGOT_PASSWORD = '/auth/forgot-password';
 const RESET_PASSWORD = '/auth/reset-password';
 const UPDATE_PROFILE = 'users/me/update-profile';
+const VIEW_PROFILE = 'users/me';
 const DELETE_USER = '/users';
 
 export const authAPI = {
@@ -58,6 +59,16 @@ export const authAPI = {
     const responseData = response.data.data;
     return {
       user: responseData.user,
+    };
+  },
+
+  //View Profile
+  viewProfile: async (): Promise<UpdateProfileResponse> => {
+    const response = await axiosPrivate.get(`${VIEW_PROFILE}`);
+    const responseData = response.data.data;
+    console.log(responseData);
+    return {
+      user: responseData,
     };
   },
 
