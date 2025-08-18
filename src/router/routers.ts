@@ -4,6 +4,7 @@ const Routers = {
   AUTH: '/auth',
   FORGOT_PASSWORD: '/auth/forgot-password',
   RESET_PASSWORD: '/auth/reset-password',
+  ABOUT_US: '/about-us',
 
   // Profile routes
   PROFILE: '/profile',
