@@ -3,8 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Check, X, Info } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { MotionWrapper } from '@/theme/animation';
-import { motion } from 'framer-motion';
-import { progressVariants } from '@/theme/animation/animation.config';
 import { usePasswordStrength } from '@/hooks/usePasswordStrength';
 
 interface PasswordStrengthRule {
