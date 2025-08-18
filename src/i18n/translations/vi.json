@@ -212,5 +212,6 @@
   "light": "Sáng",
   "dark": "Tối",
   "footer_copyright": "DataVis Capstone. Bảo lưu mọi quyền.",
-  "auth_viewProfileFailed": "Xem hồ sơ không thành công"
+  "auth_viewProfileFailed": "Xem hồ sơ không thành công",
+  "navigation_about": "Giới thiệu"
 }

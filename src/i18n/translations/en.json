@@ -210,5 +210,6 @@
   "light": "Light",
   "dark": "Dark",
   "footer_copyright": "DataVis Capstone. All rights reserved.",
-  "auth_viewProfileFailed": "Failed to view profile"
+  "auth_viewProfileFailed": "Failed to view profile",
+  "navigation_about": "About Us"
 }
