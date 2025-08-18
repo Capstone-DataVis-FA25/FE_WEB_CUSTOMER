@@ -128,18 +128,6 @@ export const PasswordStrengthTooltip: React.FC<PasswordStrengthTooltipProps> = (
                 </MotionWrapper>
               </MotionWrapper>
 
-              {/* Progress Bar */}
-              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                <motion.div
-                  variants={progressVariants}
-                  initial="initial"
-                  animate="animate"
-                  custom={strengthPercentage}
-                  className={`h-2 rounded-full ${strengthInfo.color}`}
-                  style={{ minWidth: 8 }}
-                />
-              </div>
-
               {/* Rules List */}
               <div className="space-y-2">
                 {rules.map((rule, index) => (

@@ -25,14 +25,16 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   const { signIn, signUp, signInWithGoogle, user, isAuthenticated, isLoading, successMessage } =
     useAuth();
   const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<string>('login');
   const hasShownSuccessToast = useRef(false);
   const location = useLocation();
 
   // Lấy mode từ query string
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const mode = params.get('mode');
-    if (mode === 'register') {
+    const modeParam = params.get('mode');
+    setMode(modeParam || 'login');
+    if (modeParam === 'register') {
       setIsLogin(false);
     } else {
       setIsLogin(true);
@@ -76,9 +78,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   useEffect(() => {
     if (isAuthenticated && user && !hasShownSuccessToast.current) {
       console.log(`User trong auth-page: ${JSON.stringify(user, null, 2)}`);
-      if (user.isVerified == true && successMessage == null) {
+      console.log(`Mode: ${mode}`);
+      if (mode === 'reset-password') {
+        goToAuth();
+      } else if (user.isVerified === true) {
         goToHome();
-      } else if (successMessage != null) {
+      } else if (!isLogin && successMessage != null) {
         goToSendEmailVerify();
       } else {
         goToAuth();
