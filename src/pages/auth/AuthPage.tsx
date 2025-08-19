@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,22 +26,26 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [mode, setMode] = useState<string>('login');
-  const hasShownSuccessToast = useRef(false);
   const location = useLocation();
 
   // Lấy mode từ query string
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const modeParam = params.get('mode');
-    setMode(modeParam || 'login');
-    if (modeParam === 'register') {
+    const newMode = modeParam || 'login';
+    setMode(newMode);
+
+    if (newMode === 'register') {
       setIsLogin(false);
     } else {
       setIsLogin(true);
     }
+
+    console.log(`URL changed - mode: ${newMode}, isLogin: ${newMode !== 'register'}`);
   }, [location.search]);
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Persist form data để tránh mất khi component re-mount
   const getPersistedFormData = () => {
@@ -76,26 +80,33 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
 
   // Chỉ điều hướng khi thành công
   useEffect(() => {
-    if (isAuthenticated && user && !hasShownSuccessToast.current) {
+    if (isAuthenticated && user) {
       console.log(`User trong auth-page: ${JSON.stringify(user, null, 2)}`);
       console.log(`Mode: ${mode}`);
+      console.log(`isLogin: ${isLogin}`);
+      console.log(`successMessage: ${successMessage}`);
+      console.log(`user.isVerified: ${user.isVerified}`);
+
       if (mode === 'reset-password') {
+        console.log('Navigating to auth due to reset-password mode');
         goToAuth();
       } else if (user.isVerified === true) {
+        console.log('User is verified, navigating to home');
         goToHome();
-      } else if (!isLogin && successMessage != null) {
+      } else if (mode === 'register' && successMessage) {
+        // Chỉ định rõ điều kiện: đăng ký thành công và có successMessage
+        console.log('SignUp successful, navigating to sendEmailVerify');
         goToSendEmailVerify();
       } else {
+        console.log('Default case, navigating to auth');
         goToAuth();
       }
     }
-  }, [isAuthenticated, user, goToHome]);
+  }, [isAuthenticated, user, mode, successMessage, goToHome, goToSendEmailVerify, goToAuth]);
 
-  // Reset success toast flag khi logout
+  // Reset khi logout - không cần thiết nữa vì không dùng hasShownSuccessToast
   useEffect(() => {
-    if (!isAuthenticated) {
-      hasShownSuccessToast.current = false;
-    }
+    // Component cleanup logic nếu cần
   }, [isAuthenticated]);
 
   // Validation form
@@ -164,9 +175,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
 
       // Kiểm tra kết quả
       if (result.type.endsWith('/fulfilled')) {
-        hasShownSuccessToast.current = true;
         if (!isLogin) {
+          // Đảm bảo mode được set là 'register' khi signUp thành công
+          setMode('register');
           showSuccess(t('auth_registerSuccess'));
+          console.log('SignUp successful - mode set to register');
         }
         try {
           delete (window as any).__authFormData__;
@@ -389,14 +402,28 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <Input
                         id="confirmPassword"
-                        type={showPassword ? 'text' : 'password'}
+                        type={showConfirmPassword ? 'text' : 'password'}
                         name="confirmPassword"
                         value={formData.confirmPassword}
                         onChange={handleInputChange}
-                        className="pl-10"
+                        className="pl-10 pr-12"
                         placeholder={t('auth_enterConfirmPassword')}
                         required={!isLogin}
                       />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent transition-colors duration-200 hover:text-secondary"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        disabled={isLoading}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-5 w-5 transition-transform duration-200" />
+                        ) : (
+                          <Eye className="h-5 w-5 transition-transform duration-200" />
+                        )}
+                      </Button>
                     </div>
                   </div>
                 </FadeIn>
@@ -482,8 +509,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                 type="button"
                 variant="link"
                 onClick={() => {
-                  setIsLogin(!isLogin);
-                  // setLocalError(''); // Clear error khi chuyển mode
+                  const newIsLogin = !isLogin;
+                  setIsLogin(newIsLogin);
+                  setMode(newIsLogin ? 'login' : 'register');
                 }}
                 className="p-0 ml-2 h-auto font-semibold transition-colors duration-200 text-accent hover:text-secondary"
                 disabled={isLoading}

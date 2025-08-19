@@ -16,9 +16,21 @@ import {
   selectDeleteUserStatus,
   selectDeleteUserError,
   selectAuthSuccessMessage,
+  selectResendEmailStatus,
+  selectResendEmailError,
+  selectIsResendEmailLoading,
+  selectIsResendEmailSuccess,
+  selectIsResendEmailError,
 } from './authSelector';
-import { logout, clearError, setLoading  } from './authSlice';
-import { signInThunk, signUpThunk, signInWithGoogleThunk, updateProfileThunk,deleteUserThunk } from './authThunk';
+import { logout, clearError, setLoading, clearResendEmailStatus } from './authSlice';
+import {
+  signInThunk,
+  signUpThunk,
+  signInWithGoogleThunk,
+  updateProfileThunk,
+  deleteUserThunk,
+  resendVerifyEmailThunk,
+} from './authThunk';
 import type { SignInRequest, SignUpRequest, GoogleAuthRequest, User } from './authType';
 
 export const useAuth = () => {
@@ -37,6 +49,13 @@ export const useAuth = () => {
   const successMessage = useSelector(selectAuthSuccessMessage);
   const deleteUserStatus = useSelector(selectDeleteUserStatus);
   const deleteUserError = useSelector(selectDeleteUserError);
+
+  // Resend email selectors
+  const resendEmailStatus = useSelector(selectResendEmailStatus);
+  const resendEmailError = useSelector(selectResendEmailError);
+  const isResendEmailLoading = useSelector(selectIsResendEmailLoading);
+  const isResendEmailSuccess = useSelector(selectIsResendEmailSuccess);
+  const isResendEmailError = useSelector(selectIsResendEmailError);
 
   // Role checks
   const isAdmin = useSelector(selectIsAdmin);
@@ -76,6 +95,14 @@ export const useAuth = () => {
     dispatch(setLoading(loading));
   };
 
+  const resendVerifyEmail = (email: string) => {
+    return dispatch(resendVerifyEmailThunk({ email }));
+  };
+
+  const clearResendEmailError = () => {
+    dispatch(clearResendEmailStatus());
+  };
+
   return {
     // State - Trạng thái hiện tại
     user, // User object hoặc null
@@ -95,14 +122,23 @@ export const useAuth = () => {
     isUser, // Boolean - user có phải user không
     isGuest, // Boolean - user có phải guest không
 
+    // Resend Email State
+    resendEmailStatus, // 'idle' | 'pending' | 'success' | 'error'
+    resendEmailError, // Error message hoặc null
+    isResendEmailLoading, // Boolean - đang gửi lại email
+    isResendEmailSuccess, // Boolean - gửi lại email thành công
+    isResendEmailError, // Boolean - gửi lại email thất bại
+
     // Actions - Functions để thực hiện actions
     signIn, // Function(data: SignInRequest) => Promise
     signUp, // Function(data: SignUpRequest) => Promise
-    deleteUser,// Function(userId: string) => Promise
-    signInWithGoogle,// Function(data: GoogleAuthRequest) => Promise 
+    deleteUser, // Function(userId: string) => Promise
+    signInWithGoogle, // Function(data: GoogleAuthRequest) => Promise
     logout: logoutUser, // Function() => void - logout và clear localStorage
     clearError: clearAuthError, // Function() => void - clear error state
     updateUserProfile: updateProfile, // Function(data: Partial<User>) => void
     setLoading: setAuthLoading, // Function(boolean) => void - set loading manually
+    resendVerifyEmail, // Function(email: string) => Promise - gửi lại email xác thực
+    clearResendEmailError, // Function() => void - clear resend email error
   };
 };

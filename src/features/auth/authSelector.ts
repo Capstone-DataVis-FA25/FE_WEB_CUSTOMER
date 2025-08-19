@@ -104,6 +104,38 @@ export const selectVerifyStatus = createSelector([selectAuthState], () => undefi
 export const selectVerifyMessage = createSelector([selectAuthState], () => '');
 
 // New selectors for delete user feature
-export const selectDeleteUserStatus = createSelector([selectAuthState], auth => auth.deleteUserStatus);
+export const selectDeleteUserStatus = createSelector(
+  [selectAuthState],
+  auth => auth.deleteUserStatus
+);
 
-export const selectDeleteUserError = createSelector([selectAuthState], auth => auth.deleteUserError || '');
+export const selectDeleteUserError = createSelector(
+  [selectAuthState],
+  auth => auth.deleteUserError || ''
+);
+
+// New selectors for resend email feature
+export const selectResendEmailStatus = createSelector(
+  [selectAuthState],
+  auth => auth.resendEmailStatus
+);
+
+export const selectResendEmailError = createSelector(
+  [selectAuthState],
+  auth => auth.resendEmailError || ''
+);
+
+export const selectIsResendEmailLoading = createSelector(
+  [selectResendEmailStatus],
+  status => status === 'pending'
+);
+
+export const selectIsResendEmailSuccess = createSelector(
+  [selectResendEmailStatus],
+  status => status === 'success'
+);
+
+export const selectIsResendEmailError = createSelector(
+  [selectResendEmailStatus],
+  status => status === 'error'
+);

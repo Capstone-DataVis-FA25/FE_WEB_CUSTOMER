@@ -18,6 +18,13 @@ export const useNavigation = () => {
     [navigate]
   );
 
+  const goToVerifyEmailError = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.VERIFY_EMAIL_ERROR, options);
+    },
+    [navigate]
+  );
+
   const goToSendEmailVerify = useCallback(
     (options?: NavigationOptions) => {
       navigate(Routers.SEND_EMAIL_SUCCESS, options);
@@ -28,6 +35,13 @@ export const useNavigation = () => {
   const goToVerifyEmailSuccess = useCallback(
     (options?: NavigationOptions) => {
       navigate(Routers.VERIFY_EMAIL_SUCCESS, options);
+    },
+    [navigate]
+  );
+
+  const goToResendEmail = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.RESEND_EMAIL, options);
     },
     [navigate]
   );
@@ -128,6 +142,7 @@ export const useNavigation = () => {
     // Error routes
     goToNotFound,
     goToForbidden,
+    goToVerifyEmailError,
 
     // Navigation controls
     goBack,
@@ -137,6 +152,7 @@ export const useNavigation = () => {
     // Verify
     goToSendEmailVerify,
     goToVerifyEmailSuccess,
+    goToResendEmail,
   };
 };
 

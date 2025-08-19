@@ -15,7 +15,7 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 export const Permission = {
   // Public permissions
   VIEW_PUBLIC: 'view_public',
-  
+
   // USER permissions
   VIEW_PROFILE: 'view_profile',
   EDIT_PROFILE: 'edit_profile',
@@ -308,6 +308,38 @@ export const errorRoutes: RouteConfig[] = [
 // COMBINED ROUTES
 // ================================
 
+export const verifyEmailError: RouteConfig[] = [
+  {
+    path: Routers.VERIFY_EMAIL_ERROR,
+    name: 'verify-email-error',
+    component: 'VerifyEmailErrorPage',
+    layout: 'NONE',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Lỗi xác thực email',
+      description: 'Token xác thực không hợp lệ hoặc đã hết hạn',
+      hideFromNav: true,
+    },
+  },
+];
+
+export const resendEmailRoute: RouteConfig[] = [
+  {
+    path: Routers.RESEND_EMAIL,
+    name: 'resend-email',
+    component: 'ResendEmailPage',
+    layout: 'NONE',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Gửi lại email xác thực',
+      description: 'Gửi lại email xác thực tài khoản',
+      hideFromNav: true,
+    },
+  },
+];
+
 export const allRoutes: RouteConfig[] = [
   ...publicRoutes,
   ...authRoutes,
@@ -315,6 +347,8 @@ export const allRoutes: RouteConfig[] = [
   ...errorRoutes,
   ...verifyEmailSuccess,
   ...sendEmailVerifySuccess,
+  ...verifyEmailError,
+  ...resendEmailRoute,
 ];
 
 // ================================

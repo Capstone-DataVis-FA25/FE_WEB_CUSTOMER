@@ -29,6 +29,8 @@ const componentMap = {
   NotificationSettingsPage: lazy(() => import('../pages/profile/NotificationSettingsPage')),
   GeneralSettingsPage: lazy(() => import('../pages/profile/GeneralSettingsPage')),
   AboutPage: lazy(() => import('../pages/about-us/AboutUsPage')),
+  VerifyEmailErrorPage: lazy(() => import('../pages/verify/VerifyEmailErrorPage')),
+  ResendEmailPage: lazy(() => import('../pages/verify/ResendEmailPage')),
 };
 
 // ================================

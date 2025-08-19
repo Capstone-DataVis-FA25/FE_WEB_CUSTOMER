@@ -9,6 +9,7 @@
   "navigation_home": "Trang Chủ",
   "navigation_profile": "Thông tin cá nhân",
   "navigation_settings": "Cài đặt",
+  "navigation_about": "Về chúng tôi",
   "home_title": "Trang Chủ",
   "home_subtitle": "Khám phá các component UI tương tác được xây dựng với React & TypeScript",
   "common_searchPlaceholder": "Tìm kiếm...",
@@ -43,6 +44,7 @@
   "auth_enterEmail": "Nhập địa chỉ email",
   "auth_password": "Mật khẩu",
   "auth_enterPassword": "Nhập mật khẩu",
+  "auth_invalidEmail": "Vui lòng nhập email hợp lệ",
   "auth_confirmPasswordLabel": "Xác nhận mật khẩu",
   "auth_enterConfirmPassword": "Nhập lại mật khẩu",
   "auth_rememberLogin": "Ghi nhớ đăng nhập",
@@ -213,5 +215,15 @@
   "light": "Sáng",
   "dark": "Tối",
   "footer_copyright": "DataVis Capstone. Bảo lưu mọi quyền.",
-  "auth_viewProfileFailed": "Xem hồ sơ không thành công"
+  "auth_viewProfileFailed": "Xem hồ sơ không thành công",
+  "verifyEmailError_title": "Xác thực thất bại",
+  "verifyEmailError_message": "Token xác thực không hợp lệ hoặc đã hết hạn.",
+  "verifyEmailError_suggestion": "Vui lòng kiểm tra lại email hoặc gửi lại email xác thực.",
+  "verifyEmailError_backToLogin": "Quay lại đăng nhập",
+  "verifyEmailError_resendEmail": "Gửi lại email xác thực",
+  "auth_resendEmailFailed": "Gửi lại email xác thực thất bại",
+  "resendEmail_success": "Gửi lại email xác thực thành công!",
+  "resendEmail_loading": "Đang gửi email...",
+  "resendEmail_error": "Gửi email thất bại. Vui lòng thử lại.",
+  "resendEmail_description": "Nhập email của bạn để nhận lại email xác thực"
 }
