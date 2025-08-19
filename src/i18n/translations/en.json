@@ -223,5 +223,9 @@
   "resendEmail_success": "Verification email has been resent successfully!",
   "resendEmail_loading": "Sending email...",
   "resendEmail_error": "Failed to send email. Please try again.",
-  "resendEmail_description": "Enter your email to receive verification email again"
+  "resendEmail_description": "Enter your email to receive verification email again",
+  "profile_emptyFieldsError": "Please fill in all required fields.",
+  "profile_noChangesError": "No changes detected.",
+  "profile_invalidFirstNameError": "First name contains invalid characters.",
+  "profile_invalidLastNameError": "Last name contains invalid characters."
 }

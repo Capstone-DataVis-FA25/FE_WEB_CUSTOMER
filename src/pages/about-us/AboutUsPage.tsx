@@ -466,18 +466,6 @@ export default function AboutPage() {
           </motion.div>
         </div>
       </motion.section>
-
-      {/* Footer */}
-      <footer className="py-8 px-4 bg-gray-900 text-white">
-        <div className="max-w-6xl mx-auto text-center">
-          <p className="text-lg font-semibold mb-2">
-            DataVis - Enterprise Data Visualization Platform
-          </p>
-          <p className="text-gray-400">
-            © 2025 DataVis Inc. All rights reserved. Transforming data into insights since 2019.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

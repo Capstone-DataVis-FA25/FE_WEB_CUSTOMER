@@ -9,7 +9,6 @@
   "navigation_home": "Trang Chủ",
   "navigation_profile": "Thông tin cá nhân",
   "navigation_settings": "Cài đặt",
-  "navigation_about": "Về chúng tôi",
   "home_title": "Trang Chủ",
   "home_subtitle": "Khám phá các component UI tương tác được xây dựng với React & TypeScript",
   "common_searchPlaceholder": "Tìm kiếm...",
@@ -225,5 +224,10 @@
   "resendEmail_success": "Gửi lại email xác thực thành công!",
   "resendEmail_loading": "Đang gửi email...",
   "resendEmail_error": "Gửi email thất bại. Vui lòng thử lại.",
-  "resendEmail_description": "Nhập email của bạn để nhận lại email xác thực"
+  "resendEmail_description": "Nhập email của bạn để nhận lại email xác thực",
+  "navigation_about": "Giới thiệu",
+  "profile_emptyFieldsError": "Vui lòng điền vào tất cả các trường bắt buộc.",
+  "profile_noChangesError": "Không phát hiện thay đổi.",
+  "profile_invalidFirstNameError": "Họ chứa ký tự không hợp lệ.",
+  "profile_invalidLastNameError": "Tên chứa ký tự không hợp lệ."
 }
