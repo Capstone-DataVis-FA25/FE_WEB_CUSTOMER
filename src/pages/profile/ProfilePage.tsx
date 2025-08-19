@@ -25,12 +25,12 @@ import { updateProfileThunk, viewProfileThunk } from '@/features/auth/authThunk'
 import { useAuth } from '@/features/auth/useAuth';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModal } from '@/hooks/useModal';
-import { useToast } from '@/hooks/useToast';
 import { useAppDispatch } from '@/store/hooks';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import { AvatarImage } from '@radix-ui/react-avatar';
 import Routers from '@/router/routers';
 import { FadeIn, SlideInRight } from '@/theme/animation';
+import { NAME_REGEX } from '@/utils/validation';
 
 interface UserProfile {
   id: string;
@@ -46,9 +46,11 @@ const ProfilePage: React.FC = () => {
   const { goTo } = useNavigation();
   const { user } = useAuth();
   const dispatch = useAppDispatch();
-  const toast = useToast();
   const modalConfirm = useModal();
-  const { showSuccess, showError } = useToastContext();
+  const { showSuccess, showError, showWarning } = useToastContext();
+  const [focusFieldErrorFirstName, setFocusFieldErrorFirstName] = useState(false);
+  const [focusFieldErrorLastName, setFocusFieldErrorLastName] = useState(false);
+
   // Modal state for different actions
   const [modalConfig, setModalConfig] = useState({
     title: '',
@@ -99,6 +101,27 @@ const ProfilePage: React.FC = () => {
 
   const handleSave = async () => {
     try {
+      if(editForm.firstName.trim() === '' || editForm.lastName.trim() === '') {
+        showError(t('profile_emptyFieldsError'));
+        setFocusFieldErrorFirstName(editForm.firstName.trim() === '');
+        setFocusFieldErrorLastName(editForm.lastName.trim() === '');
+        return;
+      }
+      if(editForm.firstName === userProfile.firstName && editForm.lastName === userProfile.lastName) {
+        showWarning(t('profile_noChangesError'));
+        return;
+      }
+
+      if(!NAME_REGEX.test(editForm.firstName)){
+        showError(t('profile_invalidFirstNameError'));
+        return;
+      }
+
+      if(!NAME_REGEX.test(editForm.lastName)){
+        showError(t('profile_invalidLastNameError'));
+        return;
+      }
+
       // Call the thunk with dispatch
       const result = await dispatch(
         updateProfileThunk({
@@ -115,7 +138,7 @@ const ProfilePage: React.FC = () => {
         showError(t('profile_updateError'), t('profile_updateErrorDesc'));
       }
     } catch (_error) {
-      toast.showError(t('profile_updateError'), t('profile_updateErrorDesc'));
+      showError(t('profile_updateError'), t('profile_updateErrorDesc'));
     }
   };
 
@@ -311,6 +334,9 @@ const ProfilePage: React.FC = () => {
                           onChange={e => handleInputChange('firstName', e.target.value)}
                           placeholder={t('profile_enterFirstName')}
                           className="border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 rounded-lg"
+                          style={{
+                            borderColor: focusFieldErrorFirstName ? 'red' : 'inherit',
+                          }}
                         />
                       ) : (
                         <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-transparent">
@@ -332,6 +358,9 @@ const ProfilePage: React.FC = () => {
                           onChange={e => handleInputChange('lastName', e.target.value)}
                           placeholder={t('profile_enterLastName')}
                           className="border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 rounded-lg"
+                          style={{
+                            borderColor: focusFieldErrorLastName ? 'red' : 'inherit',
+                          }}
                         />
                       ) : (
                         <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-transparent">

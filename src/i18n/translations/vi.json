@@ -213,5 +213,9 @@
   "dark": "Tối",
   "footer_copyright": "DataVis Capstone. Bảo lưu mọi quyền.",
   "auth_viewProfileFailed": "Xem hồ sơ không thành công",
-  "navigation_about": "Giới thiệu"
+  "navigation_about": "Giới thiệu",
+  "profile_emptyFieldsError": "Vui lòng điền vào tất cả các trường bắt buộc.",
+  "profile_noChangesError": "Không phát hiện thay đổi.",
+  "profile_invalidFirstNameError": "Họ chứa ký tự không hợp lệ.",
+  "profile_invalidLastNameError": "Tên chứa ký tự không hợp lệ."
 }
