@@ -38,7 +38,8 @@ const EmailConfirmation = () => {
 
     if (isResendEmailError && resendEmailError && !hasHandledError.current) {
       hasHandledError.current = true;
-      showError(t('resendEmail_error'), resendEmailError);
+      // Hiển thị lỗi từ backend, không dùng translation key cố định
+      showError('Lỗi', resendEmailError);
     }
   }, [isResendEmailSuccess, isResendEmailError, resendEmailError, t, clearResendEmailError]);
 
@@ -60,7 +61,8 @@ const EmailConfirmation = () => {
     if (user?.email) {
       resendVerifyEmail(user.email);
     } else {
-      showError(t('resendEmail_error'), 'Email không tồn tại');
+      // Hiển thị lỗi cụ thể thay vì dùng translation key
+      showError('Lỗi', 'Email không tồn tại');
     }
   };
 

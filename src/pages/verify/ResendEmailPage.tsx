@@ -42,7 +42,8 @@ const ResendEmailPage: React.FC = () => {
 
     if (isResendEmailError && resendEmailError && !hasHandledError.current) {
       hasHandledError.current = true;
-      showError(t('resendEmail_error'), resendEmailError);
+      // Hiển thị lỗi từ backend, không dùng translation key cố định
+      showError('Lỗi', resendEmailError);
     }
   }, [
     isResendEmailSuccess,
@@ -118,11 +119,9 @@ const ResendEmailPage: React.FC = () => {
                 <MdEmail className="w-10 h-10 text-accent" />
               </div>
               <h1 className="text-2xl font-bold text-white mb-2">
-                {t('verifyEmailError_resendEmail', 'Gửi lại email xác thực')}
+                {t('verifyEmailError_resendEmail')}
               </h1>
-              <p className="text-blue-100 text-sm">
-                {t('resendEmail_description', 'Nhập email của bạn để nhận lại email xác thực')}
-              </p>
+              <p className="text-blue-100 text-sm">{t('resendEmail_description')}</p>
             </div>
 
             {/* Content */}

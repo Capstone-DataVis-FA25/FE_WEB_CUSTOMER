@@ -23,7 +23,6 @@ const VerifyEmailErrorPage: React.FC = () => {
   const hasHandledSuccess = useRef(false);
   const hasHandledError = useRef(false);
 
-  // Handle resend success/error effects
   useEffect(() => {
     if (isResendEmailSuccess && !hasHandledSuccess.current) {
       hasHandledSuccess.current = true;
@@ -35,7 +34,7 @@ const VerifyEmailErrorPage: React.FC = () => {
 
     if (isResendEmailError && resendEmailError && !hasHandledError.current) {
       hasHandledError.current = true;
-      showError(t('resendEmail_error'), resendEmailError);
+      showError('Lỗi', resendEmailError);
     }
   }, [
     isResendEmailSuccess,
@@ -74,30 +73,25 @@ const VerifyEmailErrorPage: React.FC = () => {
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center ">
           <h2 className="text-2xl font-bold text-destructive mb-4">
-            {t('verifyEmailError.title', 'Xác thực thất bại')}
+            {t('verifyEmailError_title')}
           </h2>
           <p className="mb-6 text-muted-foreground">
-            {t('verifyEmailError.message', 'Token xác thực không hợp lệ hoặc đã hết hạn.')}
+            {t('verifyEmailError_message')}
             <br />
-            {t(
-              'verifyEmailError.suggestion',
-              'Vui lòng kiểm tra lại email hoặc gửi lại email xác thực.'
-            )}
+            {t('verifyEmailError_suggestion')}
           </p>
           <button
             className="bg-primary text-primary-foreground px-4 mr-2 py-2 rounded hover:bg-secondary mb-2"
             onClick={() => goToAuth()}
           >
-            {t('verifyEmailError.backToLogin', 'Quay lại đăng nhập')}
+            {t('verifyEmailError_backToLogin')}
           </button>
           <button
             className="bg-gray-200 text-primary px-4 py-2 rounded hover:bg-muted-foreground"
             onClick={handleResendEmail}
             disabled={isResendEmailLoading}
           >
-            {isResendEmailLoading
-              ? t('resendEmail_loading')
-              : t('verifyEmailError.resendEmail', 'Gửi lại email xác thực')}
+            {isResendEmailLoading ? t('resendEmail_loading') : t('sendEmail_resend')}
           </button>
         </div>
       </div>
