@@ -74,6 +74,12 @@ axiosPrivate.interceptors.response.use(
 
     // Nếu lỗi 401 và chưa retry
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Kiểm tra nếu là change password API thì không retry
+      if (originalRequest.url?.includes('/users/me/change-password')) {
+        // Không retry cho change password, để component xử lý lỗi
+        return Promise.reject(error);
+      }
+
       originalRequest._retry = true;
 
       const refreshToken = tokenStorage.getRefreshToken();

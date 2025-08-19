@@ -15,10 +15,12 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 export const Permission = {
   // Public permissions
   VIEW_PUBLIC: 'view_public',
+  FORGOT_PASSWORD: 'forgot_password',
 
   // USER permissions
   VIEW_PROFILE: 'view_profile',
   EDIT_PROFILE: 'edit_profile',
+  CHANGE_PASSWORD: 'change_password',
   DEMO_TEST: 'demo_test',
 
   // Admin permissions
@@ -30,12 +32,13 @@ export type Permission = (typeof Permission)[keyof typeof Permission];
 
 // Role permissions mapping
 export const rolePermissions: Record<UserRole, Permission[]> = {
-  [UserRole.GUEST]: [Permission.VIEW_PUBLIC],
+  [UserRole.GUEST]: [Permission.VIEW_PUBLIC, Permission.FORGOT_PASSWORD],
   [UserRole.USER]: [
     Permission.VIEW_PUBLIC,
     Permission.VIEW_PROFILE,
     Permission.EDIT_PROFILE,
     Permission.DEMO_TEST,
+    Permission.CHANGE_PASSWORD,
   ],
   [UserRole.ADMIN]: [
     Permission.VIEW_PUBLIC,
@@ -121,7 +124,7 @@ export const authRoutes: RouteConfig[] = [
     component: 'ForgotPasswordPage',
     layout: 'AUTH',
     isProtected: false,
-    permissions: [Permission.VIEW_PUBLIC],
+    permissions: [Permission.FORGOT_PASSWORD],
     meta: {
       title: 'Quên mật khẩu',
       description: 'Yêu cầu reset mật khẩu',
@@ -134,7 +137,7 @@ export const authRoutes: RouteConfig[] = [
     component: 'ResetPasswordPage',
     layout: 'AUTH',
     isProtected: false,
-    permissions: [Permission.VIEW_PUBLIC],
+    permissions: [Permission.FORGOT_PASSWORD],
     meta: {
       title: 'Reset mật khẩu',
       description: 'Tạo mật khẩu mới',
@@ -198,7 +201,7 @@ export const protectedRoutes: RouteConfig[] = [
     layout: 'USER',
     isProtected: true,
     roles: [UserRole.USER],
-    permissions: [Permission.EDIT_PROFILE],
+    permissions: [Permission.CHANGE_PASSWORD],
     meta: {
       title: 'Đổi mật khẩu',
       description: 'Thay đổi mật khẩu tài khoản',
