@@ -6,17 +6,64 @@ import { useTranslation } from 'react-i18next';
 import { FaSignInAlt } from 'react-icons/fa';
 import { logout } from '@/features/auth/authSlice';
 import useNavigation from '@/hooks/useNavigation';
+import { useAuth } from '@/features/auth/useAuth';
+import { useToastContext } from '@/components/providers/ToastProvider';
+import { useEffect, useRef } from 'react';
 
 const EmailConfirmation = () => {
   const { t } = useTranslation();
   const { goToAuth } = useNavigation();
+  const {
+    user,
+    resendVerifyEmail,
+    isResendEmailLoading,
+    isResendEmailSuccess,
+    isResendEmailError,
+    resendEmailError,
+    clearResendEmailError,
+  } = useAuth();
+  const { showError, showSuccess } = useToastContext();
+
+  // Refs to prevent duplicate toasts
+  const hasHandledSuccess = useRef(false);
+  const hasHandledError = useRef(false);
+
+  // Handle resend success/error effects
+  useEffect(() => {
+    if (isResendEmailSuccess && !hasHandledSuccess.current) {
+      hasHandledSuccess.current = true;
+      showSuccess(t('resendEmail_success'));
+      clearResendEmailError();
+    }
+
+    if (isResendEmailError && resendEmailError && !hasHandledError.current) {
+      hasHandledError.current = true;
+      // Hiển thị lỗi từ backend, không dùng translation key cố định
+      showError('Lỗi', resendEmailError);
+    }
+  }, [isResendEmailSuccess, isResendEmailError, resendEmailError, t, clearResendEmailError]);
+
+  // Reset handled flags
+  useEffect(() => {
+    if (!isResendEmailSuccess) {
+      hasHandledSuccess.current = false;
+    }
+    if (!isResendEmailError) {
+      hasHandledError.current = false;
+    }
+  }, [isResendEmailSuccess, isResendEmailError]);
 
   const handleOpenGmail = () => {
     window.open('https://mail.google.com', '_blank');
   };
 
   const handleResendEmail = () => {
-    console.log('Resending email...');
+    if (user?.email) {
+      resendVerifyEmail(user.email);
+    } else {
+      // Hiển thị lỗi cụ thể thay vì dùng translation key
+      showError('Lỗi', 'Email không tồn tại');
+    }
   };
 
   const handleContinueLogin = () => {
@@ -88,9 +135,10 @@ const EmailConfirmation = () => {
                   <Button
                     onClick={handleResendEmail}
                     variant="default"
+                    disabled={isResendEmailLoading}
                     className="text-black hover:text-accent text-sm font-medium underline"
                   >
-                    {t('sendEmail_resend')}
+                    {isResendEmailLoading ? t('resendEmail_loading') : t('sendEmail_resend')}
                   </Button>
                 </div>
               </div>

@@ -10,6 +10,7 @@ import {
   resetPasswordThunk,
   deleteUserThunk,
   viewProfileThunk,
+  resendVerifyEmailThunk,
 } from './authThunk';
 
 import { t } from 'i18next';
@@ -34,6 +35,8 @@ const initialState: AuthState = {
   successMessage: null,
   deleteUserStatus: 'idle',
   deleteUserError: null,
+  resendEmailStatus: 'idle',
+  resendEmailError: null,
 };
 
 const authSlice = createSlice({
@@ -77,6 +80,12 @@ const authSlice = createSlice({
       if (action.payload.refreshToken) {
         localStorage.setItem('refreshToken', action.payload.refreshToken);
       }
+    },
+
+    // Clear resend email status
+    clearResendEmailStatus: state => {
+      state.resendEmailStatus = 'idle';
+      state.resendEmailError = null;
     },
   },
   extraReducers: builder => {
@@ -165,7 +174,7 @@ const authSlice = createSlice({
       })
       .addCase(viewProfileThunk.rejected, (state, action) => {
         state.error =
-        action.payload?.message || action.error?.message || t('auth_viewProfileFailed');
+          action.payload?.message || action.error?.message || t('auth_viewProfileFailed');
       });
 
     // Update Profile
@@ -260,10 +269,27 @@ const authSlice = createSlice({
         state.error =
           action.payload?.message || action.error?.message || t('auth_resetPasswordFailed');
       });
+
+    // Resend Verify Email
+    builder
+      .addCase(resendVerifyEmailThunk.pending, state => {
+        state.resendEmailStatus = 'pending';
+        state.resendEmailError = null;
+      })
+      .addCase(resendVerifyEmailThunk.fulfilled, (state, action) => {
+        state.resendEmailStatus = 'success';
+        state.resendEmailError = null;
+        state.successMessage = action.payload.message;
+      })
+      .addCase(resendVerifyEmailThunk.rejected, (state, action) => {
+        state.resendEmailStatus = 'error';
+        state.resendEmailError = action.payload?.message || t('auth_resendEmailFailed');
+      });
   },
 });
 
-export const { logout, clearError, setLoading, setTokens } = authSlice.actions;
+export const { logout, clearError, setLoading, setTokens, clearResendEmailStatus } =
+  authSlice.actions;
 
 // TODO: Lỗi cái này chưa dám xóa updateUserProfile (note)
 

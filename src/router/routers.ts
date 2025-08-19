@@ -24,6 +24,8 @@ const Routers = {
   // Verify routes
   VERIFY_EMAIL_SUCCESS: '/verify-email-success',
   SEND_EMAIL_SUCCESS: '/send-email-success',
+  VERIFY_EMAIL_ERROR: '/verify-email-error',
+  RESEND_EMAIL: '/auth/resend-email',
 } as const;
 
 export default Routers;

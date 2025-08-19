@@ -6,6 +6,8 @@ import type {
   AuthResponse,
   UpdateProfileRequest,
   UpdateProfileResponse,
+  ResendEmailRequest,
+  ResendEmailResponse,
 } from './authType';
 
 const SIGN_IN = '/auth/signin';
@@ -17,6 +19,7 @@ const RESET_PASSWORD = '/auth/reset-password';
 const UPDATE_PROFILE = 'users/me/update-profile';
 const VIEW_PROFILE = 'users/me';
 const DELETE_USER = '/users';
+const RESEND_VERIFY_EMAIL = '/auth/resend-verify-email';
 
 export const authAPI = {
   signInWithEmailPassword: async (data: SignInRequest): Promise<AuthResponse> => {
@@ -103,5 +106,11 @@ export const authAPI = {
       newPassword: data.password,
       token: data.token,
     });
+  },
+
+  // Resend verify email
+  resendVerifyEmail: async (data: ResendEmailRequest): Promise<ResendEmailResponse> => {
+    const response = await axiosPublic.post(`${RESEND_VERIFY_EMAIL}`, data);
+    return { message: response.data.message };
   },
 };
