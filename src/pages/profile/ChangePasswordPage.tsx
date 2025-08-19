@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Shield, CheckCircle, X, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Lock, Shield, CheckCircle, X, Loader2, Route } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { changePasswordThunk } from '@/features/auth/authThunk';
 import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '@/store/store';
 import { useTranslation } from 'react-i18next';
+import Routers from '@/router/routers';
 
 interface PasswordFormData {
   currentPassword: string;
@@ -343,7 +344,7 @@ const ChangePasswordPage: React.FC = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => goTo('/profile')}
+                      onClick={() => goTo(Routers.PROFILE)}
                       disabled={isLoading}
                     >
                       {t('common_cancel')}

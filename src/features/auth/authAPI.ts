@@ -32,7 +32,6 @@ export const authAPI = {
   signUpWithEmailPassword: async (data: SignUpRequest): Promise<AuthResponse> => {
     const response = await axiosPublic.post(`${SIGN_UP}`, data);
     const responseData = response.data.data;
-    console.log(`Dữ liệu response data: ${JSON.stringify(responseData, null, 2)}`);
     return {
       user: responseData.user,
       access_token: responseData.tokens.access_token,
@@ -66,7 +65,6 @@ export const authAPI = {
   viewProfile: async (): Promise<UpdateProfileResponse> => {
     const response = await axiosPrivate.get(`${VIEW_PROFILE}`);
     const responseData = response.data.data;
-    console.log(responseData);
     return {
       user: responseData,
     };

@@ -211,5 +211,10 @@
   "light": "Light",
   "dark": "Dark",
   "footer_copyright": "DataVis Capstone. All rights reserved.",
-  "auth_viewProfileFailed": "Failed to view profile"
+  "auth_viewProfileFailed": "Failed to view profile",
+  "navigation_about": "About Us",
+  "profile_emptyFieldsError": "Please fill in all required fields.",
+  "profile_noChangesError": "No changes detected.",
+  "profile_invalidFirstNameError": "First name contains invalid characters.",
+  "profile_invalidLastNameError": "Last name contains invalid characters."
 }
