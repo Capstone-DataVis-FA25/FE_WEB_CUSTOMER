@@ -33,7 +33,7 @@ function HomePage() {
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Chào mừng trở lại,
+                    {t('home_welcome_back')}
                   </p>
                   <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
                     {user.firstName} {user.lastName}
@@ -41,7 +41,7 @@ function HomePage() {
                 </div>
                 <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                   <CheckCircle className="w-3 h-3 mr-1" />
-                  Online
+                  {t('home_status_online')}
                 </Badge>
               </div>
             </SlideInUp>
@@ -58,10 +58,10 @@ function HomePage() {
                 </div>
                 <div>
                   <CardTitle className="text-xl text-gray-900 dark:text-white">
-                    🐛 Debug Container Demo
+                    {t('home_debug_title')}
                   </CardTitle>
                   <CardDescription className="text-gray-600 dark:text-gray-400">
-                    Công cụ debug tích hợp cho developers
+                    {t('home_debug_description')}
                   </CardDescription>
                 </div>
               </div>
@@ -74,30 +74,29 @@ function HomePage() {
                   <div className="flex items-center gap-2 mb-3">
                     <Heart className="w-5 h-5 text-red-500" />
                     <h3 className="font-semibold text-gray-900 dark:text-white">
-                      Cách sử dụng Debug Container
+                      {t('home_debug_usage_title')}
                     </h3>
                   </div>
                   <ul className="space-y-3">
                     <li className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <Star className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                       <span className="text-sm text-gray-700 dark:text-gray-300">
-                        Tìm container debug ở góc <strong>bottom-right</strong> màn hình
+                        {t('home_debug_location')}
                       </span>
                     </li>
                     <li className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                       <Star className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                       <span className="text-sm text-gray-700 dark:text-gray-300">
-                        Click vào nó để mở rộng và xem thông tin debug
+                        {t('home_debug_expand')}
                       </span>
                     </li>
                     <li className="flex items-start gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
                       <Star className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
                       <span className="text-sm text-gray-700 dark:text-gray-300">
-                        Sử dụng phím tắt{' '}
+                        {t('home_debug_shortcut')}
                         <kbd className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-xs">
                           Ctrl/Cmd + Shift + D
                         </kbd>{' '}
-                        để bật/tắt
                       </span>
                     </li>
                   </ul>
@@ -108,32 +107,32 @@ function HomePage() {
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCircle className="w-5 h-5 text-green-500" />
                     <h3 className="font-semibold text-gray-900 dark:text-white">
-                      Thông tin hiển thị
+                      {t('home_debug_features_title')}
                     </h3>
                   </div>
                   <ul className="space-y-3">
                     <li className="flex items-start gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
                       <CheckCircle className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
                       <div className="text-sm text-gray-700 dark:text-gray-300">
-                        <strong>Current Tab:</strong> Route hiện tại, layout, permissions, roles
+                        <strong>Current Tab:</strong> {t('home_debug_current_tab')}
                       </div>
                     </li>
                     <li className="flex items-start gap-3 p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
                       <CheckCircle className="w-4 h-4 text-teal-500 mt-0.5 flex-shrink-0" />
                       <div className="text-sm text-gray-700 dark:text-gray-300">
-                        <strong>Routes Tab:</strong> Danh sách routes có thể truy cập theo role
+                        <strong>Routes Tab:</strong> {t('home_debug_routes_tab')}
                       </div>
                     </li>
                     <li className="flex items-start gap-3 p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg">
                       <CheckCircle className="w-4 h-4 text-pink-500 mt-0.5 flex-shrink-0" />
                       <div className="text-sm text-gray-700 dark:text-gray-300">
-                        <strong>User Tab:</strong> Thông tin user và trạng thái authentication
+                        <strong>User Tab:</strong> {t('home_debug_user_tab')}
                       </div>
                     </li>
                     <li className="flex items-start gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
                       <CheckCircle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
                       <div className="text-sm text-gray-700 dark:text-gray-300">
-                        <strong>System Tab:</strong> Environment, URL, user agent và system info
+                        <strong>System Tab:</strong> {t('home_debug_system_tab')}
                       </div>
                     </li>
                   </ul>

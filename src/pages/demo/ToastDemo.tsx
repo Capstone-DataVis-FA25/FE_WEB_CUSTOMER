@@ -28,14 +28,14 @@ const ToastDemoPage: React.FC = () => {
             🍞 {t('home_toastDemo_title')}
           </h1>
           <p className="text-lg text-gray-600" style={{ fontFamily: 'Inter' }}>
-            Demo các loại toast notification với nhiều tùy chọn khác nhau
+            {t('demo_description_toast')}
           </p>
         </div>
 
         {/* Basic Toast Demo */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-semibold mb-6" style={{ fontFamily: 'Roboto' }}>
-            🎯 Basic Toast Demo
+            {t('demo_basic_toast')}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -72,26 +72,26 @@ const ToastDemoPage: React.FC = () => {
         {/* Toast with different durations */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-semibold mb-6" style={{ fontFamily: 'Roboto' }}>
-            ⏱️ Toast với thời gian khác nhau
+            {t('demo_toast_duration')}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <Button
-              onClick={() => showSuccess('Toast nhanh', 'Sẽ tự động đóng sau 1 giây', 1000)}
+              onClick={() => showSuccess(t('toast_fast_title'), t('toast_fast_description'), 1000)}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
               🏃 Toast 1s
             </Button>
 
             <Button
-              onClick={() => showInfo('Toast trung bình', 'Sẽ tự động đóng sau 3 giây', 3000)}
+              onClick={() => showInfo(t('toast_medium_title'), t('toast_medium_description'), 3000)}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               🚶 Toast 3s
             </Button>
 
             <Button
-              onClick={() => showWarning('Toast chậm', 'Sẽ tự động đóng sau 5 giây', 5000)}
+              onClick={() => showWarning(t('toast_slow_title'), t('toast_slow_description'), 5000)}
               className="bg-yellow-600 hover:bg-yellow-700 text-white"
             >
               🐌 Toast 5s
@@ -102,32 +102,32 @@ const ToastDemoPage: React.FC = () => {
         {/* Multiple Toasts */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-semibold mb-6" style={{ fontFamily: 'Roboto' }}>
-            📚 Multiple Toasts
+            {t('demo_multiple_toasts')}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <Button
               onClick={() => {
-                showSuccess('Toast 1', 'Đây là toast đầu tiên');
-                setTimeout(() => showInfo('Toast 2', 'Đây là toast thứ hai'), 500);
-                setTimeout(() => showWarning('Toast 3', 'Đây là toast thứ ba'), 1000);
+                showSuccess(t('toast_multiple_1'), t('toast_multiple_1_description'));
+                setTimeout(() => showInfo(t('toast_multiple_2'), t('toast_multiple_2_description')), 500);
+                setTimeout(() => showWarning(t('toast_multiple_3'), t('toast_multiple_3_description')), 1000);
               }}
               className="bg-purple-600 hover:bg-purple-700 text-white"
             >
-              🎭 Hiện nhiều toast
+              {t('demo_show_multiple')}
             </Button>
 
             <Button
               onClick={() => {
                 for (let i = 1; i <= 5; i++) {
                   setTimeout(() => {
-                    showInfo(`Toast ${i}`, `Đây là toast số ${i}`);
+                    showInfo(`${t('toast_sequence_title')} ${i}`, `${t('toast_sequence_description')} ${i}`);
                   }, i * 300);
                 }
               }}
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              🎪 Toast liên tiếp
+              {t('demo_show_sequence')}
             </Button>
           </div>
         </div>
@@ -135,7 +135,7 @@ const ToastDemoPage: React.FC = () => {
         {/* Usage Example */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-semibold mb-6" style={{ fontFamily: 'Roboto' }}>
-            💻 Cách sử dụng Toast
+            {t('demo_usage_toast')}
           </h2>
 
           <div className="bg-gray-50 rounded-lg p-4">

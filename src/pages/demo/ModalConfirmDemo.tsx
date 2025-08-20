@@ -33,13 +33,13 @@ const ModalConfirmDemoPage: React.FC = () => {
   const handleQuickAction = async () => {
     // Simulate quick action
     await new Promise(resolve => setTimeout(resolve, 500));
-    showInfo('Thao tác nhanh hoàn thành!');
+    showInfo(t('toast_quick_action'));
   };
 
   const handleSlowAction = async () => {
     // Simulate slow action
     await new Promise(resolve => setTimeout(resolve, 3000));
-    showSuccess('Thao tác chậm hoàn thành!');
+    showSuccess(t('toast_slow_action'));
   };
 
   return (
@@ -61,14 +61,14 @@ const ModalConfirmDemoPage: React.FC = () => {
             🎯 {t('home_modalDemo_title')}
           </h1>
           <p className="text-lg text-gray-600" style={{ fontFamily: 'Inter' }}>
-            Demo modal xác nhận với nhiều loại khác nhau và tùy chọn
+            {t('demo_description_modal')}
           </p>
         </div>
 
         {/* Basic Modal Types */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-semibold mb-6" style={{ fontFamily: 'Roboto' }}>
-            🎨 Các loại Modal cơ bản
+            {t('demo_basic_modal_types')}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -138,40 +138,40 @@ const ModalConfirmDemoPage: React.FC = () => {
         {/* Different Loading Times */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-semibold mb-6" style={{ fontFamily: 'Roboto' }}>
-            ⏳ Modal với thời gian loading khác nhau
+            {t('demo_modal_loading_times')}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-green-600">🏃 Thao tác nhanh</h3>
-              <p className="text-gray-600 text-sm">Thao tác hoàn thành trong 0.5 giây</p>
+              <h3 className="text-lg font-medium text-green-600">{t('demo_fast_action')}</h3>
+              <p className="text-gray-600 text-sm">{t('demo_fast_action_description')}</p>
               <Button
                 onClick={() => modalConfirm.openConfirm(handleQuickAction)}
                 className="w-full bg-green-600 hover:bg-green-700"
               >
-                Thực hiện nhanh
+                {t('demo_execute_fast')}
               </Button>
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-blue-600">🚶 Thao tác trung bình</h3>
-              <p className="text-gray-600 text-sm">Thao tác hoàn thành trong 1.5 giây</p>
+              <h3 className="text-lg font-medium text-blue-600">{t('demo_medium_action')}</h3>
+              <p className="text-gray-600 text-sm">{t('demo_medium_action_description')}</p>
               <Button
                 onClick={() => modalConfirm.openConfirm(handleResetData)}
                 className="w-full bg-blue-600 hover:bg-blue-700"
               >
-                Thực hiện trung bình
+                {t('demo_execute_medium')}
               </Button>
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-purple-600">🐌 Thao tác chậm</h3>
-              <p className="text-gray-600 text-sm">Thao tác hoàn thành trong 3 giây</p>
+              <h3 className="text-lg font-medium text-purple-600">{t('demo_slow_action')}</h3>
+              <p className="text-gray-600 text-sm">{t('demo_slow_action_description')}</p>
               <Button
                 onClick={() => modalConfirm.openConfirm(handleSlowAction)}
                 className="w-full bg-purple-600 hover:bg-purple-700"
               >
-                Thực hiện chậm
+                {t('demo_execute_slow')}
               </Button>
             </div>
           </div>
@@ -180,7 +180,7 @@ const ModalConfirmDemoPage: React.FC = () => {
         {/* Usage Example */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-semibold mb-6" style={{ fontFamily: 'Roboto' }}>
-            💻 Cách sử dụng Modal Confirm
+            {t('demo_usage_modal')}
           </h2>
 
           <div className="bg-gray-50 rounded-lg p-4">
@@ -198,8 +198,8 @@ const ModalConfirmDemoPage: React.FC = () => {
           onConfirm={modalConfirm.confirm}
           loading={modalConfirm.isLoading}
           type="danger"
-          title="Xác nhận hành động"
-          message="Bạn có chắc chắn muốn thực hiện hành động này? Hành động này có thể không thể hoàn tác."
+          title={t('modal_confirm_title')}
+          message={t('modal_confirm_message')}
         />
       </div>
     </div>
