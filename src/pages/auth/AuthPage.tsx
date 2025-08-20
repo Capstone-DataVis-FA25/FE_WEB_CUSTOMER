@@ -112,33 +112,33 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   // Validation form
   const validateForm = (): string | null => {
     if (!formData.email.trim()) {
-      return 'Email không được để trống';
+      return t('validation_email_required');
     }
 
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      return 'Email không hợp lệ';
+      return t('validation_email_invalid');
     }
 
     if (!formData.password.trim()) {
-      return 'Mật khẩu không được để trống';
+      return t('validation_password_required');
     }
 
     if (formData.password.length < 6) {
-      return 'Mật khẩu phải có ít nhất 6 ký tự';
+      return t('validation_password_min_length');
     }
 
     if (!isLogin) {
       if (!isPasswordStrong) {
-        return 'Mật khẩu chưa đủ mạnh';
+        return t('validation_password_weak');
       }
       if (!formData.firstName.trim()) {
-        return 'Tên không được để trống';
+        return t('validation_firstname_required');
       }
       if (!formData.lastName.trim()) {
-        return 'Họ không được để trống';
+        return t('validation_lastname_required');
       }
       if (formData.password !== formData.confirmPassword) {
-        return 'Mật khẩu xác nhận không khớp';
+        return t('validation_password_mismatch');
       }
     }
 
@@ -151,7 +151,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     // Validate form - CHỈ show toast nếu có lỗi
     const validationError = validateForm();
     if (validationError) {
-      showError('Lỗi xác thực', validationError, 3000);
+      showError(t('validation_error'), validationError, 3000);
       return;
     }
 
@@ -190,12 +190,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
       } else if (result.type.endsWith('/rejected')) {
         const errorMessage =
           (result as { payload?: { message?: string } })?.payload?.message ||
-          (isLogin ? 'Email hoặc mật khẩu không đúng' : 'Đăng ký thất bại');
-        showError(isLogin ? 'Đăng nhập thất bại' : 'Đăng ký thất bại', errorMessage, 5000);
+          (isLogin ? t('auth_invalid_credentials') : t('auth_signup_failed'));
+        showError(isLogin ? t('auth_signin_failed') : t('auth_signup_failed'), errorMessage, 5000);
       }
     } catch (error) {
       console.error('Submit error:', error);
-      showError('Lỗi hệ thống', 'Vui lòng thử lại sau', 5000);
+      showError(t('auth_system_error'), t('auth_try_again_later'), 5000);
     }
   };
 
@@ -463,15 +463,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                   <span>{isLogin ? t('auth_loginButton') : t('auth_registerButton')}</span>
                 )}
               </Button>
-
-              {/* Error Message Display */}
-              {/* {localError && (
-                <FadeIn>
-                  <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                    <p className="text-destructive text-sm font-medium">{localError}</p>
-                  </div>
-                </FadeIn>
-              )} */}
             </form>
 
             {/* Social Login */}
@@ -494,7 +485,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                     theme="outline"
                     size="large"
                     shape="rectangular"
-                    i18nIsDynamicList
                   />
                 </div>
               </div>

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { 
   Monitor, 
-  Clock, 
   Shield, 
   Database,
   Download,
@@ -16,7 +15,6 @@ import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
 import LanguageSwitcher from '@/components/language-switcher/LanguageSwitcher';
 import { useToast } from '@/hooks/useToast';
 import { useModalConfirm } from '@/hooks/useModal';
-import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import { useAuth } from '@/features/auth/useAuth';
 import useNavigation from '@/hooks/useNavigation';
@@ -36,7 +34,7 @@ const GeneralSettingsPage: React.FC = () => {
   const { showToast } = useToast();
   const modalConfirm = useModalConfirm();
   const { showSuccess } = useToastContext();
-  const { user, deleteUser, deleteUserStatus, deleteUserError, logout } = useAuth();
+  const { user, deleteUser, logout } = useAuth();
   const { goToHome } = useNavigation();
   const { t } = useTranslation();
 
@@ -54,23 +52,6 @@ const GeneralSettingsPage: React.FC = () => {
   const [deleteEmail, setDeleteEmail] = useState('');
   const [deleteError, setDeleteError] = useState('');
 
-  const timezones = [
-    { value: 'Asia/Ho_Chi_Minh', label: 'Việt Nam (UTC+7)' },
-    { value: 'Asia/Tokyo', label: 'Nhật Bản (UTC+9)' },
-    { value: 'Asia/Seoul', label: 'Hàn Quốc (UTC+9)' },
-    { value: 'Asia/Singapore', label: 'Singapore (UTC+8)' },
-    { value: 'Europe/London', label: 'London (UTC+0)' },
-    { value: 'America/New_York', label: 'New York (UTC-5)' },
-    { value: 'America/Los_Angeles', label: 'Los Angeles (UTC-8)' },
-  ];
-
-  const dateFormats = [
-    { value: 'DD/MM/YYYY', label: '31/12/2024' },
-    { value: 'MM/DD/YYYY', label: '12/31/2024' },
-    { value: 'YYYY-MM-DD', label: '2024-12-31' },
-    { value: 'DD-MM-YYYY', label: '31-12-2024' },
-  ];
-
   const handleSettingChange = (key: keyof GeneralSettings, value: string | boolean) => {
     setSettings(prev => ({
       ...prev,
@@ -86,13 +67,13 @@ const GeneralSettingsPage: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       showToast({
-        title: 'Thành công',
-        options: { type: 'success', message: 'Cài đặt đã được lưu thành công' },
+        title: t('general_save_success'),
+        options: { type: 'success', message: t('general_save_success_message') },
       });
     } catch (_error) {
       showToast({
-        title: 'Lỗi',
-        options: { type: 'error', message: 'Có lỗi xảy ra khi lưu cài đặt' },
+        title: t('general_save_error'),
+        options: { type: 'error', message: t('general_save_error_message') },
       });
     } finally {
       setIsLoading(false);
@@ -122,13 +103,13 @@ const GeneralSettingsPage: React.FC = () => {
       URL.revokeObjectURL(url);
 
       showToast({
-        title: 'Xuất dữ liệu thành công',
-        options: { type: 'success', message: 'Dữ liệu đã được tải xuống' },
+        title: t('general_export_success'),
+        options: { type: 'success', message: t('general_export_success_message') },
       });
     } catch (_error) {
       showToast({
-        title: 'Lỗi',
-        options: { type: 'error', message: 'Không thể xuất dữ liệu' },
+        title: t('general_export_error'),
+        options: { type: 'error', message: t('general_export_error_message') },
       });
     }
   };
@@ -140,19 +121,19 @@ const GeneralSettingsPage: React.FC = () => {
 
   const handleConfirmDelete = async () => {
     if (!deleteEmail) {
-      setDeleteError('Vui lòng nhập email để xác nhận xóa tài khoản');
+      setDeleteError(t('general_delete_confirm_error'));
       return;
     }
     if (user?.id) {
       const result = await deleteUser(user.id, deleteEmail);
       console.log(['Delete result:', result]);
       if (result.type && result.type.endsWith('/fulfilled')) {
-        showSuccess('Tài khoản đã được xóa', 'Tài khoản và dữ liệu của bạn đã bị xóa vĩnh viễn');
+        showSuccess(t('general_delete_success'), t('general_delete_success_message'));
         modalConfirm.close();
         logout();
         goToHome();
       } else {
-        setDeleteError('Email không đúng hoặc không thể xóa tài khoản');
+        setDeleteError(t('general_delete_error'));
       }
     }
   };
@@ -183,10 +164,10 @@ const GeneralSettingsPage: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Cài đặt chung
+            {t('general_settings_title')}
           </h1>
           <p className="text-gray-600 dark:text-gray-300">
-            Tùy chỉnh giao diện và các tùy chọn cài đặt ứng dụng
+            {t('general_settings_description')}
           </p>
         </div>
 
@@ -196,18 +177,18 @@ const GeneralSettingsPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Monitor className="w-5 h-5 mr-2 text-blue-600" />
-                Giao diện
+                {t('general_appearance_title')}
               </CardTitle>
               <CardDescription>
-                Tùy chỉnh giao diện và ngôn ngữ hiển thị
+                {t('general_appearance_description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">Chế độ hiển thị</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{t('general_display_mode')}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Chọn chế độ sáng hoặc tối
+                    {t('general_display_mode_description')}
                   </p>
                 </div>
                 <ThemeSwitcher />
@@ -215,60 +196,12 @@ const GeneralSettingsPage: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">Ngôn ngữ</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{t('general_language')}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Thay đổi ngôn ngữ hiển thị
+                    {t('general_language_description')}
                   </p>
                 </div>
                 <LanguageSwitcher />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Time and Format Settings */}
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Clock className="w-5 h-5 mr-2 text-green-600" />
-                Thời gian và định dạng
-              </CardTitle>
-              <CardDescription>
-                Cài đặt múi giờ và định dạng hiển thị
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Múi giờ
-                </label>
-                <select
-                  value={settings.timezone}
-                  onChange={(e) => handleSettingChange('timezone', e.target.value)}
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  {timezones.map((tz) => (
-                    <option key={tz.value} value={tz.value}>
-                      {tz.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Định dạng ngày
-                </label>
-                <select
-                  value={settings.dateFormat}
-                  onChange={(e) => handleSettingChange('dateFormat', e.target.value)}
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  {dateFormats.map((format) => (
-                    <option key={format.value} value={format.value}>
-                      {format.label}
-                    </option>
-                  ))}
-                </select>
               </div>
             </CardContent>
           </Card>
@@ -278,18 +211,18 @@ const GeneralSettingsPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Shield className="w-5 h-5 mr-2 text-purple-600" />
-                Quyền riêng tư và dữ liệu
+                {t('general_privacy_data_title')}
               </CardTitle>
               <CardDescription>
-                Quản lý cài đặt quyền riêng tư và thu thập dữ liệu
+                {t('general_privacy_data_description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">Tự động lưu</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{t('general_auto_save')}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Tự động lưu các thay đổi
+                    {t('general_auto_save_description')}
                   </p>
                 </div>
                 <ToggleSwitch
@@ -300,9 +233,9 @@ const GeneralSettingsPage: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">Thu thập dữ liệu</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{t('general_data_collection')}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Cho phép thu thập dữ liệu để cải thiện dịch vụ
+                    {t('general_data_collection_description')}
                   </p>
                 </div>
                 <ToggleSwitch
@@ -313,9 +246,9 @@ const GeneralSettingsPage: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">Báo cáo lỗi</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{t('general_crash_reports')}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Gửi báo cáo lỗi tự động để khắc phục sự cố
+                    {t('general_crash_reports_description')}
                   </p>
                 </div>
                 <ToggleSwitch
@@ -326,9 +259,9 @@ const GeneralSettingsPage: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">Phân tích sử dụng</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{t('general_analytics')}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Chia sẻ dữ liệu phân tích ẩn danh
+                    {t('general_analytics_description')}
                   </p>
                 </div>
                 <ToggleSwitch
@@ -344,10 +277,10 @@ const GeneralSettingsPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Database className="w-5 h-5 mr-2 text-orange-600" />
-                Quản lý dữ liệu
+                {t('general_data_management_title')}
               </CardTitle>
               <CardDescription>
-                Xuất hoặc xóa dữ liệu cá nhân của bạn
+                {t('general_data_management_description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -356,16 +289,16 @@ const GeneralSettingsPage: React.FC = () => {
                   <Download className="w-5 h-5 text-blue-600" />
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      Xuất dữ liệu
+                      {t('general_export_data')}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Tải xuống bản sao dữ liệu cá nhân
+                      {t('general_export_data_description')}
                     </p>
                   </div>
                 </div>
                 <Button onClick={handleExportData} variant="outline" size="sm">
                   <Download className="w-4 h-4 mr-2" />
-                  Xuất dữ liệu
+                  {t('general_export_data')}
                 </Button>
               </div>
 
@@ -374,10 +307,10 @@ const GeneralSettingsPage: React.FC = () => {
                   <Trash2 className="w-5 h-5 text-red-600" />
                   <div>
                     <p className="font-medium text-red-900 dark:text-red-100">
-                      Xóa tài khoản
+                      {t('general_delete_account')}
                     </p>
                     <p className="text-sm text-red-700 dark:text-red-200">
-                      Xóa vĩnh viễn tài khoản và tất cả dữ liệu
+                      {t('general_delete_account_description')}
                     </p>
                   </div>
                 </div>
@@ -387,7 +320,7 @@ const GeneralSettingsPage: React.FC = () => {
                   size="sm"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  Xóa tài khoản
+                  {t('general_delete_account')}
                 </Button>
               </div>
             </CardContent>
@@ -404,51 +337,16 @@ const GeneralSettingsPage: React.FC = () => {
               {isLoading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Đang lưu...
+                  {t('general_saving')}
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Lưu cài đặt
+                  {t('general_save_settings')}
                 </>
               )}
             </Button>
           </div>
-
-          {/* Info Cards */}
-          <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-            <CardContent className="pt-6">
-              <div className="flex items-start space-x-3">
-                <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-                    Về quyền riêng tư
-                  </h4>
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    Tất cả dữ liệu được mã hóa và bảo mật. Bạn có toàn quyền kiểm soát 
-                    thông tin cá nhân và có thể thay đổi cài đặt quyền riêng tư bất kỳ lúc nào.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
-            <CardContent className="pt-6">
-              <div className="flex items-start space-x-3">
-                <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-yellow-900 dark:text-yellow-100 mb-1">
-                    Lưu ý quan trọng
-                  </h4>
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                    Việc xóa tài khoản sẽ không thể hoàn tác. Hãy chắc chắn rằng bạn đã 
-                    sao lưu tất cả dữ liệu quan trọng trước khi thực hiện.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
