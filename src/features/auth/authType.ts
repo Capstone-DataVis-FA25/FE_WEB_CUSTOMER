@@ -19,6 +19,7 @@ export interface User {
   isVerified?: boolean;
   currentHashedRefreshToken: string | null;
   isActive: boolean;
+  isSocialAccount ?: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -101,23 +101,26 @@ const ProfilePage: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      if(editForm.firstName.trim() === '' || editForm.lastName.trim() === '') {
+      if (editForm.firstName.trim() === '' || editForm.lastName.trim() === '') {
         showError(t('profile_emptyFieldsError'));
         setFocusFieldErrorFirstName(editForm.firstName.trim() === '');
         setFocusFieldErrorLastName(editForm.lastName.trim() === '');
         return;
       }
-      if(editForm.firstName === userProfile.firstName && editForm.lastName === userProfile.lastName) {
+      if (
+        editForm.firstName === userProfile.firstName &&
+        editForm.lastName === userProfile.lastName
+      ) {
         showWarning(t('profile_noChangesError'));
         return;
       }
 
-      if(!NAME_REGEX.test(editForm.firstName)){
+      if (!NAME_REGEX.test(editForm.firstName)) {
         showError(t('profile_invalidFirstNameError'));
         return;
       }
 
-      if(!NAME_REGEX.test(editForm.lastName)){
+      if (!NAME_REGEX.test(editForm.lastName)) {
         showError(t('profile_invalidLastNameError'));
         return;
       }
@@ -301,7 +304,7 @@ const ProfilePage: React.FC = () => {
                   <div className="mb-8 flex items-center justify-center">
                     <div className="text-center">
                       <Avatar className="w-24 h-24 mx-auto mb-4 ring-4 ring-blue-500/20">
-                        <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-blue-500 to-purple-500 text-4xl">
+                        <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-blue-500 to-purple-500">
                           {userProfile.firstName.charAt(0)}
                           {userProfile.lastName.charAt(0)}
                         </AvatarFallback>
@@ -442,7 +445,7 @@ const ProfilePage: React.FC = () => {
                   {navigationItems.map(item => (
                     <div
                       key={item.id}
-                      className={`p-4 rounded-xl border-2 ${item.bgColor} ${item.borderColor} hover:shadow-lg transition-all duration-300 group`}
+                      className={`p-4 rounded-xl border-2 ${item.bgColor} ${item.borderColor} hover:shadow-lg transition-all duration-300 group ${item.id === 'change-password' && user?.isSocialAccount ? 'opacity-25' : ''}`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
@@ -466,7 +469,8 @@ const ProfilePage: React.FC = () => {
                               onClick={item.action}
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 hover:bg-white/50 dark:hover:bg-gray-700/50"
+                              className="h-8 w-8 p-0 hover:bg-white/50 dark:hover:bg-gray-700/50 hover:cursor-pointer disabled:cursor-not-allowed"
+                              disabled={user?.isSocialAccount}
                             >
                               <Edit3 className="w-4 h-4" />
                             </Button>
