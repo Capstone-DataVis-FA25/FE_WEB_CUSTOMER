@@ -21,6 +21,7 @@ import { useToastContext } from '@/components/providers/ToastProvider';
 import { useAuth } from '@/features/auth/useAuth';
 import useNavigation from '@/hooks/useNavigation';
 import { ModalConfirmForm } from '@/components/ui/modal-confirm-form';
+import { useTranslation } from 'react-i18next';
 
 interface GeneralSettings {
   timezone: string;
@@ -37,6 +38,7 @@ const GeneralSettingsPage: React.FC = () => {
   const { showSuccess } = useToastContext();
   const { user, deleteUser, deleteUserStatus, deleteUserError, logout } = useAuth();
   const { goToHome } = useNavigation();
+  const { t } = useTranslation();
 
   const [settings, setSettings] = useState<GeneralSettings>({
     timezone: 'Asia/Ho_Chi_Minh',
@@ -457,13 +459,13 @@ const GeneralSettingsPage: React.FC = () => {
         onConfirm={handleConfirmDelete}
         loading={modalConfirm.isLoading}
         type="danger"
-        title="Xác nhận xóa tài khoản"
-        message="Nhập email của bạn để xác nhận xóa tài khoản. Hành động này sẽ không thể hoàn tác."
-        confirmText="Xóa"
-        cancelText="Hủy"
+        title={t('delete_account_title')}
+        message={t('delete_account_message')}
+        confirmText={t('common_confirm')}
+        cancelText={t('common_cancel')}
         inputValue={deleteEmail}
         inputType="email"
-        inputPlaceholder="Nhập email"
+        inputPlaceholder={t('common_email_placeholder')}
         inputError={deleteError}
         onInputChange={e => { setDeleteEmail(e.target.value); setDeleteError(''); }}
         userEmail={user?.email}

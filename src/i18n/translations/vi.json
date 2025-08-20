@@ -229,5 +229,8 @@
   "profile_emptyFieldsError": "Vui lòng điền vào tất cả các trường bắt buộc.",
   "profile_noChangesError": "Không phát hiện thay đổi.",
   "profile_invalidFirstNameError": "Họ chứa ký tự không hợp lệ.",
-  "profile_invalidLastNameError": "Tên chứa ký tự không hợp lệ."
+  "profile_invalidLastNameError": "Tên chứa ký tự không hợp lệ.",
+  "delete_account_title": "Xác nhận xóa tài khoản",
+  "delete_account_message": "Nhập email của bạn để xác nhận xóa tài khoản. Hành động này sẽ không thể hoàn tác.",
+  "common_email_placeholder": "Nhập email"
 }

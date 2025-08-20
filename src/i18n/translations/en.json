@@ -227,5 +227,8 @@
   "profile_emptyFieldsError": "Please fill in all required fields.",
   "profile_noChangesError": "No changes detected.",
   "profile_invalidFirstNameError": "First name contains invalid characters.",
-  "profile_invalidLastNameError": "Last name contains invalid characters."
+  "profile_invalidLastNameError": "Last name contains invalid characters.",
+  "delete_account_title": "Confirm account deletion",
+  "delete_account_message": "Enter your email to confirm account deletion. This action cannot be undone.",
+  "common_email_placeholder": "Enter email"
 }
