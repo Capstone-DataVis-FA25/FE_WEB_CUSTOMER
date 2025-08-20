@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Shield, CheckCircle, X, Loader2, Route } from 'lucide-react';
+import { Eye, EyeOff, Lock, Shield, CheckCircle, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigation } from '@/hooks/useNavigation';
-import { useToast } from '@/hooks/useToast';
+import { useToastContext } from '@/components/providers/ToastProvider';
 import { changePasswordThunk } from '@/features/auth/authThunk';
 import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '@/store/store';
@@ -19,7 +19,7 @@ interface PasswordFormData {
 
 const ChangePasswordPage: React.FC = () => {
   const { goTo } = useNavigation();
-  const { showToast } = useToast();
+  const { showSuccess, showError } = useToastContext();
   const dispatch = useDispatch<AppDispatch>();
   const { t } = useTranslation();
 
@@ -75,34 +75,22 @@ const ChangePasswordPage: React.FC = () => {
 
   const validateForm = () => {
     if (!formData.currentPassword) {
-      showToast({
-        title: 'Lỗi',
-        options: { type: 'error', message: t('change_password_current_required') },
-      });
+      showError(t('change_password_current_required'));
       return false;
     }
 
     if (formData.newPassword.length < 8) {
-      showToast({
-        title: 'Lỗi',
-        options: { type: 'error', message: t('change_password_new_required') },
-      });
+      showError(t('change_password_new_required'));
       return false;
     }
 
     if (formData.newPassword !== formData.confirmPassword) {
-      showToast({
-        title: 'Lỗi',
-        options: { type: 'error', message: t('change_password_confirm_mismatch') },
-      });
+      showError(t('change_password_confirm_mismatch'));
       return false;
     }
 
     if (formData.currentPassword === formData.newPassword) {
-      showToast({
-        title: 'Lỗi',
-        options: { type: 'error', message: t('change_password_current_mismatch') },
-      });
+      showError(t('change_password_current_mismatch'));
       return false;
     }
 
@@ -125,10 +113,8 @@ const ChangePasswordPage: React.FC = () => {
         })
       ).unwrap();
 
-      showToast({
-        title: 'Thành công',
-        options: { type: 'success', message: t('change_password_success') },
-      });
+      console.log('Change password success - about to show success toast');
+      showSuccess(t('change_password_success'));
 
       // Reset form
       setFormData({
@@ -137,20 +123,20 @@ const ChangePasswordPage: React.FC = () => {
         confirmPassword: '',
       });
 
-      // Navigate back to profile after successful change
       setTimeout(() => {
-        goTo('/profile');
+        goTo(Routers.PROFILE);
       }, 1500);
     } catch (error: unknown) {
-      showToast({
-        title: 'Lỗi',
-        options: {
-          type: 'error',
-          message:
-            (error as { message?: string })?.message ||
-            t('change_password_current_mismatch'),
-        },
-      });
+      console.error('Change password error in component:', error);
+      // Xử lý các loại lỗi khác nhau
+      if (error && typeof error === 'object' && 'message' in error) {
+        showError(error.message as string);
+      } else if (error && typeof error === 'string') {
+        showError(error);
+      } else {
+        const fallbackMessage = t('change_password_failed') || 'Đổi mật khẩu thất bại';
+        showError(fallbackMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -171,10 +157,10 @@ const ChangePasswordPage: React.FC = () => {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('change_password_title')}</h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            {t('change_password_description')}
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            {t('change_password_title')}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300">{t('change_password_description')}</p>
         </div>
 
         <div className="grid grid-cols-1">
@@ -186,9 +172,7 @@ const ChangePasswordPage: React.FC = () => {
                   <Lock className="w-5 h-5 mr-2" />
                   {t('change_password_title')}
                 </CardTitle>
-                <CardDescription>
-                  {t('change_password_input')}
-                </CardDescription>
+                <CardDescription>{t('change_password_input')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">

@@ -117,9 +117,40 @@ export const changePasswordThunk = createAsyncThunk<
     await authAPI.changePassword(changeData);
     return { message: 'Mật khẩu đã được thay đổi thành công' };
   } catch (error: unknown) {
-    const errorMessage =
-      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-      t('auth_changePasswordFailed');
+    console.error('Change password thunk error:', error);
+
+    let errorMessage = t('auth_changePasswordFailed') || 'Đổi mật khẩu thất bại';
+
+    // Xử lý lỗi từ API response
+    if (error && typeof error === 'object') {
+      const axiosError = error as {
+        response?: {
+          data?: { message?: string };
+          status?: number;
+        };
+        message?: string;
+      };
+
+      // Ưu tiên message từ response data
+      if (axiosError.response?.data?.message) {
+        errorMessage = axiosError.response.data.message;
+      }
+      // Xử lý lỗi theo status code
+      else if (axiosError.response?.status === 401) {
+        errorMessage = 'Mật khẩu hiện tại không đúng';
+      } else if (axiosError.response?.status === 400) {
+        errorMessage = 'Thông tin đổi mật khẩu không hợp lệ';
+      } else if (axiosError.response?.status === 403) {
+        errorMessage = 'Không có quyền thực hiện thao tác này';
+      } else if (axiosError.response?.status && axiosError.response.status >= 500) {
+        errorMessage = 'Lỗi server, vui lòng thử lại sau';
+      }
+      // Fallback to error message
+      else if (axiosError.message) {
+        errorMessage = axiosError.message;
+      }
+    }
+
     return rejectWithValue({ message: errorMessage });
   }
 });
