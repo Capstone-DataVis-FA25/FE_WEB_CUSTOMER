@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ModalConfirmFormProps {
   isOpen: boolean;
@@ -45,7 +46,7 @@ const typeStyles = {
   },
 };
 
-export const ModalConfirmForm: React.FC<ModalConfirmFormProps> = ({
+export const ModalConfirmForm: React.FC<ModalConfirmFormProps & { userEmail?: string }> = ({
   isOpen,
   onClose,
   onConfirm,
@@ -60,9 +61,16 @@ export const ModalConfirmForm: React.FC<ModalConfirmFormProps> = ({
   inputPlaceholder = '',
   inputError,
   onInputChange,
+  userEmail,
 }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
   const currentStyle = typeStyles[type];
+  console.log('userEmail from props:', userEmail);
+  console.log('inputValue:', inputValue);
+  const isEmailMatch = userEmail
+    ? inputValue.trim() !== '' && inputValue.trim().toLowerCase() === userEmail.trim().toLowerCase()
+    : false;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -79,13 +87,13 @@ export const ModalConfirmForm: React.FC<ModalConfirmFormProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           {title && (
             <h3 id="modal-title" className="text-lg font-semibold text-gray-900">
-              {title}
+              {t(title)}
             </h3>
           )}
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
-            aria-label="Close modal"
+            aria-label={t('common_cancel')}
             disabled={loading}
           >
             <X size={24} />
@@ -97,16 +105,16 @@ export const ModalConfirmForm: React.FC<ModalConfirmFormProps> = ({
               {currentStyle.icon}
             </span>
           </div>
-          {title && <h3 className="text-lg font-medium text-gray-900 mb-2">{title}</h3>}
-          <p className="text-sm text-gray-500 mb-4">{message}</p>
+          {title && <h3 className="text-lg font-medium text-gray-900 mb-2">{t(title)}</h3>}
+          <p className="text-sm text-gray-500 mb-4">{t(message)}</p>
           <input
             type={inputType}
             value={inputValue}
             onChange={onInputChange}
-            placeholder={inputPlaceholder}
+            placeholder={t(inputPlaceholder)}
             className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-2"
           />
-          {inputError && <p className="text-red-600 mb-2">{inputError}</p>}
+          {inputError && <p className="text-red-600 mb-2">{t(inputError)}</p>}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-3 mt-4">
             <button
               type="button"
@@ -114,12 +122,12 @@ export const ModalConfirmForm: React.FC<ModalConfirmFormProps> = ({
               disabled={loading}
               className="w-full inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {cancelText}
+              {t(cancelText)}
             </button>
             <button
               type="button"
               onClick={() => !loading && onConfirm()}
-              disabled={loading}
+              disabled={loading || !isEmailMatch}
               className={`
                 w-full inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed
                 ${currentStyle.confirmButton}
@@ -147,10 +155,10 @@ export const ModalConfirmForm: React.FC<ModalConfirmFormProps> = ({
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  Đang xử lý...
+                  {t('loading')}
                 </>
               ) : (
-                confirmText
+                t(confirmText)
               )}
             </button>
           </div>
