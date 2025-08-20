@@ -45,7 +45,7 @@ const typeStyles = {
   },
 };
 
-export const ModalConfirmForm: React.FC<ModalConfirmFormProps> = ({
+export const ModalConfirmForm: React.FC<ModalConfirmFormProps & { userEmail?: string }> = ({
   isOpen,
   onClose,
   onConfirm,
@@ -60,9 +60,15 @@ export const ModalConfirmForm: React.FC<ModalConfirmFormProps> = ({
   inputPlaceholder = '',
   inputError,
   onInputChange,
+  userEmail,
 }) => {
   if (!isOpen) return null;
   const currentStyle = typeStyles[type];
+  console.log('userEmail from props:', userEmail);
+  console.log('inputValue:', inputValue);
+  const isEmailMatch = userEmail
+    ? inputValue.trim() !== '' && inputValue.trim().toLowerCase() === userEmail.trim().toLowerCase()
+    : false;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -119,7 +125,7 @@ export const ModalConfirmForm: React.FC<ModalConfirmFormProps> = ({
             <button
               type="button"
               onClick={() => !loading && onConfirm()}
-              disabled={loading}
+              disabled={loading || !isEmailMatch}
               className={`
                 w-full inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed
                 ${currentStyle.confirmButton}

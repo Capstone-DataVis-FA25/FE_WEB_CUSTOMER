@@ -466,6 +466,7 @@ const GeneralSettingsPage: React.FC = () => {
         inputPlaceholder="Nhập email"
         inputError={deleteError}
         onInputChange={e => { setDeleteEmail(e.target.value); setDeleteError(''); }}
+        userEmail={user?.email}
       />
     </div>
   );
