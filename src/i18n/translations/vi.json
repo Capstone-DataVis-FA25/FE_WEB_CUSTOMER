@@ -233,6 +233,7 @@
   "profile_invalidLastNameError": "Tên chứa ký tự không hợp lệ.",
   "delete_account_title": "Xác nhận xóa tài khoản",
   "delete_account_message": "Nhập email của bạn để xác nhận xóa tài khoản. Hành động này sẽ không thể hoàn tác.",
+  "common_email": "Email",
   "common_email_placeholder": "Nhập email",
   "notification_settings_title": "Cài đặt thông báo",
   "notification_settings_subtitle": "Quản lý cách bạn nhận thông báo từ ứng dụng",
@@ -510,5 +511,6 @@
   "general_privacy_info_description": "Tất cả dữ liệu được mã hóa và bảo mật. Bạn có toàn quyền kiểm soát thông tin cá nhân và có thể thay đổi cài đặt quyền riêng tư bất kỳ lúc nào.",
   "general_important_note_title": "Lưu ý quan trọng",
   "general_important_note_description": "Việc xóa tài khoản sẽ không thể hoàn tác. Hãy chắc chắn rằng bạn đã sao lưu tất cả dữ liệu quan trọng trước khi thực hiện.",
-  "on_settings": "Cài đặt"
+  "on_settings": "Cài đặt",
+  "verifyEmailError_help": "Vui lòng kiểm tra lại email hoặc gửi lại email xác thực."
 }

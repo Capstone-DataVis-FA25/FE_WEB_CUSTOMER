@@ -6,7 +6,10 @@ import useNavigation from '@/hooks/useNavigation';
 import { FadeIn } from '@/theme/animation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { MdEmail } from 'react-icons/md';
+import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
+import LanguageSwitcher from '@/components/language-switcher';
 
 const ResendEmailPage: React.FC = () => {
   const { goToAuth, goToSendEmailVerify } = useNavigation();
@@ -109,51 +112,67 @@ const ResendEmailPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400/10 dark:bg-blue-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-400/10 dark:bg-purple-500/5 rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Theme and Language Switchers */}
+      <div className="absolute top-6 left-8 flex gap-4 z-50">
+        <FadeIn delay={0.25}>
+          <ThemeSwitcher />
+        </FadeIn>
+        <FadeIn delay={0.35}>
+          <LanguageSwitcher />
+        </FadeIn>
+      </div>
+
+      <div className="max-w-md w-full relative z-10">
         <FadeIn>
-          <Card className="overflow-hidden bg-white shadow-2xl border-0">
+          <Card className="overflow-hidden shadow-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
             {/* Header */}
-            <div className="bg-accent px-8 py-12 text-center">
-              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <MdEmail className="w-10 h-10 text-accent" />
+            <div className="bg-blue-600 dark:bg-blue-700 px-8 py-12 text-center">
+              <div className="w-20 h-20 bg-white dark:bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <MdEmail className="w-10 h-10 text-blue-600 dark:text-blue-700" />
               </div>
               <h1 className="text-2xl font-bold text-white mb-2">
                 {t('verifyEmailError_resendEmail')}
               </h1>
-              <p className="text-blue-100 text-sm">{t('resendEmail_description')}</p>
+              <p className="text-blue-100 dark:text-blue-200 text-sm">{t('resendEmail_description')}</p>
             </div>
 
             {/* Content */}
             <CardContent className="px-8 py-8">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('auth_email')}
                   </label>
-                  <input
+                  <Input
                     type="email"
                     id="email"
                     value={email}
                     onChange={handleEmailChange}
                     placeholder={t('auth_enterEmail')}
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent ${
+                    className={`h-12 text-base border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 transition-all duration-200 ${
                       emailError || isResendEmailError
-                        ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                        : 'border-gray-300'
+                        ? 'border-red-500 focus:ring-red-500 focus:border-red-500 dark:border-red-400'
+                        : ''
                     }`}
                     disabled={isResendEmailLoading}
                   />
-                  {emailError && <p className="mt-1 text-sm text-red-600">{emailError}</p>}
+                  {emailError && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{emailError}</p>}
                   {isResendEmailError && resendEmailError && !emailError && (
-                    <p className="mt-1 text-sm text-red-600">{resendEmailError}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{resendEmailError}</p>
                   )}
                 </div>
 
                 <Button
                   type="submit"
                   disabled={isResendEmailLoading || !email}
-                  className="w-full bg-accent text-white hover:bg-secondary py-3 text-base font-semibold transition-all duration-300"
+                  className="w-full h-12 text-base font-semibold bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isResendEmailLoading ? (
                     <div className="flex items-center justify-center">
@@ -166,11 +185,11 @@ const ResendEmailPage: React.FC = () => {
                 </Button>
               </form>
 
-              <div className="mt-6 pt-6 border-t border-gray-100 text-center">
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
                 <Button
                   onClick={() => goToAuth()}
                   variant="outline"
-                  className="text-gray-600 hover:text-accent"
+                  className="text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
                 >
                   {t('verifyEmailError_backToLogin')}
                 </Button>
