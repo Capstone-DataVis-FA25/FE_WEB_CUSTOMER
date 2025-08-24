@@ -31,6 +31,7 @@ const componentMap = {
   AboutPage: lazy(() => import('../pages/about-us/AboutUsPage')),
   VerifyEmailErrorPage: lazy(() => import('../pages/verify/VerifyEmailErrorPage')),
   ResendEmailPage: lazy(() => import('../pages/verify/ResendEmailPage')),
+  CreateDatasetPage: lazy(() => import('../pages/dataset/CreateDatasetPage')),
 };
 
 // ================================
