@@ -26,6 +26,9 @@ const Routers = {
   SEND_EMAIL_SUCCESS: '/send-email-success',
   VERIFY_EMAIL_ERROR: '/verify-email-error',
   RESEND_EMAIL: '/auth/resend-email',
+
+  // Chart routes
+  LINE_CHART: '/chart/line-chart',
 } as const;
 
 export default Routers;
