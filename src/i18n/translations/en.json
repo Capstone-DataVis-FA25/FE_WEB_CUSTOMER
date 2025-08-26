@@ -232,6 +232,7 @@
   "profile_invalidLastNameError": "Last name contains invalid characters.",
   "delete_account_title": "Confirm account deletion",
   "delete_account_message": "Enter your email to confirm account deletion. This action cannot be undone.",
+  "common_email": "Email",
   "common_email_placeholder": "Enter email",
   "notification_settings_title": "Notification Settings",
   "notification_settings_subtitle": "Manage how you receive notifications from the app",
@@ -505,5 +506,6 @@
   "timezone_london": "London (UTC+0)",
   "timezone_newyork": "New York (UTC-5)",
   "timezone_losangeles": "Los Angeles (UTC-8)",
-  "timezone_sydney": "Sydney (UTC+11)"
+  "timezone_sydney": "Sydney (UTC+11)",
+  "verifyEmailError_help": "Please check your spam folder for the verification email or request a new one."
 }

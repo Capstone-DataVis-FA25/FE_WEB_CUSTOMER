@@ -130,6 +130,7 @@ export const useNavigation = () => {
   return {
     // Public routes
     goToHome,
+    goToAboutUs,
     goToAuth,
     goToForgotPassword,
 
