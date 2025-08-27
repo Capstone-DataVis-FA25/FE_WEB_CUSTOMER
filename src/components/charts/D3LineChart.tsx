@@ -54,6 +54,29 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = React.useState(false);
+  const [dimensions, setDimensions] = React.useState({ width, height });
+
+  // Monitor container size for responsiveness
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        const aspectRatio = height / width;
+        const newWidth = Math.min(containerWidth - 32, width); // 32px for padding
+        const newHeight = newWidth * aspectRatio;
+        setDimensions({ width: newWidth, height: newHeight });
+      }
+    };
+
+    updateDimensions();
+    
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [width, height]);
 
   // Monitor theme changes
   useEffect(() => {
@@ -76,6 +99,10 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
   useEffect(() => {
     if (!svgRef.current || !data.length) return;
+
+    // Use responsive dimensions
+    const currentWidth = dimensions.width;
+    const currentHeight = dimensions.height;
 
     // Get current theme colors
     const getCurrentColors = () => {
@@ -101,20 +128,28 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
     const svg = d3.select(svgRef.current);
     
+    // Responsive margin adjustments
+    const responsiveMargin = {
+      top: margin.top,
+      right: currentWidth < 768 ? margin.right * 0.6 : margin.right, // Smaller right margin on mobile
+      bottom: currentWidth < 768 ? margin.bottom * 0.8 : margin.bottom,
+      left: currentWidth < 768 ? margin.left * 0.8 : margin.left
+    };
+
     // Set dimensions
-    const innerWidth = width - margin.left - margin.right;
-    const innerHeight = height - margin.top - margin.bottom;
+    const innerWidth = currentWidth - responsiveMargin.left - responsiveMargin.right;
+    const innerHeight = currentHeight - responsiveMargin.top - responsiveMargin.bottom;
 
     // Add background
     svg.append("rect")
-      .attr("width", width)
-      .attr("height", height)
+      .attr("width", currentWidth)
+      .attr("height", currentHeight)
       .attr("fill", backgroundColor)
       .attr("rx", 8);
 
     // Create main group
     const g = svg.append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
+      .attr("transform", `translate(${responsiveMargin.left},${responsiveMargin.top})`);
 
     // Scales
     const xScale = d3.scaleLinear()
@@ -163,7 +198,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr("opacity", 0.3);
     }
 
-    // X Axis
+    // X Axis with responsive font size
     const xAxis = d3.axisBottom(xScale)
       .tickFormat(d3.format("d"));
     
@@ -172,7 +207,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .call(xAxis)
       .selectAll("text")
       .attr("fill", textColor)
-      .style("font-size", "12px")
+      .style("font-size", currentWidth < 768 ? "10px" : "12px")
       .style("font-weight", "500");
 
     g.select(".domain")
@@ -182,14 +217,14 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     g.selectAll(".tick line")
       .attr("stroke", axisColor);
 
-    // Y Axis
+    // Y Axis with responsive font size
     const yAxis = d3.axisLeft(yScale);
     
     g.append("g")
       .call(yAxis)
       .selectAll("text")
       .attr("fill", textColor)
-      .style("font-size", "12px")
+      .style("font-size", currentWidth < 768 ? "10px" : "12px")
       .style("font-weight", "500");
 
     g.selectAll(".domain")
@@ -214,7 +249,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .datum(data)
         .attr("fill", "none")
         .attr("stroke", currentColors[key])
-        .attr("stroke-width", 3)
+        .attr("stroke-width", currentWidth < 768 ? 2 : 3)
         .attr("stroke-linecap", "round")
         .attr("stroke-linejoin", "round")
         .attr("d", keyLine)
@@ -276,7 +311,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
               .attr("text-anchor", "middle")
               .attr("y", -10)
               .attr("fill", textColor)
-              .style("font-size", "12px")
+              .style("font-size", currentWidth < 768 ? "10px" : "12px")
               .style("font-weight", "500")
               .text(d[key] as string);
           })
@@ -297,17 +332,19 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     });
 
     // Add legend
-    if (showLegend) {
+    if (showLegend && currentWidth >= 640) { // Only show legend on larger screens
       const legend = g.append("g")
         .attr("class", "legend")
         .attr("transform", `translate(${innerWidth + 20}, 20)`);
 
       // Legend background
       const legendHeight = yAxisKeys.length * 25 + 20;
+      const legendWidth = currentWidth < 768 ? 100 : 120; // Smaller legend on mobile
+      
       legend.append("rect")
         .attr("x", -10)
         .attr("y", -10)
-        .attr("width", 120)
+        .attr("width", legendWidth)
         .attr("height", legendHeight)
         .attr("fill", isDarkMode ? '#1f2937' : '#f9fafb')
         .attr("stroke", isDarkMode ? '#4b5563' : '#d1d5db')
@@ -317,11 +354,11 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
       // Legend title
       legend.append("text")
-        .attr("x", 50)
+        .attr("x", legendWidth / 2 - 10)
         .attr("y", 5)
         .attr("text-anchor", "middle")
         .attr("fill", textColor)
-        .style("font-size", "14px")
+        .style("font-size", currentWidth < 768 ? "12px" : "14px")
         .style("font-weight", "600")
         .text("Legend");
 
@@ -345,7 +382,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           .attr("x", 25)
           .attr("y", 5)
           .attr("fill", textColor)
-          .style("font-size", "12px")
+          .style("font-size", currentWidth < 768 ? "10px" : "12px")
           .style("font-weight", "500")
           .text(key);
 
@@ -378,14 +415,14 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       });
     }
 
-    // Add axis labels
+    // Add axis labels with responsive font sizes
     if (xAxisLabel) {
       g.append("text")
         .attr("x", innerWidth / 2)
-        .attr("y", innerHeight + 50)
+        .attr("y", innerHeight + (currentWidth < 768 ? 40 : 50))
         .attr("text-anchor", "middle")
         .attr("fill", textColor)
-        .style("font-size", "14px")
+        .style("font-size", currentWidth < 768 ? "12px" : "14px")
         .style("font-weight", "600")
         .text(xAxisLabel);
     }
@@ -394,33 +431,58 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       g.append("text")
         .attr("transform", `rotate(-90)`)
         .attr("x", -innerHeight / 2)
-        .attr("y", -40)
+        .attr("y", currentWidth < 768 ? -30 : -40)
         .attr("text-anchor", "middle")
         .attr("fill", textColor)
-        .style("font-size", "14px")
+        .style("font-size", currentWidth < 768 ? "12px" : "14px")
         .style("font-weight", "600")
         .text(yAxisLabel);
     }
 
-  }, [data, width, height, margin, xAxisKey, yAxisKeys, colors, showLegend, showGrid, showPoints, animationDuration, curve, title, xAxisLabel, yAxisLabel, isDarkMode]);
+  }, [data, margin, xAxisKey, yAxisKeys, colors, showLegend, showGrid, showPoints, animationDuration, curve, title, xAxisLabel, yAxisLabel, isDarkMode, dimensions]);
 
   return (
     <div ref={containerRef} className="w-full">
       {title && (
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">
           {title}
         </h3>
       )}
       
-      <div className="flex justify-center">
-        <svg
-          ref={svgRef}
-          width={width}
-          height={height}
-          className="border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900"
-          style={{ maxWidth: '100%', height: 'auto' }}
-        />
+      <div className="flex justify-center w-full overflow-x-auto">
+        <div className="min-w-full">
+          <svg
+            ref={svgRef}
+            width={dimensions.width}
+            height={dimensions.height}
+            className="border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 w-full max-w-full h-auto"
+            viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+            preserveAspectRatio="xMidYMid meet"
+          />
+        </div>
       </div>
+
+      {/* Mobile Legend - Show below chart on smaller screens */}
+      {showLegend && dimensions.width < 640 && (
+        <div className="mt-4 flex flex-wrap justify-center gap-4">
+          {yAxisKeys.map((key, index) => {
+            const colorKey = colors[key] ? key : `line${index + 1}`;
+            const color = colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] || defaultColors[`line${index + 1}`][isDarkMode ? 'dark' : 'light'];
+            
+            return (
+              <div key={key} className="flex items-center gap-2">
+                <div 
+                  className="w-3 h-3 rounded"
+                  style={{ backgroundColor: color }}
+                />
+                <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {key}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

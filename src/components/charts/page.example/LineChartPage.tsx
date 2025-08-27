@@ -61,10 +61,10 @@ const LineChartPage: React.FC = () => {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mb-4">
                 <BarChart3 className="h-8 w-8 text-white" />
               </div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
                 D3.js Line Chart Visualization
               </h1>
-              <p className="text-gray-600 dark:text-gray-300 text-lg">
+              <p className="text-gray-600 dark:text-gray-300 text-base sm:text-lg">
                 Interactive data visualization with D3.js
               </p>
             </motion.div>
@@ -116,22 +116,22 @@ const LineChartPage: React.FC = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
           >
             <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                   {currentDataConfig.title}
                 </h2>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm">
                     <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
+                    <span className="hidden sm:inline">Refresh</span>
                   </Button>
                   <Button variant="outline" size="sm">
                     <Download className="h-4 w-4 mr-2" />
-                    Export
+                    <span className="hidden sm:inline">Export</span>
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6">
                 <D3LineChart
                   data={currentDataConfig.data}
                   xAxisKey={currentDataConfig.xKey}
@@ -140,8 +140,6 @@ const LineChartPage: React.FC = () => {
                   title=""
                   xAxisLabel={currentDataConfig.xLabel}
                   yAxisLabel={currentDataConfig.yLabel}
-                  width={900}
-                  height={500}
                   showLegend={true}
                   showGrid={true}
                   showPoints={true}
@@ -165,7 +163,7 @@ const LineChartPage: React.FC = () => {
                 </h2>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-3 sm:gap-4">
                   {[
                     'Smooth Animations',
                     'Interactive Tooltips',
