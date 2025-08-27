@@ -31,7 +31,7 @@ const componentMap = {
   AboutPage: lazy(() => import('../pages/about-us/AboutUsPage')),
   VerifyEmailErrorPage: lazy(() => import('../pages/verify/VerifyEmailErrorPage')),
   ResendEmailPage: lazy(() => import('../pages/verify/ResendEmailPage')),
-  LineChartPage: lazy(() => import('../components/charts/data/LineChartPage')),
+  LineChartPage: lazy(() => import('../components/charts/page.example/LineChartPage')),
 };
 
 // ================================

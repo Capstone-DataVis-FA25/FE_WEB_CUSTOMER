@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import D3LineChart from '@/components/charts/D3LineChart';
 import { motion } from 'framer-motion';
 import { BarChart3, Download, RefreshCw } from 'lucide-react';
-import { salesData } from './data';
+import { salesData } from '../data/data';
 
 const LineChartPage: React.FC = () => {
   const currentDataConfig = {
