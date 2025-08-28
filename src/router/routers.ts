@@ -29,6 +29,7 @@ const Routers = {
 
   // Chart routes
   LINE_CHART: '/chart/line-chart',
+  STUDY_CHART: '/chart/study-chart',
 } as const;
 
 export default Routers;

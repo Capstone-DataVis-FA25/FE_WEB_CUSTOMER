@@ -21,6 +21,8 @@ export interface D3LineChartProps {
   showPoints?: boolean;
   animationDuration?: number;
   curve?: d3.CurveFactory;
+  yAxisFormatter?: (value: number) => string; // Add custom Y-axis formatter
+  xAxisFormatter?: (value: number) => string; // Add custom X-axis formatter
 }
 
 const defaultColors: Record<string, { light: string; dark: string }> = {
@@ -37,8 +39,8 @@ const defaultColors: Record<string, { light: string; dark: string }> = {
 const D3LineChart: React.FC<D3LineChartProps> = ({
   data,
   width = 800,
-  height = 500,
-  margin = { top: 20, right: 150, bottom: 60, left: 60 },
+  height = 600, // Reduced from 500 to 400 for better proportions
+  margin = { top: 20, right: 40, bottom: 60, left: 80 }, // Increased left margin for better Y-axis spacing
   xAxisKey,
   yAxisKeys,
   colors = defaultColors,
@@ -50,6 +52,8 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   showPoints = true,
   animationDuration = 1000,
   curve = d3.curveMonotoneX,
+  yAxisFormatter, // Optional custom Y-axis formatter
+  xAxisFormatter, // Optional custom X-axis formatter
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -61,8 +65,19 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     const updateDimensions = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
-        const aspectRatio = height / width;
-        const newWidth = Math.min(containerWidth - 32, width); // 32px for padding
+        // Better aspect ratio calculation for different screen sizes
+        let aspectRatio = height / width;
+        
+        // Adjust aspect ratio based on screen size for better proportions
+        if (containerWidth < 640) {
+          aspectRatio = Math.min(aspectRatio * 1.2, 0.75); // Slightly taller on mobile but not too much
+        } else if (containerWidth < 1024) {
+          aspectRatio = Math.min(aspectRatio, 0.6); // Medium screens
+        } else {
+          aspectRatio = Math.min(aspectRatio, 0.5); // Desktop - wider ratio
+        }
+        
+        const newWidth = Math.min(containerWidth - 16, width); // 16px for minimal padding
         const newHeight = newWidth * aspectRatio;
         setDimensions({ width: newWidth, height: newHeight });
       }
@@ -128,12 +143,12 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
     const svg = d3.select(svgRef.current);
     
-    // Responsive margin adjustments
+    // Responsive margin adjustments - better spacing for Y-axis
     const responsiveMargin = {
-      top: margin.top,
-      right: currentWidth < 768 ? margin.right * 0.6 : margin.right, // Smaller right margin on mobile
-      bottom: currentWidth < 768 ? margin.bottom * 0.8 : margin.bottom,
-      left: currentWidth < 768 ? margin.left * 0.8 : margin.left
+      top: currentWidth < 640 ? margin.top * 0.8 : margin.top,
+      right: currentWidth < 640 ? margin.right * 0.7 : margin.right,
+      bottom: currentWidth < 640 ? margin.bottom * 0.8 : margin.bottom,
+      left: currentWidth < 640 ? margin.left * 0.8 : margin.left // Better left spacing on mobile
     };
 
     // Set dimensions
@@ -146,6 +161,15 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .attr("height", currentHeight)
       .attr("fill", backgroundColor)
       .attr("rx", 8);
+
+    // Add subtle Y-axis background area
+    svg.append("rect")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", responsiveMargin.left)
+      .attr("height", currentHeight)
+      .attr("fill", isDarkMode ? '#1f2937' : '#f8fafc')
+      .attr("opacity", 0.3);
 
     // Create main group
     const g = svg.append("g")
@@ -198,9 +222,16 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr("opacity", 0.3);
     }
 
-    // X Axis with responsive font size
+    // X Axis with flexible formatting
     const xAxis = d3.axisBottom(xScale)
-      .tickFormat(d3.format("d"));
+      .tickFormat(d => {
+        const value = d.valueOf();
+        // Use custom formatter if provided, otherwise use integer formatting
+        if (xAxisFormatter) {
+          return xAxisFormatter(value);
+        }
+        return d3.format("d")(value);
+      });
     
     g.append("g")
       .attr("transform", `translate(0,${innerHeight})`)
@@ -217,22 +248,42 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     g.selectAll(".tick line")
       .attr("stroke", axisColor);
 
-    // Y Axis with responsive font size
-    const yAxis = d3.axisLeft(yScale);
+    // Y Axis with flexible formatting
+    const yAxis = d3.axisLeft(yScale)
+      .tickFormat(d => {
+        const value = d.valueOf();
+        // Use custom formatter if provided, otherwise use simple number formatting
+        if (yAxisFormatter) {
+          return yAxisFormatter(value);
+        }
+        return value.toLocaleString();
+      })
+      .tickSize(-5) // Shorter tick lines for cleaner look
+      .tickPadding(8); // More space between ticks and labels
     
-    g.append("g")
-      .call(yAxis)
-      .selectAll("text")
+    const yAxisGroup = g.append("g")
+      .call(yAxis);
+
+    // Style Y-axis labels beautifully
+    yAxisGroup.selectAll("text")
       .attr("fill", textColor)
-      .style("font-size", currentWidth < 768 ? "10px" : "12px")
-      .style("font-weight", "500");
+      .style("font-size", currentWidth < 768 ? "11px" : "13px")
+      .style("font-weight", "600")
+      .style("font-family", "system-ui, -apple-system, sans-serif")
+      .attr("text-anchor", "end")
+      .attr("x", -10); // Push labels further left for better spacing
 
-    g.selectAll(".domain")
+    // Style Y-axis domain line
+    yAxisGroup.select(".domain")
       .attr("stroke", axisColor)
-      .attr("stroke-width", 2);
+      .attr("stroke-width", 2)
+      .attr("opacity", 0.8);
 
-    g.selectAll(".tick line")
-      .attr("stroke", axisColor);
+    // Style Y-axis tick lines
+    yAxisGroup.selectAll(".tick line")
+      .attr("stroke", axisColor)
+      .attr("stroke-width", 1)
+      .attr("opacity", 0.6);
 
 
 
@@ -286,42 +337,60 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           .attr("stroke-width", 2)
           .style("filter", "drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))")
           .on("mouseover", function(_event, d) {
-            // Tooltip on hover
+            // Enhanced tooltip on hover
             d3.select(this)
               .transition()
-              .duration(150)
-              .attr("r", 6);
+              .duration(200)
+              .attr("r", currentWidth < 640 ? 5 : 6)
+              .attr("stroke-width", 3);
 
-            // Create tooltip
+            // Create enhanced tooltip
             const tooltip = g.append("g")
               .attr("class", "tooltip")
-              .attr("transform", `translate(${xScale(d[xAxisKey] as number)}, ${yScale(d[key] as number) - 10})`);
+              .attr("transform", `translate(${xScale(d[xAxisKey] as number)}, ${yScale(d[key] as number) - 15})`);
 
+            // Tooltip background with shadow
             tooltip.append("rect")
-              .attr("x", -25)
-              .attr("y", -25)
-              .attr("width", 50)
-              .attr("height", 20)
-              .attr("fill", isDarkMode ? '#1f2937' : '#f9fafb')
+              .attr("x", -30)
+              .attr("y", -30)
+              .attr("width", 60)
+              .attr("height", 25)
+              .attr("fill", isDarkMode ? '#1f2937' : '#ffffff')
               .attr("stroke", currentColors[key])
-              .attr("stroke-width", 1)
-              .attr("rx", 4);
+              .attr("stroke-width", 2)
+              .attr("rx", 6)
+              .style("filter", "drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))")
+              .style("opacity", 0)
+              .transition()
+              .duration(200)
+              .style("opacity", 0.95);
 
+            // Tooltip text with better formatting
+            const value = typeof d[key] === 'number' ? d[key].toLocaleString() : d[key];
             tooltip.append("text")
               .attr("text-anchor", "middle")
-              .attr("y", -10)
+              .attr("y", -12)
               .attr("fill", textColor)
-              .style("font-size", currentWidth < 768 ? "10px" : "12px")
-              .style("font-weight", "500")
-              .text(d[key] as string);
+              .style("font-size", currentWidth < 640 ? "11px" : "12px")
+              .style("font-weight", "600")
+              .style("opacity", 0)
+              .text(value as string)
+              .transition()
+              .duration(200)
+              .style("opacity", 1);
           })
           .on("mouseout", function() {
             d3.select(this)
               .transition()
-              .duration(150)
-              .attr("r", 4);
+              .duration(200)
+              .attr("r", 4)
+              .attr("stroke-width", 2);
 
-            g.select(".tooltip").remove();
+            g.select(".tooltip")
+              .transition()
+              .duration(150)
+              .style("opacity", 0)
+              .remove();
           })
           .transition()
           .delay(animationDuration + index * 100)
@@ -331,89 +400,8 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       }
     });
 
-    // Add legend
-    if (showLegend && currentWidth >= 640) { // Only show legend on larger screens
-      const legend = g.append("g")
-        .attr("class", "legend")
-        .attr("transform", `translate(${innerWidth + 20}, 20)`);
-
-      // Legend background
-      const legendHeight = yAxisKeys.length * 25 + 20;
-      const legendWidth = currentWidth < 768 ? 100 : 120; // Smaller legend on mobile
-      
-      legend.append("rect")
-        .attr("x", -10)
-        .attr("y", -10)
-        .attr("width", legendWidth)
-        .attr("height", legendHeight)
-        .attr("fill", isDarkMode ? '#1f2937' : '#f9fafb')
-        .attr("stroke", isDarkMode ? '#4b5563' : '#d1d5db')
-        .attr("stroke-width", 1)
-        .attr("rx", 6)
-        .style("filter", "drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))");
-
-      // Legend title
-      legend.append("text")
-        .attr("x", legendWidth / 2 - 10)
-        .attr("y", 5)
-        .attr("text-anchor", "middle")
-        .attr("fill", textColor)
-        .style("font-size", currentWidth < 768 ? "12px" : "14px")
-        .style("font-weight", "600")
-        .text("Legend");
-
-      // Legend items
-      yAxisKeys.forEach((key, i) => {
-        const legendItem = legend.append("g")
-          .attr("class", "legend-item")
-          .attr("transform", `translate(0, ${20 + i * 25})`)
-          .style("cursor", "pointer")
-          .style("opacity", 0);
-
-        legendItem.append("rect")
-          .attr("x", 5)
-          .attr("y", -7)
-          .attr("width", 14)
-          .attr("height", 14)
-          .attr("fill", currentColors[key])
-          .attr("rx", 2);
-
-        legendItem.append("text")
-          .attr("x", 25)
-          .attr("y", 5)
-          .attr("fill", textColor)
-          .style("font-size", currentWidth < 768 ? "10px" : "12px")
-          .style("font-weight", "500")
-          .text(key);
-
-        // Animate legend items
-        legendItem
-          .transition()
-          .delay(animationDuration + i * 100)
-          .duration(300)
-          .style("opacity", 1);
-
-        // Legend item interactions
-        legendItem.on("mouseover", function() {
-          d3.select(this).select("rect")
-            .transition()
-            .duration(150)
-            .attr("width", 16)
-            .attr("height", 16)
-            .attr("x", 4)
-            .attr("y", -8);
-        })
-        .on("mouseout", function() {
-          d3.select(this).select("rect")
-            .transition()
-            .duration(150)
-            .attr("width", 14)
-            .attr("height", 14)
-            .attr("x", 5)
-            .attr("y", -7);
-        });
-      });
-    }
+    // Remove the SVG legend completely - will be rendered below as HTML
+    // No legend inside SVG anymore
 
     // Add axis labels with responsive font sizes
     if (xAxisLabel) {
@@ -431,7 +419,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       g.append("text")
         .attr("transform", `rotate(-90)`)
         .attr("x", -innerHeight / 2)
-        .attr("y", currentWidth < 768 ? -30 : -40)
+        .attr("y", currentWidth < 768 ? -55 : -65) // Increased distance from Y-axis
         .attr("text-anchor", "middle")
         .attr("fill", textColor)
         .style("font-size", currentWidth < 768 ? "12px" : "14px")
@@ -439,48 +427,72 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .text(yAxisLabel);
     }
 
-  }, [data, margin, xAxisKey, yAxisKeys, colors, showLegend, showGrid, showPoints, animationDuration, curve, title, xAxisLabel, yAxisLabel, isDarkMode, dimensions]);
+  }, [data, margin, xAxisKey, yAxisKeys, colors, showLegend, showGrid, showPoints, animationDuration, curve, title, xAxisLabel, yAxisLabel, isDarkMode, dimensions, yAxisFormatter, xAxisFormatter]);
 
   return (
-    <div ref={containerRef} className="w-full">
+    <div ref={containerRef} className="w-full space-y-4">
       {title && (
-        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">
+        <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white text-center">
           {title}
         </h3>
       )}
       
-      <div className="flex justify-center w-full overflow-x-auto">
-        <div className="min-w-full">
-          <svg
-            ref={svgRef}
-            width={dimensions.width}
-            height={dimensions.height}
-            className="border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 w-full max-w-full h-auto"
-            viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-            preserveAspectRatio="xMidYMid meet"
-          />
-        </div>
+      {/* Chart Container */}
+      <div className="relative w-full bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+        <svg
+          ref={svgRef}
+          width={dimensions.width}
+          height={dimensions.height}
+          className="w-full h-auto"
+          viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+          preserveAspectRatio="xMidYMid meet"
+        />
       </div>
 
-      {/* Mobile Legend - Show below chart on smaller screens */}
-      {showLegend && dimensions.width < 640 && (
-        <div className="mt-4 flex flex-wrap justify-center gap-4">
-          {yAxisKeys.map((key, index) => {
-            const colorKey = colors[key] ? key : `line${index + 1}`;
-            const color = colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] || defaultColors[`line${index + 1}`][isDarkMode ? 'dark' : 'light'];
+      {/* Beautiful Legend Below Chart */}
+      {showLegend && (
+        <div className="w-full">
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <h4 className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center">
+              Legend
+            </h4>
             
-            return (
-              <div key={key} className="flex items-center gap-2">
-                <div 
-                  className="w-3 h-3 rounded"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {key}
-                </span>
-              </div>
-            );
-          })}
+            {/* Responsive Grid Layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {yAxisKeys.map((key, index) => {
+                const colorKey = colors[key] ? key : `line${index + 1}`;
+                const color = colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] || defaultColors[`line${index + 1}`][isDarkMode ? 'dark' : 'light'];
+                
+                return (
+                  <div 
+                    key={key} 
+                    className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
+                  >
+                    {/* Color Indicator */}
+                    <div className="flex-shrink-0">
+                      <div 
+                        className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
+                        style={{ backgroundColor: color }}
+                      />
+                    </div>
+                    
+                    {/* Label */}
+                    <span className="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200">
+                      {key}
+                    </span>
+                    
+                    {/* Line Preview */}
+                    <div className="flex-1 flex justify-end">
+                      <div 
+                        className="w-8 sm:w-12 h-0.5 sm:h-1 rounded-full opacity-60 group-hover:opacity-100 transition-opacity duration-200"
+                        style={{ backgroundColor: color }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>

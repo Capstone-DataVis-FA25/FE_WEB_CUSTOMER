@@ -90,6 +90,18 @@ export const publicRoutes: RouteConfig[] = [
     },
   },
   {
+    path: Routers.STUDY_CHART,
+    name: 'study-chart',
+    component: 'StudyChartPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Biểu đồ nghiên cứu',
+      description: 'Biểu đồ nghiên cứu qua các năm',
+    },
+  },
+  {
     path: Routers.HOME,
     name: 'home',
     component: 'HomePage',
