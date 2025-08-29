@@ -28,8 +28,8 @@ const Routers = {
   RESEND_EMAIL: '/auth/resend-email',
 
   // Chart routes
-  LINE_CHART: '/chart/line-chart',
-  STUDY_CHART: '/chart/study-chart',
+  LINE_CHART_DEMO: '/chart/line-chart',
+  LINE_CHART_EDITOR_DEMO: '/demo/line-chart-editor',
 } as const;
 
 export default Routers;

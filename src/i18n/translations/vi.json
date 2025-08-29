@@ -512,5 +512,6 @@
   "general_important_note_title": "Lưu ý quan trọng",
   "general_important_note_description": "Việc xóa tài khoản sẽ không thể hoàn tác. Hãy chắc chắn rằng bạn đã sao lưu tất cả dữ liệu quan trọng trước khi thực hiện.",
   "on_settings": "Cài đặt",
-  "verifyEmailError_help": "Vui lòng kiểm tra lại email hoặc gửi lại email xác thực."
+  "verifyEmailError_help": "Vui lòng kiểm tra lại email hoặc gửi lại email xác thực.",
+  "legend": "Chú giải"
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
+import { useTranslation } from 'react-i18next';
 
 export interface ChartDataPoint {
   [key: string]: number | string;
@@ -59,7 +60,8 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [dimensions, setDimensions] = React.useState({ width, height });
-
+  const { t } = useTranslation();
+  
   // Monitor container size for responsiveness
   useEffect(() => {
     const updateDimensions = () => {
@@ -134,7 +136,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
     // Theme-aware colors
     const axisColor = isDarkMode ? '#9ca3af' : '#374151';
-    const gridColor = isDarkMode ? '#374151' : '#e5e7eb';
+    const gridColor = isDarkMode ? '#4b5563' : '#9ca3af';
     const textColor = isDarkMode ? '#f3f4f6' : '#1f2937';
     const backgroundColor = isDarkMode ? '#111827' : '#ffffff';
 
@@ -204,7 +206,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr("stroke", gridColor)
         .attr("stroke-width", 1)
         .attr("stroke-dasharray", "3,3")
-        .attr("opacity", 0.5);
+        .attr("opacity", isDarkMode ? 0.5 : 0.7); // Better opacity for light mode
 
       // Vertical grid lines
       g.selectAll(".grid-line-vertical")
@@ -219,7 +221,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr("stroke", gridColor)
         .attr("stroke-width", 1)
         .attr("stroke-dasharray", "3,3")
-        .attr("opacity", 0.3);
+        .attr("opacity", isDarkMode ? 0.3 : 0.5); // Better opacity for light mode
     }
 
     // X Axis with flexible formatting
@@ -400,9 +402,6 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       }
     });
 
-    // Remove the SVG legend completely - will be rendered below as HTML
-    // No legend inside SVG anymore
-
     // Add axis labels with responsive font sizes
     if (xAxisLabel) {
       g.append("text")
@@ -454,7 +453,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         <div className="w-full">
           <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
             <h4 className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center">
-              Legend
+              {t('legend')}
             </h4>
             
             {/* Responsive Grid Layout */}

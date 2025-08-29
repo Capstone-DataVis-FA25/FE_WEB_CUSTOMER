@@ -507,5 +507,6 @@
   "timezone_newyork": "New York (UTC-5)",
   "timezone_losangeles": "Los Angeles (UTC-8)",
   "timezone_sydney": "Sydney (UTC+11)",
-  "verifyEmailError_help": "Please check your spam folder for the verification email or request a new one."
+  "verifyEmailError_help": "Please check your spam folder for the verification email or request a new one.",
+  "legend": "Legend"
 }

@@ -78,7 +78,7 @@ export interface RouteConfig {
 // Public routes (không cần đăng nhập)
 export const publicRoutes: RouteConfig[] = [
   {
-    path: Routers.LINE_CHART,
+    path: Routers.LINE_CHART_DEMO,
     name: 'line-chart',
     component: 'LineChartPage',
     layout: 'USER',
@@ -90,15 +90,15 @@ export const publicRoutes: RouteConfig[] = [
     },
   },
   {
-    path: Routers.STUDY_CHART,
-    name: 'study-chart',
-    component: 'StudyChartPage',
+    path: Routers.LINE_CHART_EDITOR_DEMO,
+    name: 'line-chart-editor-demo',
+    component: 'LineChartEditorDemo',
     layout: 'USER',
     isProtected: false,
     permissions: [Permission.VIEW_PUBLIC],
     meta: {
-      title: 'Biểu đồ nghiên cứu',
-      description: 'Biểu đồ nghiên cứu qua các năm',
+      title: 'LineChart Editor Demo',
+      description: 'Interactive demonstration of the LineChart editor component',
     },
   },
   {
