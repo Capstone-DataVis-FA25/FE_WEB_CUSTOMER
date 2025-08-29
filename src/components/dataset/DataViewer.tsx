@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { FileSpreadsheet, AlertCircle, Upload, RefreshCw } from 'lucide-react';
 
 interface ParsedData {
@@ -12,12 +14,20 @@ interface ParsedData {
 interface DataViewerProps {
   parsedData: ParsedData | null;
   isUploading: boolean;
-  onUpload: () => void;
+  onUpload: (name: string) => void;
   onChangeData: () => void;
 }
 
 function DataViewer({ parsedData, isUploading, onUpload, onChangeData }: DataViewerProps) {
   const { t } = useTranslation();
+  const [datasetName, setDatasetName] = useState<string>('');
+
+  const handleUpload = () => {
+    if (!datasetName.trim()) {
+      return; // Don't upload if name is empty
+    }
+    onUpload(datasetName.trim());
+  };
 
   return (
     <Card className="border-0 shadow-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
@@ -26,17 +36,36 @@ function DataViewer({ parsedData, isUploading, onUpload, onChangeData }: DataVie
           <FileSpreadsheet className="w-6 h-6 text-blue-600" />
           Data Preview
         </CardTitle>
-        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <p className="font-semibold text-gray-900 dark:text-white">Dataset Preview</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Ready for processing and upload
-          </p>
-        </div>
       </CardHeader>
 
       <CardContent>
         {parsedData ? (
           <div className="space-y-6">
+            {/* Dataset Name Input */}
+            <div>
+              <div className="max-w-md mx-auto">
+                <label
+                  htmlFor="dataset-name"
+                  className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2"
+                >
+                  Dataset Name *
+                </label>
+                <Input
+                  id="dataset-name"
+                  type="text"
+                  placeholder="Enter a name for your dataset..."
+                  value={datasetName}
+                  onChange={e => setDatasetName(e.target.value)}
+                  className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 border-gray-300 dark:border-gray-600"
+                  disabled={isUploading}
+                />
+                {!datasetName.trim() && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                    Please enter a name before creating the dataset
+                  </p>
+                )}
+              </div>
+            </div>
             {/* Parse Errors Warning */}
             {parsedData.parseErrors && parsedData.parseErrors.length > 0 && (
               <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 border border-amber-200 dark:border-amber-700">
@@ -154,8 +183,8 @@ function DataViewer({ parsedData, isUploading, onUpload, onChangeData }: DataVie
           </Button>
 
           <Button
-            onClick={onUpload}
-            disabled={isUploading}
+            onClick={handleUpload}
+            disabled={isUploading || !datasetName.trim()}
             className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isUploading ? (

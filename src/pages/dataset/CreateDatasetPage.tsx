@@ -79,9 +79,14 @@ function CreateDatasetPage() {
   }, []);
 
   // Handle file upload (create dataset)
-  const handleFileUpload = useCallback(async () => {
+  const handleFileUpload = useCallback(async (name: string) => {
     if (!parsedData) {
       showWarning('No Data Available', 'Please select a file or enter text data first');
+      return;
+    }
+
+    if (!name.trim()) {
+      showWarning('Dataset Name Required', 'Please enter a name for your dataset');
       return;
     }
 
@@ -90,6 +95,7 @@ function CreateDatasetPage() {
     try {
       // Prepare the data to send
       const requestBody = {
+        name: name.trim(),
         data: parsedData.tabularData || [],
       };
 
