@@ -15,3 +15,12 @@ export const salesData: ChartDataPoint[] = [
   { month: 11, ecommerce: 265, retail: 1850, wholesale: 1200 },
   { month: 12, ecommerce: 295, retail: 2100, wholesale: 1350 },
 ];
+
+export const exampleData = [
+  ['city', 'month', 'sale'],
+  ['New York', 1, 500],
+  ['Los Angeles', 1, 600],
+  ['Chicago', 1, 700],
+  ['Houston', 1, 800],
+  ['Phoenix', 1, 900],
+];

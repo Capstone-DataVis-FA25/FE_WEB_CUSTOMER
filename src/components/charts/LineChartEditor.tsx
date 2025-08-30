@@ -20,6 +20,7 @@ import {
   Upload
 } from 'lucide-react';
 import * as d3 from 'd3';
+import { useTranslation } from 'react-i18next';
 
 // LineChart configuration interface
 export interface LineChartConfig {
@@ -50,6 +51,22 @@ export interface FormatterConfig {
 
 // Color configuration
 export type ColorConfig = Record<string, { light: string; dark: string }>;
+
+// Common chart size presets
+const sizePresets = {
+  tiny: { width: 300, height: 200, labelKey: 'lineChart_editor_preset_tiny' },
+  small: { width: 400, height: 250, labelKey: 'lineChart_editor_preset_small' },
+  medium: { width: 600, height: 375, labelKey: 'lineChart_editor_preset_medium' },
+  large: { width: 800, height: 500, labelKey: 'lineChart_editor_preset_large' },
+  xlarge: { width: 1000, height: 625, labelKey: 'lineChart_editor_preset_xlarge' },
+  wide: { width: 1200, height: 400, labelKey: 'lineChart_editor_preset_wide' },
+  ultrawide: { width: 1400, height: 350, labelKey: 'lineChart_editor_preset_ultrawide' },
+  square: { width: 500, height: 500, labelKey: 'lineChart_editor_preset_square' },
+  presentation: { width: 1024, height: 768, labelKey: 'lineChart_editor_preset_presentation' },
+  mobile: { width: 350, height: 300, labelKey: 'lineChart_editor_preset_mobile' },
+  tablet: { width: 768, height: 480, labelKey: 'lineChart_editor_preset_tablet' },
+  responsive: { width: 0, height: 0, labelKey: 'lineChart_editor_preset_responsive' }
+};
 
 // Curve options
 const curveOptions = {
@@ -87,19 +104,35 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   onDataChange,
   onColorsChange,
   onFormattersChange,
-  title = 'LineChart Editor',
-  description = 'Interactive line chart configuration and data editor'
+  title,
+  description
 }) => {
+  const { t } = useTranslation();
+  
+  // Calculate responsive default dimensions
+  const getResponsiveDefaults = () => {
+    const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const containerWidth = Math.min(screenWidth * 0.7, 1000); // 70% of screen, max 1000px
+    const aspectRatio = 16 / 9; // Golden ratio for charts
+    
+    return {
+      width: Math.max(600, Math.min(containerWidth, 1000)), // Min 600px, max 1000px
+      height: Math.max(300, Math.min(containerWidth / aspectRatio, 600)) // Min 300px, max 600px
+    };
+  };
+
+  const responsiveDefaults = getResponsiveDefaults();
+
   // Default configuration
   const defaultConfig: LineChartConfig = {
-    width: 800,
-    height: 400,
+    width: responsiveDefaults.width,
+    height: responsiveDefaults.height,
     margin: { top: 20, right: 40, bottom: 60, left: 80 },
     xAxisKey: Object.keys(initialData[0] || {})[0] || 'x',
     yAxisKeys: Object.keys(initialData[0] || {}).filter(key => typeof (initialData[0] || {})[key] === 'number') || ['y'],
-    title: 'Line Chart',
-    xAxisLabel: 'X Axis',
-    yAxisLabel: 'Y Axis',
+    title: t('lineChart_editor_title'),
+    xAxisLabel: t('lineChart_editor_xAxisLabel'),
+    yAxisLabel: t('lineChart_editor_yAxisLabel'),
     showLegend: true,
     showGrid: true,
     showPoints: true,
@@ -131,6 +164,16 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   const [data, setData] = useState<ChartDataPoint[]>(initialData);
   const [formatters, setFormatters] = useState<FormatterConfig>(defaultFormatters);
   const [isEditingData, setIsEditingData] = useState(false);
+
+  // Calculate responsive fontSize based on chart dimensions
+  const getResponsiveFontSize = () => {
+    const baseSize = Math.min(config.width, config.height);
+    if (baseSize <= 300) return { axis: 10, label: 12, title: 14 };
+    if (baseSize <= 500) return { axis: 11, label: 13, title: 16 };
+    if (baseSize <= 700) return { axis: 12, label: 14, title: 18 };
+    if (baseSize <= 900) return { axis: 13, label: 15, title: 20 };
+    return { axis: 14, label: 16, title: 22 };
+  };
 
   // Generate formatter functions
   const getYAxisFormatter = useMemo(() => {
@@ -213,6 +256,17 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     const numValue = parseFloat(value) || 0;
     newData[index] = { ...newData[index], [key]: numValue };
     updateData(newData);
+  };
+
+  // Apply size preset
+  const applySizePreset = (presetKey: keyof typeof sizePresets) => {
+    const preset = sizePresets[presetKey];
+    if (presetKey === 'responsive') {
+      const responsive = getResponsiveDefaults();
+      updateConfig({ width: responsive.width, height: responsive.height });
+    } else {
+      updateConfig({ width: preset.width, height: preset.height });
+    }
   };
 
   // Y-axis keys management
@@ -321,10 +375,10 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
             <Settings className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            {title}
+            {title || t('lineChart_editor_title')}
           </h1>
           <p className="text-gray-600 dark:text-gray-300 text-base sm:text-lg">
-            {description}
+            {description || t('lineChart_editor_description')}
           </p>
         </motion.div>
 
@@ -342,33 +396,34 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 <CardHeader className="pb-3">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <BarChart3 className="h-5 w-5" />
-                    Basic Settings
+                    {t('lineChart_editor_basicSettings')}
                   </h3>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-sm font-medium">Width</Label>
-                      <Input
-                        type="number"
-                        value={config.width}
-                        onChange={(e) => updateConfig({ width: parseInt(e.target.value) || 800 })}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Height</Label>
-                      <Input
-                        type="number"
-                        value={config.height}
-                        onChange={(e) => updateConfig({ height: parseInt(e.target.value) || 400 })}
-                        className="mt-1"
-                      />
+                  {/* Size Presets */}
+                  <div>
+                    <Label className="text-sm font-medium">{t('lineChart_editor_sizePresets')}</Label>
+                    <div className="grid grid-cols-2 gap-2 mt-2 max-h overflow-y-auto">
+                      {Object.entries(sizePresets).map(([key, preset]) => (
+                        <Button
+                          key={key}
+                          variant={
+                            (preset.width === config.width && preset.height === config.height) || 
+                            (key === 'responsive' && preset.width === 0) 
+                              ? "default" 
+                              : "outline"
+                          }
+                          size="sm"
+                          onClick={() => applySizePreset(key as keyof typeof sizePresets)}
+                          className="text-xs h-8 justify-start"
+                        >
+                          {t(preset.labelKey)}
+                        </Button>
+                      ))}
                     </div>
                   </div>
-
                   <div>
-                    <Label className="text-sm font-medium">Title</Label>
+                    <Label className="text-sm font-medium">{t('lineChart_editor_title_chart')}</Label>
                     <Input
                       value={config.title}
                       onChange={(e) => updateConfig({ title: e.target.value })}
@@ -378,7 +433,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-sm font-medium">X Axis Label</Label>
+                      <Label className="text-sm font-medium">{t('lineChart_editor_xAxisLabel')}</Label>
                       <Input
                         value={config.xAxisLabel}
                         onChange={(e) => updateConfig({ xAxisLabel: e.target.value })}
@@ -386,7 +441,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       />
                     </div>
                     <div>
-                      <Label className="text-sm font-medium">Y Axis Label</Label>
+                      <Label className="text-sm font-medium">{t('lineChart_editor_yAxisLabel')}</Label>
                       <Input
                         value={config.yAxisLabel}
                         onChange={(e) => updateConfig({ yAxisLabel: e.target.value })}
@@ -396,7 +451,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">X Axis Key</Label>
+                    <Label className="text-sm font-medium">{t('lineChart_editor_xAxisKey')}</Label>
                     <Input
                       value={config.xAxisKey}
                       onChange={(e) => updateConfig({ xAxisKey: e.target.value })}
@@ -405,7 +460,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">Animation Duration (ms)</Label>
+                    <Label className="text-sm font-medium">{t('lineChart_editor_animationDuration')}</Label>
                     <Input
                       type="number"
                       value={config.animationDuration}
@@ -415,11 +470,11 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">Curve Type</Label>
+                    <Label className="text-sm font-medium">{t('lineChart_editor_curveType')}</Label>
                     <select
                       value={config.curve}
                       onChange={(e) => updateConfig({ curve: e.target.value as keyof typeof curveOptions })}
-                      className="w-full mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
                       {Object.keys(curveOptions).map((curve) => (
                         <option key={curve} value={curve}>
@@ -440,7 +495,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
             >
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                 <CardHeader className="pb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Display Options</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lineChart_editor_displayOptions')}</h3>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center space-x-2">
@@ -449,7 +504,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       checked={config.showLegend}
                       onCheckedChange={(checked) => updateConfig({ showLegend: !!checked })}
                     />
-                    <Label htmlFor="showLegend" className="text-sm font-medium">Show Legend</Label>
+                    <Label htmlFor="showLegend" className="text-sm font-medium">{t('lineChart_editor_showLegend')}</Label>
                   </div>
 
                   <div className="flex items-center space-x-2">
@@ -458,7 +513,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       checked={config.showGrid}
                       onCheckedChange={(checked) => updateConfig({ showGrid: !!checked })}
                     />
-                    <Label htmlFor="showGrid" className="text-sm font-medium">Show Grid</Label>
+                    <Label htmlFor="showGrid" className="text-sm font-medium">{t('lineChart_editor_showGrid')}</Label>
                   </div>
 
                   <div className="flex items-center space-x-2">
@@ -467,7 +522,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       checked={config.showPoints}
                       onCheckedChange={(checked) => updateConfig({ showPoints: !!checked })}
                     />
-                    <Label htmlFor="showPoints" className="text-sm font-medium">Show Points</Label>
+                    <Label htmlFor="showPoints" className="text-sm font-medium">{t('lineChart_editor_showPoints')}</Label>
                   </div>
                 </CardContent>
               </Card>
@@ -481,7 +536,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
             >
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                 <CardHeader className="pb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Formatters</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lineChart_editor_formatters')}</h3>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
@@ -491,7 +546,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                         checked={formatters.useYFormatter}
                         onCheckedChange={(checked) => updateFormatters({ useYFormatter: !!checked })}
                       />
-                      <Label htmlFor="useYFormatter" className="text-sm font-medium">Y-Axis Formatter</Label>
+                      <Label htmlFor="useYFormatter" className="text-sm font-medium">{t('lineChart_editor_yAxisFormatter')}</Label>
                     </div>
 
                     {formatters.useYFormatter && (
@@ -499,12 +554,12 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                         <select
                           value={formatters.yFormatterType}
                           onChange={(e) => updateFormatters({ yFormatterType: e.target.value as FormatterConfig['yFormatterType'] })}
-                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                          className="w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                         >
-                          <option value="number">Number</option>
-                          <option value="currency">Currency ($1.0K)</option>
-                          <option value="percentage">Percentage (%)</option>
-                          <option value="custom">Custom</option>
+                          <option value="number">{t('lineChart_editor_number')}</option>
+                          <option value="currency">{t('lineChart_editor_currency')}</option>
+                          <option value="percentage">{t('lineChart_editor_percentage')}</option>
+                          <option value="custom">{t('lineChart_editor_custom')}</option>
                         </select>
 
                         {formatters.yFormatterType === 'custom' && (
@@ -533,11 +588,11 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                   <div className="space-y-3">
                     <Button onClick={resetToDefault} className="w-full" variant="outline">
                       <RefreshCw className="h-4 w-4 mr-2" />
-                      Reset to Default
+                      {t('lineChart_editor_resetToDefault')}
                     </Button>
                     <Button onClick={exportConfig} className="w-full" variant="outline">
                       <Download className="h-4 w-4 mr-2" />
-                      Export Config
+                      {t('lineChart_editor_exportConfig')}
                     </Button>
                     <div className="relative">
                       <input
@@ -548,7 +603,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       />
                       <Button className="w-full" variant="outline">
                         <Upload className="h-4 w-4 mr-2" />
-                        Import Config
+                        {t('lineChart_editor_importConfig')}
                       </Button>
                     </div>
                   </div>
@@ -569,7 +624,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                 <CardHeader>
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Live Preview
+                    {t('lineChart_editor_livePreview')}
                   </h2>
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6">
@@ -591,6 +646,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     curve={curveOptions[config.curve]}
                     yAxisFormatter={getYAxisFormatter}
                     xAxisFormatter={getXAxisFormatter}
+                    fontSize={getResponsiveFontSize()}
                   />
                 </CardContent>
               </Card>
@@ -606,11 +662,11 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 <CardHeader className="flex flex-row items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Palette className="h-5 w-5" />
-                    Line Configuration
+                    {t('lineChart_editor_lineConfiguration')}
                   </h3>
                   <Button onClick={addYAxisKey} size="sm" variant="outline">
                     <Plus className="h-4 w-4 mr-1" />
-                    Add Line
+                    {t('lineChart_editor_addLine')}
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -638,7 +694,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label className="text-sm">Light Theme Color</Label>
+                          <Label className="text-sm">{t('lineChart_editor_lightThemeColor')}</Label>
                           <Input
                             type="color"
                             value={colors[key]?.light || '#6366f1'}
@@ -647,7 +703,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                           />
                         </div>
                         <div>
-                          <Label className="text-sm">Dark Theme Color</Label>
+                          <Label className="text-sm">{t('lineChart_editor_darkThemeColor')}</Label>
                           <Input
                             type="color"
                             value={colors[key]?.dark || '#818cf8'}
@@ -672,7 +728,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 <CardHeader className="flex flex-row items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Edit3 className="h-5 w-5" />
-                    Data Editor
+                    {t('lineChart_editor_dataEditor')}
                   </h3>
                   <div className="flex gap-2">
                     <Button 
@@ -680,11 +736,11 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       size="sm" 
                       variant="outline"
                     >
-                      {isEditingData ? 'View' : 'Edit'}
+                      {isEditingData ? t('lineChart_editor_view') : t('lineChart_editor_edit')}
                     </Button>
                     <Button onClick={addDataPoint} size="sm" variant="outline">
                       <Plus className="h-4 w-4 mr-1" />
-                      Add Point
+                      {t('lineChart_editor_addPoint')}
                     </Button>
                   </div>
                 </CardHeader>
@@ -729,8 +785,8 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                   ) : (
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                       <Edit3 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Click "Edit" to modify chart data</p>
-                      <p className="text-sm mt-1">Current data points: {data.length}</p>
+                      <p>{t('lineChart_editor_editDataTip')}</p>
+                      <p className="text-sm mt-1">{t('lineChart_editor_currentDataPoints')} {data.length}</p>
                     </div>
                   )}
                 </CardContent>

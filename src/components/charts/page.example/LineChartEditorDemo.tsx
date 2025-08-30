@@ -10,8 +10,11 @@ import type { ChartDataPoint } from '@/components/charts/D3LineChart';
 import { motion } from 'framer-motion';
 import { Download } from 'lucide-react';
 import { salesData } from '../data/data';
+import { useTranslation } from 'react-i18next';
 
 const LineChartEditorDemo: React.FC = () => {
+  const { t } = useTranslation();
+  
   // State để lưu config hiện tại
   const [currentConfig, setCurrentConfig] = useState<LineChartConfig | null>(null);
   const [currentColors, setCurrentColors] = useState<ColorConfig | null>(null);
@@ -56,16 +59,16 @@ const LineChartEditorDemo: React.FC = () => {
           >
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                LineChart Editor Demo
+                {t('lineChart_editor_demo_title')}
               </h1>
               <p className="text-gray-600 dark:text-gray-300 mt-1">
-                Interactive demonstration of the LineChart editor component
+                {t('lineChart_editor_demo_description')}
               </p>
             </div>
             <div className="flex gap-3">
               <Button onClick={exportDemoConfig} variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-2" />
-                Export Demo Config
+                {t('lineChart_editor_demo_exportConfig')}
               </Button>
             </div>
           </motion.div>
@@ -84,9 +87,9 @@ const LineChartEditorDemo: React.FC = () => {
           <LineChartEditor
             initialData={salesData}
             initialConfig={{
-              title: 'Monthly Financial Data',
-              xAxisLabel: 'Month',
-              yAxisLabel: 'Amount ($)',
+              title: t('lineChart_editor_demo_financialData'),
+              xAxisLabel: t('lineChart_editor_xAxisLabel'),
+              yAxisLabel: t('lineChart_editor_yAxisLabel'),
               xAxisKey: 'month',
               yAxisKeys: ['ecommerce', 'retail', 'wholesale'],
               width: 800,
@@ -115,8 +118,8 @@ const LineChartEditorDemo: React.FC = () => {
             onDataChange={setCurrentData}
             onColorsChange={setCurrentColors}
             onFormattersChange={setCurrentFormatters}
-            title="Financial Data LineChart Editor"
-            description="Configure your line chart with real-time preview and data editing"
+            title={t('lineChart_editor_demo_financialData')}
+            description={t('lineChart_editor_demo_financialDataDesc')}
           />
         </motion.div>
 
@@ -131,14 +134,14 @@ const LineChartEditorDemo: React.FC = () => {
             <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
               <CardHeader>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Current Configuration
+                  {t('lineChart_editor_demo_currentConfig')}
                 </h3>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
                     <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-                      Chart Config:
+                      {t('lineChart_editor_demo_chartConfig')}
                     </h4>
                     <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-sm">
                       <pre className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap overflow-x-auto">
@@ -148,12 +151,12 @@ const LineChartEditorDemo: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-                      Colors & Formatters:
+                      {t('lineChart_editor_demo_colorsFormatters')}
                     </h4>
                     <div className="space-y-3">
                       <div>
                         <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Colors:
+                          {t('lineChart_editor_demo_colors')}
                         </h5>
                         <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded text-xs">
                           <pre className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap overflow-x-auto">
@@ -163,7 +166,7 @@ const LineChartEditorDemo: React.FC = () => {
                       </div>
                       <div>
                         <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Formatters:
+                          {t('lineChart_editor_demo_formatters')}
                         </h5>
                         <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded text-xs">
                           <pre className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap overflow-x-auto">

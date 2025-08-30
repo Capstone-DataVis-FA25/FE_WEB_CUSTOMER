@@ -24,6 +24,7 @@ export interface D3LineChartProps {
   curve?: d3.CurveFactory;
   yAxisFormatter?: (value: number) => string; // Add custom Y-axis formatter
   xAxisFormatter?: (value: number) => string; // Add custom X-axis formatter
+  fontSize?: { axis: number; label: number; title: number }; // Add fontSize prop
 }
 
 const defaultColors: Record<string, { light: string; dark: string }> = {
@@ -55,6 +56,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   curve = d3.curveMonotoneX,
   yAxisFormatter, // Optional custom Y-axis formatter
   xAxisFormatter, // Optional custom X-axis formatter
+  fontSize = { axis: 12, label: 14, title: 16 }, // Default fontSize
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -170,7 +172,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .attr("y", 0)
       .attr("width", responsiveMargin.left)
       .attr("height", currentHeight)
-      .attr("fill", isDarkMode ? '#1f2937' : '#f8fafc')
+      .attr("fill", isDarkMode ? '#111827' : '#f8fafc')
       .attr("opacity", 0.3);
 
     // Create main group
@@ -240,7 +242,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .call(xAxis)
       .selectAll("text")
       .attr("fill", textColor)
-      .style("font-size", currentWidth < 768 ? "10px" : "12px")
+      .style("font-size", `${fontSize.axis}px`)
       .style("font-weight", "500");
 
     g.select(".domain")
@@ -269,7 +271,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     // Style Y-axis labels beautifully
     yAxisGroup.selectAll("text")
       .attr("fill", textColor)
-      .style("font-size", currentWidth < 768 ? "11px" : "13px")
+      .style("font-size", `${fontSize.axis}px`)
       .style("font-weight", "600")
       .style("font-family", "system-ui, -apple-system, sans-serif")
       .attr("text-anchor", "end")
@@ -373,7 +375,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
               .attr("text-anchor", "middle")
               .attr("y", -12)
               .attr("fill", textColor)
-              .style("font-size", currentWidth < 640 ? "11px" : "12px")
+              .style("font-size", `${fontSize.axis}px`)
               .style("font-weight", "600")
               .style("opacity", 0)
               .text(value as string)
@@ -409,7 +411,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr("y", innerHeight + (currentWidth < 768 ? 40 : 50))
         .attr("text-anchor", "middle")
         .attr("fill", textColor)
-        .style("font-size", currentWidth < 768 ? "12px" : "14px")
+        .style("font-size", `${fontSize.label}px`)
         .style("font-weight", "600")
         .text(xAxisLabel);
     }
@@ -421,23 +423,26 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr("y", currentWidth < 768 ? -55 : -65) // Increased distance from Y-axis
         .attr("text-anchor", "middle")
         .attr("fill", textColor)
-        .style("font-size", currentWidth < 768 ? "12px" : "14px")
+        .style("font-size", `${fontSize.label}px`)
         .style("font-weight", "600")
         .text(yAxisLabel);
     }
 
-  }, [data, margin, xAxisKey, yAxisKeys, colors, showLegend, showGrid, showPoints, animationDuration, curve, title, xAxisLabel, yAxisLabel, isDarkMode, dimensions, yAxisFormatter, xAxisFormatter]);
+  }, [data, margin, xAxisKey, yAxisKeys, colors, showLegend, showGrid, showPoints, animationDuration, curve, title, xAxisLabel, yAxisLabel, isDarkMode, dimensions, yAxisFormatter, xAxisFormatter, fontSize]);
 
   return (
     <div ref={containerRef} className="w-full space-y-4">
       {title && (
-        <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white text-center">
+        <h3 
+          className="font-bold text-gray-900 dark:text-white text-center"
+          style={{ fontSize: `${fontSize.title}px` }}
+        >
           {title}
         </h3>
       )}
       
       {/* Chart Container */}
-      <div className="relative w-full bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+      <div className="relative w-full bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3">
         <svg
           ref={svgRef}
           width={dimensions.width}
