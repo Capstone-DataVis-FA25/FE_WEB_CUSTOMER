@@ -88,18 +88,29 @@ export const parseTabularContent = (
     dynamicTyping: false, // Keep all values as strings
   };
 
-  return Papa.parse(text, config);
+  const result = Papa.parse(text, config);
+
+  // Normalize all rows to have the same length as the header (first row)
+  if (result.data.length > 0) {
+    const headerLength = result.data[0].length;
+    result.data = result.data.map(row =>
+      row.length > headerLength ? row.slice(0, headerLength) : row
+    );
+  }
+
+  return result;
 };
 
 /**
  * Process file and return Papa Parse result directly
+ * Accepts any readable text file and attempts to parse as tabular data
  */
 export const processFileContent = async (
   file: File,
   options: FileProcessingOptions = {}
 ): Promise<Papa.ParseResult<string[]>> => {
-  if (!isTabularDataFile(file)) {
-    throw new Error(`File type ${file.type || 'unknown'} is not supported. Only CSV and TSV files are allowed.`);
+  if (!isValidFileType(file)) {
+    throw new Error(`File type ${file.type || 'unknown'} is not supported.`);
   }
 
   try {

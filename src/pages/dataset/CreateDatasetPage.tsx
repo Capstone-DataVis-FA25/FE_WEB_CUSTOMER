@@ -37,7 +37,7 @@ function CreateDatasetPage() {
       setIsProcessing(true);
       try {
         const result = await processFileContent(file);
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         setParsedData(result);
         console.log(result);
         setViewMode('view');
