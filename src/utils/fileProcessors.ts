@@ -5,12 +5,6 @@
 
 import Papa from 'papaparse';
 
-export interface ParsedContent {
-  content: string;
-  tabularData?: string[][];
-  parseErrors?: Array<{ message: string; row?: number; type?: string }>;
-}
-
 // File validation configuration constants
 export const ALLOWED_TYPES = [
   'application/vnd.ms-excel', // .xls
@@ -83,7 +77,7 @@ export const parseTabularContent = (
   text: string,
   file: File,
   options: FileProcessingOptions = {}
-): { data: string[][]; errors: Papa.ParseError[] } => {
+): Papa.ParseResult<string[]> => {
   const config: Papa.ParseConfig = {
     delimiter: options.delimiter || getFileDelimiter(file),
     header: false, // Return array of arrays instead of objects
@@ -94,51 +88,25 @@ export const parseTabularContent = (
     dynamicTyping: false, // Keep all values as strings
   };
 
-  const result = Papa.parse(text, config);
-
-  return {
-    data: result.data as string[][],
-    errors: result.errors || []
-  };
+  return Papa.parse(text, config);
 };
 
 /**
- * Read and process file content based on file type
+ * Process file and return Papa Parse result directly
  */
 export const processFileContent = async (
   file: File,
   options: FileProcessingOptions = {}
-): Promise<ParsedContent> => {
-  if (!isReadableTextFile(file)) {
-    throw new Error(`File type ${file.type || 'unknown'} is not supported for content reading`);
+): Promise<Papa.ParseResult<string[]>> => {
+  if (!isTabularDataFile(file)) {
+    throw new Error(`File type ${file.type || 'unknown'} is not supported. Only CSV and TSV files are allowed.`);
   }
 
   try {
-    // Read the file as text
     const textContent = await file.text();
-
-    const result: ParsedContent = {
-      content: textContent,
-    };
-
-    // If it's tabular data, parse it
-    if (isTabularDataFile(file)) {
-      const parseResult = parseTabularContent(textContent, file, options);
-      result.tabularData = parseResult.data;
-
-      // Convert Papa Parse errors to our format
-      if (parseResult.errors.length > 0) {
-        result.parseErrors = parseResult.errors.map(error => ({
-          message: error.message,
-          row: error.row,
-          type: error.type,
-        }));
-      }
-    }
-
-    return result;
+    return parseTabularContent(textContent, file, options);
   } catch (error) {
-    throw new Error(`Failed to process file content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to process file: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
