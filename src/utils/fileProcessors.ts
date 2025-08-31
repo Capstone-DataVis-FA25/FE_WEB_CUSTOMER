@@ -18,6 +18,14 @@ export const ALLOWED_TYPES = [
 export const ALLOWED_EXTENSIONS = ['.xls', '.xlsx', '.csv', '.txt', '.json', '.tsv'];
 export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
+// Delimiter options for data parsing
+export const DELIMITER_OPTIONS = [
+  { value: ',', label: 'Comma (,)', description: 'CSV format' },
+  { value: ';', label: 'Semicolon (;)', description: 'European CSV' },
+  { value: '\t', label: 'Tab (\\t)', description: 'TSV format' },
+  { value: '|', label: 'Pipe (|)', description: 'Pipe separated' },
+];
+
 export interface FileProcessingOptions {
   delimiter?: string;
   encoding?: string;
@@ -26,36 +34,7 @@ export interface FileProcessingOptions {
   hasHeaders?: boolean;
 }
 
-/**
- * Check if a file type can be read as text content
- */
-export const isReadableTextFile = (file: File): boolean => {
-  const readableExtensions = ['.csv', '.txt', '.tsv', '.json'];
-  const readableMimeTypes = [
-    'text/plain',
-    'text/csv',
-    'text/tab-separated-values',
-    'application/json',
-  ];
 
-  return (
-    readableMimeTypes.includes(file.type) ||
-    readableExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
-  );
-};
-
-/**
- * Check if a file contains tabular data (CSV/TSV)
- */
-export const isTabularDataFile = (file: File): boolean => {
-  const tabularExtensions = ['.csv', '.tsv'];
-  const tabularMimeTypes = ['text/csv', 'text/tab-separated-values'];
-
-  return (
-    tabularMimeTypes.includes(file.type) ||
-    tabularExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
-  );
-};
 
 /**
  * Determine the appropriate delimiter for a file
@@ -78,14 +57,18 @@ export const parseTabularContent = (
   file: File,
   options: FileProcessingOptions = {}
 ): Papa.ParseResult<string[]> => {
+  const delimiter = options.delimiter || getFileDelimiter(file);
+
   const config: Papa.ParseConfig = {
-    delimiter: options.delimiter || getFileDelimiter(file),
+    delimiter: delimiter,
     header: false, // Return array of arrays instead of objects
     skipEmptyLines: options.skipEmptyLines ?? true,
     transform: options.trimValues ? (value: string) => value.trim() : undefined,
     comments: false, // Don't treat any lines as comments
-    fastMode: false, // Use robust parsing for quoted fields
+    fastMode: delimiter === '\t', // Use fast mode for tab-separated files to handle quotes differently
     dynamicTyping: false, // Keep all values as strings
+    quoteChar: '"',
+    escapeChar: '"',
   };
 
   const result = Papa.parse(text, config);
@@ -93,9 +76,17 @@ export const parseTabularContent = (
   // Normalize all rows to have the same length as the header (first row)
   if (result.data.length > 0) {
     const headerLength = result.data[0].length;
-    result.data = result.data.map(row =>
-      row.length > headerLength ? row.slice(0, headerLength) : row
-    );
+    result.data = result.data.map(row => {
+      if (row.length > headerLength) {
+        // Truncate rows that are too long
+        return row.slice(0, headerLength);
+      } else if (row.length < headerLength) {
+        // Fill rows that are too short with empty strings
+        return [...row, ...Array(headerLength - row.length).fill('')];
+      }
+      // Row is exactly the right length
+      return row;
+    });
   }
 
   return result;
@@ -129,46 +120,15 @@ export const validateFileSize = (file: File, maxSizeInBytes: number = 50 * 1024 
 };
 
 /**
- * Validate file type against allowed types
- */
-export const validateFileType = (file: File, allowedTypes: string[], allowedExtensions: string[]): boolean => {
-  return (
-    allowedTypes.includes(file.type) ||
-    allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
-  );
-};
-
-/**
- * Format file size for display
- */
-export const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-/**
- * Get file extension from filename
- */
-export const getFileExtension = (filename: string): string => {
-  return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
-};
-
-/**
- * Check if file is a specific type
- */
-export const isFileType = (file: File, extensions: string[], mimeTypes: string[] = []): boolean => {
-  return (
-    mimeTypes.includes(file.type) ||
-    extensions.some(ext => file.name.toLowerCase().endsWith(ext.toLowerCase()))
-  );
-};
-
-/**
  * Validate if file type is allowed for dataset upload
  */
 export const isValidFileType = (file: File): boolean => {
-  return validateFileType(file, ALLOWED_TYPES, ALLOWED_EXTENSIONS);
+  return (
+    ALLOWED_TYPES.includes(file.type) ||
+    ALLOWED_EXTENSIONS.some(ext => file.name.toLowerCase().endsWith(ext))
+  );
 };
+
+
+
+

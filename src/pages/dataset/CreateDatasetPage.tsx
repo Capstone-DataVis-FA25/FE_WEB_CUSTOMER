@@ -9,7 +9,7 @@ import TextUpload from '@/components/dataset/TextUpload';
 import UploadMethodNavigation from '@/components/dataset/UploadMethodNavigation';
 import {
   processFileContent,
-  isReadableTextFile,
+  parseTabularContent,
   validateFileSize,
   isValidFileType,
   MAX_FILE_SIZE,
@@ -29,13 +29,18 @@ function CreateDatasetPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('upload');
   const [parsedData, setParsedData] = useState<Papa.ParseResult<string[]> | null>(null);
-  const [_textContent, setTextContent] = useState<string>('');
+  const [originalTextContent, setOriginalTextContent] = useState<string>('');
 
   // Process file content and switch to view mode
   const processAndViewFile = useCallback(
     async (file: File) => {
       setIsProcessing(true);
       try {
+        // Read the original text content first
+        const textContent = await file.text();
+        setOriginalTextContent(textContent);
+
+        // Then process it
         const result = await processFileContent(file);
         await new Promise(resolve => setTimeout(resolve, 1000));
         setParsedData(result);
@@ -63,8 +68,8 @@ function CreateDatasetPage() {
       }
 
       setSelectedFile(file);
-      // If file is readable, automatically process it and switch to view mode
-      if (isReadableTextFile(file)) {
+      // If file is valid, automatically process it and switch to view mode
+      if (isValidFileType(file)) {
         await processAndViewFile(file);
       }
     },
@@ -109,11 +114,19 @@ function CreateDatasetPage() {
         setSelectedFile(null);
         setParsedData(null);
         setViewMode('upload');
-      } catch (error) {
-        showError(
-          'Upload Failed',
-          error instanceof Error ? error.message : 'Failed to create dataset'
-        );
+      } catch (error: any) {
+        // Check for unique constraint violation
+        if (error.response?.status === 409) {
+          showError(
+            'Dataset Name Already Exists',
+            `A dataset with the name "${name.trim()}" already exists. Please choose a different name.`
+          );
+        } else {
+          showError(
+            'Upload Failed',
+            error.response?.data?.message || error.message || 'Failed to create dataset'
+          );
+        }
       } finally {
         setIsUploading(false);
       }
@@ -125,33 +138,62 @@ function CreateDatasetPage() {
   const handleChangeData = useCallback(() => {
     setSelectedFile(null);
     setParsedData(null);
-    setTextContent('');
+    setOriginalTextContent('');
     setViewMode('upload');
   }, []);
 
   // Handle text processing
-  const handleTextProcess = useCallback((content: string) => {
-    setTextContent(content);
-    const parsedContent: ParsedContent = {
-      content,
-    };
-    setParsedData(parsedContent);
-    setViewMode('view');
-  }, []);
+  const handleTextProcess = useCallback(
+    (content: string) => {
+      setOriginalTextContent(content);
+      // Parse the text content as CSV data
+      try {
+        const result = parseTabularContent(
+          content,
+          new File([content], 'text.csv', { type: 'text/csv' })
+        );
+        setParsedData(result);
+        setViewMode('view');
+      } catch (error) {
+        showError('Parse Error', 'Failed to parse the text content');
+      }
+    },
+    [showError]
+  );
+
+  // Handle delimiter change - reparse the original content with new delimiter
+  const handleDelimiterChange = useCallback(
+    (delimiter: string) => {
+      if (!originalTextContent) return;
+
+      try {
+        const result = parseTabularContent(
+          originalTextContent,
+          new File([originalTextContent], 'data.csv', { type: 'text/csv' }),
+          { delimiter }
+        );
+        setParsedData(result);
+      } catch (error) {
+        showError('Parse Error', 'Failed to parse with the selected delimiter');
+      }
+    },
+    [originalTextContent, showError]
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {isProcessing ? (
         <LoadingSpinner />
       ) : viewMode === 'view' ? (
-        // Data Viewer - Full Screen
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        // Data Viewer - Full Width
+        <div className="py-8">
           <SlideInUp delay={0.2}>
             <DataViewer
               data={parsedData?.data || null}
               isUploading={isUploading}
               onUpload={handleFileUpload}
               onChangeData={handleChangeData}
+              onDelimiterChange={handleDelimiterChange}
             />
           </SlideInUp>
         </div>
