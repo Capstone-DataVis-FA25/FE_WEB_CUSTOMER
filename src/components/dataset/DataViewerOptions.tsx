@@ -5,25 +5,37 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Upload, RefreshCw, Settings } from 'lucide-react';
 import DelimiterSelector from './DelimiterSelector';
+import { NumberFormatSelector } from './NumberFormatSelector';
+import { useDatasetUpload } from '@/contexts/DatasetUploadContext';
 import './scrollbar.css';
 
 interface DataViewerOptionsProps {
-  isUploading: boolean;
   onUpload: (name: string, description?: string) => void;
   onChangeData: () => void;
   onDelimiterChange?: (delimiter: string) => void;
+  onNumberFormatChange?: (thousandsSeparator: string, decimalSeparator: string) => void;
 }
 
 function DataViewerOptions({
-  isUploading,
   onUpload,
   onChangeData,
   onDelimiterChange,
+  onNumberFormatChange,
 }: DataViewerOptionsProps) {
   const { t } = useTranslation();
-  const [datasetName, setDatasetName] = useState<string>('');
-  const [description, setDescription] = useState<string>('');
-  const [selectedDelimiter, setSelectedDelimiter] = useState<string>(',');
+
+  // Get states from context
+  const {
+    datasetName,
+    setDatasetName,
+    description,
+    setDescription,
+    selectedDelimiter,
+    setSelectedDelimiter,
+    numberFormat,
+    setNumberFormat,
+    isUploading,
+  } = useDatasetUpload();
 
   const handleUpload = () => {
     if (!datasetName.trim()) {
@@ -36,6 +48,18 @@ function DataViewerOptions({
     setSelectedDelimiter(delimiter);
     if (onDelimiterChange) {
       onDelimiterChange(delimiter);
+    }
+  };
+
+  const handleNumberFormatChange = (type: 'thousands' | 'decimal', value: string) => {
+    const newFormat = {
+      ...numberFormat,
+      [type === 'thousands' ? 'thousandsSeparator' : 'decimalSeparator']: value,
+    };
+    setNumberFormat(newFormat);
+
+    if (onNumberFormatChange) {
+      onNumberFormatChange(newFormat.thousandsSeparator, newFormat.decimalSeparator);
     }
   };
 
@@ -96,6 +120,16 @@ function DataViewerOptions({
             <DelimiterSelector
               selectedDelimiter={selectedDelimiter}
               onDelimiterChange={handleDelimiterChange}
+              disabled={isUploading}
+            />
+          )}
+
+          {/* Number Format Settings */}
+          {onNumberFormatChange && (
+            <NumberFormatSelector
+              thousandsSeparator={numberFormat.thousandsSeparator}
+              decimalSeparator={numberFormat.decimalSeparator}
+              onChange={handleNumberFormatChange}
               disabled={isUploading}
             />
           )}

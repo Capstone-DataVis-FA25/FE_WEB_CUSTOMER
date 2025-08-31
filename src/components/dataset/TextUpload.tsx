@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { FileText, Upload } from 'lucide-react';
 import { FadeIn } from '@/theme/animation';
+import { useDatasetUpload } from '@/contexts/DatasetUploadContext';
 
 interface TextUploadProps {
   onTextProcess: (textContent: string) => void;
@@ -13,23 +14,25 @@ interface TextUploadProps {
 
 function TextUpload({ onTextProcess, isProcessing = false }: TextUploadProps) {
   const { t: _t } = useTranslation();
-  const [textContent, setTextContent] = useState('');
+  const { originalTextContent, setOriginalTextContent } = useDatasetUpload();
 
   const handleProcess = () => {
-    if (!textContent.trim()) {
+    if (!originalTextContent.trim()) {
       return;
     }
-    onTextProcess(textContent);
+    onTextProcess(originalTextContent);
   };
 
   const handleSampleData = () => {
-    const sampleData = `Name,Age,City,Country
-John Doe,28,New York,USA
-Jane Smith,34,London,UK
-Mike Johnson,45,Toronto,Canada
-Sarah Williams,29,Sydney,Australia
-David Brown,38,Berlin,Germany`;
-    setTextContent(sampleData);
+    const sampleData = `Name,Age,City,Salary,Country
+John Doe,28,New York,"1,234.56",USA
+Jane Smith,34,London,"2,890.75",UK
+Mike Johnson,45,Toronto,"3,567.90",Canada
+Sarah Williams,29,Sydney,"1,987.25",Australia
+David Brown,38,Berlin,"4,123.80",Germany
+Lisa Garcia,31,Madrid,"2,456.40",Spain
+Tom Wilson,42,Tokyo,"5,678.95",Japan`;
+    setOriginalTextContent(sampleData);
   };
 
   return (
@@ -62,9 +65,9 @@ David Brown,38,Berlin,Germany`;
                 </Label>
                 <textarea
                   id="textContent"
-                  value={textContent}
-                  onChange={e => setTextContent(e.target.value)}
-                  placeholder="Name,Age,City,Country&#10;John Doe,28,New York,USA&#10;Jane Smith,34,London,UK&#10;Mike Johnson,45,Toronto,Canada"
+                  value={originalTextContent}
+                  onChange={e => setOriginalTextContent(e.target.value)}
+                  placeholder='Name,Age,City,Salary,Country&#10;John Doe,28,New York,"1,234.56",USA&#10;Jane Smith,34,London,"2,890.75",UK&#10;Mike Johnson,45,Toronto,"3,567.90",Canada'
                   className="w-full min-h-[300px] p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl font-mono text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all duration-200"
                   disabled={isProcessing}
                 />
@@ -87,7 +90,7 @@ David Brown,38,Berlin,Germany`;
             </Button>
             <Button
               onClick={handleProcess}
-              disabled={!textContent.trim() || isProcessing}
+              disabled={!originalTextContent.trim() || isProcessing}
               className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Upload className="w-4 h-4 mr-2" />

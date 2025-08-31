@@ -7,6 +7,7 @@ import FileUpload from '@/components/dataset/FileUpload';
 import DataViewer from '@/components/dataset/DataViewer';
 import TextUpload from '@/components/dataset/TextUpload';
 import UploadMethodNavigation from '@/components/dataset/UploadMethodNavigation';
+import { DatasetUploadProvider, useDatasetUpload } from '@/contexts/DatasetUploadContext';
 import {
   processFileContent,
   parseTabularContent,
@@ -19,17 +20,26 @@ import { axiosPrivate } from '@/services/axios';
 
 type ViewMode = 'upload' | 'textUpload' | 'view';
 
-function CreateDatasetPage() {
+// Inner component that uses the context
+function CreateDatasetPageContent() {
   const { t } = useTranslation();
   const { showSuccess, showError, showWarning } = useToastContext();
 
-  // State management
+  // Get states from context
+  const {
+    originalTextContent,
+    setOriginalTextContent,
+    parsedData,
+    setParsedData,
+    isUploading,
+    setIsUploading,
+  } = useDatasetUpload();
+
+  // Local state management (non-shareable states)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('upload');
-  const [parsedData, setParsedData] = useState<Papa.ParseResult<string[]> | null>(null);
-  const [originalTextContent, setOriginalTextContent] = useState<string>('');
+  const [numberFormat, setNumberFormat] = useState({ thousands: ',', decimal: '.' });
 
   // Process file content and switch to view mode
   const processAndViewFile = useCallback(
@@ -181,6 +191,15 @@ function CreateDatasetPage() {
     [originalTextContent, showError]
   );
 
+  // Handle number format change
+  const handleNumberFormatChange = useCallback(
+    (thousandsSeparator: string, decimalSeparator: string) => {
+      setNumberFormat({ thousands: thousandsSeparator, decimal: decimalSeparator });
+      // You can add logic here to reformat numbers in the table if needed
+    },
+    []
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {isProcessing ? (
@@ -190,11 +209,10 @@ function CreateDatasetPage() {
         <div className="py-8">
           <SlideInUp delay={0.2}>
             <DataViewer
-              data={parsedData?.data || null}
-              isUploading={isUploading}
               onUpload={handleFileUpload}
               onChangeData={handleChangeData}
               onDelimiterChange={handleDelimiterChange}
+              onNumberFormatChange={handleNumberFormatChange}
             />
           </SlideInUp>
         </div>
@@ -227,6 +245,15 @@ function CreateDatasetPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Main component with provider wrapper
+function CreateDatasetPage() {
+  return (
+    <DatasetUploadProvider>
+      <CreateDatasetPageContent />
+    </DatasetUploadProvider>
   );
 }
 

@@ -1,34 +1,35 @@
 import DataViewerOptions from './DataViewerOptions';
 import DataViewerContent from './DataViewerContent';
+import { useDatasetUpload } from '@/contexts/DatasetUploadContext';
 
 interface DataViewerProps {
-  data: string[][] | null;
-  isUploading: boolean;
-  onUpload: (name: string) => void;
+  onUpload: (name: string, description?: string) => void;
   onChangeData: () => void;
   onDelimiterChange?: (delimiter: string) => void;
+  onNumberFormatChange?: (thousandsSeparator: string, decimalSeparator: string) => void;
 }
 
 function DataViewer({
-  data,
-  isUploading,
   onUpload,
   onChangeData,
   onDelimiterChange,
+  onNumberFormatChange,
 }: DataViewerProps) {
+  // Get states from context
+  const { parsedData } = useDatasetUpload();
   return (
     <div className="flex gap-6">
       {/* Left Sidebar - Options */}
       <DataViewerOptions
-        isUploading={isUploading}
         onUpload={onUpload}
         onChangeData={onChangeData}
         onDelimiterChange={onDelimiterChange}
+        onNumberFormatChange={onNumberFormatChange}
       />
 
       {/* Main Content - Takes remaining width */}
       <div className="flex-1 pr-6">
-        <DataViewerContent data={data} />
+        <DataViewerContent data={parsedData?.data || null} />
       </div>
     </div>
   );
