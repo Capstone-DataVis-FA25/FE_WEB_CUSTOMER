@@ -85,7 +85,7 @@ function CreateDatasetPage() {
 
   // Handle file upload (create dataset)
   const handleFileUpload = useCallback(
-    async (name: string) => {
+    async (name: string, description?: string) => {
       if (!parsedData) {
         showWarning('No Data Available', 'Please select a file or enter text data first');
         return;
@@ -103,6 +103,7 @@ function CreateDatasetPage() {
         const requestBody = {
           name: name.trim(),
           data: parsedData.data || [],
+          ...(description && { description: description.trim() }),
         };
 
         // Send POST request to create dataset using axios

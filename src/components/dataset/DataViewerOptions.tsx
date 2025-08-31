@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Upload, RefreshCw, Settings } from 'lucide-react';
 import DelimiterSelector from './DelimiterSelector';
+import './scrollbar.css';
 
 interface DataViewerOptionsProps {
   isUploading: boolean;
-  onUpload: (name: string) => void;
+  onUpload: (name: string, description?: string) => void;
   onChangeData: () => void;
   onDelimiterChange?: (delimiter: string) => void;
 }
@@ -21,13 +22,14 @@ function DataViewerOptions({
 }: DataViewerOptionsProps) {
   const { t } = useTranslation();
   const [datasetName, setDatasetName] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
   const [selectedDelimiter, setSelectedDelimiter] = useState<string>(',');
 
   const handleUpload = () => {
     if (!datasetName.trim()) {
       return; // Don't upload if name is empty
     }
-    onUpload(datasetName.trim());
+    onUpload(datasetName.trim(), description.trim() || undefined);
   };
 
   const handleDelimiterChange = (delimiter: string) => {
@@ -69,6 +71,24 @@ function DataViewerOptions({
                 Please enter a name before creating the dataset
               </p>
             )}
+          </div>
+
+          {/* Description Input */}
+          <div>
+            <label
+              htmlFor="dataset-description"
+              className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2"
+            >
+              Description (Optional)
+            </label>
+            <textarea
+              id="dataset-description"
+              placeholder="Enter a description for your dataset..."
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              className="w-full px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg resize-none h-20 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 custom-scrollbar"
+              disabled={isUploading}
+            />
           </div>
 
           {/* Delimiter Selector */}

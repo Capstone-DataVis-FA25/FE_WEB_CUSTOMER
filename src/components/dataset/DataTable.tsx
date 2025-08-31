@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import './scrollbar.css';
 
 interface DataTableProps {
   data: string[][];
@@ -17,7 +18,7 @@ function DataTable({ data }: DataTableProps) {
 
   return (
     <div className="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden min-h-[700px]">
-      <div className="overflow-x-auto max-h-[600px] min-h-[700px]">
+      <div className="overflow-x-auto max-h-[600px] min-h-[700px] custom-scrollbar">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border-b border-gray-200 dark:border-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
             <tr>
