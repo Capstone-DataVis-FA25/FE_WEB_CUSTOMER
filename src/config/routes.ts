@@ -78,6 +78,30 @@ export interface RouteConfig {
 // Public routes (không cần đăng nhập)
 export const publicRoutes: RouteConfig[] = [
   {
+    path: Routers.LINE_CHART_DEMO,
+    name: 'line-chart',
+    component: 'LineChartPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Biểu đồ dân số',
+      description: 'Biểu đồ dân số qua các năm',
+    },
+  },
+  {
+    path: Routers.LINE_CHART_EDITOR_DEMO,
+    name: 'line-chart-editor-demo',
+    component: 'LineChartEditorDemo',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'LineChart Editor Demo',
+      description: 'Interactive demonstration of the LineChart editor component',
+    },
+  },
+  {
     path: Routers.HOME,
     name: 'home',
     component: 'HomePage',

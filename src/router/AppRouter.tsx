@@ -7,7 +7,6 @@ import { ErrorBoundaryClass } from '@/components/error/ErrorBoundary';
 import { useAuth } from '@/features/auth/useAuth';
 import DebugContainer from '@/components/debug/DebugContainer';
 import { useTranslation } from 'react-i18next';
-
 // ================================
 // LAZY LOAD COMPONENTS
 // ================================
@@ -31,6 +30,8 @@ const componentMap = {
   AboutPage: lazy(() => import('../pages/about-us/AboutUsPage')),
   VerifyEmailErrorPage: lazy(() => import('../pages/verify/VerifyEmailErrorPage')),
   ResendEmailPage: lazy(() => import('../pages/verify/ResendEmailPage')),
+  LineChartPage: lazy(() => import('../components/charts/page.example/LineChartPage')),
+  LineChartEditorDemo: lazy(() => import('../components/charts/page.example/LineChartEditorDemo')),
 };
 
 // ================================
