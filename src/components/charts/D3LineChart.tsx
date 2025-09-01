@@ -27,7 +27,7 @@ export interface D3LineChartProps {
   fontSize?: { axis: number; label: number; title: number }; // Add fontSize prop
 }
 
-const defaultColors: Record<string, { light: string; dark: string }> = {
+export const defaultColors: Record<string, { light: string; dark: string }> = {
   line1: { light: "#3b82f6", dark: "#60a5fa" },
   line2: { light: "#f97316", dark: "#fb923c" },
   line3: { light: "#6b7280", dark: "#9ca3af" },
