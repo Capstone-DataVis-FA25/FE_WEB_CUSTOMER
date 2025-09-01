@@ -32,7 +32,9 @@ const Routers = {
 
   // Chart routes
   LINE_CHART_DEMO: '/chart/line-chart',
+  BAR_CHART_DEMO: '/chart/bar-chart',
   LINE_CHART_EDITOR_DEMO: '/demo/line-chart-editor',
+  BAR_CHART_EDITOR_DEMO: '/demo/bar-chart-editor',
 } as const;
 
 export default Routers;
