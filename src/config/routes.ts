@@ -301,6 +301,20 @@ export const protectedRoutes: RouteConfig[] = [
       description: 'Demo Pagination Component',
     },
   },
+  // Dataset routes
+  {
+    path: Routers.CREATE_DATASET,
+    name: 'create-dataset',
+    component: 'CreateDatasetPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Create Dataset',
+      description: 'Upload and create a new dataset from Excel or CSV files',
+    },
+  },
 ];
 
 // Error routes

@@ -17,6 +17,9 @@ const Routers = {
   MODAL_DEMO: '/demo/modal',
   PAGINATION_DEMO: '/demo/pagination',
 
+  // Dataset routes
+  CREATE_DATASET: '/create-dataset',
+
   // Error routes
   NOT_FOUND: '/404',
   FORBIDDEN: '/403',

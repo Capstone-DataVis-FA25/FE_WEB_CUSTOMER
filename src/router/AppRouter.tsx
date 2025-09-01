@@ -32,6 +32,7 @@ const componentMap = {
   ResendEmailPage: lazy(() => import('../pages/verify/ResendEmailPage')),
   LineChartPage: lazy(() => import('../components/charts/page.example/LineChartPage')),
   LineChartEditorDemo: lazy(() => import('../components/charts/page.example/LineChartEditorDemo')),
+  CreateDatasetPage: lazy(() => import('../pages/dataset/CreateDatasetPage')),
 };
 
 // ================================
