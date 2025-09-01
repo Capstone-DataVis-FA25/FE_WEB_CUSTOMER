@@ -17,6 +17,9 @@ const Routers = {
   MODAL_DEMO: '/demo/modal',
   PAGINATION_DEMO: '/demo/pagination',
 
+  // Dataset routes
+  CREATE_DATASET: '/create-dataset',
+
   // Error routes
   NOT_FOUND: '/404',
   FORBIDDEN: '/403',
@@ -29,7 +32,9 @@ const Routers = {
 
   // Chart routes
   LINE_CHART_DEMO: '/chart/line-chart',
+  BAR_CHART_DEMO: '/chart/bar-chart',
   LINE_CHART_EDITOR_DEMO: '/demo/line-chart-editor',
+  BAR_CHART_EDITOR_DEMO: '/demo/bar-chart-editor',
 } as const;
 
 export default Routers;

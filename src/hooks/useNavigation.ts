@@ -75,6 +75,20 @@ export const useNavigation = () => {
     [navigate]
   );
 
+  const goToBarChart = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.BAR_CHART_DEMO, options);
+    },
+    [navigate]
+  );
+
+  const goToBarChartEditor = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.BAR_CHART_EDITOR_DEMO, options);
+    },
+    [navigate]
+  );
+
   const goToChangePassword = useCallback(
     (options?: NavigationOptions) => {
       navigate(Routers.PROFILE_CHANGE_PASSWORD, options);
@@ -133,6 +147,8 @@ export const useNavigation = () => {
     goToAboutUs,
     goToAuth,
     goToForgotPassword,
+    goToBarChart,
+    goToBarChartEditor,
 
     // Profile routes
     goToProfile,
