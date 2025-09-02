@@ -662,5 +662,20 @@
   "barChart_export": "Xuất Biểu Đồ",
   "barChart_resetSettings": "Đặt Lại Cài Đặt",
   "barChart_customColors": "Màu Tùy Chỉnh",
-  "barChart_defaultColors": "Màu Mặc Định"
+  "barChart_defaultColors": "Màu Mặc Định",
+  "lineChart_editor_editData": "Chỉnh sửa dữ liệu",
+  "lineChart_editor_dataPreview": "Xem trước dữ liệu",
+  "lineChart_editor_editDataDescription": "Nhấp 'Chỉnh sửa dữ liệu' để mở trình chỉnh sửa dạng bảng",
+  "lineChart_editor_moreRows": "Và {count} dòng khác... (Nhấp 'Chỉnh sửa dữ liệu' để xem tất cả)",
+  "lineChart_editor_totalDataPoints": "Tổng cộng {count} điểm dữ liệu",
+  "lineChart_editor_editChartData": "Chỉnh sửa dữ liệu biểu đồ",
+  "lineChart_editor_editDataDirectly": "Chỉnh sửa dữ liệu trực tiếp trong bảng tính",
+  "lineChart_editor_addRow": "Thêm dòng",
+  "lineChart_editor_saveChanges": "Lưu thay đổi",
+  "lineChart_editor_delete": "Xóa",
+  "lineChart_editor_totalRows": "Tổng cộng: {count} dòng",
+  "lineChart_editor_totalColumns": "Cột: {count}",
+  "lineChart_editor_navigationHint": "Nhấn Tab để di chuyển ngang • Enter để di chuyển xuống",
+  "lineChart_editor_moveHorizontally": "di chuyển ngang",
+  "lineChart_editor_moveDown": "di chuyển xuống"
 }

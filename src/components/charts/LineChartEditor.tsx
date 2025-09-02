@@ -954,7 +954,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       variant="outline"
                     >
                       <Edit3 className="h-4 w-4 mr-1" />
-                      Chỉnh sửa dữ liệu
+                      {t('lineChart_editor_editData')}
                     </Button>
                   </div>
                 </CardHeader>
@@ -963,10 +963,10 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                       <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
                         <Table className="h-4 w-4" />
-                        <span className="text-sm font-medium">Xem trước dữ liệu</span>
+                        <span className="text-sm font-medium">{t('lineChart_editor_dataPreview')}</span>
                       </div>
                       <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                        Nhấp "Chỉnh sửa dữ liệu" để mở trình chỉnh sửa dạng bảng
+                        {t('lineChart_editor_editDataDescription')}
                       </p>
                     </div>
                     
@@ -1008,13 +1008,13 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       </table>
                       {data.length > 5 && (
                         <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 text-center text-xs text-gray-500 dark:text-gray-400">
-                          Và {data.length - 5} dòng khác... (Nhấp "Chỉnh sửa dữ liệu" để xem tất cả)
+                          {t('lineChart_editor_moreRows', { count: data.length - 5 })}
                         </div>
                       )}
                     </div>
                     
                     <div className="text-center py-2 text-gray-500 dark:text-gray-400">
-                      <p className="text-sm">Tổng cộng {data.length} điểm dữ liệu</p>
+                      <p className="text-sm">{t('lineChart_editor_totalDataPoints', { count: data.length })}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1048,10 +1048,10 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                   <Table className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      Chỉnh sửa dữ liệu biểu đồ
+                      {t('lineChart_editor_editChartData')}
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Chỉnh sửa dữ liệu trực tiếp trong bảng tính
+                      {t('lineChart_editor_editDataDirectly')}
                     </p>
                   </div>
                 </div>
@@ -1063,7 +1063,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     className="flex items-center gap-1"
                   >
                     <Plus className="h-4 w-4" />
-                    Thêm dòng
+                    {t('lineChart_editor_addRow')}
                   </Button>
                   <Button
                     onClick={saveDataChanges}
@@ -1071,7 +1071,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white"
                   >
                     <Save className="h-4 w-4" />
-                    Lưu thay đổi
+                    {t('lineChart_editor_saveChanges')}
                   </Button>
                   <Button
                     onClick={closeDataModal}
@@ -1103,7 +1103,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                             </th>
                           ))}
                           <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">
-                            Xóa
+                            {t('lineChart_editor_delete')}
                           </th>
                         </tr>
                       </thead>
@@ -1219,16 +1219,16 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 {/* Footer Info */}
                 <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
                   <div className="flex items-center gap-4">
-                    <span>Tổng cộng: {tempData.length} dòng</span>
+                    <span>{t('lineChart_editor_totalRows', { count: tempData.length })}</span>
                     <span>•</span>
-                    <span>Cột: {1 + config.yAxisKeys.length}</span>
+                    <span>{t('lineChart_editor_totalColumns', { count: 1 + config.yAxisKeys.length })}</span>
                   </div>
                   <div className="text-xs">
                     <span className="inline-flex items-center gap-2">
                       <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">Tab</kbd>
-                      <span>di chuyển ngang •</span>
+                      <span>{t('lineChart_editor_moveHorizontally')} •</span>
                       <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">Enter</kbd>
-                      <span>di chuyển xuống dòng</span>
+                      <span>{t('lineChart_editor_moveDown')}</span>
                     </span>
                   </div>
                 </div>

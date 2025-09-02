@@ -658,5 +658,20 @@
   "barChart_export": "Export Chart",
   "barChart_resetSettings": "Reset Settings",
   "barChart_customColors": "Custom Colors",
-  "barChart_defaultColors": "Default Colors"
+  "barChart_defaultColors": "Default Colors",
+  "lineChart_editor_editData": "Edit Data",
+  "lineChart_editor_dataPreview": "Data Preview",
+  "lineChart_editor_editDataDescription": "Click 'Edit Data' to open spreadsheet-like editor",
+  "lineChart_editor_moreRows": "And {count} more rows... (Click 'Edit Data' to view all)",
+  "lineChart_editor_totalDataPoints": "Total {count} data points",
+  "lineChart_editor_editChartData": "Edit Chart Data",
+  "lineChart_editor_editDataDirectly": "Edit data directly in spreadsheet",
+  "lineChart_editor_addRow": "Add Row",
+  "lineChart_editor_saveChanges": "Save Changes",
+  "lineChart_editor_delete": "Delete",
+  "lineChart_editor_totalRows": "Total: {count} rows",
+  "lineChart_editor_totalColumns": "Columns: {count}",
+  "lineChart_editor_navigationHint": "Use Tab to move horizontally • Enter to move down",
+  "lineChart_editor_moveHorizontally": "move horizontally",
+  "lineChart_editor_moveDown": "move down"
 }
