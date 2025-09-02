@@ -32,8 +32,10 @@ const componentMap = {
   ResendEmailPage: lazy(() => import('../pages/verify/ResendEmailPage')),
   LineChartPage: lazy(() => import('../components/charts/page.example/LineChartPage')),
   BarChartPage: lazy(() => import('../components/charts/page.example/BarChartPage')),
+  AreaChartPage: lazy(() => import('../components/charts/page.example/AreaChartPage')),
   LineChartEditorDemo: lazy(() => import('../components/charts/page.example/LineChartEditorDemo')),
   BarChartEditorDemo: lazy(() => import('../components/charts/page.example/BarChartEditorDemo')),
+  AreaChartEditorDemo: lazy(() => import('../components/charts/page.example/AreaChartEditorDemo')),
   CreateDatasetPage: lazy(() => import('../pages/dataset/CreateDatasetPage')),
 };
 
