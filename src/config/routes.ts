@@ -21,7 +21,6 @@ export const Permission = {
   VIEW_PROFILE: 'view_profile',
   EDIT_PROFILE: 'edit_profile',
   CHANGE_PASSWORD: 'change_password',
-  DEMO_TEST: 'demo_test',
 
   // Admin permissions
   ADMIN_ACCESS: 'admin_access',
@@ -37,14 +36,12 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     Permission.VIEW_PUBLIC,
     Permission.VIEW_PROFILE,
     Permission.EDIT_PROFILE,
-    Permission.DEMO_TEST,
     Permission.CHANGE_PASSWORD,
   ],
   [UserRole.ADMIN]: [
     Permission.VIEW_PUBLIC,
     Permission.VIEW_PROFILE,
     Permission.EDIT_PROFILE,
-    Permission.DEMO_TEST,
     Permission.ADMIN_ACCESS,
     Permission.MANAGE_USERS,
   ],
@@ -282,47 +279,6 @@ export const protectedRoutes: RouteConfig[] = [
       title: 'Cài đặt chung',
       description: 'Cài đặt chung của ứng dụng',
       hideFromNav: true,
-    },
-  },
-  // Demo routes
-  {
-    path: Routers.TOAST_DEMO,
-    name: 'toast-demo',
-    component: 'ToastDemoPage',
-    layout: 'USER',
-    isProtected: true,
-    roles: [UserRole.USER],
-    permissions: [Permission.VIEW_PROFILE],
-    meta: {
-      title: 'Demo Toast',
-      description: 'Demo trang Toast',
-      hideFromNav: true,
-    },
-  },
-  {
-    path: Routers.MODAL_DEMO,
-    name: 'modal-demo',
-    component: 'ModalConfirmDemoPage',
-    layout: 'USER',
-    isProtected: true,
-    roles: [UserRole.USER],
-    permissions: [Permission.DEMO_TEST],
-    meta: {
-      title: 'Demo Modal',
-      description: 'Demo Modal Confirm',
-    },
-  },
-  {
-    path: Routers.PAGINATION_DEMO,
-    name: 'pagination-demo',
-    component: 'PaginationDemoPage',
-    layout: 'USER',
-    isProtected: true,
-    roles: [UserRole.USER],
-    permissions: [Permission.DEMO_TEST],
-    meta: {
-      title: 'Demo Pagination',
-      description: 'Demo Pagination Component',
     },
   },
   // Dataset routes

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileSpreadsheet } from 'lucide-react';
-import ExcelEditor from '../excel/ExcelEditor';
+import SpreadsheetEditor from '../excel/SpreadsheetEditor';
 
 interface DataViewerContentProps {
   data: string[][] | null;
@@ -29,7 +29,7 @@ function DataViewerContent({ data, onDataChange, onSave, readOnly = false }: Dat
   }
 
   return (
-    <ExcelEditor
+    <SpreadsheetEditor
       initialData={data}
       onDataChange={onDataChange}
       onSave={onSave}

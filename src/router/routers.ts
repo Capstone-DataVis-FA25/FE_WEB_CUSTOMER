@@ -12,11 +12,6 @@ const Routers = {
   PROFILE_NOTIFICATIONS: '/profile/notifications',
   PROFILE_SETTINGS: '/profile/settings',
 
-  // Demo routes
-  TOAST_DEMO: '/demo/toast',
-  MODAL_DEMO: '/demo/modal',
-  PAGINATION_DEMO: '/demo/pagination',
-
   // Dataset routes
   CREATE_DATASET: '/create-dataset',
 
