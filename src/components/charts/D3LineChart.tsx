@@ -13,6 +13,7 @@ export interface D3LineChartProps {
   margin?: { top: number; right: number; bottom: number; left: number };
   xAxisKey: string;
   yAxisKeys: string[];
+  disabledLines?: string[]; // New prop for disabled lines
   colors?: Record<string, { light: string; dark: string }>;
   title?: string;
   yAxisLabel?: string;
@@ -45,6 +46,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   margin = { top: 20, right: 40, bottom: 60, left: 80 }, // Increased left margin for better Y-axis spacing
   xAxisKey,
   yAxisKeys,
+  disabledLines = [], // Default to no disabled lines
   colors = defaultColors,
   title,
   yAxisLabel,
@@ -123,11 +125,12 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     const currentWidth = dimensions.width;
     const currentHeight = dimensions.height;
 
-    // Get current theme colors
+    // Get current theme colors for enabled lines only
     const getCurrentColors = () => {
       const theme = isDarkMode ? 'dark' : 'light';
       const result: Record<string, string> = {};
-      yAxisKeys.forEach((key, index) => {
+      const enabledLines = yAxisKeys.filter(key => !disabledLines.includes(key));
+      enabledLines.forEach((key, index) => {
         const colorKey = colors[key] ? key : `line${index + 1}`;
         result[key] = colors[colorKey]?.[theme] || defaultColors[`line${index + 1}`][theme];
       });
@@ -291,8 +294,9 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
 
 
-    // Create lines for each yAxisKey
-    yAxisKeys.forEach((key, index) => {
+    // Create lines for each enabled yAxisKey
+    const enabledLines = yAxisKeys.filter(key => !disabledLines.includes(key));
+    enabledLines.forEach((key, index) => {
       // Custom line generator for this specific key
       const keyLine = d3.line<ChartDataPoint>()
         .x(d => xScale(d[xAxisKey] as number))
@@ -428,7 +432,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .text(yAxisLabel);
     }
 
-  }, [data, margin, xAxisKey, yAxisKeys, colors, showLegend, showGrid, showPoints, animationDuration, curve, title, xAxisLabel, yAxisLabel, isDarkMode, dimensions, yAxisFormatter, xAxisFormatter, fontSize]);
+  }, [data, margin, xAxisKey, yAxisKeys, disabledLines, colors, showLegend, showGrid, showPoints, animationDuration, curve, title, xAxisLabel, yAxisLabel, isDarkMode, dimensions, yAxisFormatter, xAxisFormatter, fontSize]);
 
   return (
     <div ref={containerRef} className="w-full space-y-4">
@@ -463,7 +467,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
             
             {/* Responsive Grid Layout */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {yAxisKeys.map((key, index) => {
+              {yAxisKeys.filter(key => !disabledLines.includes(key)).map((key, index) => {
                 const colorKey = colors[key] ? key : `line${index + 1}`;
                 const color = colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] || defaultColors[`line${index + 1}`][isDarkMode ? 'dark' : 'light'];
                 
