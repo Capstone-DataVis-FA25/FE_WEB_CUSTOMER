@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 const componentMap = {
   HomePage: lazy(() => import('../pages/home/HomePage')),
+  NewHomePage: lazy(() => import('../pages/home/NewHomePage')),
   AuthPage: lazy(() => import('../pages/auth/AuthPage')),
   ForgotPasswordPage: lazy(() => import('../pages/auth/ForgotPasswordPage')),
   ResetPasswordPage: lazy(() => import('../pages/auth/ResetPasswordPage')),
