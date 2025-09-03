@@ -102,6 +102,18 @@ export const publicRoutes: RouteConfig[] = [
     },
   },
   {
+    path: Routers.AREA_CHART_DEMO,
+    name: 'area-chart',
+    component: 'AreaChartPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Biểu đồ vùng',
+      description: 'Biểu đồ vùng doanh số theo tháng',
+    },
+  },
+  {
     path: Routers.LINE_CHART_EDITOR_DEMO,
     name: 'line-chart-editor-demo',
     component: 'LineChartEditorDemo',
@@ -123,6 +135,18 @@ export const publicRoutes: RouteConfig[] = [
     meta: {
       title: 'BarChart Editor Demo',
       description: 'Interactive demonstration of the BarChart editor component',
+    },
+  },
+  {
+    path: Routers.AREA_CHART_EDITOR_DEMO,
+    name: 'area-chart-editor-demo',
+    component: 'AreaChartEditorDemo',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'AreaChart Editor Demo',
+      description: 'Interactive demonstration of the AreaChart editor component',
     },
   },
   {

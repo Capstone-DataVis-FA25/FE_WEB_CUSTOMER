@@ -13,6 +13,7 @@ export interface D3LineChartProps {
   margin?: { top: number; right: number; bottom: number; left: number };
   xAxisKey: string;
   yAxisKeys: string[];
+  disabledLines?: string[]; // New prop for disabled lines
   colors?: Record<string, { light: string; dark: string }>;
   title?: string;
   yAxisLabel?: string;
@@ -24,9 +25,10 @@ export interface D3LineChartProps {
   curve?: d3.CurveFactory;
   yAxisFormatter?: (value: number) => string; // Add custom Y-axis formatter
   xAxisFormatter?: (value: number) => string; // Add custom X-axis formatter
+  fontSize?: { axis: number; label: number; title: number }; // Add fontSize prop
 }
 
-const defaultColors: Record<string, { light: string; dark: string }> = {
+export const defaultColors: Record<string, { light: string; dark: string }> = {
   line1: { light: "#3b82f6", dark: "#60a5fa" },
   line2: { light: "#f97316", dark: "#fb923c" },
   line3: { light: "#6b7280", dark: "#9ca3af" },
@@ -44,6 +46,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   margin = { top: 20, right: 40, bottom: 60, left: 80 }, // Increased left margin for better Y-axis spacing
   xAxisKey,
   yAxisKeys,
+  disabledLines = [], // Default to no disabled lines
   colors = defaultColors,
   title,
   yAxisLabel,
@@ -55,6 +58,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   curve = d3.curveMonotoneX,
   yAxisFormatter, // Optional custom Y-axis formatter
   xAxisFormatter, // Optional custom X-axis formatter
+  fontSize = { axis: 12, label: 14, title: 16 }, // Default fontSize
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -121,11 +125,12 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     const currentWidth = dimensions.width;
     const currentHeight = dimensions.height;
 
-    // Get current theme colors
+    // Get current theme colors for enabled lines only
     const getCurrentColors = () => {
       const theme = isDarkMode ? 'dark' : 'light';
       const result: Record<string, string> = {};
-      yAxisKeys.forEach((key, index) => {
+      const enabledLines = yAxisKeys.filter(key => !disabledLines.includes(key));
+      enabledLines.forEach((key, index) => {
         const colorKey = colors[key] ? key : `line${index + 1}`;
         result[key] = colors[colorKey]?.[theme] || defaultColors[`line${index + 1}`][theme];
       });
@@ -170,7 +175,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .attr("y", 0)
       .attr("width", responsiveMargin.left)
       .attr("height", currentHeight)
-      .attr("fill", isDarkMode ? '#1f2937' : '#f8fafc')
+      .attr("fill", isDarkMode ? '#111827' : '#f8fafc')
       .attr("opacity", 0.3);
 
     // Create main group
@@ -240,7 +245,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .call(xAxis)
       .selectAll("text")
       .attr("fill", textColor)
-      .style("font-size", currentWidth < 768 ? "10px" : "12px")
+      .style("font-size", `${fontSize.axis}px`)
       .style("font-weight", "500");
 
     g.select(".domain")
@@ -269,7 +274,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     // Style Y-axis labels beautifully
     yAxisGroup.selectAll("text")
       .attr("fill", textColor)
-      .style("font-size", currentWidth < 768 ? "11px" : "13px")
+      .style("font-size", `${fontSize.axis}px`)
       .style("font-weight", "600")
       .style("font-family", "system-ui, -apple-system, sans-serif")
       .attr("text-anchor", "end")
@@ -289,8 +294,9 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
 
 
-    // Create lines for each yAxisKey
-    yAxisKeys.forEach((key, index) => {
+    // Create lines for each enabled yAxisKey
+    const enabledLines = yAxisKeys.filter(key => !disabledLines.includes(key));
+    enabledLines.forEach((key, index) => {
       // Custom line generator for this specific key
       const keyLine = d3.line<ChartDataPoint>()
         .x(d => xScale(d[xAxisKey] as number))
@@ -373,7 +379,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
               .attr("text-anchor", "middle")
               .attr("y", -12)
               .attr("fill", textColor)
-              .style("font-size", currentWidth < 640 ? "11px" : "12px")
+              .style("font-size", `${fontSize.axis}px`)
               .style("font-weight", "600")
               .style("opacity", 0)
               .text(value as string)
@@ -409,7 +415,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr("y", innerHeight + (currentWidth < 768 ? 40 : 50))
         .attr("text-anchor", "middle")
         .attr("fill", textColor)
-        .style("font-size", currentWidth < 768 ? "12px" : "14px")
+        .style("font-size", `${fontSize.label}px`)
         .style("font-weight", "600")
         .text(xAxisLabel);
     }
@@ -421,23 +427,26 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr("y", currentWidth < 768 ? -55 : -65) // Increased distance from Y-axis
         .attr("text-anchor", "middle")
         .attr("fill", textColor)
-        .style("font-size", currentWidth < 768 ? "12px" : "14px")
+        .style("font-size", `${fontSize.label}px`)
         .style("font-weight", "600")
         .text(yAxisLabel);
     }
 
-  }, [data, margin, xAxisKey, yAxisKeys, colors, showLegend, showGrid, showPoints, animationDuration, curve, title, xAxisLabel, yAxisLabel, isDarkMode, dimensions, yAxisFormatter, xAxisFormatter]);
+  }, [data, margin, xAxisKey, yAxisKeys, disabledLines, colors, showLegend, showGrid, showPoints, animationDuration, curve, title, xAxisLabel, yAxisLabel, isDarkMode, dimensions, yAxisFormatter, xAxisFormatter, fontSize]);
 
   return (
     <div ref={containerRef} className="w-full space-y-4">
       {title && (
-        <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white text-center">
+        <h3 
+          className="font-bold text-gray-900 dark:text-white text-center"
+          style={{ fontSize: `${fontSize.title}px` }}
+        >
           {title}
         </h3>
       )}
       
       {/* Chart Container */}
-      <div className="relative w-full bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+      <div className="relative w-full bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3">
         <svg
           ref={svgRef}
           width={dimensions.width}
@@ -458,7 +467,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
             
             {/* Responsive Grid Layout */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {yAxisKeys.map((key, index) => {
+              {yAxisKeys.filter(key => !disabledLines.includes(key)).map((key, index) => {
                 const colorKey = colors[key] ? key : `line${index + 1}`;
                 const color = colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] || defaultColors[`line${index + 1}`][isDarkMode ? 'dark' : 'light'];
                 

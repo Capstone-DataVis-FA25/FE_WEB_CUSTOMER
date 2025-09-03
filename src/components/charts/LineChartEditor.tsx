@@ -6,20 +6,19 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import D3LineChart from '@/components/charts/D3LineChart';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Settings, 
-  Download, 
-  RefreshCw, 
   Palette, 
   BarChart3, 
   Plus, 
   Minus,
   Edit3,
-  Trash2,
-  Upload
+  X,
+  Save,
+  Table
 } from 'lucide-react';
 import * as d3 from 'd3';
+import { useTranslation } from 'react-i18next';
 
 // LineChart configuration interface
 export interface LineChartConfig {
@@ -28,6 +27,7 @@ export interface LineChartConfig {
   margin: { top: number; right: number; bottom: number; left: number };
   xAxisKey: string;
   yAxisKeys: string[];
+  disabledLines: string[]; // New field for disabled lines
   title: string;
   xAxisLabel: string;
   yAxisLabel: string;
@@ -42,14 +42,30 @@ export interface LineChartConfig {
 export interface FormatterConfig {
   useYFormatter: boolean;
   useXFormatter: boolean;
-  yFormatterType: 'currency' | 'percentage' | 'number' | 'custom';
-  xFormatterType: 'default' | 'date' | 'custom';
+  yFormatterType: 'currency' | 'percentage' | 'number' | 'decimal' | 'scientific' | 'bytes' | 'duration' | 'date' | 'custom';
+  xFormatterType: 'currency' | 'percentage' | 'number' | 'decimal' | 'scientific' | 'bytes' | 'duration' | 'date' | 'custom';
   customYFormatter: string;
   customXFormatter: string;
 }
 
 // Color configuration
 export type ColorConfig = Record<string, { light: string; dark: string }>;
+
+// Common chart size presets
+const sizePresets = {
+  tiny: { width: 300, height: 200, labelKey: 'lineChart_editor_preset_tiny' },
+  small: { width: 400, height: 250, labelKey: 'lineChart_editor_preset_small' },
+  medium: { width: 600, height: 375, labelKey: 'lineChart_editor_preset_medium' },
+  large: { width: 800, height: 500, labelKey: 'lineChart_editor_preset_large' },
+  xlarge: { width: 1000, height: 625, labelKey: 'lineChart_editor_preset_xlarge' },
+  wide: { width: 1200, height: 400, labelKey: 'lineChart_editor_preset_wide' },
+  ultrawide: { width: 1400, height: 350, labelKey: 'lineChart_editor_preset_ultrawide' },
+  square: { width: 500, height: 500, labelKey: 'lineChart_editor_preset_square' },
+  presentation: { width: 1024, height: 768, labelKey: 'lineChart_editor_preset_presentation' },
+  mobile: { width: 350, height: 300, labelKey: 'lineChart_editor_preset_mobile' },
+  tablet: { width: 768, height: 480, labelKey: 'lineChart_editor_preset_tablet' },
+  responsive: { width: 0, height: 0, labelKey: 'lineChart_editor_preset_responsive' }
+};
 
 // Curve options
 const curveOptions = {
@@ -87,19 +103,34 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   onDataChange,
   onColorsChange,
   onFormattersChange,
-  title = 'LineChart Editor',
-  description = 'Interactive line chart configuration and data editor'
 }) => {
+  const { t } = useTranslation();
+  
+  // Calculate responsive default dimensions
+  const getResponsiveDefaults = () => {
+    const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const containerWidth = Math.min(screenWidth * 0.7, 1000); // 70% of screen, max 1000px
+    const aspectRatio = 16 / 9; // Golden ratio for charts
+    
+    return {
+      width: Math.max(600, Math.min(containerWidth, 1000)), // Min 600px, max 1000px
+      height: Math.max(300, Math.min(containerWidth / aspectRatio, 600)) // Min 300px, max 600px
+    };
+  };
+
+  const responsiveDefaults = getResponsiveDefaults();
+
   // Default configuration
   const defaultConfig: LineChartConfig = {
-    width: 800,
-    height: 400,
+    width: responsiveDefaults.width,
+    height: responsiveDefaults.height,
     margin: { top: 20, right: 40, bottom: 60, left: 80 },
     xAxisKey: Object.keys(initialData[0] || {})[0] || 'x',
     yAxisKeys: Object.keys(initialData[0] || {}).filter(key => typeof (initialData[0] || {})[key] === 'number') || ['y'],
-    title: 'Line Chart',
-    xAxisLabel: 'X Axis',
-    yAxisLabel: 'Y Axis',
+    disabledLines: [], // Default to no disabled lines
+    title: t('lineChart_editor_title'),
+    xAxisLabel: t('lineChart_editor_xAxisLabel'),
+    yAxisLabel: t('lineChart_editor_yAxisLabel'),
     showLegend: true,
     showGrid: true,
     showPoints: true,
@@ -116,10 +147,10 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   };
 
   const defaultFormatters: FormatterConfig = {
-    useYFormatter: false,
-    useXFormatter: false,
+    useYFormatter: true,
+    useXFormatter: true,
     yFormatterType: 'number',
-    xFormatterType: 'default',
+    xFormatterType: 'number',
     customYFormatter: '',
     customXFormatter: '',
     ...initialFormatters
@@ -130,7 +161,18 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   const [colors, setColors] = useState<ColorConfig>(defaultColors);
   const [data, setData] = useState<ChartDataPoint[]>(initialData);
   const [formatters, setFormatters] = useState<FormatterConfig>(defaultFormatters);
-  const [isEditingData, setIsEditingData] = useState(false);
+  const [showDataModal, setShowDataModal] = useState(false);
+  const [tempData, setTempData] = useState<ChartDataPoint[]>(initialData);
+
+  // Calculate responsive fontSize based on chart dimensions
+  const getResponsiveFontSize = () => {
+    const baseSize = Math.min(config.width, config.height);
+    if (baseSize <= 300) return { axis: 10, label: 12, title: 14 };
+    if (baseSize <= 500) return { axis: 11, label: 13, title: 16 };
+    if (baseSize <= 700) return { axis: 12, label: 14, title: 18 };
+    if (baseSize <= 900) return { axis: 13, label: 15, title: 20 };
+    return { axis: 14, label: 16, title: 22 };
+  };
 
   // Generate formatter functions
   const getYAxisFormatter = useMemo(() => {
@@ -138,9 +180,41 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     
     switch (formatters.yFormatterType) {
       case 'currency':
-        return (value: number) => `$${(value / 1000).toFixed(1)}K`;
+        return (value: number) => {
+          if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+          if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
+          return `$${value.toFixed(0)}`;
+        };
       case 'percentage':
-        return (value: number) => `${value}%`;
+        return (value: number) => `${value.toFixed(1)}%`;
+      case 'number':
+        return (value: number) => {
+          if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+          if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+          return value.toString();
+        };
+      case 'decimal':
+        return (value: number) => value.toFixed(2);
+      case 'scientific':
+        return (value: number) => value.toExponential(2);
+      case 'bytes':
+        return (value: number) => {
+          if (value >= 1024*1024*1024) return `${(value / (1024*1024*1024)).toFixed(1)}GB`;
+          if (value >= 1024*1024) return `${(value / (1024*1024)).toFixed(1)}MB`;
+          if (value >= 1024) return `${(value / 1024).toFixed(1)}KB`;
+          return `${value}B`;
+        };
+      case 'duration':
+        return (value: number) => {
+          const hours = Math.floor(value / 3600);
+          const minutes = Math.floor((value % 3600) / 60);
+          const seconds = value % 60;
+          if (hours > 0) return `${hours}h ${minutes}m`;
+          if (minutes > 0) return `${minutes}m ${seconds}s`;
+          return `${seconds}s`;
+        };
+      case 'date':
+        return (value: number) => new Date(value).toLocaleDateString();
       case 'custom':
         if (formatters.customYFormatter) {
           try {
@@ -158,14 +232,55 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   const getXAxisFormatter = useMemo(() => {
     if (!formatters.useXFormatter) return undefined;
     
-    if (formatters.xFormatterType === 'custom' && formatters.customXFormatter) {
-      try {
-        return new Function('value', `return ${formatters.customXFormatter}`) as (value: number) => string;
-      } catch {
+    switch (formatters.xFormatterType) {
+      case 'currency':
+        return (value: number) => {
+          if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+          if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
+          return `$${value.toFixed(0)}`;
+        };
+      case 'percentage':
+        return (value: number) => `${value.toFixed(1)}%`;
+      case 'number':
+        return (value: number) => {
+          if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+          if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+          return value.toString();
+        };
+      case 'decimal':
+        return (value: number) => value.toFixed(2);
+      case 'scientific':
+        return (value: number) => value.toExponential(2);
+      case 'bytes':
+        return (value: number) => {
+          if (value >= 1024*1024*1024) return `${(value / (1024*1024*1024)).toFixed(1)}GB`;
+          if (value >= 1024*1024) return `${(value / (1024*1024)).toFixed(1)}MB`;
+          if (value >= 1024) return `${(value / 1024).toFixed(1)}KB`;
+          return `${value}B`;
+        };
+      case 'duration':
+        return (value: number) => {
+          const hours = Math.floor(value / 3600);
+          const minutes = Math.floor((value % 3600) / 60);
+          const seconds = value % 60;
+          if (hours > 0) return `${hours}h ${minutes}m`;
+          if (minutes > 0) return `${minutes}m ${seconds}s`;
+          return `${seconds}s`;
+        };
+      case 'date':
+        return (value: number) => new Date(value).toLocaleDateString();
+      case 'custom':
+        if (formatters.customXFormatter) {
+          try {
+            return new Function('value', `return ${formatters.customXFormatter}`) as (value: number) => string;
+          } catch {
+            return undefined;
+          }
+        }
         return undefined;
-      }
+      default:
+        return undefined;
     }
-    return undefined;
   }, [formatters]);
 
   // Update handlers
@@ -191,28 +306,64 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     onFormattersChange?.(updatedFormatters);
   };
 
-  // Data manipulation
-  const addDataPoint = () => {
+  // Modal functions
+  const openDataModal = () => {
+    setTempData([...data]);
+    setShowDataModal(true);
+  };
+
+  const closeDataModal = () => {
+    setShowDataModal(false);
+  };
+
+  const saveDataChanges = () => {
+    updateData(tempData);
+    setShowDataModal(false);
+  };
+
+  const updateTempDataPoint = (index: number, key: string, value: string) => {
+    const newTempData = [...tempData];
+    const numValue = parseFloat(value) || 0;
+    newTempData[index] = { ...newTempData[index], [key]: numValue };
+    setTempData(newTempData);
+  };
+
+  const addTempDataPoint = () => {
     const newPoint: ChartDataPoint = {
-      [config.xAxisKey]: data.length > 0 ? Math.max(...data.map(d => d[config.xAxisKey] as number)) + 1 : 1,
+      [config.xAxisKey]: tempData.length > 0 ? Math.max(...tempData.map(d => d[config.xAxisKey] as number)) + 1 : 1,
     };
     
     config.yAxisKeys.forEach(key => {
-      newPoint[key] = 100;
+      newPoint[key] = 0;
     });
     
-    updateData([...data, newPoint]);
+    const newTempData = [...tempData, newPoint];
+    setTempData(newTempData);
+    
+    // Focus vào input đầu tiên của dòng mới sau khi component re-render
+    setTimeout(() => {
+      const newRowIndex = newTempData.length - 1;
+      const firstInput = document.querySelector(`input[data-row="${newRowIndex}"][data-col="0"]`) as HTMLInputElement;
+      if (firstInput) {
+        firstInput.focus();
+        firstInput.select();
+      }
+    }, 50);
   };
 
-  const removeDataPoint = (index: number) => {
-    updateData(data.filter((_, i) => i !== index));
+  const removeTempDataPoint = (index: number) => {
+    setTempData(tempData.filter((_, i) => i !== index));
   };
 
-  const updateDataPoint = (index: number, key: string, value: string) => {
-    const newData = [...data];
-    const numValue = parseFloat(value) || 0;
-    newData[index] = { ...newData[index], [key]: numValue };
-    updateData(newData);
+  // Apply size preset
+  const applySizePreset = (presetKey: keyof typeof sizePresets) => {
+    const preset = sizePresets[presetKey];
+    if (presetKey === 'responsive') {
+      const responsive = getResponsiveDefaults();
+      updateConfig({ width: responsive.width, height: responsive.height });
+    } else {
+      updateConfig({ width: preset.width, height: preset.height });
+    }
   };
 
   // Y-axis keys management
@@ -253,6 +404,22 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     updateData(newData);
   };
 
+  // Toggle line visibility
+  const toggleLineVisibility = (key: string) => {
+    const isCurrentlyDisabled = config.disabledLines.includes(key);
+    if (isCurrentlyDisabled) {
+      // Enable the line
+      updateConfig({
+        disabledLines: config.disabledLines.filter(line => line !== key)
+      });
+    } else {
+      // Disable the line
+      updateConfig({
+        disabledLines: [...config.disabledLines, key]
+      });
+    }
+  };
+
   const updateColor = (key: string, theme: 'light' | 'dark', value: string) => {
     updateColors({
       ...colors,
@@ -263,71 +430,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     });
   };
 
-  // Export/Import
-  const exportConfig = () => {
-    const configData = {
-      config,
-      colors,
-      data,
-      formatters
-    };
-    
-    const blob = new Blob([JSON.stringify(configData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'line-chart-config.json';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importConfig = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const configData = JSON.parse(e.target?.result as string);
-        if (configData.config) setConfig({ ...defaultConfig, ...configData.config });
-        if (configData.colors) setColors({ ...defaultColors, ...configData.colors });
-        if (configData.data) setData(configData.data);
-        if (configData.formatters) setFormatters({ ...defaultFormatters, ...configData.formatters });
-      } catch (error) {
-        console.error('Error importing config:', error);
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const resetToDefault = () => {
-    setConfig(defaultConfig);
-    setColors(defaultColors);
-    setData(initialData);
-    setFormatters(defaultFormatters);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
       <div className="container mx-auto px-4">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-8"
-        >
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mb-4">
-            <Settings className="h-8 w-8 text-white" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            {title}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300 text-base sm:text-lg">
-            {description}
-          </p>
-        </motion.div>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Configuration Panel */}
           <div className="lg:col-span-1 space-y-6">
@@ -342,33 +447,180 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 <CardHeader className="pb-3">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <BarChart3 className="h-5 w-5" />
-                    Basic Settings
+                    {t('lineChart_editor_basicSettings')}
                   </h3>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-sm font-medium">Width</Label>
-                      <Input
-                        type="number"
-                        value={config.width}
-                        onChange={(e) => updateConfig({ width: parseInt(e.target.value) || 800 })}
-                        className="mt-1"
-                      />
+                  {/* Size Presets */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('lineChart_editor_sizePresets')}</Label>
+                    <div className="grid grid-cols-2 gap-2 mt-2 max-h overflow-y-auto">
+                      {Object.entries(sizePresets).map(([key, preset]) => (
+                        <Button
+                          key={key}
+                          variant={
+                            (preset.width === config.width && preset.height === config.height) || 
+                            (key === 'responsive' && preset.width === 0) 
+                              ? "default" 
+                              : "outline"
+                          }
+                          size="sm"
+                          onClick={() => applySizePreset(key as keyof typeof sizePresets)}
+                          className="text-xs h-8 justify-start hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          {t(preset.labelKey)}
+                        </Button>
+                      ))}
                     </div>
-                    <div>
-                      <Label className="text-sm font-medium">Height</Label>
-                      <Input
-                        type="number"
-                        value={config.height}
-                        onChange={(e) => updateConfig({ height: parseInt(e.target.value) || 400 })}
-                        className="mt-1"
-                      />
+                  </div>
+
+                  {/* Custom Width and Height */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">Custom Size</Label>
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                      <div>
+                        <Label className="text-xs text-gray-600 dark:text-gray-400">{t('lineChart_editor_width')}</Label>
+                        <Input
+                          type="number"
+                          value={config.width}
+                          onChange={(e) => {
+                            const newWidth = parseInt(e.target.value);
+                            if (!isNaN(newWidth) && newWidth > 0) {
+                              updateConfig({ width: newWidth });
+                            }
+                          }}
+                          className="mt-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                          min="1"
+                          step="10"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-600 dark:text-gray-400">{t('lineChart_editor_height')}</Label>
+                        <Input
+                          type="number"
+                          value={config.height}
+                          onChange={(e) => {
+                            const newHeight = parseInt(e.target.value);
+                            if (!isNaN(newHeight) && newHeight > 0) {
+                              updateConfig({ height: newHeight });
+                            }
+                          }}
+                          className="mt-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                          min="1"
+                          step="10"
+                        />                      
+                      </div>
+                    </div>
+                    <div className="text-center mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                      <p className="text-xs text-gray-600 dark:text-gray-300">
+                        Current: {config.width} × {config.height}px | 
+                        Ratio: {(config.width / config.height).toFixed(2)}:1
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Padding Configuration */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">Padding (Margin)</Label>
+                    <div className="mt-2">
+                      {/* Visual Padding Editor */}
+                      <div className="relative bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        {/* Top */}
+                        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                          <Input
+                            type="number"
+                            value={config.margin.top}
+                            onChange={(e) => {
+                              const newTop = parseInt(e.target.value) || 0;
+                              updateConfig({ 
+                                margin: { ...config.margin, top: Math.max(0, newTop) }
+                              });
+                            }}
+                            className="w-16 h-8 text-xs text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                            min="0"
+                          />
+                        </div>
+                        
+                        {/* Left */}
+                        <div className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                          <Input
+                            type="number"
+                            value={config.margin.left}
+                            onChange={(e) => {
+                              const newLeft = parseInt(e.target.value) || 0;
+                              updateConfig({ 
+                                margin: { ...config.margin, left: Math.max(0, newLeft) }
+                              });
+                            }}
+                            className="w-16 h-8 text-xs text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                            min="0"
+                          />
+                        </div>
+                        
+                        {/* Right */}
+                        <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2">
+                          <Input
+                            type="number"
+                            value={config.margin.right}
+                            onChange={(e) => {
+                              const newRight = parseInt(e.target.value) || 0;
+                              updateConfig({ 
+                                margin: { ...config.margin, right: Math.max(0, newRight) }
+                              });
+                            }}
+                            className="w-16 h-8 text-xs text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                            min="0"
+                          />
+                        </div>
+                        
+                        {/* Bottom */}
+                        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
+                          <Input
+                            type="number"
+                            value={config.margin.bottom}
+                            onChange={(e) => {
+                              const newBottom = parseInt(e.target.value) || 0;
+                              updateConfig({ 
+                                margin: { ...config.margin, bottom: Math.max(0, newBottom) }
+                              });
+                            }}
+                            className="w-16 h-8 text-xs text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                            min="0"
+                          />
+                        </div>
+                        
+                        {/* Center Chart Area Representation */}
+                        <div className="bg-white dark:bg-gray-600 border-2 border-dashed border-gray-300 dark:border-gray-500 rounded h-20 flex items-center justify-center">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Chart Area</span>
+                        </div>
+                      </div>
+                      
+                      {/* Padding Values Display */}
+                      <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-600 rounded text-xs">
+                        <div className="grid grid-cols-4 gap-2 text-center">
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-300">Top:</span>
+                            <div className="font-mono">{config.margin.top}px</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-300">Right:</span>
+                            <div className="font-mono">{config.margin.right}px</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-300">Bottom:</span>
+                            <div className="font-mono">{config.margin.bottom}px</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-300">Left:</span>
+                            <div className="font-mono">{config.margin.left}px</div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">Title</Label>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('lineChart_editor_title_chart')}</Label>
                     <Input
                       value={config.title}
                       onChange={(e) => updateConfig({ title: e.target.value })}
@@ -378,7 +630,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-sm font-medium">X Axis Label</Label>
+                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('lineChart_editor_xAxisLabel')}</Label>
                       <Input
                         value={config.xAxisLabel}
                         onChange={(e) => updateConfig({ xAxisLabel: e.target.value })}
@@ -386,7 +638,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       />
                     </div>
                     <div>
-                      <Label className="text-sm font-medium">Y Axis Label</Label>
+                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('lineChart_editor_yAxisLabel')}</Label>
                       <Input
                         value={config.yAxisLabel}
                         onChange={(e) => updateConfig({ yAxisLabel: e.target.value })}
@@ -396,7 +648,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">X Axis Key</Label>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('lineChart_editor_xAxisKey')}</Label>
                     <Input
                       value={config.xAxisKey}
                       onChange={(e) => updateConfig({ xAxisKey: e.target.value })}
@@ -405,21 +657,21 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">Animation Duration (ms)</Label>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('lineChart_editor_animationDuration')}</Label>
                     <Input
                       type="number"
                       value={config.animationDuration}
                       onChange={(e) => updateConfig({ animationDuration: parseInt(e.target.value) || 1000 })}
-                      className="mt-1"
+                      className="mt-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                     />
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">Curve Type</Label>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('lineChart_editor_curveType')}</Label>
                     <select
                       value={config.curve}
                       onChange={(e) => updateConfig({ curve: e.target.value as keyof typeof curveOptions })}
-                      className="w-full mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
                       {Object.keys(curveOptions).map((curve) => (
                         <option key={curve} value={curve}>
@@ -440,7 +692,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
             >
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                 <CardHeader className="pb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Display Options</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lineChart_editor_displayOptions')}</h3>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center space-x-2">
@@ -449,7 +701,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       checked={config.showLegend}
                       onCheckedChange={(checked) => updateConfig({ showLegend: !!checked })}
                     />
-                    <Label htmlFor="showLegend" className="text-sm font-medium">Show Legend</Label>
+                    <Label htmlFor="showLegend" className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('lineChart_editor_showLegend')}</Label>
                   </div>
 
                   <div className="flex items-center space-x-2">
@@ -458,7 +710,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       checked={config.showGrid}
                       onCheckedChange={(checked) => updateConfig({ showGrid: !!checked })}
                     />
-                    <Label htmlFor="showGrid" className="text-sm font-medium">Show Grid</Label>
+                    <Label htmlFor="showGrid" className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('lineChart_editor_showGrid')}</Label>
                   </div>
 
                   <div className="flex items-center space-x-2">
@@ -467,7 +719,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       checked={config.showPoints}
                       onCheckedChange={(checked) => updateConfig({ showPoints: !!checked })}
                     />
-                    <Label htmlFor="showPoints" className="text-sm font-medium">Show Points</Label>
+                    <Label htmlFor="showPoints" className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('lineChart_editor_showPoints')}</Label>
                   </div>
                 </CardContent>
               </Card>
@@ -481,75 +733,90 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
             >
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                 <CardHeader className="pb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Formatters</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('lineChart_editor_formatters')}</h3>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="useYFormatter"
-                        checked={formatters.useYFormatter}
-                        onCheckedChange={(checked) => updateFormatters({ useYFormatter: !!checked })}
-                      />
-                      <Label htmlFor="useYFormatter" className="text-sm font-medium">Y-Axis Formatter</Label>
+                  <div className="space-y-4">
+                    {/* Y Axis Formatter */}
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="useYFormatter"
+                          checked={formatters.useYFormatter}
+                          onCheckedChange={(checked) => updateFormatters({ useYFormatter: !!checked })}
+                        />
+                        <Label htmlFor="useYFormatter" className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('lineChart_editor_yAxisFormatter')}</Label>
+                      </div>
+
+                      {formatters.useYFormatter && (
+                        <div className="space-y-2 ml-6">
+                          <select
+                            value={formatters.yFormatterType}
+                            onChange={(e) => updateFormatters({ yFormatterType: e.target.value as FormatterConfig['yFormatterType'] })}
+                            className="w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                          >
+                            <option value="number">{t('lineChart_editor_number')}</option>
+                            <option value="currency">{t('lineChart_editor_currency')}</option>
+                            <option value="percentage">{t('lineChart_editor_percentage')}</option>
+                            <option value="decimal">{t('lineChart_editor_decimal')}</option>
+                            <option value="scientific">{t('lineChart_editor_scientific')}</option>
+                            <option value="bytes">{t('lineChart_editor_bytes')}</option>
+                            <option value="duration">{t('lineChart_editor_duration')}</option>
+                            <option value="date">{t('lineChart_editor_date')}</option>
+                            <option value="custom">{t('lineChart_editor_custom')}</option>
+                          </select>
+
+                          {formatters.yFormatterType === 'custom' && (
+                            <Input
+                              placeholder="e.g., `${value.toFixed(2)}M`"
+                              value={formatters.customYFormatter}
+                              onChange={(e) => updateFormatters({ customYFormatter: e.target.value })}
+                              className="text-sm"
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    {formatters.useYFormatter && (
-                      <div className="space-y-2 ml-6">
-                        <select
-                          value={formatters.yFormatterType}
-                          onChange={(e) => updateFormatters({ yFormatterType: e.target.value as FormatterConfig['yFormatterType'] })}
-                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                        >
-                          <option value="number">Number</option>
-                          <option value="currency">Currency ($1.0K)</option>
-                          <option value="percentage">Percentage (%)</option>
-                          <option value="custom">Custom</option>
-                        </select>
-
-                        {formatters.yFormatterType === 'custom' && (
-                          <Input
-                            placeholder="e.g., `${value.toFixed(2)}M`"
-                            value={formatters.customYFormatter}
-                            onChange={(e) => updateFormatters({ customYFormatter: e.target.value })}
-                            className="text-sm"
-                          />
-                        )}
+                    {/* X Axis Formatter */}
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="useXFormatter"
+                          checked={formatters.useXFormatter}
+                          onCheckedChange={(checked) => updateFormatters({ useXFormatter: !!checked })}
+                        />
+                        <Label htmlFor="useXFormatter" className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('lineChart_editor_xAxisFormatter')}</Label>
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
 
-            {/* Actions */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                <CardContent className="pt-6">
-                  <div className="space-y-3">
-                    <Button onClick={resetToDefault} className="w-full" variant="outline">
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Reset to Default
-                    </Button>
-                    <Button onClick={exportConfig} className="w-full" variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Export Config
-                    </Button>
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept=".json"
-                        onChange={importConfig}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                      <Button className="w-full" variant="outline">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Import Config
-                      </Button>
+                      {formatters.useXFormatter && (
+                        <div className="space-y-2 ml-6">
+                          <select
+                            value={formatters.xFormatterType}
+                            onChange={(e) => updateFormatters({ xFormatterType: e.target.value as FormatterConfig['xFormatterType'] })}
+                            className="w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                          >
+                            <option value="number">{t('lineChart_editor_number')}</option>
+                            <option value="currency">{t('lineChart_editor_currency')}</option>
+                            <option value="percentage">{t('lineChart_editor_percentage')}</option>
+                            <option value="decimal">{t('lineChart_editor_decimal')}</option>
+                            <option value="scientific">{t('lineChart_editor_scientific')}</option>
+                            <option value="bytes">{t('lineChart_editor_bytes')}</option>
+                            <option value="duration">{t('lineChart_editor_duration')}</option>
+                            <option value="date">{t('lineChart_editor_date')}</option>
+                            <option value="custom">{t('lineChart_editor_custom')}</option>
+                          </select>
+
+                          {formatters.xFormatterType === 'custom' && (
+                            <Input
+                              placeholder="e.g., `${new Date(value).getFullYear()}`"
+                              value={formatters.customXFormatter}
+                              onChange={(e) => updateFormatters({ customXFormatter: e.target.value })}
+                              className="text-sm"
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -567,11 +834,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
               transition={{ duration: 0.6, delay: 0.2 }}
             >
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                <CardHeader>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Live Preview
-                  </h2>
-                </CardHeader>
                 <CardContent className="p-4 sm:p-6">
                   <D3LineChart
                     data={data}
@@ -580,6 +842,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     margin={config.margin}
                     xAxisKey={config.xAxisKey}
                     yAxisKeys={config.yAxisKeys}
+                    disabledLines={config.disabledLines}
                     colors={colors}
                     title={config.title}
                     xAxisLabel={config.xAxisLabel}
@@ -591,6 +854,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     curve={curveOptions[config.curve]}
                     yAxisFormatter={getYAxisFormatter}
                     xAxisFormatter={getXAxisFormatter}
+                    fontSize={getResponsiveFontSize()}
                   />
                 </CardContent>
               </Card>
@@ -606,11 +870,11 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 <CardHeader className="flex flex-row items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Palette className="h-5 w-5" />
-                    Line Configuration
+                    {t('lineChart_editor_lineConfiguration')}
                   </h3>
                   <Button onClick={addYAxisKey} size="sm" variant="outline">
                     <Plus className="h-4 w-4 mr-1" />
-                    Add Line
+                    {t('lineChart_editor_addLine')}
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -618,11 +882,18 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     <div key={key} className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={!config.disabledLines.includes(key)}
+                            onCheckedChange={() => toggleLineVisibility(key)}
+                            className="w-5 h-5"
+                          />
                           <div 
-                            className="w-6 h-6 rounded-full border-2 border-gray-300"
+                            className={`w-6 h-6 rounded-full border-2 border-gray-300 ${config.disabledLines.includes(key) ? 'opacity-50' : ''}`}
                             style={{ backgroundColor: colors[key]?.light || '#6366f1' }}
                           />
-                          <Label className="font-medium">{key}</Label>
+                          <Label className={`font-medium ${config.disabledLines.includes(key) ? 'opacity-50 line-through' : ''}`}>
+                            {key}
+                          </Label>
                         </div>
                         {config.yAxisKeys.length > 1 && (
                           <Button
@@ -631,28 +902,30 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                             onClick={() => removeYAxisKey(key)}
                             className="text-red-500 hover:text-red-700"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <X className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className={`grid grid-cols-2 gap-3 ${config.disabledLines.includes(key) ? 'opacity-50' : ''}`}>
                         <div>
-                          <Label className="text-sm">Light Theme Color</Label>
+                          <Label className="text-sm">{t('lineChart_editor_lightThemeColor')}</Label>
                           <Input
                             type="color"
                             value={colors[key]?.light || '#6366f1'}
                             onChange={(e) => updateColor(key, 'light', e.target.value)}
                             className="mt-1 h-10"
+                            disabled={config.disabledLines.includes(key)}
                           />
                         </div>
                         <div>
-                          <Label className="text-sm">Dark Theme Color</Label>
+                          <Label className="text-sm">{t('lineChart_editor_darkThemeColor')}</Label>
                           <Input
                             type="color"
                             value={colors[key]?.dark || '#818cf8'}
                             onChange={(e) => updateColor(key, 'dark', e.target.value)}
                             className="mt-1 h-10"
+                            disabled={config.disabledLines.includes(key)}
                           />
                         </div>
                       </div>
@@ -671,74 +944,299 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Edit3 className="h-5 w-5" />
-                    Data Editor
+                    <Table className="h-5 w-5" />
+                    {t('lineChart_editor_dataEditor')}
                   </h3>
                   <div className="flex gap-2">
                     <Button 
-                      onClick={() => setIsEditingData(!isEditingData)} 
+                      onClick={openDataModal} 
                       size="sm" 
                       variant="outline"
                     >
-                      {isEditingData ? 'View' : 'Edit'}
-                    </Button>
-                    <Button onClick={addDataPoint} size="sm" variant="outline">
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Point
+                      <Edit3 className="h-4 w-4 mr-1" />
+                      {t('lineChart_editor_editData')}
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {isEditingData ? (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {data.map((point, index) => (
-                        <div key={index} className="flex items-center gap-2 p-3 border border-gray-200 dark:border-gray-600 rounded-lg">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 flex-1">
-                            <div>
-                              <Label className="text-xs text-gray-500">{config.xAxisKey}</Label>
-                              <Input
-                                type="number"
-                                value={point[config.xAxisKey] as number}
-                                onChange={(e) => updateDataPoint(index, config.xAxisKey, e.target.value)}
-                                className="text-sm"
-                              />
-                            </div>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+                        <Table className="h-4 w-4" />
+                        <span className="text-sm font-medium">{t('lineChart_editor_dataPreview')}</span>
+                      </div>
+                      <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                        {t('lineChart_editor_editDataDescription')}
+                      </p>
+                    </div>
+                    
+                    {/* Table Preview */}
+                    <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 dark:bg-gray-700">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              #
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              {config.xAxisKey}
+                            </th>
                             {config.yAxisKeys.map((key) => (
-                              <div key={key}>
-                                <Label className="text-xs text-gray-500">{key}</Label>
-                                <Input
-                                  type="number"
-                                  value={point[key] as number}
-                                  onChange={(e) => updateDataPoint(index, key, e.target.value)}
-                                  className="text-sm"
-                                />
-                              </div>
+                              <th key={key} className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                {key}
+                              </th>
                             ))}
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => removeDataPoint(index)}
-                            className="text-red-500 hover:text-red-700 flex-shrink-0"
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
+                          {data.slice(0, 5).map((point, index) => (
+                            <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                                {index + 1}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
+                                {point[config.xAxisKey] as number}
+                              </td>
+                              {config.yAxisKeys.map((key) => (
+                                <td key={key} className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
+                                  {point[key] as number}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {data.length > 5 && (
+                        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 text-center text-xs text-gray-500 dark:text-gray-400">
+                          {t('lineChart_editor_moreRows', { count: data.length - 5 })}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                      <Edit3 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Click "Edit" to modify chart data</p>
-                      <p className="text-sm mt-1">Current data points: {data.length}</p>
+                    
+                    <div className="text-center py-2 text-gray-500 dark:text-gray-400">
+                      <p className="text-sm">{t('lineChart_editor_totalDataPoints', { count: data.length })}</p>
                     </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
           </div>
         </div>
       </div>
+
+      {/* Data Editor Modal */}
+      <AnimatePresence>
+        {showDataModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={closeDataModal}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+                <div className="flex items-center gap-3">
+                  <Table className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      {t('lineChart_editor_editChartData')}
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {t('lineChart_editor_editDataDirectly')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={addTempDataPoint}
+                    size="sm"
+                    variant="outline"
+                    className="flex items-center gap-1"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {t('lineChart_editor_addRow')}
+                  </Button>
+                  <Button
+                    onClick={saveDataChanges}
+                    size="sm"
+                    className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Save className="h-4 w-4" />
+                    {t('lineChart_editor_saveChanges')}
+                  </Button>
+                  <Button
+                    onClick={closeDataModal}
+                    size="sm"
+                    variant="ghost"
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Modal Content - Sheet-like Table */}
+              <div className="p-6">
+                <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+                  <div className="max-h-[60vh] overflow-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">
+                            #
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-32">
+                            {config.xAxisKey}
+                          </th>
+                          {config.yAxisKeys.map((key) => (
+                            <th key={key} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-32">
+                              {key}
+                            </th>
+                          ))}
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">
+                            {t('lineChart_editor_delete')}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
+                        {tempData.map((point, index) => (
+                          <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 group">
+                            <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700/50">
+                              {index + 1}
+                            </td>
+                            <td className="px-4 py-2">
+                              <Input
+                                type="number"
+                                value={point[config.xAxisKey] as number}
+                                onChange={(e) => updateTempDataPoint(index, config.xAxisKey, e.target.value)}
+                                data-row={index}
+                                data-col="0"
+                                className="text-sm border-transparent bg-transparent hover:border-gray-300 focus:border-blue-500 dark:hover:border-gray-600 dark:focus:border-blue-400 rounded-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const nextInput = document.querySelector(`input[data-row="${index}"][data-col="1"]`) as HTMLInputElement;
+                                    if (nextInput) {
+                                      nextInput.focus();
+                                      nextInput.select();
+                                    }
+                                  } else if (e.key === 'Tab' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    const nextInput = document.querySelector(`input[data-row="${index}"][data-col="1"]`) as HTMLInputElement;
+                                    if (nextInput) {
+                                      nextInput.focus();
+                                      nextInput.select();
+                                    }
+                                  }
+                                }}
+                              />
+                            </td>
+                            {config.yAxisKeys.map((key, colIndex) => (
+                              <td key={key} className="px-4 py-2">
+                                <Input
+                                  type="number"
+                                  value={point[key] as number}
+                                  onChange={(e) => updateTempDataPoint(index, key, e.target.value)}
+                                  data-row={index}
+                                  data-col={colIndex + 1}
+                                  className="text-sm border-transparent bg-transparent hover:border-gray-300 focus:border-blue-500 dark:hover:border-gray-600 dark:focus:border-blue-400 rounded-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      const nextRowInput = document.querySelector(`input[data-row="${index + 1}"][data-col="${colIndex + 1}"]`) as HTMLInputElement;
+                                      if (nextRowInput) {
+                                        nextRowInput.focus();
+                                        nextRowInput.select();
+                                      } else {
+                                        // Nếu không có dòng tiếp theo, tạo dòng mới
+                                        addTempDataPoint();
+                                      }
+                                    } else if (e.key === 'Tab' && !e.shiftKey) {
+                                      e.preventDefault();
+                                      const nextColIndex = colIndex + 2;
+                                      if (nextColIndex <= config.yAxisKeys.length) {
+                                        const nextInput = document.querySelector(`input[data-row="${index}"][data-col="${nextColIndex}"]`) as HTMLInputElement;
+                                        if (nextInput) {
+                                          nextInput.focus();
+                                          nextInput.select();
+                                        }
+                                      } else {
+                                        // Chuyển sang dòng tiếp theo, cột đầu tiên
+                                        const nextRowInput = document.querySelector(`input[data-row="${index + 1}"][data-col="0"]`) as HTMLInputElement;
+                                        if (nextRowInput) {
+                                          nextRowInput.focus();
+                                          nextRowInput.select();
+                                        }
+                                      }
+                                    } else if (e.key === 'Tab' && e.shiftKey) {
+                                      e.preventDefault();
+                                      const prevColIndex = colIndex;
+                                      if (prevColIndex >= 0) {
+                                        const prevInput = document.querySelector(`input[data-row="${index}"][data-col="${prevColIndex}"]`) as HTMLInputElement;
+                                        if (prevInput) {
+                                          prevInput.focus();
+                                          prevInput.select();
+                                        }
+                                      } else if (index > 0) {
+                                        // Chuyển về dòng trước, cột cuối
+                                        const prevRowInput = document.querySelector(`input[data-row="${index - 1}"][data-col="${config.yAxisKeys.length}"]`) as HTMLInputElement;
+                                        if (prevRowInput) {
+                                          prevRowInput.focus();
+                                          prevRowInput.select();
+                                        }
+                                      }
+                                    }
+                                  }}
+                                />
+                              </td>
+                            ))}
+                            <td className="px-4 py-2 text-center">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => removeTempDataPoint(index)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                
+                {/* Footer Info */}
+                <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-4">
+                    <span>{t('lineChart_editor_totalRows', { count: tempData.length })}</span>
+                    <span>•</span>
+                    <span>{t('lineChart_editor_totalColumns', { count: 1 + config.yAxisKeys.length })}</span>
+                  </div>
+                  <div className="text-xs">
+                    <span className="inline-flex items-center gap-2">
+                      <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">Tab</kbd>
+                      <span>{t('lineChart_editor_moveHorizontally')} •</span>
+                      <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">Enter</kbd>
+                      <span>{t('lineChart_editor_moveDown')}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -21,6 +21,15 @@ export const salesData: ChartDataPoint[] = [
   { month: 12, ecommerce: 295, retail: 2100, wholesale: 1350 },
 ];
 
+export const exampleData = [
+  ['city', 'month', 'sale'],
+  ['New York', 1, 500],
+  ['Los Angeles', 1, 600],
+  ['Chicago', 1, 700],
+  ['Houston', 1, 800],
+  ['Phoenix', 1, 900],
+];
+
 // Revenue by quarter data
 export const quarterlyRevenueData: ChartDataPoint[] = [
   { quarter: 'Q1 2023', technology: 2450, healthcare: 1800, finance: 3200, education: 950 },
