@@ -516,52 +516,93 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                     <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       Padding (Margin)
                     </Label>
-                    <div className="mt-2">
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <Input
-                          type="number"
-                          placeholder="Top"
-                          value={config.margin.top}
-                          onChange={e =>
-                            updateConfig({
-                              margin: { ...config.margin, top: parseInt(e.target.value) || 0 },
-                            })
-                          }
-                          className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                        />
-                        <Input
-                          type="number"
-                          placeholder="Right"
-                          value={config.margin.right}
-                          onChange={e =>
-                            updateConfig({
-                              margin: { ...config.margin, right: parseInt(e.target.value) || 0 },
-                            })
-                          }
-                          className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                        />
-                        <Input
-                          type="number"
-                          placeholder="Bottom"
-                          value={config.margin.bottom}
-                          onChange={e =>
-                            updateConfig({
-                              margin: { ...config.margin, bottom: parseInt(e.target.value) || 0 },
-                            })
-                          }
-                          className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                        />
-                        <Input
-                          type="number"
-                          placeholder="Left"
-                          value={config.margin.left}
-                          onChange={e =>
-                            updateConfig({
-                              margin: { ...config.margin, left: parseInt(e.target.value) || 0 },
-                            })
-                          }
-                          className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                        />
+
+                    {/* Visual Margin Editor */}
+                    <div className="relative bg-gray-100 dark:bg-gray-800 rounded-lg p-6 mt-3">
+                      <div
+                        className="relative bg-white dark:bg-gray-700 rounded border-2 border-dashed border-gray-300 dark:border-gray-600 mx-auto"
+                        style={{ width: '240px', height: '140px' }}
+                      >
+                        {/* Top Margin */}
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2">
+                          <Input
+                            type="number"
+                            value={config.margin.top}
+                            onChange={e =>
+                              updateConfig({
+                                margin: { ...config.margin, top: parseInt(e.target.value) || 0 },
+                              })
+                            }
+                            className="w-14 h-7 text-xs text-center p-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                          />
+                        </div>
+
+                        {/* Left Margin */}
+                        <div className="absolute top-1/2 -left-9 transform -translate-y-1/2">
+                          <Input
+                            type="number"
+                            value={config.margin.left}
+                            onChange={e =>
+                              updateConfig({
+                                margin: { ...config.margin, left: parseInt(e.target.value) || 0 },
+                              })
+                            }
+                            className="w-14 h-7 text-xs text-center p-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                          />
+                        </div>
+
+                        {/* Right Margin */}
+                        <div className="absolute top-1/2 -right-9 transform -translate-y-1/2">
+                          <Input
+                            type="number"
+                            value={config.margin.right}
+                            onChange={e =>
+                              updateConfig({
+                                margin: { ...config.margin, right: parseInt(e.target.value) || 0 },
+                              })
+                            }
+                            className="w-14 h-7 text-xs text-center p-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                          />
+                        </div>
+
+                        {/* Bottom Margin */}
+                        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
+                          <Input
+                            type="number"
+                            value={config.margin.bottom}
+                            onChange={e =>
+                              updateConfig({
+                                margin: { ...config.margin, bottom: parseInt(e.target.value) || 0 },
+                              })
+                            }
+                            className="w-14 h-7 text-xs text-center p-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                          />
+                        </div>
+
+                        {/* Center Label */}
+                        <div className="flex items-center justify-center h-full text-sm text-gray-500 dark:text-gray-400 font-medium">
+                          Chart Area
+                        </div>
+                      </div>
+
+                      {/* Margin Labels */}
+                      <div className="grid grid-cols-4 gap-4 mt-10 text-xs text-center text-gray-600 dark:text-gray-400">
+                        <div>
+                          <div className="font-medium">Top:</div>
+                          <div>{config.margin.top}px</div>
+                        </div>
+                        <div>
+                          <div className="font-medium">Right:</div>
+                          <div>{config.margin.right}px</div>
+                        </div>
+                        <div>
+                          <div className="font-medium">Bottom:</div>
+                          <div>{config.margin.bottom}px</div>
+                        </div>
+                        <div>
+                          <div className="font-medium">Left:</div>
+                          <div>{config.margin.left}px</div>
+                        </div>
                       </div>
                     </div>
                   </div>
