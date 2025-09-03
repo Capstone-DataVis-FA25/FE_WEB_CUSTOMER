@@ -18,6 +18,10 @@ import {
   Edit3,
   Eye,
   EyeOff,
+  Type,
+  Sliders,
+  MessageSquare,
+  Layout as LayoutIcon,
 } from 'lucide-react';
 import { datasets } from './data/data';
 
@@ -115,6 +119,9 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
   });
   const [selectedDataset, setSelectedDataset] = useState<string>('sales');
   const [showDataTable, setShowDataTable] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'chartType' | 'refine' | 'annotate' | 'layout'>(
+    'chartType'
+  );
 
   // Helper functions
   const updateConfig = (updates: Partial<BarChartConfig>) => {
@@ -127,23 +134,27 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     setSelectedDataset(datasetKey);
     if (datasetKey !== 'custom' && datasets[datasetKey as keyof typeof datasets]) {
       const dataset = datasets[datasetKey as keyof typeof datasets];
-      const newData = dataset.data;
-      const newConfig = {
-        ...config,
-        xAxisKey: dataset.xKey,
-        yAxisKeys: dataset.yKeys,
-        xAxisLabel: dataset.xLabel,
-        yAxisLabel: dataset.yLabel,
-        title: dataset.name,
-      };
 
-      setData(newData);
-      setConfig(newConfig);
-      setColors(dataset.colors || {});
+      // Only use datasets that are compatible with bar charts (have xKey and yKeys)
+      if ('xKey' in dataset && 'yKeys' in dataset) {
+        const newData = dataset.data as ChartDataPoint[];
+        const newConfig = {
+          ...config,
+          xAxisKey: dataset.xKey,
+          yAxisKeys: dataset.yKeys,
+          xAxisLabel: dataset.xLabel,
+          yAxisLabel: dataset.yLabel,
+          title: dataset.name,
+        };
 
-      onDataChange?.(newData);
-      onConfigChange?.(newConfig);
-      onColorsChange?.(dataset.colors || {});
+        setData(newData);
+        setConfig(newConfig);
+        setColors(dataset.colors || {});
+
+        onDataChange?.(newData);
+        onConfigChange?.(newConfig);
+        onColorsChange?.(dataset.colors || {});
+      }
     }
   };
 
@@ -275,7 +286,546 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
           </Card>
         </motion.div>
 
+        {/* Tab Navigation */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="flex justify-center"
+        >
+          <div className="bg-card/80 rounded-lg p-1 border border-border shadow-sm">
+            <div className="flex space-x-1">
+              <button
+                onClick={() => setActiveTab('chartType')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'chartType'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                {t('chartEditor_chartType')}
+              </button>
+              <button
+                onClick={() => setActiveTab('refine')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'refine'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <Sliders className="w-4 h-4" />
+                {t('chartEditor_refine')}
+              </button>
+              <button
+                onClick={() => setActiveTab('annotate')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'annotate'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                {t('chartEditor_annotate')}
+              </button>
+              <button
+                onClick={() => setActiveTab('layout')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'layout'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <LayoutIcon className="w-4 h-4" />
+                {t('chartEditor_layout')}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Controls Section */}
+        {activeTab === 'chartType' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column: Dataset & Basic Configuration */}
+            <div className="space-y-6">
+              {/* Dataset Selection */}
+              <motion.div variants={cardVariants} initial="hidden" animate="visible">
+                <Card className="backdrop-blur-sm bg-card/80 border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-primary" />
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {t('barChart_datasetSelector')}
+                      </h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="dataset">{t('barChart_datasetLabel')}</Label>
+                      <select
+                        id="dataset"
+                        value={selectedDataset}
+                        onChange={e => handleDatasetChange(e.target.value)}
+                        className="w-full mt-1 px-3 py-2 border border-input rounded-md bg-background text-foreground"
+                      >
+                        {Object.entries(datasets)
+                          .filter(([_, dataset]) => 'xKey' in dataset && 'yKeys' in dataset)
+                          .map(([key, dataset]) => (
+                            <option key={key} value={key}>
+                              {dataset.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    {/* Data Table Toggle */}
+                    <div className="flex items-end">
+                      <Button
+                        onClick={() => setShowDataTable(!showDataTable)}
+                        variant="outline"
+                        className="flex items-center gap-2"
+                      >
+                        {showDataTable ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                        {showDataTable
+                          ? t('dataset_changeData', 'Hide Data Table')
+                          : t('barChart_dataPreview', 'Show Data Table')}
+                      </Button>
+                    </div>
+
+                    {/* Data Table */}
+                    {showDataTable && (
+                      <div className="mt-4 overflow-auto max-h-96 border border-border rounded-lg">
+                        <table className="w-full text-sm">
+                          <thead className="bg-muted">
+                            <tr>
+                              {Object.keys(data[0] || {}).map(key => (
+                                <th
+                                  key={key}
+                                  className="px-4 py-2 text-left font-medium text-foreground"
+                                >
+                                  {key}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.slice(0, 10).map((row, rowIndex) => (
+                              <tr key={rowIndex} className="border-t border-border">
+                                {Object.values(row).map((value, colIndex) => (
+                                  <td key={colIndex} className="px-4 py-2 text-foreground">
+                                    {typeof value === 'number' ? value.toLocaleString() : value}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Chart Type Selection */}
+              <motion.div variants={cardVariants} initial="hidden" animate="visible">
+                <Card className="backdrop-blur-sm bg-card/80 border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-2">
+                      <Type className="w-5 h-5 text-primary" />
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {t('chartEditor_chartType')}
+                      </h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="barType">{t('barChart_barType')}</Label>
+                      <select
+                        id="barType"
+                        value={config.barType}
+                        onChange={e =>
+                          updateConfig({ barType: e.target.value as 'grouped' | 'stacked' })
+                        }
+                        className="w-full mt-1 px-3 py-2 border border-input rounded-md bg-background text-foreground"
+                      >
+                        <option value="grouped">{t('barChart_grouped')}</option>
+                        <option value="stacked">{t('barChart_stacked')}</option>
+                      </select>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* Right Column: Axis Configuration */}
+            <div className="space-y-6">
+              {/* X Axis Configuration */}
+              <motion.div variants={cardVariants} initial="hidden" animate="visible">
+                <Card className="backdrop-blur-sm bg-card/80 border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-primary" />
+                      <h3 className="text-lg font-semibold text-foreground">X Axis</h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="xAxisKey">{t('barChart_xAxisKey')}</Label>
+                      <select
+                        id="xAxisKey"
+                        value={config.xAxisKey}
+                        onChange={e => updateConfig({ xAxisKey: e.target.value })}
+                        className="w-full mt-1 px-3 py-2 border border-input rounded-md bg-background text-foreground"
+                      >
+                        {Object.keys(data[0] || {}).map(key => (
+                          <option key={key} value={key}>
+                            {key}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <Label htmlFor="xLabel">{t('barChart_xAxisLabel')}</Label>
+                      <Input
+                        id="xLabel"
+                        value={config.xAxisLabel}
+                        onChange={e => updateConfig({ xAxisLabel: e.target.value })}
+                        placeholder={t('barChart_xAxisLabel')}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Y Axis Configuration */}
+              <motion.div variants={cardVariants} initial="hidden" animate="visible">
+                <Card className="backdrop-blur-sm bg-card/80 border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-primary" />
+                      <h3 className="text-lg font-semibold text-foreground">Y Axis</h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="yLabel">{t('barChart_yAxisLabel')}</Label>
+                      <Input
+                        id="yLabel"
+                        value={config.yAxisLabel}
+                        onChange={e => updateConfig({ yAxisLabel: e.target.value })}
+                        placeholder={t('barChart_yAxisLabel')}
+                      />
+                    </div>
+                    <div>
+                      <Label>{t('barChart_yAxisKeys')}</Label>
+                      <div className="space-y-2 mt-2">
+                        {Object.keys(data[0] || {})
+                          .filter(key => typeof (data[0] || {})[key] === 'number')
+                          .map(key => (
+                            <div key={key} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`yAxis-${key}`}
+                                checked={config.yAxisKeys.includes(key)}
+                                onCheckedChange={checked => {
+                                  if (checked) {
+                                    updateConfig({ yAxisKeys: [...config.yAxisKeys, key] });
+                                  } else {
+                                    updateConfig({
+                                      yAxisKeys: config.yAxisKeys.filter(k => k !== key),
+                                    });
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`yAxis-${key}`} className="capitalize">
+                                {key}
+                              </Label>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+          </div>
+        )}
+
+        {/* Refine Tab */}
+        {activeTab === 'refine' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column: Basic Settings */}
+            <div className="space-y-6">
+              {/* Chart Settings */}
+              <motion.div variants={cardVariants} initial="hidden" animate="visible">
+                <Card className="backdrop-blur-sm bg-card/80 border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-primary" />
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {t('chartEditor_basicSettings')}
+                      </h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="width">{t('chartEditor_width')}</Label>
+                        <Input
+                          id="width"
+                          type="number"
+                          value={config.width}
+                          onChange={e => updateConfig({ width: parseInt(e.target.value) || 800 })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="height">{t('chartEditor_height')}</Label>
+                        <Input
+                          id="height"
+                          type="number"
+                          value={config.height}
+                          onChange={e => updateConfig({ height: parseInt(e.target.value) || 400 })}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="showLegend"
+                          checked={config.showLegend}
+                          onCheckedChange={checked => updateConfig({ showLegend: !!checked })}
+                        />
+                        <Label htmlFor="showLegend">{t('barChart_showLegend')}</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="showGrid"
+                          checked={config.showGrid}
+                          onCheckedChange={checked => updateConfig({ showGrid: !!checked })}
+                        />
+                        <Label htmlFor="showGrid">{t('barChart_showGrid')}</Label>
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="animationDuration">
+                        {t('chartEditor_animationDuration')}
+                      </Label>
+                      <Input
+                        id="animationDuration"
+                        type="number"
+                        value={config.animationDuration}
+                        onChange={e =>
+                          updateConfig({ animationDuration: parseInt(e.target.value) || 1000 })
+                        }
+                        min="0"
+                        max="5000"
+                        step="100"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* Right Column: Colors */}
+            <div className="space-y-6">
+              {/* Color Configuration */}
+              <motion.div variants={cardVariants} initial="hidden" animate="visible">
+                <Card className="backdrop-blur-sm bg-card/80 border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-2">
+                      <Palette className="w-5 h-5 text-primary" />
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {t('barChart_colors')}
+                      </h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      {config.yAxisKeys.map(key => (
+                        <div key={key} className="flex items-center justify-between gap-3">
+                          <Label className="capitalize text-sm font-medium">{key}</Label>
+                          <input
+                            type="color"
+                            value={colors[key]?.light || '#3b82f6'}
+                            onChange={e =>
+                              setColors(prev => ({
+                                ...prev,
+                                [key]: {
+                                  light: e.target.value,
+                                  dark: e.target.value,
+                                },
+                              }))
+                            }
+                            className="w-8 h-8 rounded border border-border"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+          </div>
+        )}
+
+        {/* Annotate Tab */}
+        {activeTab === 'annotate' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column: Text Annotations */}
+            <div className="space-y-6">
+              <motion.div variants={cardVariants} initial="hidden" animate="visible">
+                <Card className="backdrop-blur-sm bg-card/80 border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5 text-primary" />
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {t('chartEditor_textLabels')}
+                      </h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="title">{t('barChart_title_field')}</Label>
+                      <Input
+                        id="title"
+                        value={config.title}
+                        onChange={e => updateConfig({ title: e.target.value })}
+                        placeholder={t('chartEditor_chartTitle')}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="description">{t('chartEditor_description')}</Label>
+                      <textarea
+                        id="description"
+                        className="w-full mt-1 px-3 py-2 border border-input rounded-md bg-background text-foreground"
+                        rows={3}
+                        placeholder={t('chartEditor_descriptionPlaceholder')}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="notes">{t('chartEditor_notes')}</Label>
+                      <textarea
+                        id="notes"
+                        className="w-full mt-1 px-3 py-2 border border-input rounded-md bg-background text-foreground"
+                        rows={2}
+                        placeholder={t('chartEditor_notesPlaceholder')}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* Right Column: Data Source */}
+            <div className="space-y-6">
+              <motion.div variants={cardVariants} initial="hidden" animate="visible">
+                <Card className="backdrop-blur-sm bg-card/80 border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-2">
+                      <Edit3 className="w-5 h-5 text-primary" />
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {t('chartEditor_dataSource')}
+                      </h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="dataSource">{t('chartEditor_dataSource')}</Label>
+                      <Input id="dataSource" placeholder={t('chartEditor_dataSourcePlaceholder')} />
+                    </div>
+                    <div>
+                      <Label htmlFor="dataLink">{t('chartEditor_dataLink')}</Label>
+                      <Input id="dataLink" placeholder={t('chartEditor_dataLinkPlaceholder')} />
+                    </div>
+                    <div>
+                      <Label htmlFor="byline">{t('chartEditor_byline')}</Label>
+                      <Input id="byline" placeholder={t('chartEditor_bylinePlaceholder')} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+          </div>
+        )}
+
+        {/* Layout Tab */}
+        {activeTab === 'layout' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column: Output */}
+            <div className="space-y-6">
+              <motion.div variants={cardVariants} initial="hidden" animate="visible">
+                <Card className="backdrop-blur-sm bg-card/80 border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-2">
+                      <LayoutIcon className="w-5 h-5 text-primary" />
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {t('chartEditor_output')}
+                      </h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="locale">{t('chartEditor_outputLocale')}</Label>
+                      <select
+                        id="locale"
+                        className="w-full mt-1 px-3 py-2 border border-input rounded-md bg-background text-foreground"
+                      >
+                        <option value="en-US">English (en-US)</option>
+                        <option value="vi-VN">Tiếng Việt (vi-VN)</option>
+                      </select>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* Right Column: Footer & Export */}
+            <div className="space-y-6">
+              <motion.div variants={cardVariants} initial="hidden" animate="visible">
+                <Card className="backdrop-blur-sm bg-card/80 border-0 shadow-lg">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-2">
+                      <Download className="w-5 h-5 text-primary" />
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {t('chartEditor_footer')}
+                      </h3>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="dataDownload" defaultChecked />
+                        <Label htmlFor="dataDownload">{t('chartEditor_dataDownload')}</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="imageDownload" />
+                        <Label htmlFor="imageDownload">{t('chartEditor_imageDownload')}</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="embedLink" />
+                        <Label htmlFor="embedLink">{t('chartEditor_embedLink')}</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="attribution" defaultChecked />
+                        <Label htmlFor="attribution">{t('chartEditor_attribution')}</Label>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="socialButtons" />
+                        <Label htmlFor="socialButtons">{t('chartEditor_socialButtons')}</Label>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column: Dataset & Configuration */}
           <div className="space-y-6">
@@ -303,11 +853,13 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                         onChange={e => handleDatasetChange(e.target.value)}
                         className="w-full p-2 border border-border rounded-md bg-background text-foreground"
                       >
-                        {Object.keys(datasets).map(key => (
-                          <option key={key} value={key}>
-                            {datasets[key as keyof typeof datasets].name}
-                          </option>
-                        ))}
+                        {Object.entries(datasets)
+                          .filter(([_, dataset]) => 'xKey' in dataset && 'yKeys' in dataset)
+                          .map(([key, dataset]) => (
+                            <option key={key} value={key}>
+                              {dataset.name}
+                            </option>
+                          ))}
                       </select>
                     </div>
 
