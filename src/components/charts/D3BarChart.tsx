@@ -480,44 +480,38 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         />
       </div>
 
-      {/* Beautiful Legend Below Chart */}
+      {/* Legend - Modern, compact, responsive */}
       {showLegend && (
-        <div className="w-full">
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <h4 className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center">
+        <div className="w-full flex flex-col items-center">
+          <div className="bg-card rounded-2xl px-4 py-3 border border-border shadow-sm max-w-xl w-full">
+            <h4 className="text-base font-bold text-foreground mb-2 text-center tracking-wide">
               {t('legend')}
             </h4>
-
-            {/* Responsive Grid Layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="flex flex-wrap justify-center gap-3">
               {yAxisKeys.map((key, index) => {
                 const colorKey = colors[key] ? key : `bar${index + 1}`;
                 const color =
                   colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
                   defaultColors[`bar${index + 1}`][isDarkMode ? 'dark' : 'light'];
-
                 return (
                   <div
                     key={key}
-                    className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
+                    className="flex items-center gap-2 px-3 py-2 bg-background rounded-xl border border-border"
+                    style={{ minWidth: 110 }}
                   >
-                    {/* Color Indicator */}
-                    <div className="flex-shrink-0">
-                      <div
-                        className="w-4 h-4 sm:w-5 sm:h-5 rounded border-2 border-border group-hover:border-muted-foreground transition-colors duration-200"
-                        style={{ backgroundColor: color }}
-                      />
-                    </div>
-
-                    {/* Label */}
-                    <span className="text-sm sm:text-base font-medium text-muted-foreground capitalize group-hover:text-foreground transition-colors duration-200">
+                    <div
+                      className="w-5 h-5 rounded-full border-2 border-border"
+                      style={{ backgroundColor: color }}
+                    />
+                    <span
+                      className="text-base font-semibold text-foreground capitalize"
+                      style={{ letterSpacing: 0.5 }}
+                    >
                       {key}
                     </span>
-
-                    {/* Bar Preview */}
                     <div className="flex-1 flex justify-end">
                       <div
-                        className="w-8 sm:w-12 h-3 sm:h-4 rounded opacity-60 group-hover:opacity-100 transition-opacity duration-200"
+                        className="w-6 h-2 rounded-full opacity-70"
                         style={{ backgroundColor: color }}
                       />
                     </div>

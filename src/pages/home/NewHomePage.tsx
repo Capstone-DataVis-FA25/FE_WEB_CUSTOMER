@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   BarChart3,
   LineChart,
@@ -35,6 +34,8 @@ import D3TrendChart from '@/components/charts/page.example/home_chart_sample/D3T
 import D3MapChart from '@/components/charts/page.example/home_chart_sample/D3MapChart';
 import D3TableChart from '@/components/charts/page.example/home_chart_sample/D3TableChart';
 import { datasets } from '@/components/charts/data/data';
+import Lottie from 'lottie-react';
+import ChartAnimationData from '../../assets/lottie/line-chart.json';
 
 const NewHomePage: React.FC = () => {
   const [selectedChart, setSelectedChart] = useState<string>('bar');
@@ -164,7 +165,7 @@ const NewHomePage: React.FC = () => {
       return (
         <div
           className="bg-gradient-to-br from-muted to-muted/50 rounded-lg p-12 shadow-lg flex items-center justify-center"
-          style={{ width: '750px', height: '450px' }}
+          style={{ width: '800px', height: '500px' }}
         >
           <div className="text-center">
             <div
@@ -205,7 +206,7 @@ const NewHomePage: React.FC = () => {
 
     if (chartType.id === 'line') {
       return (
-        <div className="w-full h-full bg-background rounded-lg">
+        <div className="w-full h-full bg-background rounded-lg p-4">
           <ChartComponent
             data={dataset.data}
             width={750}
@@ -440,52 +441,60 @@ const NewHomePage: React.FC = () => {
         className="relative overflow-hidden py-20 lg:py-32"
       >
         <div className="container mx-auto px-4">
-          <div className="text-center max-w-4xl mx-auto">
-            <motion.div variants={fadeVariants} className="mb-6">
-              <Badge variant="secondary" className="mb-4 px-4 py-2 text-sm font-medium">
-                <Sparkles className="w-4 h-4 mr-2" />
-                Create Beautiful Charts
-              </Badge>
-            </motion.div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            {/* Left: Content */}
+            <div className="max-w-4xl mx-auto text-center lg:text-left">
+              {/* <motion.div variants={fadeVariants} className="mb-6">
+                <Badge variant="secondary" className="mb-4 px-4 py-2 text-sm font-medium">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Create Beautiful Charts
+                </Badge>
+              </motion.div> */}
 
-            <motion.h1
-              variants={fadeVariants}
-              className="text-4xl sm:text-5xl lg:text-7xl font-bold text-foreground mb-6 leading-tight"
-            >
-              Create beautiful charts with{' '}
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                DataVis
-              </span>
-            </motion.h1>
-
-            <motion.p
-              variants={fadeVariants}
-              className="text-xl lg:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed"
-            >
-              Responsive & easy-to-use chart types for every need. No coding required.
-            </motion.p>
-
-            <motion.div
-              variants={fadeVariants}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-            >
-              <Button
-                size="lg"
-                className="text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group"
+              <motion.h1
+                variants={fadeVariants}
+                className="text-4xl sm:text-5xl lg:text-7xl font-bold text-foreground mb-6 leading-tight"
               >
-                <Play className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-                Build Your Own Chart
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-6 rounded-xl">
-                <BookOpen className="w-5 h-5 mr-2" />
-                View Examples
-              </Button>
-            </motion.div>
+                Create beautiful charts with{' '}
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  DataVis
+                </span>
+              </motion.h1>
 
-            <motion.p variants={fadeVariants} className="text-sm text-muted-foreground mt-4">
-              It's free & no sign-up is required
-            </motion.p>
+              <motion.p
+                variants={fadeVariants}
+                className="text-xl lg:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto lg:mx-0 leading-relaxed"
+              >
+                Responsive & easy-to-use chart types for every need. No coding required.
+              </motion.p>
+
+              <motion.div
+                variants={fadeVariants}
+                className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center"
+              >
+                <Button
+                  size="lg"
+                  className="text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group"
+                >
+                  <Play className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+                  Build Your Own Chart
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+                <Button variant="outline" size="lg" className="text-lg px-8 py-6 rounded-xl">
+                  <BookOpen className="w-5 h-5 mr-2" />
+                  View Examples
+                </Button>
+              </motion.div>
+
+              <motion.p variants={fadeVariants} className="text-sm text-muted-foreground mt-4">
+                It's free & no sign-up is required
+              </motion.p>
+            </div>
+            {/* Right: Lottie animation placeholder */}
+            <div className="flex items-center justify-center w-full h-full py-5">
+              {/* Lottie animation sẽ đặt ở đây */}
+              <Lottie animationData={ChartAnimationData} loop={true} className="w-full h-full" />
+            </div>
           </div>
         </div>
 
@@ -520,7 +529,7 @@ const NewHomePage: React.FC = () => {
             <div className="grid lg:grid-cols-2 gap-12 items-start">
               {/* Left Column: Chart Types Grid */}
               <div className="space-y-8">
-                <motion.div variants={containerVariants} className="grid grid-cols-5 gap-3">
+                <motion.div variants={containerVariants} className="grid grid-cols-5 gap-4">
                   {chartTypes.map((chart, index) => {
                     const IconComponent = chart.icon;
                     return (
@@ -584,7 +593,7 @@ const NewHomePage: React.FC = () => {
 
               {/* Right Column: Chart Preview */}
               <div className="lg:sticky lg:top-8">
-                <Card className="overflow-hidden border-0 shadow-xl">
+                <Card className="overflow-hidden border-0">
                   <CardContent className="p-0">
                     <AnimatePresence mode="wait">
                       <motion.div
@@ -593,7 +602,7 @@ const NewHomePage: React.FC = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 1.05 }}
                         transition={{ duration: 0.4, ease: 'easeInOut' }}
-                        className="w-full min-h-[500px] bg-gradient-to-br from-background to-muted/30 flex items-center justify-center"
+                        className="w-full min-h-[600px] bg-[#18181b] flex items-center justify-center"
                       >
                         <div className="w-fit h-fit">{renderChartPreview(selectedChartData)}</div>
                       </motion.div>
@@ -669,7 +678,7 @@ const NewHomePage: React.FC = () => {
                 <Card className="h-full">
                   <CardContent className="p-6">
                     <div className="flex items-center mb-4">
-                      <div className="w-16 h-8 bg-muted rounded flex items-center justify-center">
+                      <div className="w-30 h-8 bg-muted rounded flex items-center justify-center">
                         <span className="text-xs font-medium">{story.company}</span>
                       </div>
                     </div>
