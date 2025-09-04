@@ -37,6 +37,7 @@ import { datasets } from '@/components/charts/data/data';
 import Lottie from 'lottie-react';
 import ChartAnimationData from '../../assets/lottie/line-chart.json';
 import BannerVideo from '../../assets/videos/video_demo.mp4';
+import CreateDemoVideo from '../../assets/videos/create_demo.mp4';
 import { useTranslation } from 'react-i18next';
 
 const NewHomePage: React.FC = () => {
@@ -645,7 +646,7 @@ const NewHomePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
             <div className="rounded-4xl  flex items-center justify-center w-full h-full">
               <video
-                src={BannerVideo}
+                src={CreateDemoVideo}
                 className="w-full h-full object-cover rounded-4xl"
                 autoPlay
                 loop
