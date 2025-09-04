@@ -3,8 +3,8 @@ import type Papa from 'papaparse';
 
 // Types
 interface NumberFormat {
-  thousands: string;
-  decimal: string;
+  thousandsSeparator: string;
+  decimalSeparator: string;
 }
 
 interface DatasetState {
@@ -52,8 +52,8 @@ const initialState: DatasetState = {
   parsedData: null,
   selectedDelimiter: ',',
   numberFormat: {
-    thousands: ',',
-    decimal: '.',
+    thousandsSeparator: ',',
+    decimalSeparator: '.',
   },
   isUploading: false,
   datasetName: '',

@@ -9,12 +9,14 @@ import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
 import { axiosPrivate } from '@/services/axios';
 import { SlideInUp } from '@/theme/animation';
 import {
+  getFileDelimiter,
   isValidFileType,
   MAX_FILE_SIZE,
   parseTabularContent,
   processFileContent,
   validateFileSize,
 } from '@/utils/fileProcessors';
+import { DATASET_NAME_MAX_LENGTH, DATASET_DESCRIPTION_MAX_LENGTH } from '@/utils/Consts';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -26,15 +28,22 @@ function CreateDatasetPageContent() {
   const { showSuccess, showError, showWarning } = useToastContext();
 
   // Get states from context
-  const { originalTextContent, setOriginalTextContent, parsedData, setParsedData, setIsUploading } =
-    useDataset();
+  const {
+    originalTextContent,
+    setOriginalTextContent,
+    parsedData,
+    setParsedData,
+    setIsUploading,
+    setSelectedDelimiter,
+    setNumberFormat,
+    resetState,
+  } = useDataset();
 
   // Local state management (non-shareable states)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('upload');
   const [previousViewMode, setPreviousViewMode] = useState<ViewMode>('upload');
-  const [numberFormat, setNumberFormat] = useState({ thousands: ',', decimal: '.' });
 
   // Handle switching between upload methods; clear transient inputs
   const handleViewModeChange = useCallback(
@@ -58,6 +67,10 @@ function CreateDatasetPageContent() {
         const textContent = await file.text();
         setOriginalTextContent(textContent);
 
+        // Set the detected delimiter for this file
+        const detectedDelimiter = getFileDelimiter(file);
+        setSelectedDelimiter(detectedDelimiter);
+
         // Then process it
         const result = await processFileContent(file);
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -66,20 +79,28 @@ function CreateDatasetPageContent() {
         setPreviousViewMode(viewMode);
         setViewMode('view');
       } catch (error) {
-        showError(
-          t('dataset_fileReadError'),
-          error instanceof Error ? error.message : t('dataset_fileReadErrorMessage')
-        );
+        const errorMessage =
+          error instanceof Error ? error.message : t('dataset_fileReadErrorMessage');
+        showError(t('dataset_fileReadError'), t(errorMessage));
       } finally {
         setIsProcessing(false);
       }
     },
-    [showError, t, viewMode]
+    [showError, t, viewMode, setSelectedDelimiter]
   );
 
   // Handle file selection and validation
   const handleFileSelect = useCallback(
     async (file: File) => {
+      // Validate file type
+      if (!isValidFileType(file)) {
+        showError(
+          t('dataset_fileReadError'),
+          t('dataset_unsupportedFileType', { fileType: file.type || 'unknown' })
+        );
+        return;
+      }
+
       // Validate file size
       if (!validateFileSize(file, MAX_FILE_SIZE)) {
         showError(t('dataset_fileTooLarge'), t('dataset_fileTooLargeMessage'));
@@ -88,9 +109,7 @@ function CreateDatasetPageContent() {
 
       setSelectedFile(file);
       // If file is valid, automatically process it and switch to view mode
-      if (isValidFileType(file)) {
-        await processAndViewFile(file);
-      }
+      await processAndViewFile(file);
     },
     [showError, t, processAndViewFile]
   );
@@ -112,6 +131,22 @@ function CreateDatasetPageContent() {
 
       if (!name.trim()) {
         showWarning('Dataset Name Required', 'Please enter a name for your dataset');
+        return;
+      }
+
+      if (name.length > DATASET_NAME_MAX_LENGTH) {
+        showWarning(
+          t('dataset_nameTooLong'),
+          t('dataset_nameTooLongMessage', { maxLength: DATASET_NAME_MAX_LENGTH })
+        );
+        return;
+      }
+
+      if (description && description.length > DATASET_DESCRIPTION_MAX_LENGTH) {
+        showWarning(
+          t('dataset_descriptionTooLong'),
+          t('dataset_descriptionTooLongMessage', { maxLength: DATASET_DESCRIPTION_MAX_LENGTH })
+        );
         return;
       }
 
@@ -137,14 +172,11 @@ function CreateDatasetPageContent() {
       } catch (error: any) {
         // Check for unique constraint violation
         if (error.response?.status === 409) {
-          showError(
-            'Dataset Name Already Exists',
-            `A dataset with the name "${name.trim()}" already exists. Please choose a different name.`
-          );
+          showError(t('dataset_nameExists'), t('dataset_nameExistsMessage', { name: name.trim() }));
         } else {
           showError(
-            'Upload Failed',
-            error.response?.data?.message || error.message || 'Failed to create dataset'
+            t('dataset_uploadFailed'),
+            error.response?.data?.message || error.message || t('dataset_uploadFailedMessage')
           );
         }
       } finally {
@@ -154,12 +186,21 @@ function CreateDatasetPageContent() {
     [parsedData, showWarning, showSuccess, showError]
   );
 
-  // Handle change data (go back to upload and clear file)
+  // Handle change data (go back to previous upload method and reset shared state)
   const handleChangeData = useCallback(() => {
+    const prevText = originalTextContent;
+    // Reset all shared dataset state back to initial
+    resetState();
+    // Clear local file selection
     setSelectedFile(null);
-    setParsedData(null);
+
+    // Restore user text only if returning to text upload
+    if (previousViewMode === 'textUpload') {
+      setOriginalTextContent(prevText);
+    }
+
     setViewMode(previousViewMode);
-  }, [previousViewMode]);
+  }, [originalTextContent, previousViewMode, resetState, setOriginalTextContent]);
 
   // Handle text processing
   const handleTextProcess = useCallback(
@@ -172,10 +213,12 @@ function CreateDatasetPageContent() {
         setPreviousViewMode(viewMode);
         setViewMode('view');
       } catch (error) {
-        showError('Parse Error', 'Failed to parse the text content');
+        const errorMessage =
+          error instanceof Error ? error.message : t('dataset_parseErrorMessage');
+        showError(t('dataset_parseError'), t(errorMessage));
       }
     },
-    [showError, viewMode]
+    [showError, t, viewMode]
   );
 
   // Handle delimiter change - reparse the original content with new delimiter
@@ -196,10 +239,13 @@ function CreateDatasetPageContent() {
   // Handle number format change
   const handleNumberFormatChange = useCallback(
     (thousandsSeparator: string, decimalSeparator: string) => {
-      setNumberFormat({ thousands: thousandsSeparator, decimal: decimalSeparator });
+      setNumberFormat({
+        thousandsSeparator: thousandsSeparator,
+        decimalSeparator: decimalSeparator,
+      });
       // You can add logic here to reformat numbers in the table if needed
     },
-    []
+    [setNumberFormat]
   );
 
   return (

@@ -7,6 +7,7 @@ import { Upload, RefreshCw, Settings } from 'lucide-react';
 import DelimiterSelector from './DelimiterSelector';
 import { NumberFormatSelector } from './NumberFormatSelector';
 import { useDataset } from '@/contexts/DatasetContext';
+import { DATASET_NAME_MAX_LENGTH, DATASET_DESCRIPTION_MAX_LENGTH } from '@/utils/Consts';
 import './scrollbar.css';
 
 interface DataViewerOptionsProps {
@@ -64,7 +65,7 @@ function DataViewerOptions({
   };
 
   return (
-    <div className="w-96 flex-shrink-0 pl-6">
+    <div className="w-[420px] flex-shrink-0">
       <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm h-fit">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg text-gray-900 dark:text-white flex items-center gap-2">
@@ -87,14 +88,22 @@ function DataViewerOptions({
               placeholder="Enter a name for your dataset..."
               value={datasetName}
               onChange={e => setDatasetName(e.target.value)}
+              maxLength={DATASET_NAME_MAX_LENGTH}
               className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 border-gray-300 dark:border-gray-600"
               disabled={isUploading}
             />
-            {!datasetName.trim() && (
-              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                Please enter a name before creating the dataset
+            <div className="flex justify-between items-center mt-1">
+              {!datasetName.trim() && (
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Please enter a name before creating the dataset
+                </p>
+              )}
+              <p
+                className={`text-xs ml-auto ${datasetName.length > DATASET_NAME_MAX_LENGTH * 0.8 ? 'text-orange-500' : 'text-gray-400'}`}
+              >
+                {datasetName.length}/{DATASET_NAME_MAX_LENGTH}
               </p>
-            )}
+            </div>
           </div>
 
           {/* Description Input */}
@@ -110,9 +119,15 @@ function DataViewerOptions({
               placeholder="Enter a description for your dataset..."
               value={description}
               onChange={e => setDescription(e.target.value)}
+              maxLength={DATASET_DESCRIPTION_MAX_LENGTH}
               className="w-full px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg resize-none h-20 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 custom-scrollbar"
               disabled={isUploading}
             />
+            <p
+              className={`text-xs text-right mt-1 ${description.length > DATASET_DESCRIPTION_MAX_LENGTH * 0.8 ? 'text-orange-500' : 'text-gray-400'}`}
+            >
+              {description.length}/{DATASET_DESCRIPTION_MAX_LENGTH}
+            </p>
           </div>
 
           {/* Delimiter Selector */}

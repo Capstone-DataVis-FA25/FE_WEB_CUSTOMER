@@ -16,9 +16,9 @@ function DataViewer({
   onNumberFormatChange,
 }: DataViewerProps) {
   // Get states from context
-      const { parsedData } = useDataset();
+  const { parsedData } = useDataset();
   return (
-    <div className="flex gap-6">
+    <div className="flex gap-6 p-6">
       {/* Left Sidebar - Options */}
       <DataViewerOptions
         onUpload={onUpload}
@@ -28,7 +28,7 @@ function DataViewer({
       />
 
       {/* Main Content - Takes remaining width */}
-      <div className="flex-1 pr-6">
+      <div className="flex-1 min-w-0">
         <DataViewerContent data={parsedData?.data || null} />
       </div>
     </div>

@@ -73,6 +73,11 @@ export const parseTabularContent = (
 
   const result = Papa.parse(text, config);
 
+  // Validate that we have data beyond just headers
+  if (result.data.length <= 1) {
+    throw new Error('dataset_cannotParse');
+  }
+
   // Normalize all rows to have the same length as the header (first row)
   if (result.data.length > 0) {
     const headerLength = result.data[0].length;
@@ -101,15 +106,12 @@ export const processFileContent = async (
   options: FileProcessingOptions = {}
 ): Promise<Papa.ParseResult<string[]>> => {
   if (!isValidFileType(file)) {
-    throw new Error(`File type ${file.type || 'unknown'} is not supported.`);
+    throw new Error(`dataset_unsupportedFileType:${file.type || 'unknown'}`);
   }
 
-  try {
-    const textContent = await file.text();
-    return parseTabularContent(textContent, file, options);
-  } catch (error) {
-    throw new Error(`Failed to process file: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  const textContent = await file.text();
+  return parseTabularContent(textContent, file, options);
+
 };
 
 /**

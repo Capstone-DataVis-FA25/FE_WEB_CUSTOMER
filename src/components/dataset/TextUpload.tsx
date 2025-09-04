@@ -67,7 +67,7 @@ Tom Wilson,42,Tokyo,"5,678.95",Japan`;
                   id="textContent"
                   value={originalTextContent}
                   onChange={e => setOriginalTextContent(e.target.value)}
-                  placeholder='Name,Age,City,Salary,Country&#10;John Doe,28,New York,"1,234.56",USA&#10;Jane Smith,34,London,"2,890.75",UK&#10;Mike Johnson,45,Toronto,"3,567.90",Canada'
+                  placeholder='Name,Age,City,Salary,Country&#10;John Doe,28,New York,"1,234.56",USA&#10;Jane Smith,34,London,"2,890.75",UK&#10;Mike Johnson,45,Toronto,"3,567.90",Canada&#10;Sarah Williams,29,Sydney,"1,987.25",Australia&#10;David Brown,38,Berlin,"4,123.80",Germany&#10;Lisa Garcia,31,Madrid,"2,456.40",Spain&#10;Tom Wilson,42,Tokyo,"5,678.95",Japan'
                   className="w-full min-h-[300px] p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl font-mono text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y focus:border-blue-200 dark:focus:border-blue-800 focus:outline-none"
                   disabled={isProcessing}
                 />
