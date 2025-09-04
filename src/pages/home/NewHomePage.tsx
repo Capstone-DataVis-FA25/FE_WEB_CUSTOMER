@@ -36,18 +36,20 @@ import D3TableChart from '@/components/charts/page.example/home_chart_sample/D3T
 import { datasets } from '@/components/charts/data/data';
 import Lottie from 'lottie-react';
 import ChartAnimationData from '../../assets/lottie/line-chart.json';
+import BannerVideo from '../../assets/videos/video_demo.mp4';
+import { useTranslation } from 'react-i18next';
 
 const NewHomePage: React.FC = () => {
   const [selectedChart, setSelectedChart] = useState<string>('bar');
+  const { t } = useTranslation();
 
   // Chart types data
   const chartTypes = [
     {
       id: 'bar',
       icon: BarChart3,
-      title: 'Bar Chart',
-      description:
-        'The classic bar chart — unbeaten in simplicity, and more readable than a column chart on mobile screens.',
+      title: t('home_barChart_title'),
+      description: t('home_barChart_desc'),
       color: 'bg-blue-500',
       dataKey: 'sales',
       component: D3BarChart,
@@ -60,9 +62,8 @@ const NewHomePage: React.FC = () => {
     {
       id: 'line',
       icon: LineChart,
-      title: 'Line Chart',
-      description:
-        'Perfect for showing trends over time. Connect data points to show how values change.',
+      title: t('home_lineChart_title'),
+      description: t('home_lineChart_desc'),
       color: 'bg-green-500',
       dataKey: 'quarterly',
       component: D3LineChart,
@@ -75,9 +76,8 @@ const NewHomePage: React.FC = () => {
     {
       id: 'pie',
       icon: PieChart,
-      title: 'Pie Chart',
-      description:
-        'Show parts of a whole with this classic circular chart. Best for simple proportions.',
+      title: t('home_pieChart_title'),
+      description: t('home_pieChart_desc'),
       color: 'bg-purple-500',
       dataKey: 'pie',
       component: D3PieChart,
@@ -89,8 +89,8 @@ const NewHomePage: React.FC = () => {
     {
       id: 'scatter',
       icon: ScatterChart,
-      title: 'Scatter Plot',
-      description: 'Explore relationships between two variables. Great for correlation analysis.',
+      title: t('home_scatterChart_title'),
+      description: t('home_scatterChart_desc'),
       color: 'bg-orange-500',
       dataKey: 'scatter',
       component: D3ScatterPlot,
@@ -101,9 +101,8 @@ const NewHomePage: React.FC = () => {
     {
       id: 'area',
       icon: AreaChart,
-      title: 'Area Chart',
-      description:
-        'Like line charts, but with filled areas. Perfect for showing quantities over time.',
+      title: t('home_areaChart_title'),
+      description: t('home_areaChart_desc'),
       color: 'bg-teal-500',
       dataKey: 'area',
       component: D3AreaChart,
@@ -116,9 +115,8 @@ const NewHomePage: React.FC = () => {
     {
       id: 'map',
       icon: Map,
-      title: 'Maps',
-      description:
-        'Visualize geographic data with interactive maps. Show regional differences clearly.',
+      title: t('home_mapChart_title'),
+      description: t('home_mapChart_desc'),
       color: 'bg-red-500',
       dataKey: 'map',
       component: D3MapChart,
@@ -129,9 +127,8 @@ const NewHomePage: React.FC = () => {
     {
       id: 'table',
       icon: Table2,
-      title: 'Tables',
-      description:
-        'Sometimes the best visualization is a well-designed table. Sort and search enabled.',
+      title: t('home_tableChart_title'),
+      description: t('home_tableChart_desc'),
       color: 'bg-indigo-500',
       dataKey: 'table',
       component: D3TableChart,
@@ -144,8 +141,8 @@ const NewHomePage: React.FC = () => {
     {
       id: 'trend',
       icon: TrendingUp,
-      title: 'Trend Chart',
-      description: 'Highlight trends and patterns in your data with advanced trend analysis.',
+      title: t('home_trendChart_title'),
+      description: t('home_trendChart_desc'),
       color: 'bg-pink-500',
       dataKey: 'trend',
       component: D3TrendChart,
@@ -358,76 +355,65 @@ const NewHomePage: React.FC = () => {
   const features = [
     {
       icon: Sparkles,
-      title: 'Unlimited Visualizations',
-      description:
-        "Even with the free plan, there's no limit to the number of charts, maps, and tables you can create.",
+      title: t('home_feature_unlimited_title'),
+      description: t('home_feature_unlimited_desc'),
     },
     {
       icon: Palette,
-      title: 'Comes in Your Design',
-      description:
-        "Send us your style guide and we'll create a custom design theme for your brand, 100% white-labeled.",
+      title: t('home_feature_design_title'),
+      description: t('home_feature_design_desc'),
     },
     {
       icon: Shield,
-      title: 'Private by Default',
-      description:
-        'No matter which plan you choose, all your visualizations and data are private until you hit the "Publish" button.',
+      title: t('home_feature_private_title'),
+      description: t('home_feature_private_desc'),
     },
     {
       icon: Smartphone,
-      title: 'Responsive',
-      description:
-        'On desktop devices, tablets, or smartphones — visualizations are beautiful and readable everywhere.',
+      title: t('home_feature_responsive_title'),
+      description: t('home_feature_responsive_desc'),
     },
     {
       icon: Users,
-      title: 'Collaborate in Teams',
-      description:
-        'Make use of shared folders, integrations, and admin permissions to see what your team is creating.',
+      title: t('home_feature_team_title'),
+      description: t('home_feature_team_desc'),
     },
     {
       icon: Zap,
-      title: 'Automate Chart Creation',
-      description:
-        'Create, update, and export visualizations without a single click, using our state-of-the-art API.',
+      title: t('home_feature_automate_title'),
+      description: t('home_feature_automate_desc'),
     },
     {
       icon: Target,
-      title: 'Works for Big Audiences',
-      description:
-        'Visualizations scale to the largest audiences and support even millions of viewers.',
+      title: t('home_feature_audience_title'),
+      description: t('home_feature_audience_desc'),
     },
     {
       icon: Download,
-      title: 'PNG, SVG, PDF Export',
-      description:
-        'Export every visualization as PNG, SVG, or PDF and continue working with tools like Adobe Illustrator.',
+      title: t('home_feature_export_title'),
+      description: t('home_feature_export_desc'),
     },
   ];
 
   // Success stories
   const successStories = [
     {
-      company: 'The New York Times',
-      description:
-        'Leading publication using our platform for daily data journalism and breaking news visualization.',
+      company: t('home_story_nyt_company'),
+      description: t('home_story_nyt_desc'),
       logo: '/api/placeholder/120/60',
-      case: 'Election Coverage 2024',
+      case: t('home_story_nyt_case'),
     },
     {
-      company: 'WIRED Magazine',
-      description:
-        'Tech magazine explaining complex topics with custom dark themes and interactive charts.',
+      company: t('home_story_wired_company'),
+      description: t('home_story_wired_desc'),
       logo: '/api/placeholder/120/60',
-      case: 'Tech Stock Analysis',
+      case: t('home_story_wired_case'),
     },
     {
-      company: 'Brennan Center',
-      description:
-        'Nonpartisan law institute presenting policy facts with clear, accessible visualizations.',
+      company: t('home_story_brennan_company'),
+      description: t('home_story_brennan_desc'),
       logo: '/api/placeholder/120/60',
-      case: 'Policy Impact Studies',
+      case: t('home_story_brennan_case'),
     },
   ];
 
@@ -517,10 +503,10 @@ const NewHomePage: React.FC = () => {
         <div className="container mx-auto px-4">
           <motion.div variants={fadeVariants} className="text-center mb-16">
             <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
-              Responsive & easy-to-use chart types for every need
+              {t('home_chartTypes_title')}
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Select a chart type to see what it can do
+              {t('home_chartTypes_desc')}
             </p>
           </motion.div>
 
@@ -626,10 +612,10 @@ const NewHomePage: React.FC = () => {
         <div className="container mx-auto px-4">
           <motion.div variants={fadeVariants} className="text-center mb-16">
             <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
-              More than static charts: responsive, customizable and live-updating
+              {t('home_features_title')}
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Here's what will make your life easier
+              {t('home_features_desc')}
             </p>
           </motion.div>
 
@@ -654,6 +640,62 @@ const NewHomePage: React.FC = () => {
         </div>
       </motion.section>
 
+      <section className="py-20 lg:py-32">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+            <div className="rounded-4xl  flex items-center justify-center w-full h-full">
+              <video
+                src={BannerVideo}
+                className="w-full h-full object-cover rounded-4xl"
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+            </div>
+            <div className="flex items-center justify-center h-full">
+              <div className="rounded-2xl flex flex-col justify-center h-full">
+                <h2 className="text-3xl lg:text-5xl font-bold text-light mb-6">
+                  Your data, fully interactive
+                </h2>
+                <p className="text-xl lg:text-2xl text-muted-foreground mb-8 max-w-3xl leading-relaxed">
+                  Transform raw data into interactive visualizations that are as sleek as they are
+                  engaging. Say goodbye to static charts and let your audience explore, connect, and
+                  truly understand your story.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 lg:py-32">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+            <div className="rounded-2xl flex flex-col justify-center h-full">
+              <h2 className="text-3xl lg:text-5xl font-bold text-light mb-6">
+                {t('home_share_title')}
+              </h2>
+              <p className="text-xl lg:text-2xl text-muted-foreground mb-8 max-w-3xl leading-relaxed">
+                {t('home_share_desc')}
+              </p>
+            </div>
+            <div className="flex items-center justify-center h-full">
+              <div className="rounded-4xl  flex items-center justify-center w-full h-full">
+                <video
+                  src={BannerVideo}
+                  className="w-full h-full object-cover rounded-4xl"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Success Stories */}
       <motion.section
         variants={containerVariants}
@@ -665,10 +707,10 @@ const NewHomePage: React.FC = () => {
         <div className="container mx-auto px-4">
           <motion.div variants={fadeVariants} className="text-center mb-16">
             <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
-              You're in good company
+              {t('home_stories_title')}
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Leading publications like The New York Times and WIRED build charts with DataVis.
+              {t('home_stories_desc')}
             </p>
           </motion.div>
 
@@ -707,9 +749,9 @@ const NewHomePage: React.FC = () => {
         <div className="container mx-auto px-4">
           <motion.div variants={fadeVariants} className="text-center mb-16">
             <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
-              Need help creating DataVis charts?
+              {t('home_help_title')}
             </h2>
-            <p className="text-xl text-muted-foreground">We're here for you.</p>
+            <p className="text-xl text-muted-foreground">{t('home_help_desc')}</p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -719,14 +761,13 @@ const NewHomePage: React.FC = () => {
                   <div className="w-16 h-16 bg-blue-500/10 rounded-lg flex items-center justify-center mx-auto mb-6">
                     <BookOpen className="w-8 h-8 text-blue-500" />
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-4">Visit our Academy</h3>
-                  <p className="text-muted-foreground mb-6">
-                    Over 250+ Academy articles explain how to create each chart type, step by step.
-                    Plus: how to upload data, embed charts, and more.
-                  </p>
+                  <h3 className="text-xl font-semibold text-foreground mb-4">
+                    {t('home_help_academy_title')}
+                  </h3>
+                  <p className="text-muted-foreground mb-6">{t('home_help_academy_desc')}</p>
                   <Button className="group">
                     <BookOpen className="w-4 h-4 mr-2" />
-                    Browse Academy
+                    {t('home_help_academy_btn')}
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </CardContent>
@@ -739,14 +780,13 @@ const NewHomePage: React.FC = () => {
                   <div className="w-16 h-16 bg-green-500/10 rounded-lg flex items-center justify-center mx-auto mb-6">
                     <HeadphonesIcon className="w-8 h-8 text-green-500" />
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-4">Contact Support</h3>
-                  <p className="text-muted-foreground mb-6">
-                    If you still have questions after consulting our Academy, do write us! Our
-                    customer happiness team will be back in touch as quickly as possible.
-                  </p>
+                  <h3 className="text-xl font-semibold text-foreground mb-4">
+                    {t('home_help_support_title')}
+                  </h3>
+                  <p className="text-muted-foreground mb-6">{t('home_help_support_desc')}</p>
                   <Button variant="outline" className="group">
                     <HeadphonesIcon className="w-4 h-4 mr-2" />
-                    Get Support
+                    {t('home_help_support_btn')}
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </CardContent>
@@ -770,17 +810,15 @@ const NewHomePage: React.FC = () => {
               <CardContent className="p-12 text-center relative z-10">
                 <motion.div variants={fadeVariants}>
                   <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
-                    Try it for yourself, without signing up
+                    {t('home_cta_title')}
                   </h2>
-                  <p className="text-xl text-muted-foreground mb-8">
-                    No data? You can use our sample data.
-                  </p>
+                  <p className="text-xl text-muted-foreground mb-8">{t('home_cta_desc')}</p>
                   <Button
                     size="lg"
                     className="text-lg px-12 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group"
                   >
                     <Play className="w-6 h-6 mr-2 group-hover:scale-110 transition-transform" />
-                    Create a Chart
+                    {t('home_cta_btn')}
                     <ArrowRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </motion.div>
