@@ -1,24 +1,24 @@
-import { useState, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { SlideInUp } from '@/theme/animation';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { useToastContext } from '@/components/providers/ToastProvider';
-import FileUpload from '@/components/dataset/FileUpload';
 import DataViewer from '@/components/dataset/DataViewer';
+import FileUpload from '@/components/dataset/FileUpload';
+import SampleDataUpload from '@/components/dataset/SampleDataUpload';
 import TextUpload from '@/components/dataset/TextUpload';
 import UploadMethodNavigation from '@/components/dataset/UploadMethodNavigation';
-import { DatasetUploadProvider, useDatasetUpload } from '@/contexts/DatasetUploadContext';
+import { useToastContext } from '@/components/providers/ToastProvider';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
+import { axiosPrivate } from '@/services/axios';
+import { SlideInUp } from '@/theme/animation';
 import {
-  processFileContent,
-  parseTabularContent,
-  validateFileSize,
   isValidFileType,
   MAX_FILE_SIZE,
+  parseTabularContent,
+  processFileContent,
+  validateFileSize,
 } from '@/utils/fileProcessors';
-import type Papa from 'papaparse';
-import { axiosPrivate } from '@/services/axios';
+import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-type ViewMode = 'upload' | 'textUpload' | 'view';
+type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view';
 
 // Inner component that uses the context
 function CreateDatasetPageContent() {
@@ -26,20 +26,28 @@ function CreateDatasetPageContent() {
   const { showSuccess, showError, showWarning } = useToastContext();
 
   // Get states from context
-  const {
-    originalTextContent,
-    setOriginalTextContent,
-    parsedData,
-    setParsedData,
-    isUploading,
-    setIsUploading,
-  } = useDatasetUpload();
+  const { originalTextContent, setOriginalTextContent, parsedData, setParsedData, setIsUploading } =
+    useDataset();
 
   // Local state management (non-shareable states)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('upload');
+  const [previousViewMode, setPreviousViewMode] = useState<ViewMode>('upload');
   const [numberFormat, setNumberFormat] = useState({ thousands: ',', decimal: '.' });
+
+  // Handle switching between upload methods; clear transient inputs
+  const handleViewModeChange = useCallback(
+    (mode: ViewMode) => {
+      if (mode !== 'view') {
+        setOriginalTextContent('');
+        setParsedData(null);
+        setSelectedFile(null);
+      }
+      setViewMode(mode);
+    },
+    [setOriginalTextContent]
+  );
 
   // Process file content and switch to view mode
   const processAndViewFile = useCallback(
@@ -55,6 +63,7 @@ function CreateDatasetPageContent() {
         await new Promise(resolve => setTimeout(resolve, 1000));
         setParsedData(result);
         console.log(result);
+        setPreviousViewMode(viewMode);
         setViewMode('view');
       } catch (error) {
         showError(
@@ -65,7 +74,7 @@ function CreateDatasetPageContent() {
         setIsProcessing(false);
       }
     },
-    [showError, t]
+    [showError, t, viewMode]
   );
 
   // Handle file selection and validation
@@ -149,9 +158,8 @@ function CreateDatasetPageContent() {
   const handleChangeData = useCallback(() => {
     setSelectedFile(null);
     setParsedData(null);
-    setOriginalTextContent('');
-    setViewMode('upload');
-  }, []);
+    setViewMode(previousViewMode);
+  }, [previousViewMode]);
 
   // Handle text processing
   const handleTextProcess = useCallback(
@@ -159,17 +167,15 @@ function CreateDatasetPageContent() {
       setOriginalTextContent(content);
       // Parse the text content as CSV data
       try {
-        const result = parseTabularContent(
-          content,
-          new File([content], 'text.csv', { type: 'text/csv' })
-        );
+        const result = parseTabularContent(content);
         setParsedData(result);
+        setPreviousViewMode(viewMode);
         setViewMode('view');
       } catch (error) {
         showError('Parse Error', 'Failed to parse the text content');
       }
     },
-    [showError]
+    [showError, viewMode]
   );
 
   // Handle delimiter change - reparse the original content with new delimiter
@@ -178,11 +184,7 @@ function CreateDatasetPageContent() {
       if (!originalTextContent) return;
 
       try {
-        const result = parseTabularContent(
-          originalTextContent,
-          new File([originalTextContent], 'data.csv', { type: 'text/csv' }),
-          { delimiter }
-        );
+        const result = parseTabularContent(originalTextContent, undefined, { delimiter });
         setParsedData(result);
       } catch (error) {
         showError('Parse Error', 'Failed to parse with the selected delimiter');
@@ -221,7 +223,7 @@ function CreateDatasetPageContent() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex gap-6 items-start">
             {/* Left Navigation Component */}
-            <UploadMethodNavigation viewMode={viewMode} onViewModeChange={setViewMode} />
+            <UploadMethodNavigation viewMode={viewMode} onViewModeChange={handleViewModeChange} />
 
             {/* Main Content */}
             <div className="flex-1">
@@ -235,9 +237,13 @@ function CreateDatasetPageContent() {
                     isProcessing={false}
                   />
                 </SlideInUp>
-              ) : (
+              ) : viewMode === 'textUpload' ? (
                 <SlideInUp key="text-upload" delay={0.2}>
-                  <TextUpload onTextProcess={handleTextProcess} isProcessing={false} />
+                  <TextUpload onTextProcess={handleTextProcess} isProcessing={isProcessing} />
+                </SlideInUp>
+              ) : (
+                <SlideInUp key="sample-data" delay={0.2}>
+                  <SampleDataUpload onSampleSelect={handleTextProcess} />
                 </SlideInUp>
               )}
             </div>
@@ -251,9 +257,9 @@ function CreateDatasetPageContent() {
 // Main component with provider wrapper
 function CreateDatasetPage() {
   return (
-    <DatasetUploadProvider>
+    <DatasetProvider>
       <CreateDatasetPageContent />
-    </DatasetUploadProvider>
+    </DatasetProvider>
   );
 }
 

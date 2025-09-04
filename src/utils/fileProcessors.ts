@@ -54,10 +54,10 @@ export const getFileDelimiter = (file: File): string => {
  */
 export const parseTabularContent = (
   text: string,
-  file: File,
+  file?: File,
   options: FileProcessingOptions = {}
 ): Papa.ParseResult<string[]> => {
-  const delimiter = options.delimiter || getFileDelimiter(file);
+  const delimiter = options.delimiter || (file ? getFileDelimiter(file) : ',');
 
   const config: Papa.ParseConfig = {
     delimiter: delimiter,

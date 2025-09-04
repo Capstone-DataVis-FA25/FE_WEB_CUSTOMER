@@ -1,6 +1,6 @@
 import DataViewerOptions from './DataViewerOptions';
 import DataViewerContent from './DataViewerContent';
-import { useDatasetUpload } from '@/contexts/DatasetUploadContext';
+import { useDataset } from '@/contexts/DatasetContext';
 
 interface DataViewerProps {
   onUpload: (name: string, description?: string) => void;
@@ -16,7 +16,7 @@ function DataViewer({
   onNumberFormatChange,
 }: DataViewerProps) {
   // Get states from context
-  const { parsedData } = useDatasetUpload();
+      const { parsedData } = useDataset();
   return (
     <div className="flex gap-6">
       {/* Left Sidebar - Options */}

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { FileText, Upload } from 'lucide-react';
 import { FadeIn } from '@/theme/animation';
-import { useDatasetUpload } from '@/contexts/DatasetUploadContext';
+import { useDataset } from '@/contexts/DatasetContext';
 
 interface TextUploadProps {
   onTextProcess: (textContent: string) => void;
@@ -14,7 +14,7 @@ interface TextUploadProps {
 
 function TextUpload({ onTextProcess, isProcessing = false }: TextUploadProps) {
   const { t: _t } = useTranslation();
-  const { originalTextContent, setOriginalTextContent } = useDatasetUpload();
+  const { originalTextContent, setOriginalTextContent } = useDataset();
 
   const handleProcess = () => {
     if (!originalTextContent.trim()) {
@@ -68,7 +68,7 @@ Tom Wilson,42,Tokyo,"5,678.95",Japan`;
                   value={originalTextContent}
                   onChange={e => setOriginalTextContent(e.target.value)}
                   placeholder='Name,Age,City,Salary,Country&#10;John Doe,28,New York,"1,234.56",USA&#10;Jane Smith,34,London,"2,890.75",UK&#10;Mike Johnson,45,Toronto,"3,567.90",Canada'
-                  className="w-full min-h-[300px] p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl font-mono text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all duration-200"
+                  className="w-full min-h-[300px] p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl font-mono text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y focus:border-blue-200 dark:focus:border-blue-800 focus:outline-none"
                   disabled={isProcessing}
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">

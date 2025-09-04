@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Upload, RefreshCw, Settings } from 'lucide-react';
 import DelimiterSelector from './DelimiterSelector';
 import { NumberFormatSelector } from './NumberFormatSelector';
-import { useDatasetUpload } from '@/contexts/DatasetUploadContext';
+import { useDataset } from '@/contexts/DatasetContext';
 import './scrollbar.css';
 
 interface DataViewerOptionsProps {
@@ -35,7 +35,7 @@ function DataViewerOptions({
     numberFormat,
     setNumberFormat,
     isUploading,
-  } = useDatasetUpload();
+  } = useDataset();
 
   const handleUpload = () => {
     if (!datasetName.trim()) {
