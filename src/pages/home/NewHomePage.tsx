@@ -644,7 +644,8 @@ const NewHomePage: React.FC = () => {
       <section className="py-20 lg:py-32">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-            <div className="rounded-4xl  flex items-center justify-center w-full h-full">
+            <div className="rounded-4xl flex items-center justify-center w-full h-full">
+              {/* Animation added next to video */}
               <video
                 src={CreateDemoVideo}
                 className="w-full h-full object-cover rounded-4xl"
@@ -653,16 +654,17 @@ const NewHomePage: React.FC = () => {
                 muted
                 playsInline
               />
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                <Lottie animationData={ChartAnimationData} loop={true} className="w-40 h-40" />
+              </div>
             </div>
             <div className="flex items-center justify-center h-full">
               <div className="rounded-2xl flex flex-col justify-center h-full">
                 <h2 className="text-3xl lg:text-5xl font-bold text-light mb-6">
-                  Your data, fully interactive
+                  {t('home_interactive_title')}
                 </h2>
                 <p className="text-xl lg:text-2xl text-muted-foreground mb-8 max-w-3xl leading-relaxed">
-                  Transform raw data into interactive visualizations that are as sleek as they are
-                  engaging. Say goodbye to static charts and let your audience explore, connect, and
-                  truly understand your story.
+                  {t('home_interactive_desc')}
                 </p>
               </div>
             </div>
