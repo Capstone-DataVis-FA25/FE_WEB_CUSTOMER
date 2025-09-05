@@ -15,7 +15,6 @@ import {
   isValidFileType,
   MAX_FILE_SIZE,
 } from '@/utils/fileProcessors';
-import type Papa from 'papaparse';
 import { axiosPrivate } from '@/services/axios';
 
 type ViewMode = 'upload' | 'textUpload' | 'view';

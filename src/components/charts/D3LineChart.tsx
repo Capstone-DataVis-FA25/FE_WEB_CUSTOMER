@@ -1,13 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
+import { convertArrayToChartData } from '@/utils/dataConverter';
 
 export interface ChartDataPoint {
   [key: string]: number | string;
 }
 
 export interface D3LineChartProps {
-  data: ChartDataPoint[];
+  data?: ChartDataPoint[];
+  arrayData?: (string | number)[][]; // New prop for array data
   width?: number;
   height?: number;
   margin?: { top: number; right: number; bottom: number; left: number };
@@ -41,6 +43,7 @@ export const defaultColors: Record<string, { light: string; dark: string }> = {
 
 const D3LineChart: React.FC<D3LineChartProps> = ({
   data,
+  arrayData,
   width = 800,
   height = 600, // Reduced from 500 to 400 for better proportions
   margin = { top: 20, right: 40, bottom: 60, left: 80 }, // Increased left margin for better Y-axis spacing
@@ -65,6 +68,15 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [dimensions, setDimensions] = React.useState({ width, height });
   const { t } = useTranslation();
+
+  // Convert arrayData to ChartDataPoint[] if provided
+  const processedData = React.useMemo((): ChartDataPoint[] => {
+    if (arrayData && arrayData.length > 0) {
+      return convertArrayToChartData(arrayData);
+    }
+    
+    return data || [];
+  }, [data, arrayData]);
 
   // Monitor container size for responsiveness
   useEffect(() => {
@@ -119,7 +131,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!svgRef.current || !data.length) return;
+    if (!svgRef.current || !processedData.length) return;
 
     // Use responsive dimensions
     const currentWidth = dimensions.width;
@@ -188,10 +200,10 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     // Scales
     const xScale = d3
       .scaleLinear()
-      .domain(d3.extent(data, d => d[xAxisKey] as number) as [number, number])
+      .domain(d3.extent(processedData, d => d[xAxisKey] as number) as [number, number])
       .range([0, innerWidth]);
 
-    const allYValues = data.flatMap(d => yAxisKeys.map(key => d[key] as number));
+    const allYValues = processedData.flatMap(d => yAxisKeys.map(key => d[key] as number));
 
     const yScale = d3
       .scaleLinear()
@@ -307,7 +319,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       // Add the line path
       const path = g
         .append('path')
-        .datum(data)
+        .datum(processedData)
         .attr('fill', 'none')
         .attr('stroke', currentColors[key])
         .attr('stroke-width', currentWidth < 768 ? 2 : 3)
@@ -335,7 +347,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       // Add data points
       if (showPoints) {
         g.selectAll(`.point-${index}`)
-          .data(data)
+          .data(processedData)
           .enter()
           .append('circle')
           .attr('class', `point-${index}`)
@@ -432,7 +444,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .text(yAxisLabel);
     }
   }, [
-    data,
+    processedData,
     margin,
     xAxisKey,
     yAxisKeys,
