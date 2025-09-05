@@ -27,7 +27,7 @@ export const DELIMITER_OPTIONS = [
 ];
 
 export interface FileProcessingOptions {
-  delimiter?: string;
+  delimiter: string; // Make delimiter required
   encoding?: string;
   skipEmptyLines?: boolean;
   trimValues?: boolean;
@@ -50,14 +50,102 @@ export const getFileDelimiter = (file: File): string => {
 };
 
 /**
+ * Handle duplicate headers by adding numeric suffixes
+ * @param headers - Array of header names
+ * @returns Array of unique header names with suffixes
+ */
+const handleDuplicateHeaders = (headers: string[]): string[] => {
+  const headerCounts = new Map<string, number>();
+  const processedHeaders: string[] = [];
+
+  for (const header of headers) {
+    const trimmedHeader = header.trim();
+    const count = headerCounts.get(trimmedHeader) || 0;
+
+    if (count === 0) {
+      // First occurrence, use as is
+      processedHeaders.push(trimmedHeader);
+      headerCounts.set(trimmedHeader, 1);
+    } else {
+      // Duplicate, add suffix
+      const newHeader = `${trimmedHeader}_${count}`;
+      processedHeaders.push(newHeader);
+      headerCounts.set(trimmedHeader, count + 1);
+    }
+  }
+
+  return processedHeaders;
+};
+
+/**
+ * Smart delimiter detector that analyzes the header row
+ * @param text - The text content to analyze
+ * @param candidates - Array of delimiter candidates to test
+ * @returns The best delimiter string
+ */
+export const detectDelimiter = (
+  text: string,
+  candidates: string[] = [',', '\t', ';', '|']
+): string => {
+  // Split into lines and find the first non-empty, non-comment line
+  const lines = text.split('\n');
+  let headerLine = '';
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('//')) {
+      headerLine = trimmed;
+      break;
+    }
+  }
+
+  if (!headerLine) {
+    // Fallback to comma if no valid header found
+    return ',';
+  }
+
+  // Count occurrences of each delimiter in the header
+  const counts: Record<string, number> = {};
+  for (const delimiter of candidates) {
+    counts[delimiter] = (headerLine.match(new RegExp(`\\${delimiter}`, 'g')) || []).length;
+  }
+
+  // Find delimiter with highest count
+  let maxCount = -1;
+  let bestDelimiter = ',';
+
+  for (const delimiter of candidates) {
+    if (counts[delimiter] > maxCount) {
+      maxCount = counts[delimiter];
+      bestDelimiter = delimiter;
+    }
+  }
+
+  // Check for ties and resolve using priority order
+  const tied = candidates.filter(d => counts[d] === maxCount);
+
+  if (tied.length > 1) {
+    for (const delimiter of [',', '\t', ';', '|']) {
+      if (tied.includes(delimiter)) {
+        bestDelimiter = delimiter;
+        break;
+      }
+    }
+  }
+
+
+  return bestDelimiter;
+};
+
+
+/**
  * Parse tabular data from text content using Papa Parse
  */
 export const parseTabularContent = (
   text: string,
-  file?: File,
-  options: FileProcessingOptions = {}
+  options: FileProcessingOptions
 ): Papa.ParseResult<string[]> => {
-  const delimiter = options.delimiter || (file ? getFileDelimiter(file) : ',');
+  const delimiter = options.delimiter;
 
   const config: Papa.ParseConfig = {
     delimiter: delimiter,
@@ -92,6 +180,9 @@ export const parseTabularContent = (
       // Row is exactly the right length
       return row;
     });
+
+    // Handle duplicate headers in the first row
+    result.data[0] = handleDuplicateHeaders(result.data[0]);
   }
 
   return result;
@@ -103,15 +194,14 @@ export const parseTabularContent = (
  */
 export const processFileContent = async (
   file: File,
-  options: FileProcessingOptions = {}
+  options: FileProcessingOptions
 ): Promise<Papa.ParseResult<string[]>> => {
   if (!isValidFileType(file)) {
     throw new Error(`dataset_unsupportedFileType:${file.type || 'unknown'}`);
   }
 
   const textContent = await file.text();
-  return parseTabularContent(textContent, file, options);
-
+  return parseTabularContent(textContent, options);
 };
 
 /**
@@ -129,6 +219,64 @@ export const isValidFileType = (file: File): boolean => {
     ALLOWED_TYPES.includes(file.type) ||
     ALLOWED_EXTENSIONS.some(ext => file.name.toLowerCase().endsWith(ext))
   );
+};
+
+/**
+ * Transforms data from wide format to long format (melt operation)
+ * @param data - 2D array of data with headers in first row
+ * @param transformationColumn - Column name to use as identifier
+ * @returns Transformed data in long format
+ */
+export const transformWideToLong = (
+  data: string[][],
+  transformationColumn: string
+): string[][] => {
+  if (!data || data.length === 0) return data;
+
+  const headers = data[0];
+  const columnIndex = headers?.indexOf(transformationColumn);
+  if (columnIndex === undefined || columnIndex < 0) return data;
+
+  // Get all other columns (excluding the selected transformation column)
+  const otherColumns = headers.filter((_, index) => index !== columnIndex);
+
+  // Create new headers: [selectedColumn, 'variable', 'value']
+  const transformed: string[][] = [];
+  transformed.push([transformationColumn, 'variable', 'value']);
+
+  // Process each data row
+  for (let i = 1; i < data.length; i += 1) {
+    const row = data[i] || [];
+    const idValue = (row[columnIndex] ?? '').toString();
+
+    // For each other column, create a new row
+    for (let j = 0; j < otherColumns.length; j += 1) {
+      const otherColumnIndex = headers.indexOf(otherColumns[j]);
+      const cellValue = (row[otherColumnIndex] ?? '').toString();
+      transformed.push([idValue, otherColumns[j], cellValue]);
+    }
+  }
+
+  return transformed;
+};
+
+/**
+ * Extract original headers from text content using specified delimiter
+ * @param textContent - Original text content
+ * @param delimiter - Delimiter to use for parsing
+ * @returns Array of header names
+ */
+export const getOriginalHeaders = (
+  textContent: string,
+  delimiter: string
+): string[] => {
+  if (!textContent) return [];
+  try {
+    const result = parseTabularContent(textContent, { delimiter });
+    return result.data?.[0] || [];
+  } catch {
+    return [];
+  }
 };
 
 

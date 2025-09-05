@@ -11,6 +11,7 @@ import { SlideInUp } from '@/theme/animation';
 import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
 import {
   getFileDelimiter,
+  detectDelimiter,
   isValidFileType,
   MAX_FILE_SIZE,
   parseTabularContent,
@@ -36,6 +37,8 @@ function CreateDatasetPageContent() {
     setIsUploading,
     setSelectedDelimiter,
     resetState,
+    datasetName,
+    description,
   } = useDataset();
 
   // Local state management (non-shareable states)
@@ -71,7 +74,7 @@ function CreateDatasetPageContent() {
         setSelectedDelimiter(detectedDelimiter);
 
         // Then process it
-        const result = await processFileContent(file);
+        const result = await processFileContent(file, { delimiter: detectedDelimiter });
         await new Promise(resolve => setTimeout(resolve, 1000));
         setParsedData(result);
         console.log(result);
@@ -121,69 +124,69 @@ function CreateDatasetPageContent() {
   }, []);
 
   // Handle file upload (create dataset)
-  const handleFileUpload = useCallback(
-    async (name: string, description?: string) => {
-      if (!parsedData) {
-        showWarning('No Data Available', 'Please select a file or enter text data first');
-        return;
-      }
+  const handleFileUpload = useCallback(async () => {
+    if (!parsedData) {
+      showWarning('No Data Available', 'Please select a file or enter text data first');
+      return;
+    }
 
-      if (!name.trim()) {
-        showWarning('Dataset Name Required', 'Please enter a name for your dataset');
-        return;
-      }
+    if (!datasetName.trim()) {
+      showWarning('Dataset Name Required', 'Please enter a name for your dataset');
+      return;
+    }
 
-      if (name.length > DATASET_NAME_MAX_LENGTH) {
-        showWarning(
-          t('dataset_nameTooLong'),
-          t('dataset_nameTooLongMessage', { maxLength: DATASET_NAME_MAX_LENGTH })
+    if (datasetName.length > DATASET_NAME_MAX_LENGTH) {
+      showWarning(
+        t('dataset_nameTooLong'),
+        t('dataset_nameTooLongMessage', { maxLength: DATASET_NAME_MAX_LENGTH })
+      );
+      return;
+    }
+
+    if (description && description.length > DATASET_DESCRIPTION_MAX_LENGTH) {
+      showWarning(
+        t('dataset_descriptionTooLong'),
+        t('dataset_descriptionTooLongMessage', { maxLength: DATASET_DESCRIPTION_MAX_LENGTH })
+      );
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // Prepare the data to send
+      const requestBody = {
+        name: datasetName.trim(),
+        data: parsedData.data || [],
+        ...(description && { description: description.trim() }),
+      };
+
+      // Send POST request to create dataset using axios
+      const response = await axiosPrivate.post('/datasets', requestBody);
+
+      showSuccess('Dataset Created Successfully', 'Your dataset has been created and saved');
+
+      // Reset state after successful upload
+      setSelectedFile(null);
+      setParsedData(null);
+      setViewMode('upload');
+    } catch (error: any) {
+      // Check for unique constraint violation
+      if (error.response?.status === 409) {
+        showError(
+          t('dataset_nameExists'),
+          t('dataset_nameExistsMessage', { name: datasetName.trim() })
         );
-        return;
-      }
-
-      if (description && description.length > DATASET_DESCRIPTION_MAX_LENGTH) {
-        showWarning(
-          t('dataset_descriptionTooLong'),
-          t('dataset_descriptionTooLongMessage', { maxLength: DATASET_DESCRIPTION_MAX_LENGTH })
+      } else {
+        showError(
+          t('dataset_uploadFailed'),
+          error.response?.data?.message || error.message || t('dataset_uploadFailedMessage')
         );
-        return;
       }
-
-      setIsUploading(true);
-
-      try {
-        // Prepare the data to send
-        const requestBody = {
-          name: name.trim(),
-          data: parsedData.data || [],
-          ...(description && { description: description.trim() }),
-        };
-
-        // Send POST request to create dataset using axios
-        const response = await axiosPrivate.post('/datasets', requestBody);
-
-        showSuccess('Dataset Created Successfully', 'Your dataset has been created and saved');
-
-        // Reset state after successful upload
-        setSelectedFile(null);
-        setParsedData(null);
-        setViewMode('upload');
-      } catch (error: any) {
-        // Check for unique constraint violation
-        if (error.response?.status === 409) {
-          showError(t('dataset_nameExists'), t('dataset_nameExistsMessage', { name: name.trim() }));
-        } else {
-          showError(
-            t('dataset_uploadFailed'),
-            error.response?.data?.message || error.message || t('dataset_uploadFailedMessage')
-          );
-        }
-      } finally {
-        setIsUploading(false);
-      }
-    },
-    [parsedData, showWarning, showSuccess, showError]
-  );
+    } finally {
+      setIsUploading(false);
+    }
+  }, [parsedData, showWarning, showSuccess, showError]);
 
   // Handle change data (go back to previous upload method and reset shared state)
   const handleChangeData = useCallback(() => {
@@ -207,7 +210,9 @@ function CreateDatasetPageContent() {
       setOriginalTextContent(content);
       // Parse the text content as CSV data
       try {
-        const result = parseTabularContent(content);
+        const detectedDelimiter = detectDelimiter(content);
+        setSelectedDelimiter(detectedDelimiter);
+        const result = parseTabularContent(content, { delimiter: detectedDelimiter });
         setParsedData(result);
         setPreviousViewMode(viewMode);
         setViewMode('view');

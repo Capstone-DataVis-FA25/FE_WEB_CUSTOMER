@@ -3,7 +3,7 @@ import DataViewerContent from './DataViewerContent';
 import { useDataset } from '@/contexts/DatasetContext';
 
 interface DataViewerProps {
-  onUpload?: (name: string, description?: string) => void;
+  onUpload?: () => void;
   onChangeData?: () => void;
 }
 

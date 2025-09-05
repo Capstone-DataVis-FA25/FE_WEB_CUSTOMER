@@ -11,6 +11,7 @@ interface DatasetState {
   // Data states
   originalTextContent: string;
   parsedData: Papa.ParseResult<string[]> | null;
+  originalHeaders: string[];
 
   // Configuration states
   selectedDelimiter: string;

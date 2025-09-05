@@ -9,13 +9,14 @@ import { NumberFormatSelector } from './NumberFormatSelector';
 import DataTransformationSelector from './DataTransformationSelector';
 import { useDataset } from '@/contexts/DatasetContext';
 import { DATASET_NAME_MAX_LENGTH, DATASET_DESCRIPTION_MAX_LENGTH } from '@/utils/Consts';
+import { transformWideToLong, getOriginalHeaders } from '@/utils/fileProcessors';
 import './scrollbar.css';
 import { parseTabularContent } from '@/utils/fileProcessors';
 import { useCallback } from 'react';
 import { useToastContext } from '../providers/ToastProvider';
 
 interface DataViewerOptionsProps {
-  onUpload?: (name: string, description?: string) => void;
+  onUpload?: () => void;
   onChangeData?: () => void;
 }
 
@@ -41,21 +42,16 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
     setParsedData,
   } = useDataset();
 
-  const handleUpload = () => {
-    if (!datasetName.trim()) {
-      return; // Don't upload if name is empty
-    }
-    onUpload(datasetName.trim(), description.trim() || undefined);
-  };
-
   // Handle delimiter change - reparse the original content with new delimiter
   const handleDelimiterChange = useCallback(
     (delimiter: string) => {
       if (!originalTextContent) return;
 
       setSelectedDelimiter(delimiter);
+      // Reset transformation when delimiter changes
+      setTransformationColumn(null);
       try {
-        const result = parseTabularContent(originalTextContent, undefined, { delimiter });
+        const result = parseTabularContent(originalTextContent, { delimiter });
         setParsedData(result);
       } catch (error) {
         showError('Parse Error', 'Failed to parse with the selected delimiter');
@@ -77,6 +73,32 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
 
   const handleTransformationColumnChange = (column: string) => {
     setTransformationColumn(column);
+
+    // Always parse from original text content to ensure we have fresh data
+    if (!originalTextContent) return;
+
+    try {
+      const result = parseTabularContent(originalTextContent, {
+        delimiter: selectedDelimiter,
+      });
+
+      // If no column selected, use original data
+      if (!column) {
+        setParsedData(result);
+        return;
+      }
+
+      // Transform the original data
+      const transformed = transformWideToLong(result.data, column);
+
+      // Update the parsed data with transformed data
+      setParsedData({
+        ...result,
+        data: transformed,
+      });
+    } catch (error) {
+      showError('Parse Error', 'Failed to process data transformation');
+    }
   };
 
   return (
@@ -162,7 +184,7 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
 
           {/* Data Transformation Selector */}
           <DataTransformationSelector
-            headers={parsedData?.data?.[0] || []}
+            headers={getOriginalHeaders(originalTextContent, selectedDelimiter)}
             value={transformationColumn ?? ''}
             onChange={handleTransformationColumnChange}
             disabled={isUploading || !parsedData}
@@ -171,7 +193,7 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
           {/* Action Buttons */}
           <div className="space-y-3 pt-4">
             <Button
-              onClick={handleUpload}
+              onClick={onUpload}
               disabled={isUploading || !datasetName.trim()}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
