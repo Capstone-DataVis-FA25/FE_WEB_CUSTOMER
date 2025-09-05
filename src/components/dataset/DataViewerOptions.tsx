@@ -1,4 +1,4 @@
-import { useState } from 'react';
+// import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,24 +6,22 @@ import { Input } from '@/components/ui/input';
 import { Upload, RefreshCw, Settings } from 'lucide-react';
 import DelimiterSelector from './DelimiterSelector';
 import { NumberFormatSelector } from './NumberFormatSelector';
+import DataTransformationSelector from './DataTransformationSelector';
 import { useDataset } from '@/contexts/DatasetContext';
 import { DATASET_NAME_MAX_LENGTH, DATASET_DESCRIPTION_MAX_LENGTH } from '@/utils/Consts';
 import './scrollbar.css';
+import { parseTabularContent } from '@/utils/fileProcessors';
+import { useCallback } from 'react';
+import { useToastContext } from '../providers/ToastProvider';
 
 interface DataViewerOptionsProps {
-  onUpload: (name: string, description?: string) => void;
-  onChangeData: () => void;
-  onDelimiterChange?: (delimiter: string) => void;
-  onNumberFormatChange?: (thousandsSeparator: string, decimalSeparator: string) => void;
+  onUpload?: (name: string, description?: string) => void;
+  onChangeData?: () => void;
 }
 
-function DataViewerOptions({
-  onUpload,
-  onChangeData,
-  onDelimiterChange,
-  onNumberFormatChange,
-}: DataViewerOptionsProps) {
+function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
   const { t } = useTranslation();
+  const { showError } = useToastContext();
 
   // Get states from context
   const {
@@ -36,6 +34,11 @@ function DataViewerOptions({
     numberFormat,
     setNumberFormat,
     isUploading,
+    parsedData,
+    transformationColumn,
+    setTransformationColumn,
+    originalTextContent,
+    setParsedData,
   } = useDataset();
 
   const handleUpload = () => {
@@ -45,23 +48,35 @@ function DataViewerOptions({
     onUpload(datasetName.trim(), description.trim() || undefined);
   };
 
-  const handleDelimiterChange = (delimiter: string) => {
-    setSelectedDelimiter(delimiter);
-    if (onDelimiterChange) {
-      onDelimiterChange(delimiter);
-    }
-  };
+  // Handle delimiter change - reparse the original content with new delimiter
+  const handleDelimiterChange = useCallback(
+    (delimiter: string) => {
+      if (!originalTextContent) return;
 
-  const handleNumberFormatChange = (type: 'thousands' | 'decimal', value: string) => {
+      setSelectedDelimiter(delimiter);
+      try {
+        const result = parseTabularContent(originalTextContent, undefined, { delimiter });
+        setParsedData(result);
+      } catch (error) {
+        showError('Parse Error', 'Failed to parse with the selected delimiter');
+      }
+    },
+    [originalTextContent, showError]
+  );
+
+  const handleNumberFormatChange = (
+    type: 'thousandsSeparator' | 'decimalSeparator',
+    value: string
+  ) => {
     const newFormat = {
       ...numberFormat,
-      [type === 'thousands' ? 'thousandsSeparator' : 'decimalSeparator']: value,
+      [type]: value,
     };
     setNumberFormat(newFormat);
+  };
 
-    if (onNumberFormatChange) {
-      onNumberFormatChange(newFormat.thousandsSeparator, newFormat.decimalSeparator);
-    }
+  const handleTransformationColumnChange = (column: string) => {
+    setTransformationColumn(column);
   };
 
   return (
@@ -131,23 +146,27 @@ function DataViewerOptions({
           </div>
 
           {/* Delimiter Selector */}
-          {onDelimiterChange && (
-            <DelimiterSelector
-              selectedDelimiter={selectedDelimiter}
-              onDelimiterChange={handleDelimiterChange}
-              disabled={isUploading}
-            />
-          )}
+          <DelimiterSelector
+            selectedDelimiter={selectedDelimiter}
+            onDelimiterChange={handleDelimiterChange}
+            disabled={isUploading}
+          />
 
           {/* Number Format Settings */}
-          {onNumberFormatChange && (
-            <NumberFormatSelector
-              thousandsSeparator={numberFormat.thousandsSeparator}
-              decimalSeparator={numberFormat.decimalSeparator}
-              onChange={handleNumberFormatChange}
-              disabled={isUploading}
-            />
-          )}
+          <NumberFormatSelector
+            thousandsSeparator={numberFormat.thousandsSeparator}
+            decimalSeparator={numberFormat.decimalSeparator}
+            onChange={handleNumberFormatChange}
+            disabled={isUploading}
+          />
+
+          {/* Data Transformation Selector */}
+          <DataTransformationSelector
+            headers={parsedData?.data?.[0] || []}
+            value={transformationColumn ?? ''}
+            onChange={handleTransformationColumnChange}
+            disabled={isUploading || !parsedData}
+          />
 
           {/* Action Buttons */}
           <div className="space-y-3 pt-4">

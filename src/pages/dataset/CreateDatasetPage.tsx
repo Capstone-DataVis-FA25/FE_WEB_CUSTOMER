@@ -8,6 +8,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
 import { axiosPrivate } from '@/services/axios';
 import { SlideInUp } from '@/theme/animation';
+import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
 import {
   getFileDelimiter,
   isValidFileType,
@@ -16,7 +17,6 @@ import {
   processFileContent,
   validateFileSize,
 } from '@/utils/fileProcessors';
-import { DATASET_NAME_MAX_LENGTH, DATASET_DESCRIPTION_MAX_LENGTH } from '@/utils/Consts';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -35,7 +35,6 @@ function CreateDatasetPageContent() {
     setParsedData,
     setIsUploading,
     setSelectedDelimiter,
-    setNumberFormat,
     resetState,
   } = useDataset();
 
@@ -221,33 +220,6 @@ function CreateDatasetPageContent() {
     [showError, t, viewMode]
   );
 
-  // Handle delimiter change - reparse the original content with new delimiter
-  const handleDelimiterChange = useCallback(
-    (delimiter: string) => {
-      if (!originalTextContent) return;
-
-      try {
-        const result = parseTabularContent(originalTextContent, undefined, { delimiter });
-        setParsedData(result);
-      } catch (error) {
-        showError('Parse Error', 'Failed to parse with the selected delimiter');
-      }
-    },
-    [originalTextContent, showError]
-  );
-
-  // Handle number format change
-  const handleNumberFormatChange = useCallback(
-    (thousandsSeparator: string, decimalSeparator: string) => {
-      setNumberFormat({
-        thousandsSeparator: thousandsSeparator,
-        decimalSeparator: decimalSeparator,
-      });
-      // You can add logic here to reformat numbers in the table if needed
-    },
-    [setNumberFormat]
-  );
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {isProcessing ? (
@@ -256,12 +228,7 @@ function CreateDatasetPageContent() {
         // Data Viewer - Full Width
         <div className="py-8">
           <SlideInUp delay={0.2}>
-            <DataViewer
-              onUpload={handleFileUpload}
-              onChangeData={handleChangeData}
-              onDelimiterChange={handleDelimiterChange}
-              onNumberFormatChange={handleNumberFormatChange}
-            />
+            <DataViewer onUpload={handleFileUpload} onChangeData={handleChangeData} />
           </SlideInUp>
         </div>
       ) : (

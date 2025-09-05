@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import type Papa from 'papaparse';
 
 // Types
@@ -15,6 +15,7 @@ interface DatasetState {
   // Configuration states
   selectedDelimiter: string;
   numberFormat: NumberFormat;
+  transformationColumn?: string | null;
 
   // UI states
   isUploading: boolean;
@@ -32,6 +33,7 @@ interface DatasetContextType extends DatasetState {
   // Configuration actions
   setSelectedDelimiter: (delimiter: string) => void;
   setNumberFormat: (format: NumberFormat) => void;
+  setTransformationColumn: (column: string | null) => void;
 
   // UI actions
   setIsUploading: (uploading: boolean) => void;
@@ -55,6 +57,7 @@ const initialState: DatasetState = {
     thousandsSeparator: ',',
     decimalSeparator: '.',
   },
+  transformationColumn: null,
   isUploading: false,
   datasetName: '',
   description: '',
@@ -62,7 +65,7 @@ const initialState: DatasetState = {
 
 // Provider component
 interface DatasetProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) => {
@@ -84,6 +87,10 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
 
   const setNumberFormat = (format: NumberFormat) => {
     setState(prev => ({ ...prev, numberFormat: format }));
+  };
+
+  const setTransformationColumn = (column: string | null) => {
+    setState(prev => ({ ...prev, transformationColumn: column }));
   };
 
   // UI actions
@@ -111,6 +118,7 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
     setParsedData,
     setSelectedDelimiter,
     setNumberFormat,
+    setTransformationColumn,
     setIsUploading,
     setDatasetName,
     setDescription,
