@@ -529,14 +529,14 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
 
       {/* Beautiful Legend Below Chart */}
       {showLegend && (
-        <div className="w-full">
+        <div className="inline-flex">
           <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
             <h4 className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center">
               {t('legend')}
             </h4>
 
             {/* Responsive Grid Layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 justify-items-center">
               {yAxisKeys.map((key, index) => {
                 const colorKey = colors[key] ? key : `bar${index + 1}`;
                 const color =
@@ -546,21 +546,19 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
                 return (
                   <div
                     key={key}
-                    className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
+                    className="flex items-center min-w-[140px] max-w-[180px] gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
                   >
                     {/* Color Indicator */}
                     <div className="flex-shrink-0">
                       <div
-                        className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
+                        className="w-2 h-2 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
                         style={{ backgroundColor: color }}
                       />
                     </div>
-
                     {/* Label */}
-                    <span className="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200">
                       {key}
                     </span>
-
                     {/* Bar Preview */}
                     <div className="flex-1 flex justify-end">
                       <div
