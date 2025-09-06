@@ -31,7 +31,7 @@ const LineChartPage: React.FC = () => {
             <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
               <CardContent className="p-4 sm:p-6">
                 <D3LineChart
-                  data={currentDataConfig.data}
+                  arrayData={currentDataConfig.data}
                   xAxisKey={currentDataConfig.xKey}
                   yAxisKeys={currentDataConfig.yKeys}
                   colors={currentDataConfig.colors}

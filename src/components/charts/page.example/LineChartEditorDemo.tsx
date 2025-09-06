@@ -17,7 +17,7 @@ const LineChartEditorDemo: React.FC = () => {
           transition={{ duration: 0.6, delay: 0.6 }}
         >
           <LineChartEditor
-            initialData={salesData}
+            initialArrayData={salesData}
             initialConfig={{
               title: t('lineChart_editor_demo_financialData'),
               xAxisLabel: t('lineChart_editor_xAxisLabel'),

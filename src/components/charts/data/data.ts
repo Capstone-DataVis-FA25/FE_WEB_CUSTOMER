@@ -6,19 +6,20 @@ import type { MapDataPoint } from '@/components/charts/page.example/home_chart_s
 import type { TableDataPoint } from '@/components/charts/page.example/home_chart_sample/D3TableChart';
 
 // Sales data
-export const salesData: ChartDataPoint[] = [
-  { month: 1, ecommerce: 125, retail: 980, wholesale: 750 },
-  { month: 2, ecommerce: 135, retail: 1020, wholesale: 780 },
-  { month: 3, ecommerce: 148, retail: 1150, wholesale: 820 },
-  { month: 4, ecommerce: 162, retail: 1080, wholesale: 860 },
-  { month: 5, ecommerce: 175, retail: 1200, wholesale: 900 },
-  { month: 6, ecommerce: 189, retail: 1350, wholesale: 950 },
-  { month: 7, ecommerce: 210, retail: 1450, wholesale: 1000 },
-  { month: 8, ecommerce: 225, retail: 1520, wholesale: 1080 },
-  { month: 9, ecommerce: 215, retail: 1480, wholesale: 1050 },
-  { month: 10, ecommerce: 238, retail: 1650, wholesale: 1120 },
-  { month: 11, ecommerce: 265, retail: 1850, wholesale: 1200 },
-  { month: 12, ecommerce: 295, retail: 2100, wholesale: 1350 },
+export const salesData: (string | number)[][] = [
+  ["Month", "Ecommerce", "Retail", "Wholesale"], // header
+  [1, 125, 980, 750],
+  [2, 135, 1020, 780],
+  [3, 148, 1150, 820],
+  [4, 162, 1080, 860],
+  [5, 175, 1200, 900],
+  [6, 189, 1350, 950],
+  [7, 210, 1450, 1000],
+  [8, 225, 1520, 1080],
+  [9, 215, 1480, 1050],
+  [10, 238, 1650, 1120],
+  [11, 265, 1850, 1200],
+  [12, 295, 2100, 1350],
 ];
 
 export const exampleData = [
