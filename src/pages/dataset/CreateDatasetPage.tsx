@@ -13,9 +13,13 @@ import {
   getFileDelimiter,
   detectDelimiter,
   isValidFileType,
+  isExcelFile,
+  isJsonFormat as checkIsJsonFormat,
   MAX_FILE_SIZE,
+  parseJsonDirectly,
   parseTabularContent,
   processFileContent,
+  readExcelAsText,
   validateFileSize,
 } from '@/utils/fileProcessors';
 import { useCallback, useState } from 'react';
@@ -34,6 +38,9 @@ function CreateDatasetPageContent() {
     setOriginalTextContent,
     parsedData,
     setParsedData,
+    setOriginalHeaders,
+    isJsonFormat,
+    setIsJsonFormat,
     setIsUploading,
     setSelectedDelimiter,
     resetState,
@@ -65,8 +72,13 @@ function CreateDatasetPageContent() {
     async (file: File) => {
       setIsProcessing(true);
       try {
-        // Read the original text content first
-        const textContent = await file.text();
+        // Read the original text content first - handle Excel files differently
+        let textContent: string;
+        if (isExcelFile(file)) {
+          textContent = await readExcelAsText(file);
+        } else {
+          textContent = await file.text();
+        }
         setOriginalTextContent(textContent);
 
         // Set the detected delimiter for this file
@@ -77,6 +89,7 @@ function CreateDatasetPageContent() {
         const result = await processFileContent(file, { delimiter: detectedDelimiter });
         await new Promise(resolve => setTimeout(resolve, 1000));
         setParsedData(result);
+        setOriginalHeaders(result[0] || []);
         console.log(result);
         setPreviousViewMode(viewMode);
         setViewMode('view');
@@ -157,7 +170,7 @@ function CreateDatasetPageContent() {
       // Prepare the data to send
       const requestBody = {
         name: datasetName.trim(),
-        data: parsedData.data || [],
+        data: parsedData || [],
         ...(description && { description: description.trim() }),
       };
 
@@ -208,21 +221,52 @@ function CreateDatasetPageContent() {
   const handleTextProcess = useCallback(
     (content: string) => {
       setOriginalTextContent(content);
-      // Parse the text content as CSV data
+
       try {
-        const detectedDelimiter = detectDelimiter(content);
-        setSelectedDelimiter(detectedDelimiter);
-        const result = parseTabularContent(content, { delimiter: detectedDelimiter });
-        setParsedData(result);
+        // Check if content is JSON format first
+        const isJson = checkIsJsonFormat(content);
+        setIsJsonFormat(isJson);
+
+        if (isJson) {
+          // Parse JSON directly - no delimiter needed
+          const result = parseJsonDirectly(content);
+          setSelectedDelimiter(','); // Set a default delimiter for display purposes
+          setParsedData(result);
+          setOriginalHeaders(result[0] || []);
+        } else {
+          // Parse as regular CSV/text data
+          const detectedDelimiter = detectDelimiter(content);
+          setSelectedDelimiter(detectedDelimiter);
+          const result = parseTabularContent(content, { delimiter: detectedDelimiter });
+          setParsedData(result);
+          setOriginalHeaders(result[0] || []);
+        }
+
         setPreviousViewMode(viewMode);
         setViewMode('view');
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : t('dataset_parseErrorMessage');
-        showError(t('dataset_parseError'), t(errorMessage));
+        const errorMessage = error instanceof Error ? error.message : 'dataset_parseErrorMessage';
+
+        // Check if it's a translation key with parameters (format: key:param)
+        if (errorMessage.includes(':')) {
+          const [key, param] = errorMessage.split(':', 2);
+          if (key.startsWith('dataset_')) {
+            showError(t('dataset_parseError'), t(key, { error: param }));
+            return;
+          }
+        }
+
+        // Check if it's a simple translation key
+        if (errorMessage.startsWith('dataset_')) {
+          showError(t('dataset_parseError'), t(errorMessage));
+          return;
+        }
+
+        // Fallback for other errors
+        showError(t('dataset_parseError'), errorMessage);
       }
     },
-    [showError, t, viewMode]
+    [showError, t, viewMode, setOriginalHeaders, setIsJsonFormat]
   );
 
   return (

@@ -18,7 +18,7 @@ function DataViewer({ onUpload, onChangeData }: DataViewerProps) {
 
       {/* Main Content - Takes remaining width */}
       <div className="flex-1 min-w-0">
-        <DataViewerContent data={parsedData?.data || null} />
+        <DataViewerContent data={parsedData || null} />
       </div>
     </div>
   );

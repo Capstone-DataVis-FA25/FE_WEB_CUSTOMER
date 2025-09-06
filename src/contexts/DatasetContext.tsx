@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState } from 'react';
-import type Papa from 'papaparse';
 
 // Types
 interface NumberFormat {
@@ -10,8 +9,9 @@ interface NumberFormat {
 interface DatasetState {
   // Data states
   originalTextContent: string;
-  parsedData: Papa.ParseResult<string[]> | null;
+  parsedData: string[][] | null;
   originalHeaders: string[];
+  isJsonFormat: boolean;
 
   // Configuration states
   selectedDelimiter: string;
@@ -29,7 +29,9 @@ interface DatasetState {
 interface DatasetContextType extends DatasetState {
   // Data actions
   setOriginalTextContent: (content: string) => void;
-  setParsedData: (data: Papa.ParseResult<string[]> | null) => void;
+  setParsedData: (data: string[][] | null) => void;
+  setOriginalHeaders: (headers: string[]) => void;
+  setIsJsonFormat: (isJson: boolean) => void;
 
   // Configuration actions
   setSelectedDelimiter: (delimiter: string) => void;
@@ -53,6 +55,8 @@ const DatasetContext = createContext<DatasetContextType | undefined>(undefined);
 const initialState: DatasetState = {
   originalTextContent: '',
   parsedData: null,
+  originalHeaders: [],
+  isJsonFormat: false,
   selectedDelimiter: ',',
   numberFormat: {
     thousandsSeparator: ',',
@@ -77,8 +81,16 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
     setState(prev => ({ ...prev, originalTextContent: content }));
   };
 
-  const setParsedData = (data: Papa.ParseResult<string[]> | null) => {
+  const setParsedData = (data: string[][] | null) => {
     setState(prev => ({ ...prev, parsedData: data }));
+  };
+
+  const setOriginalHeaders = (headers: string[]) => {
+    setState(prev => ({ ...prev, originalHeaders: headers }));
+  };
+
+  const setIsJsonFormat = (isJson: boolean) => {
+    setState(prev => ({ ...prev, isJsonFormat: isJson }));
   };
 
   // Configuration actions
@@ -117,6 +129,8 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
     ...state,
     setOriginalTextContent,
     setParsedData,
+    setOriginalHeaders,
+    setIsJsonFormat,
     setSelectedDelimiter,
     setNumberFormat,
     setTransformationColumn,

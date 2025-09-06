@@ -9,7 +9,7 @@ import { NumberFormatSelector } from './NumberFormatSelector';
 import DataTransformationSelector from './DataTransformationSelector';
 import { useDataset } from '@/contexts/DatasetContext';
 import { DATASET_NAME_MAX_LENGTH, DATASET_DESCRIPTION_MAX_LENGTH } from '@/utils/Consts';
-import { transformWideToLong, getOriginalHeaders } from '@/utils/fileProcessors';
+import { transformWideToLong, parseJsonDirectly } from '@/utils/fileProcessors';
 import './scrollbar.css';
 import { parseTabularContent } from '@/utils/fileProcessors';
 import { useCallback } from 'react';
@@ -36,6 +36,9 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
     setNumberFormat,
     isUploading,
     parsedData,
+    originalHeaders,
+    setOriginalHeaders,
+    isJsonFormat,
     transformationColumn,
     setTransformationColumn,
     originalTextContent,
@@ -53,11 +56,12 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
       try {
         const result = parseTabularContent(originalTextContent, { delimiter });
         setParsedData(result);
+        setOriginalHeaders(result[0] || []);
       } catch (error) {
         showError('Parse Error', 'Failed to parse with the selected delimiter');
       }
     },
-    [originalTextContent, showError]
+    [originalTextContent, showError, setOriginalHeaders]
   );
 
   const handleNumberFormatChange = (
@@ -74,28 +78,35 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
   const handleTransformationColumnChange = (column: string) => {
     setTransformationColumn(column);
 
-    // Always parse from original text content to ensure we have fresh data
+    // Always re-parse from original content to get fresh data
     if (!originalTextContent) return;
 
     try {
-      const result = parseTabularContent(originalTextContent, {
-        delimiter: selectedDelimiter,
-      });
+      // Re-parse from original content to get fresh data
+      let originalData: string[][];
+
+      // Use the stored format flag instead of recalculating
+      if (isJsonFormat) {
+        originalData = parseJsonDirectly(originalTextContent);
+      } else {
+        originalData = parseTabularContent(originalTextContent, {
+          delimiter: selectedDelimiter,
+        });
+      }
 
       // If no column selected, use original data
       if (!column) {
-        setParsedData(result);
+        setParsedData(originalData);
+        setOriginalHeaders(originalData[0] || []);
         return;
       }
 
-      // Transform the original data
-      const transformed = transformWideToLong(result.data, column);
+      // Transform the original data (not the current parsedData)
+      const transformed = transformWideToLong(originalData, column);
 
       // Update the parsed data with transformed data
-      setParsedData({
-        ...result,
-        data: transformed,
-      });
+      // Keep original headers - don't change them for transformations
+      setParsedData(transformed);
     } catch (error) {
       showError('Parse Error', 'Failed to process data transformation');
     }
@@ -167,12 +178,14 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
             </p>
           </div>
 
-          {/* Delimiter Selector */}
-          <DelimiterSelector
-            selectedDelimiter={selectedDelimiter}
-            onDelimiterChange={handleDelimiterChange}
-            disabled={isUploading}
-          />
+          {/* Delimiter Selector - Only show for non-JSON formats */}
+          {!isJsonFormat && (
+            <DelimiterSelector
+              selectedDelimiter={selectedDelimiter}
+              onDelimiterChange={handleDelimiterChange}
+              disabled={isUploading}
+            />
+          )}
 
           {/* Number Format Settings */}
           <NumberFormatSelector
@@ -184,7 +197,7 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
 
           {/* Data Transformation Selector */}
           <DataTransformationSelector
-            headers={getOriginalHeaders(originalTextContent, selectedDelimiter)}
+            headers={originalHeaders}
             value={transformationColumn ?? ''}
             onChange={handleTransformationColumnChange}
             disabled={isUploading || !parsedData}
