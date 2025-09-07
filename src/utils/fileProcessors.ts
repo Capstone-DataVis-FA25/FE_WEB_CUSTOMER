@@ -109,12 +109,12 @@ const normalizeArrayData = (data: string[][]): string[][] => {
 /**
  * Smart delimiter detector that analyzes the header row
  * @param text - The text content to analyze
- * @param candidates - Array of delimiter candidates to test, priority is based on order
+ * @param candidates - Array of delimiter candidates to test, in priority order
  * @returns The best delimiter string
  */
 export const detectDelimiter = (
   text: string,
-  candidates: string[]
+  candidates: string[] = DELIMITER_OPTIONS.map(({ value }) => value)
 ): string => {
   // Split into lines and find the first non-empty, non-comment line
   const lines = text.split('\n');
@@ -129,8 +129,8 @@ export const detectDelimiter = (
   }
 
   if (!headerLine) {
-    // If nothing valid, just return the first candidate
-    return candidates[0] || ',';
+    // If no valid header found, just use the first candidate
+    return candidates[0];
   }
 
   // Count occurrences of each delimiter in the header
@@ -139,8 +139,7 @@ export const detectDelimiter = (
     counts[delimiter] = (headerLine.match(new RegExp(`\\${delimiter}`, 'g')) || []).length;
   }
 
-  // Pick the delimiter with the highest count.
-  // In case of tie, the first one in candidates wins.
+  // Pick delimiter with max count, breaking ties by candidate order
   let maxCount = -1;
   let bestDelimiter = candidates[0];
 
