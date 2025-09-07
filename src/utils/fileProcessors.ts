@@ -78,6 +78,7 @@ const handleDuplicateHeaders = (headers: string[]): string[] => {
   return processedHeaders;
 };
 
+
 /**
  * Normalize 2D array data to ensure consistent row lengths and handle duplicate headers
  * @param data - 2D array of data
@@ -108,12 +109,12 @@ const normalizeArrayData = (data: string[][]): string[][] => {
 /**
  * Smart delimiter detector that analyzes the header row
  * @param text - The text content to analyze
- * @param candidates - Array of delimiter candidates to test
+ * @param candidates - Array of delimiter candidates to test, priority is based on order
  * @returns The best delimiter string
  */
 export const detectDelimiter = (
   text: string,
-  candidates: string[] = [',', '\t', ';', '|']
+  candidates: string[]
 ): string => {
   // Split into lines and find the first non-empty, non-comment line
   const lines = text.split('\n');
@@ -128,8 +129,8 @@ export const detectDelimiter = (
   }
 
   if (!headerLine) {
-    // Fallback to comma if no valid header found
-    return ',';
+    // If nothing valid, just return the first candidate
+    return candidates[0] || ',';
   }
 
   // Count occurrences of each delimiter in the header
@@ -138,9 +139,10 @@ export const detectDelimiter = (
     counts[delimiter] = (headerLine.match(new RegExp(`\\${delimiter}`, 'g')) || []).length;
   }
 
-  // Find delimiter with highest count
+  // Pick the delimiter with the highest count.
+  // In case of tie, the first one in candidates wins.
   let maxCount = -1;
-  let bestDelimiter = ',';
+  let bestDelimiter = candidates[0];
 
   for (const delimiter of candidates) {
     if (counts[delimiter] > maxCount) {
@@ -149,21 +151,9 @@ export const detectDelimiter = (
     }
   }
 
-  // Check for ties and resolve using priority order
-  const tied = candidates.filter(d => counts[d] === maxCount);
-
-  if (tied.length > 1) {
-    for (const delimiter of [',', '\t', ';', '|']) {
-      if (tied.includes(delimiter)) {
-        bestDelimiter = delimiter;
-        break;
-      }
-    }
-  }
-
-
   return bestDelimiter;
 };
+
 
 
 /**
@@ -260,8 +250,10 @@ export const transformWideToLong = (
   const columnIndex = headers?.indexOf(transformationColumn);
   if (columnIndex === undefined || columnIndex < 0) return data;
 
-  // Get all other columns (excluding the selected transformation column)
-  const otherColumns = headers.filter((_, index) => index !== columnIndex);
+  // Store indexes and column names for all columns except the transformation column
+  const otherColumnIndexes = headers
+    .map((col, idx) => ({ col, idx }))
+    .filter(({ idx }) => idx !== columnIndex);
 
   // Create new headers: [selectedColumn, 'variable', 'value']
   const transformed: string[][] = [];
@@ -272,16 +264,16 @@ export const transformWideToLong = (
     const row = data[i] || [];
     const idValue = (row[columnIndex] ?? '').toString();
 
-    // For each other column, create a new row
-    for (let j = 0; j < otherColumns.length; j += 1) {
-      const otherColumnIndex = headers.indexOf(otherColumns[j]);
-      const cellValue = (row[otherColumnIndex] ?? '').toString();
-      transformed.push([idValue, otherColumns[j], cellValue]);
+    // Loop over only the "other" columns we prepared
+    for (const { col, idx } of otherColumnIndexes) {
+      const cellValue = (row[idx] ?? '').toString();
+      transformed.push([idValue, col, cellValue]);
     }
   }
 
   return transformed;
 };
+
 
 /**
  * Read text content from Excel files (.xls, .xlsx)
@@ -301,7 +293,7 @@ export const readExcelAsText = async (file: File): Promise<string> => {
         }
 
         // Parse the Excel file
-        const workbook = XLSX.read(data, { type: 'binary' });
+        const workbook = XLSX.read(data, { type: 'array' });
 
         // Get the first worksheet
         const firstSheetName = workbook.SheetNames[0];
@@ -328,7 +320,7 @@ export const readExcelAsText = async (file: File): Promise<string> => {
     };
 
     // Read the file as binary string for XLSX library
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   });
 };
 
