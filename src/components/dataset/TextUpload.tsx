@@ -1,11 +1,10 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { FileText, Upload } from 'lucide-react';
 import { FadeIn } from '@/theme/animation';
-import { useDatasetUpload } from '@/contexts/DatasetUploadContext';
+import { useDataset } from '@/contexts/DatasetContext';
 
 interface TextUploadProps {
   onTextProcess: (textContent: string) => void;
@@ -14,7 +13,7 @@ interface TextUploadProps {
 
 function TextUpload({ onTextProcess, isProcessing = false }: TextUploadProps) {
   const { t: _t } = useTranslation();
-  const { originalTextContent, setOriginalTextContent } = useDatasetUpload();
+  const { originalTextContent, setOriginalTextContent } = useDataset();
 
   const handleProcess = () => {
     if (!originalTextContent.trim()) {
@@ -35,6 +34,20 @@ Tom Wilson,42,Tokyo,"5,678.95",Japan`;
     setOriginalTextContent(sampleData);
   };
 
+  const handleJsonSampleData = () => {
+    const jsonSampleData = `[
+  ["Name", "Age", "City", "Salary", "Country"],
+  ["John Doe", 28, "New York", "1,234.56", "USA"],
+  ["Jane Smith", 34, "London", "2,890.75", "UK"],
+  ["Mike Johnson", 45, "Toronto", "3,567.90", "Canada"],
+  ["Sarah Williams", 29, "Sydney", "1,987.25", "Australia"],
+  ["David Brown", 38, "Berlin", "4,123.80", "Germany"],
+  ["Lisa Garcia", 31, "Madrid", "2,456.40", "Spain"],
+  ["Tom Wilson", 42, "Tokyo", "5,678.95", "Japan"]
+]`;
+    setOriginalTextContent(jsonSampleData);
+  };
+
   return (
     <FadeIn>
       <Card className="border-0 shadow-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
@@ -44,8 +57,8 @@ Tom Wilson,42,Tokyo,"5,678.95",Japan`;
             Text Input
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
-            Paste your tabular data directly as text. Supports CSV, TSV, and other delimited
-            formats.
+            Paste your tabular data directly as text. Supports CSV, TSV, JSON (2D arrays), and other
+            delimited formats.
           </CardDescription>
         </CardHeader>
 
@@ -67,8 +80,8 @@ Tom Wilson,42,Tokyo,"5,678.95",Japan`;
                   id="textContent"
                   value={originalTextContent}
                   onChange={e => setOriginalTextContent(e.target.value)}
-                  placeholder='Name,Age,City,Salary,Country&#10;John Doe,28,New York,"1,234.56",USA&#10;Jane Smith,34,London,"2,890.75",UK&#10;Mike Johnson,45,Toronto,"3,567.90",Canada'
-                  className="w-full min-h-[300px] p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl font-mono text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all duration-200"
+                  placeholder='CSV Format:&#10;Name,Age,City,Salary,Country&#10;John Doe,28,New York,"1,234.56",USA&#10;&#10;JSON Format (2D Array):&#10;[&#10;  ["Name", "Age", "City", "Salary", "Country"],&#10;  ["John Doe", 28, "New York", "1,234.56", "USA"]&#10;]'
+                  className="w-full min-h-[300px] p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl font-mono text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y focus:border-blue-200 dark:focus:border-blue-800 focus:outline-none"
                   disabled={isProcessing}
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -79,14 +92,22 @@ Tom Wilson,42,Tokyo,"5,678.95",Japan`;
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-center gap-4">
+          <div className="flex justify-center gap-4 flex-wrap">
             <Button
               variant="outline"
               onClick={handleSampleData}
               disabled={isProcessing}
               className="px-6 py-3 border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-400"
             >
-              Load Sample Data
+              Load CSV Sample
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleJsonSampleData}
+              disabled={isProcessing}
+              className="px-6 py-3 border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-400"
+            >
+              Load JSON Sample
             </Button>
             <Button
               onClick={handleProcess}

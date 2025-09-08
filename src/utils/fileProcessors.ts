@@ -4,6 +4,7 @@
  */
 
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 
 // File validation configuration constants
 export const ALLOWED_TYPES = [
@@ -27,7 +28,7 @@ export const DELIMITER_OPTIONS = [
 ];
 
 export interface FileProcessingOptions {
-  delimiter?: string;
+  delimiter: string; // Make delimiter required
   encoding?: string;
   skipEmptyLines?: boolean;
   trimValues?: boolean;
@@ -50,14 +51,118 @@ export const getFileDelimiter = (file: File): string => {
 };
 
 /**
+ * Handle duplicate headers by adding numeric suffixes
+ * @param headers - Array of header names
+ * @returns Array of unique header names with suffixes
+ */
+const handleDuplicateHeaders = (headers: string[]): string[] => {
+  const headerCounts = new Map<string, number>();
+  const processedHeaders: string[] = [];
+
+  for (const header of headers) {
+    const trimmedHeader = header.trim();
+    const count = headerCounts.get(trimmedHeader) || 0;
+
+    if (count === 0) {
+      // First occurrence, use as is
+      processedHeaders.push(trimmedHeader);
+      headerCounts.set(trimmedHeader, 1);
+    } else {
+      // Duplicate, add suffix
+      const newHeader = `${trimmedHeader}_${count}`;
+      processedHeaders.push(newHeader);
+      headerCounts.set(trimmedHeader, count + 1);
+    }
+  }
+
+  return processedHeaders;
+};
+
+
+/**
+ * Normalize 2D array data to ensure consistent row lengths and handle duplicate headers
+ * @param data - 2D array of data
+ * @returns Normalized 2D array with consistent row lengths
+ */
+const normalizeArrayData = (data: string[][]): string[][] => {
+  if (data.length === 0) return data;
+
+  // Normalize all rows to have the same length as the first row
+  const headerLength = data[0].length;
+  const normalizedData = data.map(row => {
+    if (row.length > headerLength) {
+      // Truncate rows that are too long
+      return row.slice(0, headerLength);
+    } else if (row.length < headerLength) {
+      // Fill rows that are too short with empty strings
+      return [...row, ...Array(headerLength - row.length).fill('')];
+    }
+    return row;
+  });
+
+  // Handle duplicate headers in the first row
+  normalizedData[0] = handleDuplicateHeaders(normalizedData[0]);
+
+  return normalizedData;
+};
+
+/**
+ * Smart delimiter detector that analyzes the header row
+ * @param text - The text content to analyze
+ * @param candidates - Array of delimiter candidates to test, in priority order
+ * @returns The best delimiter string
+ */
+export const detectDelimiter = (
+  text: string,
+  candidates: string[] = DELIMITER_OPTIONS.map(({ value }) => value)
+): string => {
+  // Split into lines and find the first non-empty, non-comment line
+  const lines = text.split('\n');
+  let headerLine = '';
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('//')) {
+      headerLine = trimmed;
+      break;
+    }
+  }
+
+  if (!headerLine) {
+    // If no valid header found, just use the first candidate
+    return candidates[0];
+  }
+
+  // Count occurrences of each delimiter in the header
+  const counts: Record<string, number> = {};
+  for (const delimiter of candidates) {
+    counts[delimiter] = (headerLine.match(new RegExp(`\\${delimiter}`, 'g')) || []).length;
+  }
+
+  // Pick delimiter with max count, breaking ties by candidate order
+  let maxCount = -1;
+  let bestDelimiter = candidates[0];
+
+  for (const delimiter of candidates) {
+    if (counts[delimiter] > maxCount) {
+      maxCount = counts[delimiter];
+      bestDelimiter = delimiter;
+    }
+  }
+
+  return bestDelimiter;
+};
+
+
+
+/**
  * Parse tabular data from text content using Papa Parse
  */
 export const parseTabularContent = (
   text: string,
-  file: File,
-  options: FileProcessingOptions = {}
-): Papa.ParseResult<string[]> => {
-  const delimiter = options.delimiter || getFileDelimiter(file);
+  options: FileProcessingOptions
+): string[][] => {
+  const delimiter = options.delimiter;
 
   const config: Papa.ParseConfig = {
     delimiter: delimiter,
@@ -73,43 +178,42 @@ export const parseTabularContent = (
 
   const result = Papa.parse(text, config);
 
-  // Normalize all rows to have the same length as the header (first row)
-  if (result.data.length > 0) {
-    const headerLength = result.data[0].length;
-    result.data = result.data.map(row => {
-      if (row.length > headerLength) {
-        // Truncate rows that are too long
-        return row.slice(0, headerLength);
-      } else if (row.length < headerLength) {
-        // Fill rows that are too short with empty strings
-        return [...row, ...Array(headerLength - row.length).fill('')];
-      }
-      // Row is exactly the right length
-      return row;
-    });
+  // Validate that we have data beyond just headers
+  if (result.data.length <= 1) {
+    throw new Error('dataset_cannotParse');
   }
 
-  return result;
+  // Normalize all rows to have the same length as the header (first row)
+  if (result.data.length > 0) {
+    return normalizeArrayData(result.data);
+  }
+
+  return result.data;
 };
 
 /**
- * Process file and return Papa Parse result directly
+ * Process file and return 2D array directly
  * Accepts any readable text file and attempts to parse as tabular data
  */
 export const processFileContent = async (
   file: File,
-  options: FileProcessingOptions = {}
-): Promise<Papa.ParseResult<string[]>> => {
+  options: FileProcessingOptions
+): Promise<string[][]> => {
   if (!isValidFileType(file)) {
-    throw new Error(`File type ${file.type || 'unknown'} is not supported.`);
+    throw new Error(`dataset_unsupportedFileType:${file.type || 'unknown'}`);
   }
 
-  try {
-    const textContent = await file.text();
-    return parseTabularContent(textContent, file, options);
-  } catch (error) {
-    throw new Error(`Failed to process file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  let textContent: string;
+
+  // Handle Excel files differently
+  if (isExcelFile(file)) {
+    textContent = await readExcelAsText(file);
+  } else {
+    // Handle other text-based files
+    textContent = await file.text();
   }
+
+  return parseTabularContent(textContent, options);
 };
 
 /**
@@ -128,6 +232,173 @@ export const isValidFileType = (file: File): boolean => {
     ALLOWED_EXTENSIONS.some(ext => file.name.toLowerCase().endsWith(ext))
   );
 };
+
+/**
+ * Transforms data from wide format to long format (melt operation)
+ * @param data - 2D array of data with headers in first row
+ * @param transformationColumn - Column name to use as identifier
+ * @returns Transformed data in long format
+ */
+export const transformWideToLong = (
+  data: string[][],
+  transformationColumn: string
+): string[][] => {
+  if (!data || data.length === 0) return data;
+
+  const headers = data[0];
+  const columnIndex = headers?.indexOf(transformationColumn);
+  if (columnIndex === undefined || columnIndex < 0) return data;
+
+  // Store indexes and column names for all columns except the transformation column
+  const otherColumnIndexes = headers
+    .map((col, idx) => ({ col, idx }))
+    .filter(({ idx }) => idx !== columnIndex);
+
+  // Create new headers: [selectedColumn, 'variable', 'value']
+  const transformed: string[][] = [];
+  transformed.push([transformationColumn, 'variable', 'value']);
+
+  // Process each data row
+  for (let i = 1; i < data.length; i += 1) {
+    const row = data[i] || [];
+    const idValue = (row[columnIndex] ?? '').toString();
+
+    // Loop over only the "other" columns we prepared
+    for (const { col, idx } of otherColumnIndexes) {
+      const cellValue = (row[idx] ?? '').toString();
+      transformed.push([idValue, col, cellValue]);
+    }
+  }
+
+  return transformed;
+};
+
+
+/**
+ * Read text content from Excel files (.xls, .xlsx)
+ * @param file - Excel file to read
+ * @returns Promise that resolves to text content in CSV format
+ */
+export const readExcelAsText = async (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        if (!data) {
+          reject(new Error('dataset_excelReadDataFailed'));
+          return;
+        }
+
+        // Parse the Excel file
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        // Get the first worksheet
+        const firstSheetName = workbook.SheetNames[0];
+        if (!firstSheetName) {
+          reject(new Error('dataset_excelNoWorksheets'));
+          return;
+        }
+
+        const worksheet = workbook.Sheets[firstSheetName];
+
+        // Convert worksheet to CSV format
+        const csvText = XLSX.utils.sheet_to_csv(worksheet, {
+          blankrows: false, // Skip completely empty rows
+        });
+
+        resolve(csvText);
+      } catch (error) {
+        reject(new Error(`dataset_excelParseFailed:${error instanceof Error ? error.message : 'Unknown error'}`));
+      }
+    };
+
+    reader.onerror = () => {
+      reject(new Error('dataset_fileReadFailed'));
+    };
+
+    // Read the file as binary string for XLSX library
+    reader.readAsArrayBuffer(file);
+  });
+};
+
+/**
+ * Check if a file is an Excel file
+ * @param file - File to check
+ * @returns True if file is Excel format
+ */
+export const isExcelFile = (file: File): boolean => {
+  const excelTypes = [
+    'application/vnd.ms-excel', // .xls
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+  ];
+
+  const excelExtensions = ['.xls', '.xlsx'];
+
+  return (
+    excelTypes.includes(file.type) ||
+    excelExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
+  );
+};
+
+/**
+ * Check if text content is valid JSON format
+ * @param text - Text content to check
+ * @returns True if text is valid JSON
+ */
+export const isJsonFormat = (text: string): boolean => {
+  if (!text.trim()) return false;
+
+  try {
+    const parsed = JSON.parse(text);
+    // Check if it's a 2D array (array of arrays)
+    return Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0]);
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Parse JSON content as 2D array directly
+ * @param jsonText - JSON text content
+ * @returns string[][] format
+ */
+export const parseJsonDirectly = (jsonText: string): string[][] => {
+  try {
+    const parsed = JSON.parse(jsonText);
+
+    // Validate JSON structure: must be 2D array with at least 2 rows
+    if (!Array.isArray(parsed) || parsed.length < 2 || !Array.isArray(parsed[0])) {
+      throw new Error('dataset_jsonInvalidFormat');
+    }
+
+    // Ensure all elements are arrays
+    const data: (string | number | boolean | null)[][] = parsed.map(row => {
+      if (!Array.isArray(row)) {
+        throw new Error('dataset_jsonElementsNotArrays');
+      }
+      return row;
+    });
+
+    // Convert to string format for consistency
+    const stringData: string[][] = data.map(row =>
+      row.map(cell => String(cell ?? ''))
+    );
+
+    // Normalize the data directly
+    return normalizeArrayData(stringData);
+
+  } catch (error) {
+    // If it's already a translation key, throw it directly
+    if (error instanceof Error && error.message.startsWith('dataset_')) {
+      throw error;
+    }
+    // Otherwise, throw the unknown error key with the error message
+    throw new Error(`dataset_jsonUnknownError:${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
 
 
 
