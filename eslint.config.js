@@ -28,6 +28,7 @@ export default tseslint.config(
         varsIgnorePattern: '^_',
         caughtErrorsIgnorePattern: '^_'
       }],
+      '@typescript-eslint/no-explicit-any': 'off',
       // Bỏ rule no-unused-imports vì không tồn tại
     },
   },

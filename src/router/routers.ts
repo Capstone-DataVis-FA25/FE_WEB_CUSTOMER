@@ -15,6 +15,7 @@ const Routers = {
 
   // Dataset routes
   CREATE_DATASET: '/create-dataset',
+  CREATE_CHART: '/create-chart',
 
   // Error routes
   NOT_FOUND: '/404',

@@ -35,6 +35,7 @@ const componentMap = {
   BarChartEditorDemo: lazy(() => import('../components/charts/page.example/BarChartEditorDemo')),
   AreaChartEditorDemo: lazy(() => import('../components/charts/page.example/AreaChartEditorDemo')),
   CreateDatasetPage: lazy(() => import('../pages/dataset/CreateDatasetPage')),
+  CreateChartPage: lazy(() => import('../pages/chart/CreateChartPage')),
 };
 
 // ================================

@@ -8,8 +8,7 @@ export interface ChartDataPoint {
 }
 
 export interface D3LineChartProps {
-  data?: ChartDataPoint[];
-  arrayData?: (string | number)[][]; // New prop for array data
+  arrayData?: (string | number)[][]; // Array data input
   width?: number;
   height?: number;
   margin?: { top: number; right: number; bottom: number; left: number };
@@ -17,6 +16,7 @@ export interface D3LineChartProps {
   yAxisKeys: string[];
   disabledLines?: string[]; // New prop for disabled lines
   colors?: Record<string, { light: string; dark: string }>;
+  seriesNames?: Record<string, string>; // Add series names mapping
   title?: string;
   yAxisLabel?: string;
   xAxisLabel?: string;
@@ -42,7 +42,6 @@ export const defaultColors: Record<string, { light: string; dark: string }> = {
 };
 
 const D3LineChart: React.FC<D3LineChartProps> = ({
-  data,
   arrayData,
   width = 800,
   height = 600, // Reduced from 500 to 400 for better proportions
@@ -51,6 +50,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   yAxisKeys,
   disabledLines = [], // Default to no disabled lines
   colors = defaultColors,
+  seriesNames = {}, // Default to empty object
   title,
   yAxisLabel,
   xAxisLabel,
@@ -75,8 +75,8 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       return convertArrayToChartData(arrayData);
     }
     
-    return data || [];
-  }, [data, arrayData]);
+    return [];
+  }, [arrayData]);
 
   // Monitor container size for responsiveness
   useEffect(() => {
@@ -505,6 +505,9 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
                   const color =
                     colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
                     defaultColors[`line${index + 1}`][isDarkMode ? 'dark' : 'light'];
+                  
+                  // Use series name if provided, otherwise fallback to key
+                  const displayName = seriesNames[key] || key;
 
                   return (
                     <div
@@ -521,7 +524,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
                       {/* Label */}
                       <span className="text-sm  font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200">
-                        {key}
+                        {displayName}
                       </span>
 
                       {/* Line Preview */}
