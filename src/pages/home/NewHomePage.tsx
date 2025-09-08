@@ -427,6 +427,7 @@ const NewHomePage: React.FC = () => {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
+        viewport={{ once: true, amount: 0.2 }}
         className="relative py-20 lg:py-32 z-10"
       >
         <div className="container mx-auto px-4">
@@ -496,7 +497,7 @@ const NewHomePage: React.FC = () => {
         viewport={{ once: true }}
         className="py-20 lg:py-32"
       >
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4  bg-gradient-to-br bg-[var(--gradient-main)]">
           <motion.div variants={fadeVariants} className="text-center mb-16">
             <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
               {t('home_chartTypes_title')}
@@ -602,10 +603,10 @@ const NewHomePage: React.FC = () => {
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true }}
-        className="py-20 lg:py-32 bg-muted/30"
+        viewport={{ once: true, amount: 0.5 }}
+        className="py-20 lg:py-32 "
       >
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 bg-gradient-to-r ">
           <motion.div variants={fadeVariants} className="text-center mb-16">
             <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
               {t('home_features_title')}
@@ -620,7 +621,7 @@ const NewHomePage: React.FC = () => {
               const IconComponent = feature.icon;
               return (
                 <motion.div key={index} variants={cardVariants} custom={index} whileHover="hover">
-                  <Card className="h-full">
+                  <Card className="h-full border-bg-primary/10">
                     <CardContent className="p-6">
                       <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                         <IconComponent className="w-6 h-6 text-primary" />
@@ -636,7 +637,7 @@ const NewHomePage: React.FC = () => {
         </div>
       </motion.section>
 
-      <section className="py-20 lg:py-32">
+      <section className="py-20 lg:py-32 bg-gradient-to-l from-bg-blue-20 to-bg-blue-800 ">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
             <div className="rounded-4xl flex items-center justify-center w-full h-full">
@@ -697,7 +698,7 @@ const NewHomePage: React.FC = () => {
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true }}
-        className="py-20 lg:py-32"
+        className="py-20 lg:py-32 "
       >
         <div className="container mx-auto px-4">
           <motion.div variants={fadeVariants} className="text-center mb-16">
