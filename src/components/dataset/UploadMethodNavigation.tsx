@@ -1,9 +1,9 @@
 import React from 'react';
-import { FileSpreadsheet, FileUp, FileText } from 'lucide-react';
+import { FileSpreadsheet, FileUp, FileText, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FadeIn } from '@/theme/animation';
 
-type ViewMode = 'upload' | 'textUpload' | 'view';
+type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view';
 
 interface UploadMethodNavigationProps {
   viewMode: ViewMode;
@@ -24,6 +24,11 @@ const UploadMethodNavigation: React.FC<UploadMethodNavigationProps> = ({
       mode: 'textUpload' as ViewMode,
       icon: FileText,
       label: 'Paste your data',
+    },
+    {
+      mode: 'sampleData' as ViewMode,
+      icon: Database,
+      label: 'Try sample data',
     },
   ];
 

@@ -29,7 +29,7 @@ const SelectContext = React.createContext<{
   value?: string;
   onValueChange?: (value: string) => void;
   open: boolean;
-  setOpen: (open: boolean) => void;
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }>({
   open: false,
   setOpen: () => {},
@@ -37,19 +37,18 @@ const SelectContext = React.createContext<{
 
 const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
   const [open, setOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside of the Select container
   React.useEffect(() => {
-    const handleClickOutside = (_event: MouseEvent) => {
-      if (open) {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (open && containerRef.current && !containerRef.current.contains(target)) {
         setOpen(false);
       }
     };
 
-    if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -57,14 +56,16 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
 
   return (
     <SelectContext.Provider value={{ value, onValueChange, open, setOpen }}>
-      <div className="relative">{children}</div>
+      <div className="relative" ref={containerRef}>
+        {children}
+      </div>
     </SelectContext.Provider>
   );
 };
 
 const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
   ({ className, children, ...props }, ref) => {
-    const { open, setOpen } = React.useContext(SelectContext);
+    const { setOpen } = React.useContext(SelectContext);
 
     return (
       <button
@@ -75,7 +76,7 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
           'flex h-10 w-full items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm ring-offset-background placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer',
           className
         )}
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen(prev => !prev)}
         {...props}
       >
         {children}
@@ -87,29 +88,12 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
 SelectTrigger.displayName = 'SelectTrigger';
 
 const SelectContent: React.FC<SelectContentProps> = ({ children }) => {
-  const { open, setOpen } = React.useContext(SelectContext);
-
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      if (!target.closest('[data-select-content]') && !target.closest('[data-select-trigger]')) {
-        setOpen(false);
-      }
-    };
-
-    if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [open, setOpen]);
+  const { open } = React.useContext(SelectContext);
 
   if (!open) return null;
 
   return (
-    <div 
+    <div
       data-select-content
       className="absolute top-full left-0 right-0 z-[99999] mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-2xl max-h-60 overflow-auto"
       style={{
