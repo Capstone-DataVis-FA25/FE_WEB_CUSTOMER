@@ -1,6 +1,7 @@
 const Routers = {
   // Public routes
-  HOME: '/',
+  HOME: '/new-home',
+  NEW_HOME: '/',
   AUTH: '/auth',
   FORGOT_PASSWORD: '/auth/forgot-password',
   RESET_PASSWORD: '/auth/reset-password',
@@ -33,6 +34,8 @@ const Routers = {
   BAR_CHART_DEMO: '/chart/bar-chart',
   LINE_CHART_EDITOR_DEMO: '/demo/line-chart-editor',
   BAR_CHART_EDITOR_DEMO: '/demo/bar-chart-editor',
+  AREA_CHART_DEMO: '/chart/area-chart',
+  AREA_CHART_EDITOR_DEMO: '/demo/area-chart-editor',
 } as const;
 
 export default Routers;

@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 const componentMap = {
   HomePage: lazy(() => import('../pages/home/HomePage')),
+  NewHomePage: lazy(() => import('../pages/home/NewHomePage')),
   AuthPage: lazy(() => import('../pages/auth/AuthPage')),
   ForgotPasswordPage: lazy(() => import('../pages/auth/ForgotPasswordPage')),
   ResetPasswordPage: lazy(() => import('../pages/auth/ResetPasswordPage')),
@@ -29,8 +30,10 @@ const componentMap = {
   ResendEmailPage: lazy(() => import('../pages/verify/ResendEmailPage')),
   LineChartPage: lazy(() => import('../components/charts/page.example/LineChartPage')),
   BarChartPage: lazy(() => import('../components/charts/page.example/BarChartPage')),
+  AreaChartPage: lazy(() => import('../components/charts/page.example/AreaChartPage')),
   LineChartEditorDemo: lazy(() => import('../components/charts/page.example/LineChartEditorDemo')),
   BarChartEditorDemo: lazy(() => import('../components/charts/page.example/BarChartEditorDemo')),
+  AreaChartEditorDemo: lazy(() => import('../components/charts/page.example/AreaChartEditorDemo')),
   CreateDatasetPage: lazy(() => import('../pages/dataset/CreateDatasetPage')),
   DatasetListPage: lazy(() => import('../pages/dataset/DatasetListPage')),
   DatasetDetailPage: lazy(() => import('../pages/dataset/DatasetDetailPage')),

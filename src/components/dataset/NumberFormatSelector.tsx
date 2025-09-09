@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 interface NumberFormatSelectorProps {
   thousandsSeparator: string;
   decimalSeparator: string;
-  onChange: (type: 'thousands' | 'decimal', value: string) => void;
+  onChange: (type: 'thousandsSeparator' | 'decimalSeparator', value: string) => void;
   disabled?: boolean;
 }
 
@@ -26,14 +26,14 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
             htmlFor="thousands-separator"
             className="text-xs font-medium text-gray-700 dark:text-gray-300 w-32 flex-shrink-0"
           >
-            Thousands seperator
+            Thousands Separator
           </label>
           <Input
             id="thousands-separator"
             type="text"
             placeholder=","
             value={thousandsSeparator}
-            onChange={e => onChange('thousands', e.target.value.slice(0, 1))}
+            onChange={e => onChange('thousandsSeparator', e.target.value.slice(0, 1))}
             className="w-12 h-8 text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 ml-auto"
             disabled={disabled}
             maxLength={1}
@@ -46,14 +46,14 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
             htmlFor="decimal-separator"
             className="text-xs font-medium text-gray-700 dark:text-gray-300 w-32 flex-shrink-0"
           >
-            Decimal seperator
+            Decimal Separator
           </label>
           <Input
             id="decimal-separator"
             type="text"
             placeholder="."
             value={decimalSeparator}
-            onChange={e => onChange('decimal', e.target.value.slice(0, 1))}
+            onChange={e => onChange('decimalSeparator', e.target.value.slice(0, 1))}
             className="w-12 h-8 text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 ml-auto"
             disabled={disabled}
             maxLength={1}
