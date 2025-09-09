@@ -23,7 +23,7 @@ type ViewMode = 'upload' | 'textUpload' | 'view';
 // Inner component that uses the context
 function CreateDatasetPageContent() {
   const { t } = useTranslation();
-  const { showSuccess, showError, showWarning } = useToastContext();
+  const { showSuccess, showError } = useToastContext();
 
   // Get states from context
   const {
@@ -57,9 +57,12 @@ function CreateDatasetPageContent() {
         console.log(result);
         setViewMode('view');
       } catch (error) {
+        console.error('File processing error:', error);
         showError(
-          t('dataset_fileReadError'),
-          error instanceof Error ? error.message : t('dataset_fileReadErrorMessage')
+          t('dataset_fileReadError', 'File Processing Error'),
+          error instanceof Error 
+            ? error.message 
+            : t('dataset_fileReadErrorMessage', 'Unable to read the selected file. Please check the file format.')
         );
       } finally {
         setIsProcessing(false);
@@ -73,15 +76,25 @@ function CreateDatasetPageContent() {
     async (file: File) => {
       // Validate file size
       if (!validateFileSize(file, MAX_FILE_SIZE)) {
-        showError(t('dataset_fileTooLarge'), t('dataset_fileTooLargeMessage'));
+        showError(
+          t('dataset_fileTooLarge', 'File Too Large'), 
+          t('dataset_fileTooLargeMessage', `File size exceeds the maximum limit of ${Math.round(MAX_FILE_SIZE / (1024 * 1024))}MB`)
+        );
+        return;
+      }
+
+      // Validate file type
+      if (!isValidFileType(file)) {
+        showError(
+          t('dataset_invalidFileType', 'Invalid File Type'),
+          t('dataset_invalidFileTypeMessage', 'Please select a valid file type (CSV, TXT, TSV, JSON)')
+        );
         return;
       }
 
       setSelectedFile(file);
-      // If file is valid, automatically process it and switch to view mode
-      if (isValidFileType(file)) {
-        await processAndViewFile(file);
-      }
+      // Process the valid file and switch to view mode
+      await processAndViewFile(file);
     },
     [showError, t, processAndViewFile]
   );
@@ -97,12 +110,10 @@ function CreateDatasetPageContent() {
   const handleFileUpload = useCallback(
     async (name: string, description?: string) => {
       if (!parsedData) {
-        showWarning('No Data Available', 'Please select a file or enter text data first');
         return;
       }
 
       if (!name.trim()) {
-        showWarning('Dataset Name Required', 'Please enter a name for your dataset');
         return;
       }
 
@@ -117,32 +128,57 @@ function CreateDatasetPageContent() {
         };
 
         // Send POST request to create dataset using axios
-        const response = await axiosPrivate.post('/datasets', requestBody);
+        await axiosPrivate.post('/datasets', requestBody);
 
-        showSuccess('Dataset Created Successfully', 'Your dataset has been created and saved');
+        console.log('Dataset creation success');
+        showSuccess(
+          t('dataset_createSuccess', 'Dataset Created Successfully'),
+          t('dataset_createSuccessMessage', 'Your dataset has been created and saved successfully')
+        );
 
-        // Reset state after successful upload
-        setSelectedFile(null);
-        setParsedData(null);
-        setViewMode('upload');
+        // Reset state after successful upload with delay to show toast
+        setTimeout(() => {
+          setSelectedFile(null);
+          setParsedData(null);
+          setOriginalTextContent('');
+          setViewMode('upload');
+        }, 1500);
+
       } catch (error: any) {
-        // Check for unique constraint violation
+        console.error('Dataset creation error:', error);
+        
+        // Check for specific error types
         if (error.response?.status === 409) {
           showError(
-            'Dataset Name Already Exists',
-            `A dataset with the name "${name.trim()}" already exists. Please choose a different name.`
+            t('dataset_nameExists', 'Dataset Name Already Exists'),
+            t('dataset_nameExistsMessage', `A dataset with the name "${name.trim()}" already exists. Please choose a different name.`)
+          );
+        } else if (error.response?.status === 400) {
+          showError(
+            t('dataset_validationError', 'Validation Error'),
+            error.response?.data?.message || t('dataset_invalidData', 'The data format is invalid')
+          );
+        } else if (error.response?.status >= 500) {
+          showError(
+            t('dataset_serverError', 'Server Error'),
+            t('dataset_serverErrorMessage', 'Server is temporarily unavailable. Please try again later.')
+          );
+        } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+          showError(
+            t('dataset_networkError', 'Network Error'),
+            t('dataset_networkErrorMessage', 'Unable to connect to server. Please check your internet connection.')
           );
         } else {
           showError(
-            'Upload Failed',
-            error.response?.data?.message || error.message || 'Failed to create dataset'
+            t('dataset_uploadFailed', 'Upload Failed'),
+            error.response?.data?.message || error.message || t('dataset_uploadFailedMessage', 'Failed to create dataset')
           );
         }
       } finally {
         setIsUploading(false);
       }
     },
-    [parsedData, showWarning, showSuccess, showError]
+    [parsedData, showSuccess, showError, t, setOriginalTextContent]
   );
 
   // Handle change data (go back to upload and clear file)
@@ -166,10 +202,14 @@ function CreateDatasetPageContent() {
         setParsedData(result);
         setViewMode('view');
       } catch (error) {
-        showError('Parse Error', 'Failed to parse the text content');
+        console.error('Text parse error:', error);
+        showError(
+          t('dataset_parseError', 'Parse Error'), 
+          t('dataset_parseErrorMessage', 'Failed to parse the text content. Please check your data format.')
+        );
       }
     },
-    [showError]
+    [showError, t]
   );
 
   // Handle delimiter change - reparse the original content with new delimiter
@@ -185,10 +225,14 @@ function CreateDatasetPageContent() {
         );
         setParsedData(result);
       } catch (error) {
-        showError('Parse Error', 'Failed to parse with the selected delimiter');
+        console.error('Delimiter change error:', error);
+        showError(
+          t('dataset_parseError', 'Parse Error'), 
+          t('dataset_delimiterError', 'Failed to parse with the selected delimiter. Please try a different delimiter.')
+        );
       }
     },
-    [originalTextContent, showError]
+    [originalTextContent, showError, t]
   );
 
   // Handle number format change
