@@ -23,6 +23,8 @@ export interface D3LineChartProps {
   showLegend?: boolean;
   showGrid?: boolean;
   showPoints?: boolean;
+  xAxisStart?: "auto" | "zero" | number; // Add custom X-axis start option
+  yAxisStart?: "auto" | "zero" | number; // Add custom Y-axis start option
   animationDuration?: number;
   curve?: d3.CurveFactory;
   yAxisFormatter?: (value: number) => string; // Add custom Y-axis formatter
@@ -57,6 +59,8 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   showLegend = true,
   showGrid = true,
   showPoints = true,
+  xAxisStart = "auto", // Default to auto
+  yAxisStart = "auto", // Default to auto
   animationDuration = 1000,
   curve = d3.curveMonotoneX,
   yAxisFormatter, // Optional custom Y-axis formatter
@@ -198,16 +202,45 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top})`);
 
     // Scales
+    const xExtent = d3.extent(processedData, d => d[xAxisKey] as number) as [number, number];
+    
+    // Dynamic X scale domain based on xAxisStart prop
+    let xDomain: [number, number];
+    if (xAxisStart === "auto") {
+      xDomain = xExtent;
+    } else if (xAxisStart === "zero") {
+      xDomain = [0, xExtent[1]];
+    } else if (typeof xAxisStart === "number") {
+      xDomain = [xAxisStart, xExtent[1]];
+    } else {
+      // Fallback to old logic for backward compatibility
+      xDomain = xExtent[0] > 0 && xExtent[0] <= 1 ? [0, xExtent[1]] : xExtent;
+    }
+    
     const xScale = d3
       .scaleLinear()
-      .domain(d3.extent(processedData, d => d[xAxisKey] as number) as [number, number])
+      .domain(xDomain)
       .range([0, innerWidth]);
 
     const allYValues = processedData.flatMap(d => yAxisKeys.map(key => d[key] as number));
+    const yExtent = d3.extent(allYValues) as [number, number];
+    
+    // Dynamic Y scale domain based on yAxisStart prop
+    let yDomain: [number, number];
+    if (yAxisStart === "auto") {
+      yDomain = yExtent;
+    } else if (yAxisStart === "zero") {
+      yDomain = [0, yExtent[1]];
+    } else if (typeof yAxisStart === "number") {
+      yDomain = [yAxisStart, yExtent[1]];
+    } else {
+      // Fallback to old logic for backward compatibility
+      yDomain = yExtent[0] > 0 ? [0, yExtent[1]] : yExtent;
+    }
 
     const yScale = d3
       .scaleLinear()
-      .domain(d3.extent(allYValues) as [number, number])
+      .domain(yDomain)
       .nice()
       .range([innerHeight, 0]);
 
@@ -245,14 +278,19 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     }
 
     // X Axis with flexible formatting
-    const xAxis = d3.axisBottom(xScale).tickFormat(d => {
-      const value = d.valueOf();
-      // Use custom formatter if provided, otherwise use integer formatting
-      if (xAxisFormatter) {
-        return xAxisFormatter(value);
-      }
-      return d3.format('d')(value);
-    });
+    // Get unique X values from actual data to avoid duplicate ticks
+    const uniqueXValues = [...new Set(processedData.map(d => d[xAxisKey] as number))].sort((a, b) => a - b);
+    
+    const xAxis = d3.axisBottom(xScale)
+      .tickValues(uniqueXValues) // Use actual data values as ticks
+      .tickFormat(d => {
+        const value = d.valueOf();
+        // Use custom formatter if provided, otherwise use integer formatting
+        if (xAxisFormatter) {
+          return xAxisFormatter(value);
+        }
+        return d3.format('d')(value);
+      });
 
     g.append('g')
       .attr('transform', `translate(0,${innerHeight})`)
@@ -463,6 +501,8 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     yAxisFormatter,
     xAxisFormatter,
     fontSize,
+    xAxisStart,
+    yAxisStart,
   ]);
 
   return (

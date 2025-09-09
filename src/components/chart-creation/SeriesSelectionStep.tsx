@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { useChartCreation } from '@/contexts/ChartCreationContext';
+import { convertArrayToChartData } from '@/utils/dataConverter';
+import type { ChartDataPoint } from '@/components/charts/D3LineChart';
 import { 
   Plus,
   Trash2,
@@ -25,37 +28,53 @@ interface SeriesSelectionStepProps {
 }
 
 function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesSelectionStepProps) {
-  const { selectedSeries, addSeries, removeSeries, updateSeries, chartConfiguration } = useChartCreation();
-  
+  const { t } = useTranslation();
+  const { selectedSeries, addSeries, removeSeries, updateSeries, chartConfiguration, xAxisColumn, setXAxisColumn } = useChartCreation();
   // Available columns from dataset
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
-  const [xAxisColumn, setXAxisColumn] = useState<string>('');
+  const [convertedData, setConvertedData] = useState<ChartDataPoint[]>([]);
   
-  // Get available columns from dataset
+  // Get available columns from dataset and convert data
   useEffect(() => {
     if (dataset && dataset.data && dataset.data.length > 0) {
-      // Use headers if available, otherwise use first row
-      const headers = dataset.headers || dataset.data[0] || [];
-      setAvailableColumns(headers);
-      
-      // Set default X-axis column (first column)
-      if (headers.length > 0 && !xAxisColumn) {
-        setXAxisColumn(headers[0]);
+      // Convert array data to ChartDataPoint format
+      try {
+        const chartData = convertArrayToChartData(dataset.data);
+        setConvertedData(chartData);
+        
+        // Get available columns from converted data
+        if (chartData.length > 0) {
+          const dataColumns = Object.keys(chartData[0]);
+          setAvailableColumns(dataColumns);
+          
+          // Set default X-axis column (first column)
+          if (dataColumns.length > 0 && !xAxisColumn) {
+            setXAxisColumn(dataColumns[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error converting data:', error);
+        setConvertedData([]);
+        // Fallback to original method if conversion fails
+        const headers = dataset.headers || dataset.data[0] || [];
+        setAvailableColumns(headers);
+        if (headers.length > 0 && !xAxisColumn) {
+          setXAxisColumn(headers[0]);
+        }
       }
     }
-  }, [dataset, xAxisColumn]);
+  }, [dataset, xAxisColumn, setXAxisColumn]);
 
   // Add new series
   const handleAddSeries = () => {
-    if (availableColumns.length <= selectedSeries.length + 1) return; // Keep at least one column for X-axis
-    
+    // Lấy danh sách column đã được sử dụng (bao gồm xAxisColumn và các series hiện tại)
     const usedColumns = new Set([xAxisColumn, ...selectedSeries.map(s => s.dataColumn)]);
     const availableColumn = availableColumns.find(col => !usedColumns.has(col));
     
     if (availableColumn) {
       const newSeries: SeriesConfig = {
         id: `series-${Date.now()}`,
-        name: availableColumn,
+        name: availableColumn, // Name theo data column
         dataColumn: availableColumn,
         color: chartConfiguration.colors?.[selectedSeries.length % (chartConfiguration.colors?.length || 5)] || '#3B82F6',
         type: chartType?.id || 'line',
@@ -73,7 +92,15 @@ function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesS
 
   // Update series
   const handleUpdateSeries = (seriesId: string, field: keyof SeriesConfig, value: string | boolean) => {
-    updateSeries(seriesId, { [field]: value });
+    // Nếu thay đổi dataColumn, tự động cập nhật name theo dataColumn
+    if (field === 'dataColumn' && typeof value === 'string') {
+      updateSeries(seriesId, { 
+        [field]: value,
+        name: value // Tự động cập nhật name theo dataColumn
+      });
+    } else {
+      updateSeries(seriesId, { [field]: value });
+    }
   };
 
   // Toggle series visibility
@@ -84,12 +111,16 @@ function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesS
     }
   };
 
-  // Get data preview
+  // Get data preview using converted data
   const getDataPreview = () => {
-    if (!dataset || !dataset.data || dataset.data.length === 0) return null;
+    if (!convertedData || convertedData.length === 0) {
+      return null;
+    }
     
-    const previewRows = dataset.data.slice(dataset.headers ? 1 : 0, 6); // Skip header row if headers exist
-    return previewRows;
+    // Return first 5 rows of converted data
+    return convertedData.slice(0, 5).map(point => 
+      availableColumns.map(column => String(point[column] || ''))
+    );
   };
 
   // Check if form is valid
@@ -100,10 +131,10 @@ function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesS
       {/* Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Select Data Series
+          {t('chart_creation_series_title')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Choose which columns to include in your {chartType?.name || 'chart'}
+          {t('chart_creation_series_subtitle', { chartTypeName: chartType?.name || 'chart' })}
         </p>
       </div>
 
@@ -113,19 +144,18 @@ function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesS
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-lg">
               <BarChart className="w-5 h-5 text-blue-600" />
-              X-Axis Configuration
+              {t('chart_series_x_axis_configuration')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div>
-              <Label htmlFor="xAxis" className="text-sm font-medium text-gray-700 dark:text-gray-300">X-Axis Column</Label>
+              <Label htmlFor="xAxis" className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('chart_series_x_axis_column')}</Label>
               <select
                 id="xAxis"
                 value={xAxisColumn}
                 onChange={(e) => setXAxisColumn(e.target.value)}
-                className="w-full mt-2 p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                className="w-full h-10 mt-2 p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
               >
-                <option value="">Select X-axis column</option>
                 {availableColumns.map((column) => (
                   <option key={column} value={column}>
                     {column}
@@ -141,14 +171,14 @@ function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesS
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Eye className="w-5 h-5 text-green-600" />
-              Data Preview
+              {t('chart_series_data_preview')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {getDataPreview() ? (
               <div className="space-y-4">
                 <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">Column Legend:</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">{t('chart_series_column_legend')}</div>
                   <div className="flex flex-wrap gap-2">
                     {availableColumns.map((column) => (
                       <Badge
@@ -210,16 +240,16 @@ function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesS
                 
                 <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded-lg p-2">
                   <div className="flex items-center justify-between">
-                    <span>Showing first 5 rows</span>
-                    <span className="font-medium">{dataset?.data.length} total rows</span>
+                    <span>{t('chart_series_showing_rows', { count: 5 })}</span>
+                    <span className="font-medium">{t('chart_series_total_rows', { count: convertedData.length })}</span>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="text-center py-12 text-gray-500">
                 <Eye className="mx-auto h-12 w-12 mb-4 text-gray-400" />
-                <p className="text-lg font-medium">No data available</p>
-                <p className="text-sm">Select a dataset to see preview</p>
+                <p className="text-lg font-medium">{t('chart_series_no_data')}</p>
+                <p className="text-sm">{t('chart_series_select_dataset')}</p>
               </div>
             )}
           </CardContent>
@@ -231,16 +261,21 @@ function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesS
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-lg">
                 <BarChart className="w-5 h-5 text-blue-600" />
-                Data Series ({selectedSeries.length})
+                {t('chart_series_data_series')} ({selectedSeries.length})
               </span>
               <Button
                 onClick={handleAddSeries}
                 size="sm"
-                disabled={availableColumns.length <= selectedSeries.length + 1}
-                className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+                disabled={(() => {
+                  // Tính toán số column có thể sử dụng (trừ xAxisColumn và các column đã dùng)
+                  const usedColumns = new Set([xAxisColumn, ...selectedSeries.map(s => s.dataColumn)]);
+                  const availableColumnsForSeries = availableColumns.filter(col => !usedColumns.has(col));
+                  return availableColumnsForSeries.length === 0;
+                })()}
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="w-4 h-4" />
-                Add Series
+                {t('chart_series_add_series')}
               </Button>
             </CardTitle>
           </CardHeader>
@@ -248,8 +283,8 @@ function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesS
               {selectedSeries.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <BarChart className="mx-auto h-12 w-12 mb-4 text-gray-400" />
-                  <p className="text-lg font-medium">No data series selected</p>
-                  <p className="text-sm">Click "Add Series" to get started</p>
+                  <p className="text-lg font-medium">{t('chart_series_no_data')}</p>
+                  <p className="text-sm">{t('chart_series_select_dataset')}</p>
                 </div>
               ) : (
                 selectedSeries.map((series, index) => (
@@ -258,7 +293,7 @@ function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesS
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <Badge variant="secondary" className="text-xs px-3 py-1">
-                            Series {index + 1}
+                            {t('chart_series_series_label', { index: index + 1 })}
                           </Badge>
                           <div className="flex items-center gap-2">
                             <Button
@@ -286,23 +321,32 @@ function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesS
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Series Name</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('chart_series_series_name')}</Label>
                             <Input
                               value={series.name}
                               onChange={(e) => handleUpdateSeries(series.id, 'name', e.target.value)}
-                              placeholder="Series name"
-                              className="mt-1 h-10 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500"
+                              placeholder={t('chart_series_series_name_placeholder')}
+                              className="mt-1 h-11 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500"
                             />
                           </div>
                           <div>
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Data Column</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('chart_series_data_column')}</Label>
                             <select
                               value={series.dataColumn}
                               onChange={(e) => handleUpdateSeries(series.id, 'dataColumn', e.target.value)}
-                              className="w-full mt-1 h-10 p-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className="w-full mt-1 h-11 p-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             >
                               {availableColumns
-                                .filter(col => col !== xAxisColumn)
+                                .filter(col => {
+                                  // Không được là xAxisColumn
+                                  const isNotXAxis = col !== xAxisColumn;
+                                  // Không được là column đang được sử dụng bởi series khác
+                                  const isNotUsedByOther = !selectedSeries.some(s => s.id !== series.id && s.dataColumn === col);
+                                  // Hoặc là column hiện tại của series này
+                                  const isCurrentColumn = series.dataColumn === col;
+                                  
+                                  return isNotXAxis && (isNotUsedByOther || isCurrentColumn);
+                                })
                                 .map((column) => (
                                 <option key={column} value={column}>
                                   {column}
@@ -314,7 +358,7 @@ function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesS
 
                         <div className="flex items-center gap-6">
                           <div className="flex items-center gap-3">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Color</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('chart_series_color')}</Label>
                             <input
                               type="color"
                               value={series.color}
@@ -347,7 +391,7 @@ function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesS
           className="flex items-center gap-2 px-6 py-3 border-2 border-gray-300 hover:border-gray-400 shadow-lg"
         >
           <ChevronLeft className="w-4 h-4" />
-          Back to Configuration
+          {t('lineChart_editor_backConfiguration')}
         </Button>
         <Button 
           onClick={onNext} 
@@ -355,7 +399,7 @@ function SeriesSelectionStep({ onNext, onPrevious, dataset, chartType }: SeriesS
           size="lg"
           className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Continue to Preview
+          {t('lineChart_editor_continuePreview')}
           <ChevronRight className="w-4 h-4" />
         </Button>
       </div>

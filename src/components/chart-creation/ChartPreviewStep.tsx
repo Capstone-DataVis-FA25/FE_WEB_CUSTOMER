@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +19,7 @@ import {
 import { axiosPrivate } from '@/services/axios';
 import { convertArrayToChartData } from '@/utils/dataConverter';
 
-// Import chart components based on type
+// Import D3LineChart instead of LineChartEditor
 import D3LineChart from '@/components/charts/D3LineChart';
 
 interface ChartPreviewStepProps {
@@ -27,6 +28,7 @@ interface ChartPreviewStepProps {
 }
 
 function ChartPreviewStep({ onPrevious, onSave }: ChartPreviewStepProps) {
+  const { t } = useTranslation();
   const { showSuccess, showError } = useToastContext();
   const navigation = useNavigation();
   const { 
@@ -34,6 +36,7 @@ function ChartPreviewStep({ onPrevious, onSave }: ChartPreviewStepProps) {
     selectedChartType, 
     chartConfiguration, 
     selectedSeries,
+    xAxisColumn,
     setIsCreating 
   } = useChartCreation();
 
@@ -52,16 +55,13 @@ function ChartPreviewStep({ onPrevious, onSave }: ChartPreviewStepProps) {
     return convertArrayToChartData(selectedDataset.data);
   };
 
-  // Get X-axis column (first available column that's not used in series)
-  const getXAxisColumn = () => {
-    if (!selectedDataset || !selectedDataset.data) return '';
-    const headers = selectedDataset.headers || selectedDataset.data[0];
-    return headers[0] || '';
-  };
+  // Get X-axis column from context
+  const currentXAxisColumn = xAxisColumn || (selectedDataset?.headers?.[0] || selectedDataset?.data?.[0]?.[0] || '');
 
   // Get chart data
   const chartData = transformDataForChart();
-
+  const arrayData = selectedDataset?.data;
+  console.log("arrayData: ", arrayData)
   // Render chart based on type
   const renderChart = () => {
     if (!selectedChartType || !chartData.length) {
@@ -72,33 +72,51 @@ function ChartPreviewStep({ onPrevious, onSave }: ChartPreviewStepProps) {
       );
     }
 
-    const commonProps = {
-      data: chartData,
-      xAxisKey: getXAxisColumn(),
-      yAxisKeys: selectedSeries.filter(s => s.visible).map(s => s.dataColumn),
-      title: chartConfiguration.title,
-      xAxisLabel: chartConfiguration.xAxisTitle,
-      yAxisLabel: chartConfiguration.yAxisTitle,
-      showLegend: chartConfiguration.showLegend,
-      showGrid: chartConfiguration.showGrid,
-      colors: selectedSeries.reduce((acc, series) => {
+    // For line chart, use D3LineChart
+    if (selectedChartType.id === 'line') {
+      // Prepare colors object from selected series
+      const colors = selectedSeries.reduce((acc, series) => {
         acc[series.dataColumn] = { 
           light: series.color || '#3B82F6', 
           dark: series.color || '#60A5FA' 
         };
         return acc;
-      }, {} as Record<string, { light: string; dark: string }>),
-      width: chartConfiguration.width,
-      height: chartConfiguration.height,
-      showPoints: true,
-      animationDuration: chartConfiguration.animation ? 1000 : 0,
-    };
+      }, {} as Record<string, { light: string; dark: string }>);
+      
+      // Prepare series names mapping
+      const seriesNames = selectedSeries.reduce((acc, series) => {
+        acc[series.dataColumn] = series.name;
+        return acc;
+      }, {} as Record<string, string>);
 
+      console.log("arrayData: ", arrayData)
+      return (
+        <D3LineChart
+          arrayData={arrayData}
+          width={chartConfiguration.width || 800}
+          height={chartConfiguration.height || 400}
+          margin={{ top: 20, right: 40, bottom: 60, left: 80 }}
+          xAxisKey={currentXAxisColumn}
+          yAxisKeys={selectedSeries.filter(s => s.visible).map(s => s.dataColumn)}
+          colors={colors}
+          seriesNames={seriesNames}
+          title={chartConfiguration.title || ''}
+          xAxisLabel={chartConfiguration.xAxisTitle || 'X Axis'}
+          yAxisLabel={chartConfiguration.yAxisTitle || 'Y Axis'}
+          showLegend={chartConfiguration.showLegend}
+          showGrid={chartConfiguration.showGrid}
+          showPoints={true}
+          animationDuration={chartConfiguration.animation ? 1000 : 0}
+          curve={undefined} // Use default curve
+          xAxisStart={chartConfiguration.xAxisStart || "auto"}
+          yAxisStart={chartConfiguration.yAxisStart || "auto"}
+        />
+      );
+    }
+
+    // For other chart types, show placeholder
     switch (selectedChartType.id) {
-      case 'line':
-        return <D3LineChart {...commonProps} />;
       case 'bar':
-        // Return placeholder for now
         return (
           <div className="flex items-center justify-center h-64 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
             <p className="text-blue-600">Bar Chart Preview (Component not implemented yet)</p>
@@ -142,7 +160,7 @@ function ChartPreviewStep({ onPrevious, onSave }: ChartPreviewStepProps) {
           description: chartDescription.trim() || undefined,
         },
         series: selectedSeries,
-        xAxisColumn: getXAxisColumn(),
+        xAxisColumn: currentXAxisColumn,
       };
 
       await axiosPrivate.post('/charts', chartPayload);
@@ -199,10 +217,10 @@ function ChartPreviewStep({ onPrevious, onSave }: ChartPreviewStepProps) {
       {/* Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Preview & Save Chart
+          {t('chart_creation_preview_title')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Review your chart and save it to your collection
+          {t('chart_creation_preview_subtitle')}
         </p>
       </div>
 
@@ -213,7 +231,7 @@ function ChartPreviewStep({ onPrevious, onSave }: ChartPreviewStepProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Eye className="w-5 h-5" />
-                Chart Preview
+                {t('chart_preview_chart')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -229,30 +247,31 @@ function ChartPreviewStep({ onPrevious, onSave }: ChartPreviewStepProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Save className="w-5 h-5" />
-                Save Chart
+                {t('chart_preview_save_title')}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="sp  ace-y-4">
               <div>
-                <Label htmlFor="chartName">Chart Name *</Label>
+                <Label htmlFor="chartName">{t('chart_preview_chart_name')} *</Label>
                 <Input
                   id="chartName"
-                  placeholder="Enter chart name"
+                  placeholder={t('chart_preview_chart_name_placeholder')}
                   value={chartName}
                   onChange={(e) => setChartName(e.target.value)}
-                  className={!chartName.trim() ? 'border-red-300' : ''}
+                  className={!chartName.trim() ? 'border-red-300 mt-2' : 'mt-2'}
                 />
                 {!chartName.trim() && (
-                  <p className="text-sm text-red-600 mt-1">Name is required</p>
+                  <p className="text-sm text-red-600 mt-1">{t('chart_preview_chart_name_required')}</p>
                 )}
               </div>
 
-              <div>
-                <Label htmlFor="chartDescription">Description</Label>
+              <div className='mt-4'>
+                <Label htmlFor="chartDescription">{t('chart_preview_description')}</Label>
                 <Input
                   id="chartDescription"
-                  placeholder="Enter description (optional)"
+                  placeholder={t('chart_preview_description_placeholder')}
                   value={chartDescription}
+                  className="mt-2"
                   onChange={(e) => setChartDescription(e.target.value)}
                 />
               </div>
@@ -260,18 +279,18 @@ function ChartPreviewStep({ onPrevious, onSave }: ChartPreviewStepProps) {
               <Button
                 onClick={handleSaveChart}
                 disabled={!chartName.trim() || isSaving}
-                className="w-full"
+                className="w-full mt-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 size="lg"
               >
                 {isSaving ? (
                   <div className="flex items-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Saving...
+                    {t('chart_preview_saving')}
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4" />
-                    Save Chart
+                    {t('chart_preview_save_button')}
                   </div>
                 )}
               </Button>
@@ -283,35 +302,90 @@ function ChartPreviewStep({ onPrevious, onSave }: ChartPreviewStepProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5" />
-                Chart Summary
+                {t('chart_preview_chart_summary')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="space-y-2 text-sm">
+              <div className="space-y-3 text-sm">
+                {/* Basic Info */}
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Type:</span>
+                  <span className="text-gray-600">{t('chart_preview_config_title')}</span>
+                  <span className="font-medium">{chartConfiguration.title || chartName || 'Untitled'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">{t('chart_preview_config_type')}</span>
                   <Badge variant="secondary">{selectedChartType?.name}</Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Dataset:</span>
+                  <span className="text-gray-600">{t('chart_preview_config_dataset')}</span>
                   <span className="font-medium">{selectedDataset?.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Data Points:</span>
+                  <span className="text-gray-600">{t('chart_preview_config_data_points')}</span>
                   <span className="font-medium">{chartData.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Series:</span>
+                  <span className="text-gray-600">{t('chart_preview_config_series')}</span>
                   <span className="font-medium">{selectedSeries.filter(s => s.visible).length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Dimensions:</span>
-                  <span className="font-medium">{chartConfiguration.width} × {chartConfiguration.height}</span>
+                  <span className="text-gray-600">{t('chart_preview_config_dimensions')}</span>
+                  <span className="font-medium">{chartConfiguration.width || 800} × {chartConfiguration.height || 400}px</span>
+                </div>
+
+                {/* Axis Configuration */}
+                <div className="border-t pt-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">{t('chart_preview_config_x_axis')}</span>
+                    <span className="font-medium">{chartConfiguration.xAxisTitle || currentXAxisColumn}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">{t('chart_preview_config_y_axis')}</span>
+                    <span className="font-medium">{chartConfiguration.yAxisTitle || 'Y Axis'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">{t('chart_preview_config_x_axis_start')}</span>
+                    <span className="font-medium">
+                      {chartConfiguration.xAxisStart === 'auto' ? t('chart_preview_config_auto') :
+                       chartConfiguration.xAxisStart === 'zero' ? t('chart_preview_config_zero') :
+                       chartConfiguration.xAxisStart || t('chart_preview_config_auto')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">{t('chart_preview_config_y_axis_start')}</span>
+                    <span className="font-medium">
+                      {chartConfiguration.yAxisStart === 'auto' ? t('chart_preview_config_auto') :
+                       chartConfiguration.yAxisStart === 'zero' ? t('chart_preview_config_zero') :
+                       chartConfiguration.yAxisStart || t('chart_preview_config_auto')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Display Options */}
+                <div className="border-t pt-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">{t('chart_preview_config_show_legend')}</span>
+                    <Badge variant={chartConfiguration.showLegend ? "default" : "secondary"}>
+                      {chartConfiguration.showLegend ? t('chart_preview_config_yes') : t('chart_preview_config_no')}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">{t('chart_preview_config_show_grid')}</span>
+                    <Badge variant={chartConfiguration.showGrid ? "default" : "secondary"}>
+                      {chartConfiguration.showGrid ? t('chart_preview_config_yes') : t('chart_preview_config_no')}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">{t('chart_preview_config_animation')}</span>
+                    <Badge variant={chartConfiguration.animation ? "default" : "secondary"}>
+                      {chartConfiguration.animation ? t('chart_preview_config_yes') : t('chart_preview_config_no')}
+                    </Badge>
+                  </div>
                 </div>
               </div>
 
               <div className="pt-2 border-t">
-                <Label className="text-xs text-gray-600">Active Series:</Label>
+                <Label className="text-xs text-gray-600">{t('chart_preview_config_active_series')}</Label>
                 <div className="space-y-1 mt-1">
                   {selectedSeries.filter(s => s.visible).map((series) => (
                     <div key={series.id} className="flex items-center gap-2">
@@ -333,7 +407,7 @@ function ChartPreviewStep({ onPrevious, onSave }: ChartPreviewStepProps) {
                 size="sm"
               >
                 <Download className="w-4 h-4 mr-2" />
-                Export Data
+                {t('chart_preview_export_data')}
               </Button>
             </CardContent>
           </Card>
@@ -348,10 +422,10 @@ function ChartPreviewStep({ onPrevious, onSave }: ChartPreviewStepProps) {
           className="flex items-center gap-2"
         >
           <ChevronLeft className="w-4 h-4" />
-          Back to Series
+          {t('chart_preview_back_to_series')}
         </Button>
         <div className="text-sm text-gray-500">
-          Ready to save your chart? Use the Save Chart button above.
+          {t('chart_preview_ready_hint')}
         </div>
       </div>
     </div>

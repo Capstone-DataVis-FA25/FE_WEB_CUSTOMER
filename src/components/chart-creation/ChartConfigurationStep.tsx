@@ -168,6 +168,87 @@ function ChartConfigurationStep({ onNext, onPrevious, chartType }: ChartConfigur
                 onChange={(e) => handleInputChange('yAxisTitle', e.target.value)}
               />
             </div>
+
+            {/* Axis Start Configuration */}
+            <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Label className="text-base font-semibold">{t('chart_config_axis_configuration')}</Label>
+              
+              {/* X-Axis Start */}
+              <div>
+                <Label htmlFor="xAxisStart">{t('chart_config_x_axis_start')}</Label>
+                <div className="space-y-2 mt-2">
+                  <select
+                    id="xAxisStart"
+                    value={typeof formData.xAxisStart === "number" ? "custom" : formData.xAxisStart || "auto"}
+                    onChange={(e) => {
+                      if (e.target.value === "custom") {
+                        handleInputChange('xAxisStart', 0);
+                      } else {
+                        handleInputChange('xAxisStart', e.target.value as "auto" | "zero");
+                      }
+                    }}
+                    className="w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  >
+                    <option value="auto">{t('chart_config_axis_auto')}</option>
+                    <option value="zero">{t('chart_config_axis_zero')}</option>
+                    <option value="custom">{t('chart_config_axis_custom')}</option>
+                  </select>
+                  
+                  {typeof formData.xAxisStart === "number" && (
+                    <Input
+                      type="number"
+                      value={formData.xAxisStart}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value);
+                        if (!isNaN(value)) {
+                          handleInputChange('xAxisStart', value);
+                        }
+                      }}
+                      placeholder={t('chart_config_axis_custom_placeholder')}
+                      className="h-9 text-sm"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Y-Axis Start */}
+              <div>
+                <Label htmlFor="yAxisStart">{t('chart_config_y_axis_start')}</Label>
+                <div className="space-y-2 mt-2">
+                  <select
+                    id="yAxisStart"
+                    value={typeof formData.yAxisStart === "number" ? "custom" : formData.yAxisStart || "auto"}
+                    onChange={(e) => {
+                      if (e.target.value === "custom") {
+                        handleInputChange('yAxisStart', 0);
+                      } else {
+                        handleInputChange('yAxisStart', e.target.value as "auto" | "zero");
+                      }
+                    }}
+                    className="w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  >
+                    <option value="auto">{t('chart_config_axis_auto')}</option>
+                    <option value="zero">{t('chart_config_axis_zero')}</option>
+                    <option value="custom">{t('chart_config_axis_custom')}</option>
+                  </select>
+                  
+                  {typeof formData.yAxisStart === "number" && (
+                    <Input
+                      type="number"
+                      value={formData.yAxisStart}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value);
+                        if (!isNaN(value)) {
+                          handleInputChange('yAxisStart', value);
+                        }
+                      }}
+                      placeholder={t('chart_config_axis_custom_placeholder')}
+                      className="h-9 text-sm"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -272,6 +353,22 @@ function ChartConfigurationStep({ onNext, onPrevious, chartType }: ChartConfigur
               <div>
                 <span className="font-medium">{t('chart_config_preview_theme')}</span> {colorThemes[selectedTheme].name}
               </div>
+              <div>
+                <span className="font-medium">{t('chart_config_preview_x_axis')}</span> 
+                <span className="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded ml-1">
+                  {formData.xAxisStart === "auto" ? t('chart_config_axis_auto') : 
+                   formData.xAxisStart === "zero" ? t('chart_config_axis_zero') : 
+                   `${t('chart_config_axis_custom')}: ${formData.xAxisStart}`}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium">{t('chart_config_preview_y_axis')}</span>
+                <span className="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded ml-1">
+                  {formData.yAxisStart === "auto" ? t('chart_config_axis_auto') : 
+                   formData.yAxisStart === "zero" ? t('chart_config_axis_zero') : 
+                   `${t('chart_config_axis_custom')}: ${formData.yAxisStart}`}
+                </span>
+              </div>
             </div>
             
             <div className="flex items-center space-x-4 text-sm pt-2">
@@ -306,7 +403,7 @@ function ChartConfigurationStep({ onNext, onPrevious, chartType }: ChartConfigur
           onClick={onNext} 
           disabled={!isFormValid}
           size="lg"
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {t('chart_config_continue_series')}
           <ChevronRight className="w-4 h-4" />

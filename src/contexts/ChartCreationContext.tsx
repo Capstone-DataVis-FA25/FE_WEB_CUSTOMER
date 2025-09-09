@@ -32,6 +32,8 @@ export interface ChartConfiguration {
   xAxisTitle?: string;
   yAxisTitle?: string;
   animation?: boolean;
+  xAxisStart?: "auto" | "zero" | number;
+  yAxisStart?: "auto" | "zero" | number;
 }
 
 export interface SeriesConfig {
@@ -57,6 +59,7 @@ interface ChartCreationState {
   
   // Series selection
   selectedSeries: SeriesConfig[];
+  xAxisColumn: string;
   
   // UI states
   isCreating: boolean;
@@ -82,6 +85,9 @@ interface ChartCreationActions {
   addSeries: (series: SeriesConfig) => void;
   removeSeries: (seriesId: string) => void;
   updateSeries: (seriesId: string, updates: Partial<SeriesConfig>) => void;
+  
+  // X-Axis actions
+  setXAxisColumn: (column: string) => void;
   
   // UI actions
   setIsCreating: (isCreating: boolean) => void;
@@ -115,8 +121,11 @@ const initialState: ChartCreationState = {
     xAxisTitle: '',
     yAxisTitle: '',
     animation: true,
+    xAxisStart: "auto",
+    yAxisStart: "auto",
   },
   selectedSeries: [],
+  xAxisColumn: '',
   isCreating: false,
   isUploading: false,
   step: 0,
@@ -184,6 +193,11 @@ export function ChartCreationProvider({ children }: ChartCreationProviderProps) 
     }));
   };
 
+  // X-Axis actions
+  const setXAxisColumn = (column: string) => {
+    setState(prev => ({ ...prev, xAxisColumn: column }));
+  };
+
   // UI actions
   const setIsCreating = (isCreating: boolean) => {
     setState(prev => ({ ...prev, isCreating }));
@@ -213,6 +227,7 @@ export function ChartCreationProvider({ children }: ChartCreationProviderProps) 
     addSeries,
     removeSeries,
     updateSeries,
+    setXAxisColumn,
     setIsCreating,
     setIsUploading,
     setStep,

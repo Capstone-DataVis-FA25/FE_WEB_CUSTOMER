@@ -36,6 +36,8 @@ export interface LineChartConfig {
   showPoints: boolean;
   animationDuration: number;
   curve: keyof typeof curveOptions;
+  xAxisStart: "auto" | "zero" | number; // New field for X-axis start
+  yAxisStart: "auto" | "zero" | number; // New field for Y-axis start
 }
 
 // Formatter configuration
@@ -144,7 +146,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     height: responsiveDefaults.height,
     margin: { top: 20, right: 40, bottom: 60, left: 80 },
     xAxisKey: Object.keys(processedInitialData[0] || {})[0] || 'x',
-    yAxisKeys: Object.keys(processedInitialData[0] || {}).filter(key => typeof (processedInitialData[0] || {})[key] === 'number') || ['y'],
+    yAxisKeys: Object.keys(processedInitialData[0] || {}).slice(1) || ['y'], // Lấy tất cả columns trừ column đầu tiên (xAxisKey)
     disabledLines: [], // Default to no disabled lines
     title: t('lineChart_editor_title'),
     xAxisLabel: t('lineChart_editor_xAxisLabel'),
@@ -154,13 +156,32 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     showPoints: true,
     animationDuration: 1000,
     curve: 'curveMonotoneX',
+    xAxisStart: "auto", // Default to auto
+    yAxisStart: "auto", // Default to auto
     ...initialConfig
   };
 
   const defaultColors: ColorConfig = {
-    line1: { light: "#3b82f6", dark: "#60a5fa" },
-    line2: { light: "#f97316", dark: "#fb923c" },
-    line3: { light: "#10b981", dark: "#34d399" },
+    line1: { light: "#3b82f6", dark: "#60a5fa" }, // Blue
+    line2: { light: "#f97316", dark: "#fb923c" }, // Orange  
+    line3: { light: "#10b981", dark: "#34d399" }, // Green
+    line4: { light: "#ef4444", dark: "#f87171" }, // Red
+    line5: { light: "#8b5cf6", dark: "#a78bfa" }, // Purple
+    line6: { light: "#06b6d4", dark: "#67e8f9" }, // Cyan
+    line7: { light: "#84cc16", dark: "#a3e635" }, // Lime
+    line8: { light: "#f59e0b", dark: "#fbbf24" }, // Amber
+    line9: { light: "#ec4899", dark: "#f472b6" }, // Pink
+    line10: { light: "#6366f1", dark: "#818cf8" }, // Indigo
+    line11: { light: "#14b8a6", dark: "#5eead4" }, // Teal
+    line12: { light: "#f43f5e", dark: "#fb7185" }, // Rose
+    line13: { light: "#a855f7", dark: "#c084fc" }, // Violet
+    line14: { light: "#22c55e", dark: "#4ade80" }, // Green-500
+    line15: { light: "#ff6b35", dark: "#ff8566" }, // Red-Orange
+    line16: { light: "#6d28d9", dark: "#8b5cf6" }, // Purple-700
+    line17: { light: "#059669", dark: "#10b981" }, // Emerald-600
+    line18: { light: "#dc2626", dark: "#ef4444" }, // Red-600
+    line19: { light: "#7c3aed", dark: "#a78bfa" }, // Violet-600
+    line20: { light: "#0891b2", dark: "#0ea5e9" }, // Sky-600
     ...initialColors
   };
 
@@ -184,13 +205,21 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   
   // Series management state
   const [seriesConfigs, setSeriesConfigs] = useState<SeriesConfig[]>(() => {
-    return config.yAxisKeys.map((key, index) => ({
-      id: `series-${index}`,
-      name: key,
-      dataColumn: key,
-      color: Object.values(defaultColors)[index]?.light || '#3b82f6',
-      visible: !config.disabledLines.includes(key)
-    }));
+    return config.yAxisKeys.map((key, index) => {
+      // Sử dụng màu từ defaultColors theo thứ tự, tránh trùng lặp
+      const colorKeys = Object.keys(defaultColors);
+      const colorIndex = index % colorKeys.length;
+      const selectedColorKey = colorKeys[colorIndex];
+      const selectedColor = defaultColors[selectedColorKey];
+      
+      return {
+        id: `series-${index}`,
+        name: key,
+        dataColumn: key,
+        color: selectedColor.light,
+        visible: !config.disabledLines.includes(key)
+      };
+    });
   });
 
   // Calculate responsive fontSize based on chart dimensions
@@ -338,19 +367,19 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   // Helper function to get available columns for new series
   const getAvailableColumns = () => {
     return Object.keys(data[0] || {}).filter(key => 
-      typeof (data[0] || {})[key] === 'number' &&
+      key !== config.xAxisKey && // Không được là xAxisKey
       !seriesConfigs.some(s => s.dataColumn === key)
     );
   };
 
   // Helper function to check if a column is available for a specific series
   const isColumnAvailableForSeries = (column: string, seriesId: string) => {
-    const isNumeric = typeof (data[0] || {})[column] === 'number';
+    const isNotXAxis = column !== config.xAxisKey; // Không được là xAxisKey
     const currentSeries = seriesConfigs.find(s => s.id === seriesId);
     const isCurrentColumn = currentSeries?.dataColumn === column;
     const isUsedByOther = seriesConfigs.some(s => s.id !== seriesId && s.dataColumn === column);
     
-    return isNumeric && (isCurrentColumn || !isUsedByOther);
+    return isNotXAxis && (isCurrentColumn || !isUsedByOther);
   };
 
   // Series management functions
@@ -419,12 +448,49 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     const availableColumns = getAvailableColumns();
     
     if (availableColumns.length > 0) {
-      const newColor = '#3b82f6';
+      // Lấy danh sách màu đã được sử dụng
+      const usedColors = seriesConfigs.map(s => s.color);
+      
+      // Tìm màu từ defaultColors chưa được sử dụng
+      const colorKeys = Object.keys(defaultColors);
+      let selectedColor = defaultColors[colorKeys[0]]; // Fallback color
+      
+      for (const colorKey of colorKeys) {
+        const color = defaultColors[colorKey];
+        if (!usedColors.includes(color.light)) {
+          selectedColor = color;
+          break;
+        }
+      }
+      
+      // Nếu tất cả màu trong defaultColors đã được sử dụng, tạo màu random
+      if (usedColors.includes(selectedColor.light)) {
+        const generateRandomColor = () => {
+          const letters = '0123456789ABCDEF';
+          let color = '#';
+          for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+          }
+          return color;
+        };
+        
+        let randomColor = generateRandomColor();
+        // Đảm bảo màu random không trùng với màu đã có
+        while (usedColors.includes(randomColor)) {
+          randomColor = generateRandomColor();
+        }
+        
+        selectedColor = {
+          light: randomColor,
+          dark: randomColor
+        };
+      }
+      
       const newSeries: SeriesConfig = {
         id: `series-${Date.now()}`,
         name: availableColumns[0],
         dataColumn: availableColumns[0],
-        color: newColor,
+        color: selectedColor.light,
         visible: true
       };
       
@@ -432,8 +498,8 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       updateColors({
         ...colors,
         [newSeries.dataColumn]: {
-          light: newColor,
-          dark: newColor
+          light: selectedColor.light,
+          dark: selectedColor.dark
         }
       });
       
@@ -780,6 +846,124 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
               </Card>
             </motion.div>
 
+            {/* Axis Configuration */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.15 }}
+            >
+              <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
+                <CardHeader className="pb-3">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Axis Configuration
+                  </h3>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* X-Axis Start Configuration */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">X-Axis Start</Label>
+                    <div className="space-y-2 mt-2">
+                      <select
+                        value={typeof config.xAxisStart === "number" ? "custom" : config.xAxisStart}
+                        onChange={(e) => {
+                          if (e.target.value === "custom") {
+                            updateConfig({ xAxisStart: 0 });
+                          } else {
+                            updateConfig({ xAxisStart: e.target.value as "auto" | "zero" });
+                          }
+                        }}
+                        className="w-full h-9 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                      >
+                        <option value="auto">Auto (từ giá trị min của data)</option>
+                        <option value="zero">Zero (bắt đầu từ 0)</option>
+                        <option value="custom">Custom (giá trị tùy chỉnh)</option>
+                      </select>
+                      
+                      {typeof config.xAxisStart === "number" && (
+                        <Input
+                          type="number"
+                          value={config.xAxisStart}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value);
+                            if (!isNaN(value)) {
+                              updateConfig({ xAxisStart: value });
+                            }
+                          }}
+                          placeholder="Nhập giá trị bắt đầu"
+                          className="h-9 text-sm"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Y-Axis Start Configuration */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">Y-Axis Start</Label>
+                    <div className="space-y-2 mt-2">
+                      <select
+                        value={typeof config.yAxisStart === "number" ? "custom" : config.yAxisStart}
+                        onChange={(e) => {
+                          if (e.target.value === "custom") {
+                            updateConfig({ yAxisStart: 0 });
+                          } else {
+                            updateConfig({ yAxisStart: e.target.value as "auto" | "zero" });
+                          }
+                        }}
+                        className="w-full h-9 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                      >
+                        <option value="auto">Auto (từ giá trị min của data)</option>
+                        <option value="zero">Zero (bắt đầu từ 0)</option>
+                        <option value="custom">Custom (giá trị tùy chỉnh)</option>
+                      </select>
+                      
+                      {typeof config.yAxisStart === "number" && (
+                        <Input
+                          type="number"
+                          value={config.yAxisStart}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value);
+                            if (!isNaN(value)) {
+                              updateConfig({ yAxisStart: value });
+                            }
+                          }}
+                          placeholder="Nhập giá trị bắt đầu"
+                          className="h-9 text-sm"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Preview of current axis settings */}
+                  <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="font-medium">X-Axis Start:</span>
+                        <span className="font-mono bg-white dark:bg-gray-700 px-2 py-1 rounded">
+                          {config.xAxisStart === "auto" ? "Auto (min data)" : 
+                           config.xAxisStart === "zero" ? "From 0" : 
+                           `From ${config.xAxisStart}`}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Y-Axis Start:</span>
+                        <span className="font-mono bg-white dark:bg-gray-700 px-2 py-1 rounded">
+                          {config.yAxisStart === "auto" ? "Auto (min data)" : 
+                           config.yAxisStart === "zero" ? "From 0" : 
+                           `From ${config.yAxisStart}`}
+                        </span>
+                      </div>
+                      <div className="text-center mt-2 pt-2 border-t border-blue-300 dark:border-blue-600">
+                        <span className="text-blue-600 dark:text-blue-300 font-medium">
+                          Chart sẽ cập nhật theo cấu hình trên
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
             {/* Display Options */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -960,6 +1144,8 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     yAxisFormatter={getYAxisFormatter}
                     xAxisFormatter={getXAxisFormatter}
                     fontSize={getResponsiveFontSize()}
+                    xAxisStart={config.xAxisStart}
+                    yAxisStart={config.yAxisStart}
                   />
                 </CardContent>
               </Card>

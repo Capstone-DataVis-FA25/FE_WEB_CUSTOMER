@@ -239,7 +239,7 @@ function ChartTypeSelectionStep({ onNext, onPrevious, onChartTypeSelect }: Chart
           onClick={onNext} 
           disabled={!selectedChartType}
           size="lg"
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {t('chart_type_continue_config')}
           <ChevronRight className="w-4 h-4" />
