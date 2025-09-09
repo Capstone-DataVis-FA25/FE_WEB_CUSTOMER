@@ -800,7 +800,7 @@
   "dataset_columns": "Cột",
   "dataset_created": "Đã Tạo",
   "dataset_updated": "Đã Cập Nhật",
-  "dataset_backToDetail": "Quay Về Chi Tiết Dataset"
+  "dataset_backToDetail": "Quay Về Chi Tiết Dataset",
   "chartEditor_chartType": "Loại biểu đồ",
   "chartEditor_refine": "Tinh chỉnh",
   "chartEditor_annotate": "Chú thích",
@@ -845,4 +845,3 @@
   "lineChart_editor_moveHorizontally": "di chuyển ngang",
   "lineChart_editor_moveDown": "di chuyển xuống"
 }
-
