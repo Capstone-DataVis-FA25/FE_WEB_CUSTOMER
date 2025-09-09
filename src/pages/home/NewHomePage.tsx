@@ -697,7 +697,7 @@ const NewHomePage: React.FC = () => {
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true }}
+        viewport={{ once: false }}
         className="py-20 lg:py-32 "
       >
         <div className="container mx-auto px-4">
