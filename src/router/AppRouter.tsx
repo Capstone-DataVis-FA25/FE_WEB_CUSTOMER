@@ -32,6 +32,9 @@ const componentMap = {
   LineChartEditorDemo: lazy(() => import('../components/charts/page.example/LineChartEditorDemo')),
   BarChartEditorDemo: lazy(() => import('../components/charts/page.example/BarChartEditorDemo')),
   CreateDatasetPage: lazy(() => import('../pages/dataset/CreateDatasetPage')),
+  DatasetListPage: lazy(() => import('../pages/dataset/DatasetListPage')),
+  DatasetDetailPage: lazy(() => import('../pages/dataset/DatasetDetailPage')),
+  EditDatasetPage: lazy(() => import('../pages/dataset/EditDatasetPage')),
 };
 
 // ================================

@@ -15,8 +15,8 @@ import {
   isValidFileType,
   MAX_FILE_SIZE,
 } from '@/utils/fileProcessors';
+import { useDataset } from '@/features/dataset/useDataset';
 import type Papa from 'papaparse';
-import { axiosPrivate } from '@/services/axios';
 
 type ViewMode = 'upload' | 'textUpload' | 'view';
 
@@ -24,6 +24,7 @@ type ViewMode = 'upload' | 'textUpload' | 'view';
 function CreateDatasetPageContent() {
   const { t } = useTranslation();
   const { showSuccess, showError } = useToastContext();
+  const { createDataset, creating } = useDataset();
 
   // Get states from context
   const {
@@ -31,8 +32,6 @@ function CreateDatasetPageContent() {
     setOriginalTextContent,
     parsedData,
     setParsedData,
-    isUploading,
-    setIsUploading,
   } = useDatasetUpload();
 
   // Local state management (non-shareable states)
@@ -117,8 +116,6 @@ function CreateDatasetPageContent() {
         return;
       }
 
-      setIsUploading(true);
-
       try {
         // Prepare the data to send
         const requestBody = {
@@ -127,8 +124,8 @@ function CreateDatasetPageContent() {
           ...(description && { description: description.trim() }),
         };
 
-        // Send POST request to create dataset using axios
-        await axiosPrivate.post('/datasets', requestBody);
+        // Send POST request to create dataset using the new dataset features
+        await createDataset(requestBody).unwrap();
 
         console.log('Dataset creation success');
         showSuccess(
@@ -148,22 +145,22 @@ function CreateDatasetPageContent() {
         console.error('Dataset creation error:', error);
         
         // Check for specific error types
-        if (error.response?.status === 409) {
+        if (error.status === 409) {
           showError(
             t('dataset_nameExists', 'Dataset Name Already Exists'),
             t('dataset_nameExistsMessage', `A dataset with the name "${name.trim()}" already exists. Please choose a different name.`)
           );
-        } else if (error.response?.status === 400) {
+        } else if (error.status === 400) {
           showError(
             t('dataset_validationError', 'Validation Error'),
-            error.response?.data?.message || t('dataset_invalidData', 'The data format is invalid')
+            error.message || t('dataset_invalidData', 'The data format is invalid')
           );
-        } else if (error.response?.status >= 500) {
+        } else if (error.status >= 500) {
           showError(
             t('dataset_serverError', 'Server Error'),
             t('dataset_serverErrorMessage', 'Server is temporarily unavailable. Please try again later.')
           );
-        } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+        } else if (error.code === 'NETWORK_ERROR' || !error.status) {
           showError(
             t('dataset_networkError', 'Network Error'),
             t('dataset_networkErrorMessage', 'Unable to connect to server. Please check your internet connection.')
@@ -171,14 +168,12 @@ function CreateDatasetPageContent() {
         } else {
           showError(
             t('dataset_uploadFailed', 'Upload Failed'),
-            error.response?.data?.message || error.message || t('dataset_uploadFailedMessage', 'Failed to create dataset')
+            error.message || t('dataset_uploadFailedMessage', 'Failed to create dataset')
           );
         }
-      } finally {
-        setIsUploading(false);
       }
     },
-    [parsedData, showSuccess, showError, t, setOriginalTextContent]
+    [parsedData, createDataset, showSuccess, showError, t, setOriginalTextContent, setParsedData, setSelectedFile, setViewMode]
   );
 
   // Handle change data (go back to upload and clear file)
