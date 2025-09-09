@@ -1,4 +1,5 @@
 import type { Variants } from 'framer-motion';
+import type { Transition } from 'framer-motion';
 
 // Transition configs có thể tái sử dụng
 export const transitions = {
@@ -6,27 +7,27 @@ export const transitions = {
     type: 'tween',
     duration: 0.3,
     ease: 'easeInOut',
-  },
+  } as Transition,
   spring: {
     type: 'spring',
     stiffness: 300,
     damping: 30,
-  },
+  } as Transition,
   bouncy: {
     type: 'spring',
     stiffness: 400,
     damping: 25,
-  },
+  } as Transition,
   slow: {
     type: 'tween',
     duration: 0.6,
     ease: 'easeInOut',
-  },
+  } as Transition,
   fast: {
     type: 'tween',
     duration: 0.15,
     ease: 'easeInOut',
-  },
+  } as Transition,
 };
 
 // Animation variants cho fade effects
@@ -278,18 +279,23 @@ export const pageVariants: Variants = {
 };
 
 // Utility function để tạo delay
+
 export const createDelayedVariants = (baseVariants: Variants, delay: number): Variants => {
   const delayedVariants: Variants = {};
 
   Object.keys(baseVariants).forEach(key => {
     const variant = baseVariants[key];
     if (typeof variant === 'object' && variant !== null) {
+      const baseTransition: Transition =
+        typeof variant.transition === 'object'
+          ? { ...variant.transition }
+          : { ...transitions.smooth };
       delayedVariants[key] = {
         ...variant,
         transition: {
-          ...(variant.transition || transitions.smooth),
+          ...baseTransition,
           delay,
-        },
+        } as Transition,
       };
     }
   });

@@ -6,15 +6,15 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import D3LineChart from '@/components/charts/D3LineChart';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
+import { convertArrayToChartData, convertChartDataToArray } from '@/utils/dataConverter';
+import SpreadsheetEditor from '@/components/excel/SpreadsheetEditor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Palette, 
   BarChart3, 
-  Plus, 
-  Minus,
+  Plus,
   Edit3,
   X,
-  Save,
   Table
 } from 'lucide-react';
 import * as d3 from 'd3';
@@ -82,7 +82,8 @@ const curveOptions = {
 
 // Props for LineChart Editor
 export interface LineChartEditorProps {
-  initialData: ChartDataPoint[];
+  initialData?: ChartDataPoint[];
+  initialArrayData?: (string | number)[][];
   initialConfig?: Partial<LineChartConfig>;
   initialColors?: ColorConfig;
   initialFormatters?: Partial<FormatterConfig>;
@@ -96,6 +97,7 @@ export interface LineChartEditorProps {
 
 const LineChartEditor: React.FC<LineChartEditorProps> = ({
   initialData,
+  initialArrayData,
   initialConfig = {},
   initialColors = {},
   initialFormatters = {},
@@ -105,6 +107,14 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   onFormattersChange,
 }) => {
   const { t } = useTranslation();
+  
+  // Convert array data to ChartDataPoint format if provided
+  const processedInitialData = useMemo(() => {
+    if (initialArrayData && initialArrayData.length > 0) {
+      return convertArrayToChartData(initialArrayData);
+    }
+    return initialData || [];
+  }, [initialData, initialArrayData]);
   
   // Calculate responsive default dimensions
   const getResponsiveDefaults = () => {
@@ -125,12 +135,12 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     width: responsiveDefaults.width,
     height: responsiveDefaults.height,
     margin: { top: 20, right: 40, bottom: 60, left: 80 },
-    xAxisKey: Object.keys(initialData[0] || {})[0] || 'x',
-    yAxisKeys: Object.keys(initialData[0] || {}).filter(key => typeof (initialData[0] || {})[key] === 'number') || ['y'],
+    xAxisKey: Object.keys(processedInitialData[0] || {})[0] || 'x',
+    yAxisKeys: Object.keys(processedInitialData[0] || {}).filter(key => typeof (processedInitialData[0] || {})[key] === 'number') || ['y'],
     disabledLines: [], // Default to no disabled lines
-    title: t('lineChart_editor_title'),
-    xAxisLabel: t('lineChart_editor_xAxisLabel'),
-    yAxisLabel: t('lineChart_editor_yAxisLabel'),
+    title: t('lineChart_editor_title') || 'Line Chart',
+    xAxisLabel: t('lineChart_editor_xAxisLabel') || 'X Axis',
+    yAxisLabel: t('lineChart_editor_yAxisLabel') || 'Y Axis',
     showLegend: true,
     showGrid: true,
     showPoints: true,
@@ -159,10 +169,16 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   // State management
   const [config, setConfig] = useState<LineChartConfig>(defaultConfig);
   const [colors, setColors] = useState<ColorConfig>(defaultColors);
-  const [data, setData] = useState<ChartDataPoint[]>(initialData);
+  const [data, setData] = useState<ChartDataPoint[]>(processedInitialData);
   const [formatters, setFormatters] = useState<FormatterConfig>(defaultFormatters);
   const [showDataModal, setShowDataModal] = useState(false);
-  const [tempData, setTempData] = useState<ChartDataPoint[]>(initialData);
+  const [tempArrayData, setTempArrayData] = useState<string[][]>(() => {
+    if (initialArrayData && initialArrayData.length > 0) {
+      return initialArrayData.map(row => row.map(cell => String(cell)));
+    }
+    const arrayData = convertChartDataToArray(processedInitialData);
+    return arrayData.map(row => row.map(cell => String(cell)));
+  });
 
   // Calculate responsive fontSize based on chart dimensions
   const getResponsiveFontSize = () => {
@@ -306,9 +322,11 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     onFormattersChange?.(updatedFormatters);
   };
 
-  // Modal functions
+  // Modal functions with SpreadsheetEditor
   const openDataModal = () => {
-    setTempData([...data]);
+    // Convert current chart data to array format for the spreadsheet editor
+    const arrayData = convertChartDataToArray(data);
+    setTempArrayData(arrayData.map(row => row.map(cell => String(cell))));
     setShowDataModal(true);
   };
 
@@ -316,43 +334,32 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     setShowDataModal(false);
   };
 
-  const saveDataChanges = () => {
-    updateData(tempData);
-    setShowDataModal(false);
+  const handleSpreadsheetDataChange = (newData: string[][]) => {
+    setTempArrayData(newData);
   };
 
-  const updateTempDataPoint = (index: number, key: string, value: string) => {
-    const newTempData = [...tempData];
-    const numValue = parseFloat(value) || 0;
-    newTempData[index] = { ...newTempData[index], [key]: numValue };
-    setTempData(newTempData);
-  };
-
-  const addTempDataPoint = () => {
-    const newPoint: ChartDataPoint = {
-      [config.xAxisKey]: tempData.length > 0 ? Math.max(...tempData.map(d => d[config.xAxisKey] as number)) + 1 : 1,
-    };
+  const handleSpreadsheetSave = (data: string[][]) => {
+    // Update temp data and immediately save to chart
+    setTempArrayData(data);
     
-    config.yAxisKeys.forEach(key => {
-      newPoint[key] = 0;
-    });
+    // Convert the array data back to ChartDataPoint format
+    const numericArrayData = data.map(row => 
+      row.map(cell => {
+        // Keep headers as strings, convert data to numbers where possible
+        const trimmed = String(cell).trim();
+        return isNaN(Number(trimmed)) || trimmed === '' ? trimmed : Number(trimmed);
+      })
+    );
     
-    const newTempData = [...tempData, newPoint];
-    setTempData(newTempData);
-    
-    // Focus vào input đầu tiên của dòng mới sau khi component re-render
-    setTimeout(() => {
-      const newRowIndex = newTempData.length - 1;
-      const firstInput = document.querySelector(`input[data-row="${newRowIndex}"][data-col="0"]`) as HTMLInputElement;
-      if (firstInput) {
-        firstInput.focus();
-        firstInput.select();
-      }
-    }, 50);
-  };
-
-  const removeTempDataPoint = (index: number) => {
-    setTempData(tempData.filter((_, i) => i !== index));
+    try {
+      const newChartData = convertArrayToChartData(numericArrayData);
+      updateData(newChartData);
+      // Optionally close modal after save
+      // setShowDataModal(false);
+    } catch (error) {
+      console.error('Error converting data:', error);
+      // You might want to show an error message to the user here
+    }
   };
 
   // Apply size preset
@@ -1024,7 +1031,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         </div>
       </div>
 
-      {/* Data Editor Modal */}
+      {/* Data Editor Modal with SpreadsheetEditor */}
       <AnimatePresence>
         {showDataModal && (
           <motion.div
@@ -1039,40 +1046,13 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
-                <div className="flex items-center gap-3">
-                  <Table className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      {t('lineChart_editor_editChartData')}
-                    </h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('lineChart_editor_editDataDirectly')}
-                    </p>
-                  </div>
-                </div>
+                <div className="flex items-center gap-3"></div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    onClick={addTempDataPoint}
-                    size="sm"
-                    variant="outline"
-                    className="flex items-center gap-1"
-                  >
-                    <Plus className="h-4 w-4" />
-                    {t('lineChart_editor_addRow')}
-                  </Button>
-                  <Button
-                    onClick={saveDataChanges}
-                    size="sm"
-                    className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <Save className="h-4 w-4" />
-                    {t('lineChart_editor_saveChanges')}
-                  </Button>
                   <Button
                     onClick={closeDataModal}
                     size="sm"
@@ -1084,152 +1064,26 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 </div>
               </div>
 
-              {/* Modal Content - Sheet-like Table */}
-              <div className="p-6">
-                <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
-                  <div className="max-h-[60vh] overflow-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">
-                            #
-                          </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-32">
-                            {config.xAxisKey}
-                          </th>
-                          {config.yAxisKeys.map((key) => (
-                            <th key={key} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-32">
-                              {key}
-                            </th>
-                          ))}
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">
-                            {t('lineChart_editor_delete')}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
-                        {tempData.map((point, index) => (
-                          <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 group">
-                            <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700/50">
-                              {index + 1}
-                            </td>
-                            <td className="px-4 py-2">
-                              <Input
-                                type="number"
-                                value={point[config.xAxisKey] as number}
-                                onChange={(e) => updateTempDataPoint(index, config.xAxisKey, e.target.value)}
-                                data-row={index}
-                                data-col="0"
-                                className="text-sm border-transparent bg-transparent hover:border-gray-300 focus:border-blue-500 dark:hover:border-gray-600 dark:focus:border-blue-400 rounded-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    const nextInput = document.querySelector(`input[data-row="${index}"][data-col="1"]`) as HTMLInputElement;
-                                    if (nextInput) {
-                                      nextInput.focus();
-                                      nextInput.select();
-                                    }
-                                  } else if (e.key === 'Tab' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    const nextInput = document.querySelector(`input[data-row="${index}"][data-col="1"]`) as HTMLInputElement;
-                                    if (nextInput) {
-                                      nextInput.focus();
-                                      nextInput.select();
-                                    }
-                                  }
-                                }}
-                              />
-                            </td>
-                            {config.yAxisKeys.map((key, colIndex) => (
-                              <td key={key} className="px-4 py-2">
-                                <Input
-                                  type="number"
-                                  value={point[key] as number}
-                                  onChange={(e) => updateTempDataPoint(index, key, e.target.value)}
-                                  data-row={index}
-                                  data-col={colIndex + 1}
-                                  className="text-sm border-transparent bg-transparent hover:border-gray-300 focus:border-blue-500 dark:hover:border-gray-600 dark:focus:border-blue-400 rounded-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      const nextRowInput = document.querySelector(`input[data-row="${index + 1}"][data-col="${colIndex + 1}"]`) as HTMLInputElement;
-                                      if (nextRowInput) {
-                                        nextRowInput.focus();
-                                        nextRowInput.select();
-                                      } else {
-                                        // Nếu không có dòng tiếp theo, tạo dòng mới
-                                        addTempDataPoint();
-                                      }
-                                    } else if (e.key === 'Tab' && !e.shiftKey) {
-                                      e.preventDefault();
-                                      const nextColIndex = colIndex + 2;
-                                      if (nextColIndex <= config.yAxisKeys.length) {
-                                        const nextInput = document.querySelector(`input[data-row="${index}"][data-col="${nextColIndex}"]`) as HTMLInputElement;
-                                        if (nextInput) {
-                                          nextInput.focus();
-                                          nextInput.select();
-                                        }
-                                      } else {
-                                        // Chuyển sang dòng tiếp theo, cột đầu tiên
-                                        const nextRowInput = document.querySelector(`input[data-row="${index + 1}"][data-col="0"]`) as HTMLInputElement;
-                                        if (nextRowInput) {
-                                          nextRowInput.focus();
-                                          nextRowInput.select();
-                                        }
-                                      }
-                                    } else if (e.key === 'Tab' && e.shiftKey) {
-                                      e.preventDefault();
-                                      const prevColIndex = colIndex;
-                                      if (prevColIndex >= 0) {
-                                        const prevInput = document.querySelector(`input[data-row="${index}"][data-col="${prevColIndex}"]`) as HTMLInputElement;
-                                        if (prevInput) {
-                                          prevInput.focus();
-                                          prevInput.select();
-                                        }
-                                      } else if (index > 0) {
-                                        // Chuyển về dòng trước, cột cuối
-                                        const prevRowInput = document.querySelector(`input[data-row="${index - 1}"][data-col="${config.yAxisKeys.length}"]`) as HTMLInputElement;
-                                        if (prevRowInput) {
-                                          prevRowInput.focus();
-                                          prevRowInput.select();
-                                        }
-                                      }
-                                    }
-                                  }}
-                                />
-                              </td>
-                            ))}
-                            <td className="px-4 py-2 text-center">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeTempDataPoint(index)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <Minus className="h-4 w-4" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+              {/* Modal Content - SpreadsheetEditor */}
+              <div className="p-6" style={{ height: 'calc(95vh - 200px)' }}>
+                <SpreadsheetEditor
+                  initialData={tempArrayData}
+                  onDataChange={handleSpreadsheetDataChange}
+                  onSave={handleSpreadsheetSave}
+                  readOnly={false}
+                  title=""
+                  className="h-full"
+                />
                 
                 {/* Footer Info */}
                 <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
                   <div className="flex items-center gap-4">
-                    <span>{t('lineChart_editor_totalRows', { count: tempData.length })}</span>
+                    <span>Rows: {tempArrayData.length}</span>
                     <span>•</span>
-                    <span>{t('lineChart_editor_totalColumns', { count: 1 + config.yAxisKeys.length })}</span>
+                    <span>Columns: {tempArrayData[0]?.length || 0}</span>
                   </div>
                   <div className="text-xs">
-                    <span className="inline-flex items-center gap-2">
-                      <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">Tab</kbd>
-                      <span>{t('lineChart_editor_moveHorizontally')} •</span>
-                      <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">Enter</kbd>
-                      <span>{t('lineChart_editor_moveDown')}</span>
-                    </span>
+                    <span>Use the spreadsheet editor to modify your data. Changes are saved automatically.</span>
                   </div>
                 </div>
               </div>

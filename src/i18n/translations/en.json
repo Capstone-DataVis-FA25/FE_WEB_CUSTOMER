@@ -806,7 +806,7 @@
   "dataset_columns": "Columns",
   "dataset_created": "Created",
   "dataset_updated": "Updated",
-  "dataset_backToDetail": "Back to Dataset Detail"
+  "dataset_backToDetail": "Back to Dataset Detail",
   "chartEditor_chartType": "Chart type",
   "chartEditor_refine": "Refine",
   "chartEditor_annotate": "Annotate",
@@ -851,4 +851,3 @@
   "lineChart_editor_moveHorizontally": "move horizontally",
   "lineChart_editor_moveDown": "move down"
 }
-

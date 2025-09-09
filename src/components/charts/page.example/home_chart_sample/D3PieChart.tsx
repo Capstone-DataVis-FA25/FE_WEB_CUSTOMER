@@ -197,34 +197,39 @@ const D3PieChart: React.FC<PieChartProps> = ({
   ]);
 
   return (
-    <div className="w-full bg-[#18181b] h-full flex flex-col items-center justify-center">
+    <div
+      className={`w-full ${isDarkMode ? 'bg-[#18181b] border-[#23232a]' : 'bg-white border-[#e5e7eb]'} h-full flex flex-col items-center justify-center`}
+    >
       {title && (
         <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground text-center mb-2">
           {title}
         </h3>
       )}
-      <div className="relative w-full h-full flex items-center justify-center bg-[#18181b] rounded-xl border-2 border-[#23232a]  overflow-hidden p-0">
+      <div
+        className={`relative w-full h-full flex items-center justify-center rounded-xl border-2 overflow-hidden p-0 ${isDarkMode ? 'bg-[#18181b] border-[#23232a]' : 'bg-white border-[#e5e7eb]'}`}
+      >
         <svg
           ref={svgRef}
           width="100%"
           height="100%"
           className="w-full h-full block"
           viewBox={`0 0 ${width} ${height}`}
-          preserveAspectRatio="xMidYMid meet"
-          style={{ display: 'block' }}
+          preserveAspectRatio="none"
         />
       </div>
       {/* Legend */}
       {showLegend && (
         <div className="mt-4 w-full">
-          <div className="bg-[#18181b] rounded-xl border-2 border-[#23232a]  p-4 flex flex-wrap justify-center gap-4">
+          <div
+            className={`rounded-xl p-4 flex flex-wrap justify-center gap-4 ${isDarkMode ? 'bg-[#18181b] border-2 border-[#23232a]' : 'bg-white border-2 border-[#e5e7eb]'}`}
+          >
             {data.map((item, index) => {
               const label = String(item[labelKey]);
               const color = colors[label]?.light || defaultColors[index % defaultColors.length];
               return (
                 <div
                   key={label}
-                  className="flex items-center gap-2 px-3 py-2 bg-[#23232a] rounded-lg border border-[#23232a]  transition-all duration-200"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 ${isDarkMode ? 'bg-[#23232a] border-[#23232a]' : 'bg-[#f3f4f6] border-[#e5e7eb]'}`}
                 >
                   <div
                     className="w-4 h-4 rounded border-2 border-border"

@@ -1,13 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
+import { convertArrayToChartData } from '@/utils/dataConverter';
 
 export interface ChartDataPoint {
   [key: string]: number | string;
 }
 
 export interface D3BarChartProps {
-  data: ChartDataPoint[];
+  data?: ChartDataPoint[];
+  arrayData?: (string | number)[][]; // New prop for array data
   width?: number;
   height?: number;
   margin?: { top: number; right: number; bottom: number; left: number };
@@ -39,6 +41,7 @@ const defaultColors: Record<string, { light: string; dark: string }> = {
 
 const D3BarChart: React.FC<D3BarChartProps> = ({
   data,
+  arrayData,
   width = 800,
   height = 600, // Reduced from 500 to 400 for better proportions
   margin = { top: 20, right: 40, bottom: 60, left: 80 }, // Increased left margin for better Y-axis spacing
@@ -61,6 +64,15 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [dimensions, setDimensions] = React.useState({ width, height });
   const { t } = useTranslation();
+
+  // Convert arrayData to ChartDataPoint[] if provided
+  const processedData = React.useMemo((): ChartDataPoint[] => {
+    if (arrayData && arrayData.length > 0) {
+      return convertArrayToChartData(arrayData);
+    }
+
+    return data || [];
+  }, [data, arrayData]);
 
   // Monitor container size for responsiveness
   useEffect(() => {
@@ -111,7 +123,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!svgRef.current || !data.length) return;
+    if (!svgRef.current || !processedData.length) return;
 
     const currentWidth = dimensions.width;
     const currentHeight = dimensions.height;
@@ -178,7 +190,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     // Scales
     const xScale = d3
       .scaleBand()
-      .domain(data.map(d => String(d[xAxisKey])))
+      .domain(processedData.map(d => String(d[xAxisKey])))
       .range([0, innerWidth])
       .padding(0.2);
 
@@ -186,9 +198,10 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     let maxValue: number;
     if (barType === 'stacked') {
       maxValue =
-        d3.max(data, d => yAxisKeys.reduce((sum, key) => sum + (d[key] as number), 0)) || 0;
+        d3.max(processedData, d => yAxisKeys.reduce((sum, key) => sum + (d[key] as number), 0)) ||
+        0;
     } else {
-      maxValue = d3.max(data, d => d3.max(yAxisKeys, key => d[key] as number) || 0) || 0;
+      maxValue = d3.max(processedData, d => d3.max(yAxisKeys, key => d[key] as number) || 0) || 0;
     }
 
     const yScale = d3
@@ -297,7 +310,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       // Grouped bars
       yAxisKeys.forEach((key, keyIndex) => {
         g.selectAll(`.bar-${keyIndex}`)
-          .data(data)
+          .data(processedData)
           .enter()
           .append('rect')
           .attr('class', `bar-${keyIndex}`)
@@ -379,7 +392,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       const stackedData = d3
         .stack<ChartDataPoint>()
         .keys(yAxisKeys)
-        .value((d, key) => d[key] as number)(data);
+        .value((d, key) => d[key] as number)(processedData);
 
       stackedData.forEach((series, seriesIndex) => {
         g.selectAll(`.bar-stack-${seriesIndex}`)
@@ -485,7 +498,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         .text(yAxisLabel);
     }
   }, [
-    data,
+    processedData,
     margin,
     xAxisKey,
     yAxisKeys,

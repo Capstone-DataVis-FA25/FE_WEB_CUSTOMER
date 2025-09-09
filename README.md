@@ -37,6 +37,7 @@ This is a modern web application built for data visualization and customer manag
 ## 🛠️ Tech Stack
 
 ### Frontend
+
 - **React 18** - Modern React with Hooks and Suspense
 - **TypeScript** - Type-safe development
 - **Vite** - Fast build tool and dev server
@@ -46,6 +47,7 @@ This is a modern web application built for data visualization and customer manag
 - **Lucide React** - Beautiful icons
 
 ### Development Tools
+
 - **ESLint** - Code linting
 - **Prettier** - Code formatting
 - **Git** - Version control
@@ -61,12 +63,14 @@ Before you begin, ensure you have the following installed:
 ## 🚀 Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd FE_WEB_CUSTOMER
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    # or
@@ -74,15 +78,17 @@ Before you begin, ensure you have the following installed:
    ```
 
 3. **Environment setup**
+
    ```bash
    # Copy environment variables
    cp .env.example .env.local
-   
+
    # Edit the environment variables
    nano .env.local
    ```
 
 4. **Start development server**
+
    ```bash
    npm run dev
    # or
@@ -189,11 +195,11 @@ The project uses Tailwind CSS for styling. Configuration can be found in `tailwi
 
 ```typescript
 // Available permissions
-VIEW_PUBLIC     // View public content
-VIEW_PROFILE    // View user profile
-EDIT_PROFILE    // Edit user profile
-ADMIN_ACCESS    // Admin panel access
-MANAGE_USERS    // User management
+VIEW_PUBLIC; // View public content
+VIEW_PROFILE; // View user profile
+EDIT_PROFILE; // Edit user profile
+ADMIN_ACCESS; // Admin panel access
+MANAGE_USERS; // User management
 ```
 
 ### Role-Permission Mapping
@@ -202,7 +208,7 @@ MANAGE_USERS    // User management
 const rolePermissions = {
   GUEST: ['VIEW_PUBLIC'],
   CUSTOMER: ['VIEW_PUBLIC', 'VIEW_PROFILE', 'EDIT_PROFILE'],
-  ADMIN: ['VIEW_PUBLIC', 'ADMIN_ACCESS', 'MANAGE_USERS']
+  ADMIN: ['VIEW_PUBLIC', 'ADMIN_ACCESS', 'MANAGE_USERS'],
 };
 ```
 
@@ -237,6 +243,7 @@ Routes are configured in `src/config/routes.ts`:
 ### Protected Routes
 
 Routes can be protected by:
+
 - **Authentication** - `isProtected: true`
 - **Roles** - `roles: [UserRole.CUSTOMER]`
 - **Permissions** - `permissions: [Permission.VIEW_PROFILE]`
@@ -265,11 +272,13 @@ Routes can be protected by:
 ## 🏗️ Building for Production
 
 1. **Build the application**
+
    ```bash
    npm run build
    ```
 
 2. **Preview the build**
+
    ```bash
    npm run preview
    ```
@@ -346,3 +355,7 @@ For support and questions:
 ---
 
 **Happy Coding! 🚀**
+
+#### Màu background Tailwind
+
+bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800
