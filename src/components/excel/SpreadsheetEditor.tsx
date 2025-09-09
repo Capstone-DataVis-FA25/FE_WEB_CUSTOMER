@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileSpreadsheet, Download, Upload, Save } from 'lucide-react';
 import Spreadsheet from 'x-data-spreadsheet';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import 'x-data-spreadsheet/dist/xspreadsheet.css';
 
 interface SpreadsheetEditorProps {
@@ -28,22 +30,7 @@ const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   // Convert array data to x-spreadsheet format
   const convertToSpreadsheetData = (data: string[][]) => {
     if (!data || data.length === 0) {
-      return {
-        name: 'Sheet1',
-        freeze: 'A1',
-        styles: [],
-        merges: [],
-        rows: {
-          0: {
-            cells: {
-              0: { text: 'A1' },
-              1: { text: 'B1' },
-              2: { text: 'C1' }
-            }
-          }
-        },
-        cols: {}
-      };
+      return { name: 'Sheet1', freeze: 'A1', styles: [], merges: [], rows: {}, cols: {} };
     }
 
     const rows: any = {};
@@ -59,71 +46,91 @@ const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
       }
     });
 
-    return {
-      name: 'Sheet1',
-      freeze: 'A1',
-      styles: [],
-      merges: [],
-      rows,
-      cols: {}
-    };
+    return { name: 'Sheet1', freeze: 'A1', styles: [], merges: [], rows, cols: {} };
   };
 
-  // Convert x-spreadsheet data back to array format
+  // Convert x-spreadsheet data back to array format using direct data access
   const convertFromSpreadsheetData = (): string[][] => {
-    if (!spreadsheetRef.current) return [];
+    if (!spreadsheetRef.current || !spreadsheetRef.current.data) {
+      console.warn('Spreadsheet reference or internal data not available.');
+      return [];
+    }
 
     try {
-      const data = spreadsheetRef.current.getData();
-      const result: string[][] = [];
-      
-      if (data && data.rows) {
-        // Find max row and column
-        let maxRow = 0;
-        let maxCol = 0;
-        
-        Object.keys(data.rows).forEach(rowKey => {
-          const rowIndex = parseInt(rowKey);
-          maxRow = Math.max(maxRow, rowIndex);
-          
-          if (data.rows[rowIndex] && data.rows[rowIndex].cells) {
-            Object.keys(data.rows[rowIndex].cells).forEach(colKey => {
-              const colIndex = parseInt(colKey);
-              maxCol = Math.max(maxCol, colIndex);
-            });
-          }
-        });
-
-        // Convert to 2D array
-        for (let r = 0; r <= maxRow; r++) {
-          const row: string[] = [];
-          for (let c = 0; c <= maxCol; c++) {
-            const cellData = data.rows[r]?.cells?.[c];
-            row[c] = cellData?.text || '';
-          }
-          result[r] = row;
+      // Directly access the data of the first sheet from the instance's internal state
+      const sheetData = spreadsheetRef.current.data[0];
+      if (!sheetData || !sheetData.rows) {
+        console.error('Direct Access: No sheet data or rows found in the instance.');
+        // Fallback to getData() if direct access fails
+        const allSheetsData = spreadsheetRef.current.getData();
+        if (!allSheetsData || !Array.isArray(allSheetsData) || allSheetsData.length === 0) {
+          console.error('Fallback getData() also failed or returned no sheets.');
+          return [];
         }
+        return parseSheetData(allSheetsData[0]);
       }
+      
+      return parseSheetData(sheetData);
 
-      // Remove empty trailing rows and columns
-      while (result.length > 0 && result[result.length - 1].every(cell => !cell)) {
-        result.pop();
-      }
-
-      return result;
     } catch (error) {
-      console.error('Error converting spreadsheet data:', error);
+      console.error('Error converting spreadsheet data via direct access:', error);
       return [];
     }
   };
 
+  const parseSheetData = (sheet: any): string[][] => {
+    if (!sheet || !sheet.rows) {
+      console.log('Sheet contains no rows.');
+      return [];
+    }
+
+    const rows = sheet.rows;
+    const result: string[][] = [];
+    const rowKeys = Object.keys(rows);
+
+    if (rowKeys.length === 0) {
+      return [];
+    }
+
+    let maxRow = 0;
+    let maxCol = 0;
+    rowKeys.forEach(r => {
+      const rowIndex = parseInt(r);
+      if (!isNaN(rowIndex)) {
+        maxRow = Math.max(maxRow, rowIndex);
+        const row = rows[rowIndex];
+        if (row && row.cells) {
+          Object.keys(row.cells).forEach(c => {
+            const colIndex = parseInt(c);
+            if (!isNaN(colIndex)) {
+              maxCol = Math.max(maxCol, colIndex);
+            }
+          });
+        }
+      }
+    });
+
+    for (let i = 0; i <= maxRow; i++) {
+      const rowData: string[] = [];
+      for (let j = 0; j <= maxCol; j++) {
+        const cell = rows[i]?.cells?.[j];
+        rowData.push(cell?.text || '');
+      }
+      result.push(rowData);
+    }
+    
+    while (result.length > 0 && result[result.length - 1].every(cell => !cell)) {
+      result.pop();
+    }
+
+    console.log('Successfully parsed sheet data:', result.length, 'rows');
+    return result;
+  }
+
   // Initialize x-spreadsheet
   useEffect(() => {
     if (containerRef.current) {
-      // Clear container
       containerRef.current.innerHTML = '';
-
-      const spreadsheetData = convertToSpreadsheetData(initialData);
       
       const options = {
         mode: (readOnly ? 'read' : 'edit') as 'read' | 'edit',
@@ -134,39 +141,19 @@ const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
           height: () => 600,
           width: () => containerRef.current?.offsetWidth || 800,
         },
-        row: {
-          len: Math.max(50, initialData.length + 10),
-          height: 25,
-        },
-        col: {
-          len: Math.max(26, (initialData[0]?.length || 0) + 5),
-          width: 100,
-          indexWidth: 60,
-          minWidth: 60,
-        }
+        row: { len: Math.max(100, initialData.length + 20), height: 25 },
+        col: { len: Math.max(26, (initialData[0]?.length || 0) + 10), width: 100, indexWidth: 60, minWidth: 60 }
       };
 
       try {
         const xs = new Spreadsheet(containerRef.current, options);
         
-        // Load data directly into first sheet
         if (initialData && initialData.length > 0) {
           xs.loadData([convertToSpreadsheetData(initialData)]);
-        } else {
-          // Create default data structure
-          xs.loadData([{
-            name: 'Sheet1',
-            freeze: 'A1',
-            styles: [],
-            merges: [],
-            rows: {},
-            cols: {}
-          }]);
         }
         
-        // Handle data changes
         if (onDataChange && !readOnly) {
-          xs.change((_json: Record<string, any>) => {
+          xs.change(() => {
             const newData = convertFromSpreadsheetData();
             onDataChange(newData);
           });
@@ -179,15 +166,12 @@ const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
     }
 
     return () => {
-      if (spreadsheetRef.current) {
-        try {
-          spreadsheetRef.current.destroy();
-        } catch (error) {
-          console.error('Error destroying spreadsheet:', error);
-        }
+      if (spreadsheetRef.current && typeof spreadsheetRef.current.destroy === 'function') {
+        spreadsheetRef.current.destroy();
+        spreadsheetRef.current = null;
       }
     };
-  }, [initialData, readOnly, onDataChange]);
+  }, [initialData, readOnly]);
 
   // Handle save
   const handleSave = () => {
@@ -197,166 +181,148 @@ const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
     }
   };
 
-  // Handle export
+  // Handle export to XLSX
   const handleExport = () => {
-    if (spreadsheetRef.current) {
-      try {
-        const data = convertFromSpreadsheetData();
-        const csvContent = data.map(row => 
-          row.map(cell => 
-            cell.includes(',') ? `"${cell}"` : cell
-          ).join(',')
-        ).join('\n');
-        
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'spreadsheet-export.csv');
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (error) {
-        console.error('Export error:', error);
+    try {
+      const data = convertFromSpreadsheetData();
+      console.log('Exporting data:', data);
+      
+      if (!data || data.length === 0 || data.every(row => row.every(cell => !cell))) {
+        alert('No data to export. Please add some data to the spreadsheet first.');
+        return;
       }
+      
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.aoa_to_sheet(data);
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+      
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      
+      saveAs(blob, `${title.replace(/[^a-zA-Z0-9]/g, '_') || 'spreadsheet'}_export.xlsx`);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Export failed. Please check the console for more details.');
     }
   };
 
-  // Handle import
+  // Handle import from Excel/CSV files
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && spreadsheetRef.current) {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const text = e.target?.result as string;
-          const rows = text.split('\n').map(row => 
-            row.split(',').map(cell => cell.replace(/^"|"$/g, '').trim())
-          ).filter(row => row.some(cell => cell.length > 0)); // Remove completely empty rows
+          const data = e.target?.result;
+          let rows: string[][] = [];
+          
+          if (file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')) {
+            const workbook = XLSX.read(data, { type: 'array' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as string[][];
+          } else {
+            const text = data as string;
+            rows = text.split(/\\r\\n|\\n/).map(row => row.split(',').map(cell => cell.trim()));
+          }
           
           if (rows.length > 0) {
-            const spreadsheetData = convertToSpreadsheetData(rows);
-            spreadsheetRef.current.loadData([spreadsheetData]);
-            
-            if (onDataChange) {
-              onDataChange(rows);
-            }
+            spreadsheetRef.current.loadData([convertToSpreadsheetData(rows)]);
+            if (onDataChange) onDataChange(rows);
           }
         } catch (error) {
           console.error('Import error:', error);
+          alert('Failed to import file. See console for details.');
         }
       };
-      reader.readAsText(file);
+      
+      if (file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')) {
+        reader.readAsArrayBuffer(file);
+      } else {
+        reader.readAsText(file);
+      }
     }
-    // Clear input
     event.target.value = '';
   };
 
   return (
     <div className={`w-full ${className}`}>
-      <Card className="border-0 shadow-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm w-full max-w-full mx-auto">
+      <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm w-full max-w-full mx-auto">
         
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl text-gray-900 dark:text-white flex items-center gap-3">
+            <CardTitle className="text-2xl text-gray-900 flex items-center gap-3">
               <FileSpreadsheet className="w-6 h-6 text-blue-600" />
               {title}
             </CardTitle>
           </div>
           
-          {/* Toolbar */}
-          <div className="flex items-center gap-3 flex-wrap mt-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+          <div className="flex items-center gap-3 flex-wrap mt-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
             {onSave && !readOnly && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleSave}
-                className="flex items-center gap-2 h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
-                title="Save data"
-              >
-                <Save className="w-4 h-4" />
-                Save
+              <Button variant="default" size="sm" onClick={handleSave} className="flex items-center gap-2 h-9 bg-blue-600 hover:bg-blue-700 text-white">
+                <Save className="w-4 h-4" /> Save
               </Button>
             )}
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExport}
-              className="flex items-center gap-2 h-9 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
-              title="Export to CSV"
-            >
-              <Download className="w-4 h-4" />
-              Export
+            <Button variant="outline" size="sm" onClick={handleExport} className="flex items-center gap-2 h-9 border-gray-300 hover:bg-gray-50">
+              <Download className="w-4 h-4" /> Export XLSX
             </Button>
-            
             {!readOnly && (
               <>
-                <input
-                  type="file"
-                  accept=".csv,.txt"
-                  onChange={handleImport}
-                  className="hidden"
-                  id="spreadsheet-import"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => document.getElementById('spreadsheet-import')?.click()}
-                  className="flex items-center gap-2 h-9 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
-                  title="Import CSV file"
-                >
-                  <Upload className="w-4 h-4" />
-                  Import
+                <input type="file" accept=".csv,.txt,.xlsx,.xls" onChange={handleImport} className="hidden" id="spreadsheet-import" />
+                <Button variant="outline" size="sm" onClick={() => document.getElementById('spreadsheet-import')?.click()} className="flex items-center gap-2 h-9 border-gray-300 hover:bg-gray-50">
+                  <Upload className="w-4 h-4" /> Import
                 </Button>
               </>
             )}
-            
-            <div className="flex-1"></div>
-            
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <span className="hidden sm:inline">Excel-like Features:</span>
-              <div className="flex gap-1">
-                <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs font-medium">Formulas</span>
-                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs font-medium">Formatting</span>
-                <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-medium">Sorting</span>
-              </div>
-            </div>
           </div>
         </CardHeader>
         
         <CardContent>
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden w-full">
-            {/* Spreadsheet Container */}
-            <div
-              ref={containerRef}
-              className="w-full min-h-[400px] max-h-[80vh] bg-white dark:bg-gray-800 rounded-lg overflow-hidden 
-                         [&_.x-spreadsheet]:font-inherit [&_.x-spreadsheet]:bg-white dark:[&_.x-spreadsheet]:bg-gray-800
-                         [&_.x-spreadsheet-table]:border-gray-200 dark:[&_.x-spreadsheet-table]:border-gray-600
-                         [&_.x-spreadsheet-table_td]:border-gray-200 dark:[&_.x-spreadsheet-table_td]:border-gray-600
-                         [&_.x-spreadsheet-table_td]:bg-white dark:[&_.x-spreadsheet-table_td]:bg-gray-800
-                         [&_.x-spreadsheet-table_td]:text-gray-900 dark:[&_.x-spreadsheet-table_td]:text-gray-100
-                         [&_.x-spreadsheet-table_th]:bg-gray-50 dark:[&_.x-spreadsheet-table_th]:bg-gray-700
-                         [&_.x-spreadsheet-table_th]:text-gray-700 dark:[&_.x-spreadsheet-table_th]:text-gray-200
-                         [&_.x-spreadsheet-toolbar]:bg-gray-50 dark:[&_.x-spreadsheet-toolbar]:bg-gray-700
-                         [&_.x-spreadsheet-toolbar_.x-spreadsheet-toolbar-btn]:text-gray-700 dark:[&_.x-spreadsheet-toolbar_.x-spreadsheet-toolbar-btn]:text-gray-200
-                         [&_.x-spreadsheet-formula-input]:bg-white dark:[&_.x-spreadsheet-formula-input]:bg-gray-800
-                         [&_.x-spreadsheet-formula-input]:text-gray-900 dark:[&_.x-spreadsheet-formula-input]:text-gray-100
-                         [&_.x-spreadsheet-formula-input]:border-gray-200 dark:[&_.x-spreadsheet-formula-input]:border-gray-600"
-              style={{ height: '600px' }}
-            />
-          </div>
-          
-          <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 text-xs text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center mt-4 rounded-lg">
-            <span className="flex items-center gap-2">
-              <span className="text-lg">📊</span>
-              <span>Powered by x-spreadsheet - Fast & Lightweight Excel experience</span>
-            </span>
-            <span className="text-gray-500 dark:text-gray-400 hidden lg:block">
-              <span className="text-lg">⚡</span>
-              No dependencies, pure JavaScript implementation
-            </span>
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden w-full">
+            <div ref={containerRef} className="w-full" style={{ height: '600px', position: 'relative' }} />
+            
+            <style dangerouslySetInnerHTML={{ __html: `
+              /* Aggressive CSS to fix "2 cells in 1" issue */
+              .x-spreadsheet-table td {
+                position: relative !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: hidden !important;
+              }
+              /* Hide all direct children of a cell by default */
+              .x-spreadsheet-table td > * {
+                display: none !important;
+              }
+              /* ONLY show the direct .x-spreadsheet-cell child. This is the key rule. */
+              .x-spreadsheet-table td > .x-spreadsheet-cell {
+                display: flex !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                align-items: center !important;
+                padding: 2px 6px !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                font-size: 13px !important;
+                line-height: 1.2 !important;
+              }
+              /* Prevent nested cells from ever appearing */
+              .x-spreadsheet-cell .x-spreadsheet-cell {
+                display: none !important;
+              }
+              
+              /* General UI improvements */
+              .x-spreadsheet { border: none !important; }
+              .x-spreadsheet-toolbar { background: #f8fafc !important; border-bottom: 1px solid #e2e8f0 !important; padding: 8px !important; }
+              .x-spreadsheet-table th { background: #f9fafb !important; color: #374151 !important; border: 1px solid #d1d5db !important; font-weight: 600 !important; text-align: center !important; }
+              .x-spreadsheet-table td { border: 1px solid #e5e7eb !important; background: white !important; }
+              .x-spreadsheet-cell-selected {
+                border: 2px solid #3b82f6 !important;
+                background: rgba(59, 130, 246, 0.05) !important;
+              }
+            `}} />
           </div>
         </CardContent>
       </Card>
