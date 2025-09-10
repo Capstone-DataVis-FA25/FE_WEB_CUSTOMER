@@ -25,25 +25,10 @@ function FileUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const handleFileSelect = (file: File) => {
-    if (!isValidFileType(file)) {
-      showError(t('dataset_invalidFileType'), t('dataset_invalidFileTypeMessage'));
-      return;
-    }
-
-    if (file.size > 50 * 1024 * 1024) {
-      // 50MB limit
-      showError(t('dataset_fileTooLarge'), t('dataset_fileTooLargeMessage'));
-      return;
-    }
-
-    onFileSelect(file);
-  };
-
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      handleFileSelect(file);
+      onFileSelect(file);
     }
   };
 
@@ -63,7 +48,7 @@ function FileUpload({
 
     const file = event.dataTransfer.files[0];
     if (file) {
-      handleFileSelect(file);
+      onFileSelect(file);
     }
   };
 

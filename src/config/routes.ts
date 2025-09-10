@@ -346,6 +346,45 @@ export const protectedRoutes: RouteConfig[] = [
       description: 'Create beautiful charts from your datasets with step-by-step wizard',
     },
   },
+  {
+    path: Routers.DATASETS,
+    name: 'datasets-list',
+    component: 'DatasetListPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'My Datasets',
+      description: 'View and manage your datasets',
+    },
+  },
+  {
+    path: Routers.DATASET_DETAIL,
+    name: 'dataset-detail',
+    component: 'DatasetDetailPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Dataset Details',
+      description: 'View dataset details and data',
+    },
+  },
+  {
+    path: Routers.EDIT_DATASET,
+    name: 'edit-dataset',
+    component: 'EditDatasetPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.EDIT_PROFILE],
+    meta: {
+      title: 'Edit Dataset',
+      description: 'Edit dataset information and data',
+    },
+  },
 ];
 
 // Error routes

@@ -24,7 +24,12 @@ import {
   Zap,
   Target,
 } from 'lucide-react';
-import { containerVariants, cardVariants, fadeVariants } from '@/theme/animation/animation.config';
+import {
+  containerVariants,
+  cardVariants,
+  fadeVariants,
+  slideVariants,
+} from '@/theme/animation/animation.config';
 import D3BarChart from '@/components/charts/D3BarChart';
 import D3LineChart from '@/components/charts/D3LineChart';
 import D3PieChart from '@/components/charts/page.example/home_chart_sample/D3PieChart';
@@ -161,10 +166,7 @@ const NewHomePage: React.FC = () => {
 
     if (!chartType.component || !dataset) {
       return (
-        <div
-          className="bg-gradient-to-br from-muted to-muted/50 rounded-lg p-12 shadow-lg flex items-center justify-center"
-          style={{ width: '800px', height: '500px' }}
-        >
+        <div className="bg-gradient-to-br from-white to-muted/50 rounded-lg shadow-lg flex items-center justify-center w-full h-full min-h-[600px] p-4">
           <div className="text-center">
             <div
               className={`w-16 h-16 ${chartType.color} rounded-lg flex items-center justify-center mx-auto mb-4`}
@@ -181,11 +183,11 @@ const NewHomePage: React.FC = () => {
 
     if (chartType.id === 'bar') {
       return (
-        <div className="bg-background rounded-lg p-6 shadow-lg">
+        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
           <ChartComponent
             data={dataset.data}
-            width={750}
-            height={450}
+            width={900}
+            height={500}
             margin={{ top: 30, right: 40, bottom: 60, left: 70 }}
             xAxisKey={(dataset as any).xKey}
             yAxisKeys={(dataset as any).yKeys}
@@ -204,11 +206,11 @@ const NewHomePage: React.FC = () => {
 
     if (chartType.id === 'line') {
       return (
-        <div className="w-full h-full bg-background rounded-lg p-4">
+        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
           <ChartComponent
             data={dataset.data}
-            width={750}
-            height={450}
+            width={900}
+            height={500}
             margin={{ top: 30, right: 40, bottom: 60, left: 70 }}
             xAxisKey={(dataset as any).xKey}
             yAxisKeys={(dataset as any).yKeys}
@@ -227,11 +229,11 @@ const NewHomePage: React.FC = () => {
 
     if (chartType.id === 'pie') {
       return (
-        <div className="bg-background rounded-lg p-6 shadow-lg">
+        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg h-full min-h-[600px] flex items-center justify-center">
           <ChartComponent
             data={dataset.data}
-            width={750}
-            height={450}
+            width={900}
+            height={500}
             margin={{ top: 30, right: 40, bottom: 60, left: 70 }}
             valueKey={(dataset as any).valueKey}
             categoryKey={(dataset as any).categoryKey}
@@ -246,11 +248,11 @@ const NewHomePage: React.FC = () => {
 
     if (chartType.id === 'scatter') {
       return (
-        <div className="bg-background rounded-lg p-6 shadow-lg">
+        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
           <ChartComponent
             data={dataset.data}
-            width={750}
-            height={450}
+            width={900}
+            height={500}
             margin={{ top: 30, right: 40, bottom: 60, left: 70 }}
             xAxisKey={(dataset as any).xKey}
             yAxisKey={(dataset as any).yKey}
@@ -268,11 +270,11 @@ const NewHomePage: React.FC = () => {
 
     if (chartType.id === 'area') {
       return (
-        <div className="bg-background rounded-lg p-6 shadow-lg">
+        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
           <ChartComponent
             data={dataset.data}
-            width={750}
-            height={450}
+            width={900}
+            height={500}
             margin={{ top: 30, right: 40, bottom: 60, left: 70 }}
             xAxisKey={(dataset as any).xKey}
             yAxisKey={(dataset as any).yKey}
@@ -291,33 +293,38 @@ const NewHomePage: React.FC = () => {
 
     if (chartType.id === 'trend') {
       return (
-        <div className="bg-background rounded-lg p-6 shadow-lg">
-          <ChartComponent
-            data={dataset.data}
-            width={750}
-            height={450}
-            margin={{ top: 30, right: 40, bottom: 60, left: 70 }}
-            xAxisKey={(dataset as any).xKey}
-            yAxisKey={(dataset as any).yKey}
-            title={(dataset as any).title}
-            xAxisLabel={(dataset as any).xLabel}
-            yAxisLabel={(dataset as any).yLabel}
-            showGrid={chartType.chartConfig.showGrid}
-            showTrendLine={chartType.chartConfig.showTrendLine}
-            showDataPoints={chartType.chartConfig.showDataPoints}
-            animationDuration={800}
-          />
+        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
+          <div
+            className="w-full h-full flex items-center justify-center"
+            style={{ minHeight: 500 }}
+          >
+            <ChartComponent
+              data={dataset.data}
+              width={900}
+              height={500}
+              margin={{ top: 30, right: 40, bottom: 60, left: 70 }}
+              xAxisKey={(dataset as any).xKey}
+              yAxisKey={(dataset as any).yKey}
+              title={(dataset as any).title}
+              xAxisLabel={(dataset as any).xLabel}
+              yAxisLabel={(dataset as any).yLabel}
+              showGrid={chartType.chartConfig.showGrid}
+              showTrendLine={chartType.chartConfig.showTrendLine}
+              showDataPoints={chartType.chartConfig.showDataPoints}
+              animationDuration={800}
+            />
+          </div>
         </div>
       );
     }
 
     if (chartType.id === 'map') {
       return (
-        <div className="bg-background rounded-lg p-6 shadow-lg">
+        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
           <ChartComponent
             data={dataset.data}
-            width={750}
-            height={450}
+            width={900}
+            height={500}
             margin={{ top: 30, right: 40, bottom: 60, left: 70 }}
             title={(dataset as any).title}
             showLegend={chartType.chartConfig.showLegend}
@@ -329,7 +336,7 @@ const NewHomePage: React.FC = () => {
 
     if (chartType.id === 'table') {
       return (
-        <div className="bg-background rounded-lg p-6 shadow-lg">
+        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
           <ChartComponent
             data={dataset.data}
             title={(dataset as any).title}
@@ -425,19 +432,13 @@ const NewHomePage: React.FC = () => {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="relative overflow-hidden py-20 lg:py-32"
+        viewport={{ once: true, amount: 0.2 }}
+        className="relative py-20 lg:py-32 z-10"
       >
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            {/* Left: Content */}
+            {/* LEFT CONTENT */}
             <div className="max-w-4xl mx-auto text-center lg:text-left">
-              {/* <motion.div variants={fadeVariants} className="mb-6">
-                <Badge variant="secondary" className="mb-4 px-4 py-2 text-sm font-medium">
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Create Beautiful Charts
-                </Badge>
-              </motion.div> */}
-
               <motion.h1
                 variants={fadeVariants}
                 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-foreground mb-6 leading-tight"
@@ -472,24 +473,27 @@ const NewHomePage: React.FC = () => {
                   View Examples
                 </Button>
               </motion.div>
-
-              <motion.p variants={fadeVariants} className="text-sm text-muted-foreground mt-4">
-                It's free & no sign-up is required
-              </motion.p>
             </div>
-            {/* Right: Lottie animation placeholder */}
+            {/* RIGHT CONTENT: Animation */}
             <div className="flex items-center justify-center w-full h-full py-5">
-              {/* Lottie animation sẽ đặt ở đây */}
-              <Lottie animationData={ChartAnimationData} loop={true} className="w-full h-full" />
+              <motion.div
+                key={'video_section_1'}
+                variants={slideVariants.slideInLeft}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Lottie animationData={ChartAnimationData} loop={true} className="w-full h-full" />
+              </motion.div>
             </div>
           </div>
-        </div>
-
-        {/* Background decoration */}
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-          <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-purple-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
-          <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-pink-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-2000"></div>
+          {/* BACKGROUND ANIMATION */}
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+            <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-purple-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
+            <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-pink-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-2000"></div>
+          </div>
         </div>
       </motion.section>
 
@@ -501,7 +505,7 @@ const NewHomePage: React.FC = () => {
         viewport={{ once: true }}
         className="py-20 lg:py-32"
       >
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4  bg-gradient-to-br bg-[var(--gradient-main)]">
           <motion.div variants={fadeVariants} className="text-center mb-16">
             <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
               {t('home_chartTypes_title')}
@@ -603,14 +607,14 @@ const NewHomePage: React.FC = () => {
       </motion.section>
 
       {/* Features Section */}
-      <motion.section
+      <motion.div
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true }}
-        className="py-20 lg:py-32 bg-muted/30"
+        viewport={{ once: true, amount: 0.5 }}
+        className="py-20 lg:py-32"
       >
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 bg-gradient-to-r ">
           <motion.div variants={fadeVariants} className="text-center mb-16">
             <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
               {t('home_features_title')}
@@ -620,12 +624,24 @@ const NewHomePage: React.FC = () => {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <motion.div
+            className="grid md:grid-cols-2 lg:grid-cols-4 gap-8"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.2 }}
+            variants={containerVariants}
+          >
             {features.map((feature, index) => {
               const IconComponent = feature.icon;
               return (
-                <motion.div key={index} variants={cardVariants} custom={index} whileHover="hover">
-                  <Card className="h-full">
+                <motion.div
+                  key={index}
+                  variants={slideVariants.slideInTop}
+                  custom={index}
+                  whileHover="hover"
+                  transition={{ delay: index * 0.2 }}
+                >
+                  <Card className="h-full border-bg-primary/10 transform transition-transform duration-300 ease-in-out hover:scale-105 hover:delay-150">
                     <CardContent className="p-6">
                       <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                         <IconComponent className="w-6 h-6 text-primary" />
@@ -637,40 +653,46 @@ const NewHomePage: React.FC = () => {
                 </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
-      </motion.section>
+      </motion.div>
 
-      <section className="py-20 lg:py-32">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-            <div className="rounded-4xl flex items-center justify-center w-full h-full">
-              {/* Animation added next to video */}
-              <video
-                src={CreateDemoVideo}
-                className="w-full h-full object-cover rounded-4xl"
-                autoPlay
-                loop
-                muted
-                playsInline
-              />
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                <Lottie animationData={ChartAnimationData} loop={true} className="w-40 h-40" />
+      <motion.div
+        key={'video_section_1'}
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: false, amount: 0.2 }}
+        transition={{ delay: 0.2 }}
+      >
+        <section className="py-20 lg:py-32 bg-gradient-to-l from-bg-blue-20 to-bg-blue-800 ">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+              <div className="rounded-4xl flex items-center justify-center w-full h-full">
+                {/* Animation added next to video */}
+                <video
+                  src={CreateDemoVideo}
+                  className="w-full h-full object-cover rounded-4xl"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                />
               </div>
-            </div>
-            <div className="flex items-center justify-center h-full">
-              <div className="rounded-2xl flex flex-col justify-center h-full">
-                <h2 className="text-3xl lg:text-5xl font-bold text-light mb-6">
-                  {t('home_interactive_title')}
-                </h2>
-                <p className="text-xl lg:text-2xl text-muted-foreground mb-8 max-w-3xl leading-relaxed">
-                  {t('home_interactive_desc')}
-                </p>
+              <div className="flex items-center justify-center h-full">
+                <div className="rounded-2xl flex flex-col justify-center h-full">
+                  <h2 className="text-3xl lg:text-5xl font-bold text-light mb-6">
+                    {t('home_interactive_title')}
+                  </h2>
+                  <p className="text-xl lg:text-2xl text-muted-foreground mb-8 max-w-3xl leading-relaxed">
+                    {t('home_interactive_desc')}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </motion.div>
 
       <section className="py-20 lg:py-32">
         <div className="container mx-auto px-4">
@@ -704,8 +726,8 @@ const NewHomePage: React.FC = () => {
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true }}
-        className="py-20 lg:py-32"
+        viewport={{ once: false }}
+        className="py-20 lg:py-32 "
       >
         <div className="container mx-auto px-4">
           <motion.div variants={fadeVariants} className="text-center mb-16">

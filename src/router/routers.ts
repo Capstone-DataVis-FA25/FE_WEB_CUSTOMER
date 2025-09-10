@@ -14,8 +14,11 @@ const Routers = {
   PROFILE_SETTINGS: '/profile/settings',
 
   // Dataset routes
-  CREATE_DATASET: '/create-dataset',
   CREATE_CHART: '/create-chart',
+  DATASETS: '/datasets',
+  DATASET_DETAIL: '/datasets/:id',
+  CREATE_DATASET: '/datasets/create',
+  EDIT_DATASET: '/datasets/:id/edit',
 
   // Error routes
   NOT_FOUND: '/404',

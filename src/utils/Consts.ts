@@ -15,3 +15,7 @@ export const STATUS_WORK: { [key: number]: string } = {
   30: 'IN PROGRESS',
   40: 'FINISHED',
 };
+
+// ======== Dataset Limits =====
+export const DATASET_NAME_MAX_LENGTH = 20;
+export const DATASET_DESCRIPTION_MAX_LENGTH = 100;

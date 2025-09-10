@@ -1,24 +1,31 @@
-import { useState, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { SlideInUp } from '@/theme/animation';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { useToastContext } from '@/components/providers/ToastProvider';
-import FileUpload from '@/components/dataset/FileUpload';
 import DataViewer from '@/components/dataset/DataViewer';
+import FileUpload from '@/components/dataset/FileUpload';
+import SampleDataUpload from '@/components/dataset/SampleDataUpload';
 import TextUpload from '@/components/dataset/TextUpload';
 import UploadMethodNavigation from '@/components/dataset/UploadMethodNavigation';
-import { DatasetUploadProvider, useDatasetUpload } from '@/contexts/DatasetUploadContext';
-import {
-  processFileContent,
-  parseTabularContent,
-  validateFileSize,
-  isValidFileType,
-  MAX_FILE_SIZE,
-} from '@/utils/fileProcessors';
-import type Papa from 'papaparse';
+import { useToastContext } from '@/components/providers/ToastProvider';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
 import { axiosPrivate } from '@/services/axios';
+import { SlideInUp } from '@/theme/animation';
+import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
+import {
+  getFileDelimiter,
+  detectDelimiter,
+  isValidFileType,
+  isExcelFile,
+  isJsonFormat as checkIsJsonFormat,
+  MAX_FILE_SIZE,
+  parseJsonDirectly,
+  parseTabularContent,
+  processFileContent,
+  readExcelAsText,
+  validateFileSize,
+} from '@/utils/fileProcessors';
+import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-type ViewMode = 'upload' | 'textUpload' | 'view';
+type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view';
 
 // Inner component that uses the context
 function CreateDatasetPageContent() {
@@ -31,46 +38,84 @@ function CreateDatasetPageContent() {
     setOriginalTextContent,
     parsedData,
     setParsedData,
-    isUploading,
+    setOriginalHeaders,
+    isJsonFormat,
+    setIsJsonFormat,
     setIsUploading,
-  } = useDatasetUpload();
+    setSelectedDelimiter,
+    resetState,
+    datasetName,
+    description,
+  } = useDataset();
 
   // Local state management (non-shareable states)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('upload');
-  const [numberFormat, setNumberFormat] = useState({ thousands: ',', decimal: '.' });
+  const [previousViewMode, setPreviousViewMode] = useState<ViewMode>('upload');
+
+  // Handle switching between upload methods; clear transient inputs
+  const handleViewModeChange = useCallback(
+    (mode: ViewMode) => {
+      if (mode !== 'view') {
+        setOriginalTextContent('');
+        setParsedData(null);
+        setSelectedFile(null);
+      }
+      setViewMode(mode);
+    },
+    [setOriginalTextContent]
+  );
 
   // Process file content and switch to view mode
   const processAndViewFile = useCallback(
     async (file: File) => {
       setIsProcessing(true);
       try {
-        // Read the original text content first
-        const textContent = await file.text();
+        // Read the original text content first - handle Excel files differently
+        let textContent: string;
+        if (isExcelFile(file)) {
+          textContent = await readExcelAsText(file);
+        } else {
+          textContent = await file.text();
+        }
         setOriginalTextContent(textContent);
 
+        // Set the detected delimiter for this file
+        const detectedDelimiter = getFileDelimiter(file);
+        setSelectedDelimiter(detectedDelimiter);
+
         // Then process it
-        const result = await processFileContent(file);
+        const result = await processFileContent(file, { delimiter: detectedDelimiter });
         await new Promise(resolve => setTimeout(resolve, 1000));
         setParsedData(result);
+        setOriginalHeaders(result[0] || []);
         console.log(result);
+        setPreviousViewMode(viewMode);
         setViewMode('view');
       } catch (error) {
-        showError(
-          t('dataset_fileReadError'),
-          error instanceof Error ? error.message : t('dataset_fileReadErrorMessage')
-        );
+        const errorMessage =
+          error instanceof Error ? error.message : t('dataset_fileReadErrorMessage');
+        showError(t('dataset_fileReadError'), t(errorMessage));
       } finally {
         setIsProcessing(false);
       }
     },
-    [showError, t]
+    [showError, t, viewMode, setSelectedDelimiter]
   );
 
   // Handle file selection and validation
   const handleFileSelect = useCallback(
     async (file: File) => {
+      // Validate file type
+      if (!isValidFileType(file)) {
+        showError(
+          t('dataset_fileReadError'),
+          t('dataset_unsupportedFileType', { fileType: file.type || 'unknown' })
+        );
+        return;
+      }
+
       // Validate file size
       if (!validateFileSize(file, MAX_FILE_SIZE)) {
         showError(t('dataset_fileTooLarge'), t('dataset_fileTooLargeMessage'));
@@ -79,9 +124,7 @@ function CreateDatasetPageContent() {
 
       setSelectedFile(file);
       // If file is valid, automatically process it and switch to view mode
-      if (isValidFileType(file)) {
-        await processAndViewFile(file);
-      }
+      await processAndViewFile(file);
     },
     [showError, t, processAndViewFile]
   );
@@ -94,110 +137,136 @@ function CreateDatasetPageContent() {
   }, []);
 
   // Handle file upload (create dataset)
-  const handleFileUpload = useCallback(
-    async (name: string, description?: string) => {
-      if (!parsedData) {
-        showWarning('No Data Available', 'Please select a file or enter text data first');
-        return;
+  const handleFileUpload = useCallback(async () => {
+    if (!parsedData) {
+      showWarning('No Data Available', 'Please select a file or enter text data first');
+      return;
+    }
+
+    if (!datasetName.trim()) {
+      showWarning('Dataset Name Required', 'Please enter a name for your dataset');
+      return;
+    }
+
+    if (datasetName.length > DATASET_NAME_MAX_LENGTH) {
+      showWarning(
+        t('dataset_nameTooLong'),
+        t('dataset_nameTooLongMessage', { maxLength: DATASET_NAME_MAX_LENGTH })
+      );
+      return;
+    }
+
+    if (description && description.length > DATASET_DESCRIPTION_MAX_LENGTH) {
+      showWarning(
+        t('dataset_descriptionTooLong'),
+        t('dataset_descriptionTooLongMessage', { maxLength: DATASET_DESCRIPTION_MAX_LENGTH })
+      );
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // Prepare the data to send
+      const requestBody = {
+        name: datasetName.trim(),
+        data: parsedData || [],
+        ...(description && { description: description.trim() }),
+      };
+
+      // Send POST request to create dataset using axios
+      const response = await axiosPrivate.post('/datasets', requestBody);
+
+      showSuccess('Dataset Created Successfully', 'Your dataset has been created and saved');
+
+      // Reset state after successful upload
+      setSelectedFile(null);
+      setParsedData(null);
+      setViewMode('upload');
+    } catch (error: any) {
+      // Check for unique constraint violation
+      if (error.response?.status === 409) {
+        showError(
+          t('dataset_nameExists'),
+          t('dataset_nameExistsMessage', { name: datasetName.trim() })
+        );
+      } else {
+        showError(
+          t('dataset_uploadFailed'),
+          error.response?.data?.message || error.message || t('dataset_uploadFailedMessage')
+        );
       }
+    } finally {
+      setIsUploading(false);
+    }
+  }, [datasetName, description]);
 
-      if (!name.trim()) {
-        showWarning('Dataset Name Required', 'Please enter a name for your dataset');
-        return;
-      }
-
-      setIsUploading(true);
-
-      try {
-        // Prepare the data to send
-        const requestBody = {
-          name: name.trim(),
-          data: parsedData.data || [],
-          ...(description && { description: description.trim() }),
-        };
-
-        // Send POST request to create dataset using axios
-        const response = await axiosPrivate.post('/datasets', requestBody);
-
-        showSuccess('Dataset Created Successfully', 'Your dataset has been created and saved');
-
-        // Reset state after successful upload
-        setSelectedFile(null);
-        setParsedData(null);
-        setViewMode('upload');
-      } catch (error: any) {
-        // Check for unique constraint violation
-        if (error.response?.status === 409) {
-          showError(
-            'Dataset Name Already Exists',
-            `A dataset with the name "${name.trim()}" already exists. Please choose a different name.`
-          );
-        } else {
-          showError(
-            'Upload Failed',
-            error.response?.data?.message || error.message || 'Failed to create dataset'
-          );
-        }
-      } finally {
-        setIsUploading(false);
-      }
-    },
-    [parsedData, showWarning, showSuccess, showError]
-  );
-
-  // Handle change data (go back to upload and clear file)
+  // Handle change data (go back to previous upload method and reset shared state)
   const handleChangeData = useCallback(() => {
+    const prevText = originalTextContent;
+    // Reset all shared dataset state back to initial
+    resetState();
+    // Clear local file selection
     setSelectedFile(null);
-    setParsedData(null);
-    setOriginalTextContent('');
-    setViewMode('upload');
-  }, []);
+
+    // Restore user text only if returning to text upload
+    if (previousViewMode === 'textUpload') {
+      setOriginalTextContent(prevText);
+    }
+
+    setViewMode(previousViewMode);
+  }, [originalTextContent, previousViewMode, resetState, setOriginalTextContent]);
 
   // Handle text processing
   const handleTextProcess = useCallback(
     (content: string) => {
       setOriginalTextContent(content);
-      // Parse the text content as CSV data
+
       try {
-        const result = parseTabularContent(
-          content,
-          new File([content], 'text.csv', { type: 'text/csv' })
-        );
-        setParsedData(result);
+        // Check if content is JSON format first
+        const isJson = checkIsJsonFormat(content);
+        setIsJsonFormat(isJson);
+
+        if (isJson) {
+          // Parse JSON directly - no delimiter needed
+          const result = parseJsonDirectly(content);
+          setSelectedDelimiter(','); // Set a default delimiter for display purposes
+          setParsedData(result);
+          setOriginalHeaders(result[0] || []);
+        } else {
+          // Parse as regular CSV/text data
+          const detectedDelimiter = detectDelimiter(content);
+          setSelectedDelimiter(detectedDelimiter);
+          const result = parseTabularContent(content, { delimiter: detectedDelimiter });
+          setParsedData(result);
+          setOriginalHeaders(result[0] || []);
+        }
+
+        setPreviousViewMode(viewMode);
         setViewMode('view');
       } catch (error) {
-        showError('Parse Error', 'Failed to parse the text content');
+        const errorMessage = error instanceof Error ? error.message : 'dataset_parseErrorMessage';
+
+        // Check if it's a translation key with parameters (format: key:param)
+        if (errorMessage.includes(':')) {
+          const [key, param] = errorMessage.split(':', 2);
+          if (key.startsWith('dataset_')) {
+            showError(t('dataset_parseError'), t(key, { error: param }));
+            return;
+          }
+        }
+
+        // Check if it's a simple translation key
+        if (errorMessage.startsWith('dataset_')) {
+          showError(t('dataset_parseError'), t(errorMessage));
+          return;
+        }
+
+        // Fallback for other errors
+        showError(t('dataset_parseError'), errorMessage);
       }
     },
-    [showError]
-  );
-
-  // Handle delimiter change - reparse the original content with new delimiter
-  const handleDelimiterChange = useCallback(
-    (delimiter: string) => {
-      if (!originalTextContent) return;
-
-      try {
-        const result = parseTabularContent(
-          originalTextContent,
-          new File([originalTextContent], 'data.csv', { type: 'text/csv' }),
-          { delimiter }
-        );
-        setParsedData(result);
-      } catch (error) {
-        showError('Parse Error', 'Failed to parse with the selected delimiter');
-      }
-    },
-    [originalTextContent, showError]
-  );
-
-  // Handle number format change
-  const handleNumberFormatChange = useCallback(
-    (thousandsSeparator: string, decimalSeparator: string) => {
-      setNumberFormat({ thousands: thousandsSeparator, decimal: decimalSeparator });
-      // You can add logic here to reformat numbers in the table if needed
-    },
-    []
+    [showError, t, viewMode, setOriginalHeaders, setIsJsonFormat]
   );
 
   return (
@@ -208,12 +277,7 @@ function CreateDatasetPageContent() {
         // Data Viewer - Full Width
         <div className="py-8">
           <SlideInUp delay={0.2}>
-            <DataViewer
-              onUpload={handleFileUpload}
-              onChangeData={handleChangeData}
-              onDelimiterChange={handleDelimiterChange}
-              onNumberFormatChange={handleNumberFormatChange}
-            />
+            <DataViewer onUpload={handleFileUpload} onChangeData={handleChangeData} />
           </SlideInUp>
         </div>
       ) : (
@@ -221,7 +285,7 @@ function CreateDatasetPageContent() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex gap-6 items-start">
             {/* Left Navigation Component */}
-            <UploadMethodNavigation viewMode={viewMode} onViewModeChange={setViewMode} />
+            <UploadMethodNavigation viewMode={viewMode} onViewModeChange={handleViewModeChange} />
 
             {/* Main Content */}
             <div className="flex-1">
@@ -235,9 +299,13 @@ function CreateDatasetPageContent() {
                     isProcessing={false}
                   />
                 </SlideInUp>
-              ) : (
+              ) : viewMode === 'textUpload' ? (
                 <SlideInUp key="text-upload" delay={0.2}>
-                  <TextUpload onTextProcess={handleTextProcess} isProcessing={false} />
+                  <TextUpload onTextProcess={handleTextProcess} isProcessing={isProcessing} />
+                </SlideInUp>
+              ) : (
+                <SlideInUp key="sample-data" delay={0.2}>
+                  <SampleDataUpload onSampleSelect={handleTextProcess} />
                 </SlideInUp>
               )}
             </div>
@@ -251,9 +319,9 @@ function CreateDatasetPageContent() {
 // Main component with provider wrapper
 function CreateDatasetPage() {
   return (
-    <DatasetUploadProvider>
+    <DatasetProvider>
       <CreateDatasetPageContent />
-    </DatasetUploadProvider>
+    </DatasetProvider>
   );
 }
 
