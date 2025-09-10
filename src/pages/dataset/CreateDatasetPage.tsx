@@ -199,7 +199,7 @@ function CreateDatasetPageContent() {
     } finally {
       setIsUploading(false);
     }
-  }, [datasetName, description]);
+  }, [parsedData, showWarning, showSuccess, showError]);
 
   // Handle change data (go back to previous upload method and reset shared state)
   const handleChangeData = useCallback(() => {
