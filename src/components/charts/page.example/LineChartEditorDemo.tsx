@@ -33,11 +33,6 @@ const LineChartEditorDemo: React.FC = () => {
               curve: 'curveMonotoneX',
               margin: { top: 20, right: 40, bottom: 60, left: 80 },
             }}
-            initialColors={{
-              ecommerce: { light: '#16a34a', dark: '#22c55e' },
-              retail: { light: '#9333ea', dark: '#a855f7' },
-              wholesale: { light: '#c2410c', dark: '#ea580c' },
-            }}
             initialFormatters={{
               useYFormatter: true,
               useXFormatter: true,

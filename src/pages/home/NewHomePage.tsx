@@ -473,6 +473,9 @@ const NewHomePage: React.FC = () => {
                   View Examples
                 </Button>
               </motion.div>
+            </div>
+            {/* RIGHT CONTENT: Animation */}
+            <div className="flex items-center justify-center w-full h-full py-5">
               <motion.div
                 key={'video_section_1'}
                 variants={slideVariants.slideInLeft}
@@ -481,23 +484,15 @@ const NewHomePage: React.FC = () => {
                 viewport={{ once: true, amount: 0.2 }}
                 transition={{ delay: 0.2 }}
               >
-                <div className="flex items-center justify-center w-full h-full py-5">
-                  <Lottie
-                    animationData={ChartAnimationData}
-                    loop={true}
-                    className="w-full h-full"
-                  />
-                </div>
+                <Lottie animationData={ChartAnimationData} loop={true} className="w-full h-full" />
               </motion.div>
             </div>
-
-            {/* BACKGROUND ANIMATION */}
-            {/* Mấy cái cục đủ màu phía sau */}
-            <div className="absolute inset-0 -z-10">
-              <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-              <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-purple-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
-              <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-pink-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-2000"></div>
-            </div>
+          </div>
+          {/* BACKGROUND ANIMATION */}
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+            <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-purple-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
+            <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-pink-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-2000"></div>
           </div>
         </div>
       </motion.section>
