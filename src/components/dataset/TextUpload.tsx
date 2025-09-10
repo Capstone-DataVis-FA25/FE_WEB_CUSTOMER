@@ -12,7 +12,7 @@ interface TextUploadProps {
 }
 
 function TextUpload({ onTextProcess, isProcessing = false }: TextUploadProps) {
-  const { t: _t } = useTranslation();
+  const { t } = useTranslation();
   const { originalTextContent, setOriginalTextContent } = useDataset();
 
   const handleProcess = () => {
@@ -23,14 +23,15 @@ function TextUpload({ onTextProcess, isProcessing = false }: TextUploadProps) {
   };
 
   const handleSampleData = () => {
-    const sampleData = `Name,Age,City,Salary,Country
-John Doe,28,New York,"1,234.56",USA
-Jane Smith,34,London,"2,890.75",UK
-Mike Johnson,45,Toronto,"3,567.90",Canada
-Sarah Williams,29,Sydney,"1,987.25",Australia
-David Brown,38,Berlin,"4,123.80",Germany
-Lisa Garcia,31,Madrid,"2,456.40",Spain
-Tom Wilson,42,Tokyo,"5,678.95",Japan`;
+    const sampleData = 
+    `ID,Age,Salary,Bonus
+1,28,1234.56,300
+2,34,2890.75,500
+3,45,3567.90,700
+4,29,1987.25,350
+5,38,4123.80,600
+6,31,2456.40,400
+7,42,5678.95,800`;
     setOriginalTextContent(sampleData);
   };
 
@@ -54,7 +55,7 @@ Tom Wilson,42,Tokyo,"5,678.95",Japan`;
         <CardHeader className="pb-6">
           <CardTitle className="text-2xl text-gray-900 dark:text-white flex items-center gap-3">
             <FileText className="w-6 h-6 text-blue-600" />
-            Text Input
+            {t('textUpload_title')}
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
             Paste your tabular data directly as text. Supports CSV, TSV, JSON (2D arrays), and other
@@ -74,7 +75,7 @@ Tom Wilson,42,Tokyo,"5,678.95",Japan`;
                   htmlFor="textContent"
                   className="text-lg font-semibold text-gray-900 dark:text-white"
                 >
-                  Paste your data here
+                  {t('textUpload_pasteLabel')}
                 </Label>
                 <textarea
                   id="textContent"
@@ -85,7 +86,7 @@ Tom Wilson,42,Tokyo,"5,678.95",Japan`;
                   disabled={isProcessing}
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Tip: Use the first row as headers for better data organization
+                  {t('textUpload_tip')}
                 </p>
               </div>
             </div>
@@ -115,7 +116,7 @@ Tom Wilson,42,Tokyo,"5,678.95",Japan`;
               className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Upload className="w-4 h-4 mr-2" />
-              {isProcessing ? 'Processing...' : 'Process Text'}
+              {isProcessing ? t('textUpload_processing') : t('textUpload_process')}
             </Button>
           </div>
         </CardContent>

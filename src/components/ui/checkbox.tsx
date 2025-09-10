@@ -9,7 +9,22 @@ function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxP
     <CheckboxPrimitive.Root
       data-slot="checkbox"
       className={cn(
-        'peer border-input dark:bg-input/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
+        // Base styles - improved visibility
+        'peer size-4 shrink-0 rounded-[4px] border-2 shadow-sm transition-all outline-none',
+        // Light theme - stronger borders and backgrounds
+        'border-gray-400 bg-white hover:border-blue-500 focus-visible:border-blue-500',
+        // Dark theme
+        'dark:border-gray-500 dark:bg-gray-800 dark:hover:border-blue-400 dark:focus-visible:border-blue-400',
+        // Checked state - more visible
+        'data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white',
+        'dark:data-[state=checked]:bg-blue-500 dark:data-[state=checked]:border-blue-500',
+        // Focus ring
+        'focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-opacity-50',
+        'dark:focus-visible:ring-blue-400',
+        // Disabled state
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        // Invalid state
+        'aria-invalid:border-red-500 aria-invalid:ring-1 aria-invalid:ring-red-500/20',
         className
       )}
       {...props}
@@ -18,7 +33,7 @@ function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxP
         data-slot="checkbox-indicator"
         className="flex items-center justify-center text-current transition-none"
       >
-        <CheckIcon className="size-3.5" />
+        <CheckIcon className="size-3.5 stroke-[3]" />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   );
