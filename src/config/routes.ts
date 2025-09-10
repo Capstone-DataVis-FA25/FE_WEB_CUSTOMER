@@ -332,6 +332,20 @@ export const protectedRoutes: RouteConfig[] = [
       description: 'Upload and create a new dataset from Excel or CSV files',
     },
   },
+  // Chart routes
+  {
+    path: Routers.CREATE_CHART,
+    name: 'create-chart',
+    component: 'CreateChartPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Create Chart',
+      description: 'Create beautiful charts from your datasets with step-by-step wizard',
+    },
+  },
   {
     path: Routers.DATASETS,
     name: 'datasets-list',

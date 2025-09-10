@@ -14,6 +14,7 @@ const Routers = {
   PROFILE_SETTINGS: '/profile/settings',
 
   // Dataset routes
+  CREATE_CHART: '/create-chart',
   DATASETS: '/datasets',
   DATASET_DETAIL: '/datasets/:id',
   CREATE_DATASET: '/datasets/create',
