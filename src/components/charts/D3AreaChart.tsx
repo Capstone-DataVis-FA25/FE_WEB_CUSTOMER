@@ -1,8 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
-import { defaultColors } from './D3LineChart';
+import type { ColorConfig } from './chartConstants';
 
+const defaultAreaColors: ColorConfig = {
+    area1: { light: '#3b82f6', dark: '#60a5fa' },
+    area2: { light: '#f97316', dark: '#fb923c' },
+    area3: { light: '#6b7280', dark: '#9ca3af' },
+    area4: { light: '#eab308', dark: '#facc15' },
+    area5: { light: '#ef4444', dark: '#f87171' },
+    area6: { light: '#10b981', dark: '#34d399' },
+    area7: { light: '#8b5cf6', dark: '#a78bfa' },
+    area8: { light: '#f59e0b', dark: '#fbbf24' },
+};
 export interface ChartDataPoint {
   [key: string]: number | string;
 }
@@ -14,14 +24,15 @@ export interface D3AreaChartProps {
   margin?: { top: number; right: number; bottom: number; left: number };
   xAxisKey: string;
   yAxisKeys: string[];
-  colors?: Record<string, { light: string; dark: string }>;
+  disabledLines?: string[]; // New prop for disabled areas (similar to line chart)
+  colors?: ColorConfig;
   title?: string;
   yAxisLabel?: string;
   xAxisLabel?: string;
   showLegend?: boolean;
   showGrid?: boolean;
   showPoints?: boolean;
-  showStroke?: boolean; // Show stroke line
+  showStroke?: boolean; // Whether to show stroke lines on areas
   animationDuration?: number;
   curve?: d3.CurveFactory;
   yAxisFormatter?: (value: number) => string;
@@ -34,17 +45,18 @@ export interface D3AreaChartProps {
 const D3AreaChart: React.FC<D3AreaChartProps> = ({
   data,
   width = 800,
-  height = 600,
-  margin = { top: 20, right: 40, bottom: 60, left: 80 },
+  height = 600, 
+  margin = { top: 20, right: 40, bottom: 60, left: 80 }, // Same as line chart
   xAxisKey,
   yAxisKeys,
-  colors = defaultColors,
+  disabledLines = [], // Default to no disabled areas
+  colors = defaultAreaColors,
   title,
   yAxisLabel,
   xAxisLabel,
   showLegend = true,
   showGrid = true,
-  showPoints = false,
+  showPoints = false, // Areas typically don't show points by default
   showStroke = true,
   animationDuration = 1000,
   curve = d3.curveMonotoneX,
@@ -114,13 +126,14 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     const currentWidth = dimensions.width;
     const currentHeight = dimensions.height;
 
-    // Get current theme colors
+    // Get current theme colors for enabled areas only
     const getCurrentColors = () => {
       const theme = isDarkMode ? 'dark' : 'light';
       const result: Record<string, string> = {};
-      yAxisKeys.forEach((key, index) => {
+      const enabledAreas = yAxisKeys.filter(key => !disabledLines.includes(key));
+      enabledAreas.forEach((key, index) => {
         const colorKey = colors[key] ? key : `area${index + 1}`;
-        result[key] = colors[colorKey]?.[theme] || defaultColors[`area${index + 1}`][theme];
+        result[key] = colors[colorKey]?.[theme] || defaultAreaColors[`area${index + 1}`][theme];
       });
       return result;
     };
@@ -182,10 +195,12 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     let yScale: d3.ScaleLinear<number, number>;
 
     if (stackedMode) {
-      // For stacked areas, we need to calculate the stack
+      // For stacked areas, filter out disabled areas
+      const enabledKeys = yAxisKeys.filter(key => !disabledLines.includes(key));
+
       const stack = d3
         .stack<ChartDataPoint>()
-        .keys(yAxisKeys)
+        .keys(enabledKeys)
         .value((d, key) => d[key] as number);
 
       const stackedData = stack(data);
@@ -200,10 +215,11 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         // Area generator for stacked data
         const area = d3
           .area<d3.SeriesPoint<ChartDataPoint>>()
-          .x((d, i) => xScale(data[i][xAxisKey] as number))
+          .x((_d, i) => xScale(data[i][xAxisKey] as number))
           .y0(d => yScale(d[0]))
           .y1(d => yScale(d[1]))
           .curve(curve);
+
         // Create area path
         const areaPath = g
           .append('path')
@@ -217,7 +233,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         if (showStroke) {
           const line = d3
             .line<d3.SeriesPoint<ChartDataPoint>>()
-            .x((d, i) => xScale(data[i][xAxisKey] as number))
+            .x((_d, i) => xScale(data[i][xAxisKey] as number))
             .y(d => yScale(d[1]))
             .curve(curve);
 
@@ -246,7 +262,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       });
     } else {
       // For overlapping areas
-      const allYValues = data.flatMap(d => yAxisKeys.map(key => d[key] as number));
+      const enabledAreas = yAxisKeys.filter(key => !disabledLines.includes(key));
+      const allYValues = data.flatMap(d => enabledAreas.map(key => d[key] as number));
 
       yScale = d3
         .scaleLinear()
@@ -254,8 +271,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         .nice()
         .range([innerHeight, 0]);
 
-      // Create overlapping areas
-      yAxisKeys.forEach((key, index) => {
+      // Create overlapping areas for enabled areas only
+      enabledAreas.forEach((key, index) => {
         // Area generator
         const area = d3
           .area<ChartDataPoint>()
@@ -510,6 +527,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     margin,
     xAxisKey,
     yAxisKeys,
+    disabledLines,
     colors,
     showLegend,
     showGrid,
@@ -565,7 +583,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
                 const colorKey = colors[key] ? key : `area${index + 1}`;
                 const color =
                   colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
-                  defaultColors[`area${index + 1}`][isDarkMode ? 'dark' : 'light'];
+                  defaultAreaColors[`area${index + 1}`][isDarkMode ? 'dark' : 'light'];
 
                 return (
                   <div

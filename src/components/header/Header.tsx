@@ -46,6 +46,7 @@ const Header: React.FC<HeaderProps> = ({
   // Navigation items
   const navItems = [
     { name: t('navigation_home'), href: '/' },
+    ...(isAuthenticated ? [{ name: 'Workspace', href: '/workspace' }] : []),
     { name: t('navigation_about'), href: '/about-us' },
   ];
 
