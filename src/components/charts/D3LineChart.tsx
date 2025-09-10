@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+  import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
 import { convertArrayToChartData } from '@/utils/dataConverter';
@@ -17,6 +17,18 @@ export interface D3LineChartProps {
   disabledLines?: string[]; // New prop for disabled lines
   colors?: Record<string, { light: string; dark: string }>;
   seriesNames?: Record<string, string>; // Add series names mapping
+  // Individual series configurations
+  seriesConfigs?: Record<string, {
+    lineWidth?: number;
+    pointRadius?: number;
+    lineStyle?: 'solid' | 'dashed' | 'dotted';
+    pointStyle?: 'circle' | 'square' | 'triangle' | 'diamond';
+    opacity?: number;
+    curveType?: string;
+    formatter?: string;
+    dataTransform?: 'none' | 'cumulative' | 'percentage' | 'normalized';
+    zIndex?: number;
+  }>;
   title?: string;
   yAxisLabel?: string;
   xAxisLabel?: string;
@@ -30,6 +42,29 @@ export interface D3LineChartProps {
   yAxisFormatter?: (value: number) => string; // Add custom Y-axis formatter
   xAxisFormatter?: (value: number) => string; // Add custom X-axis formatter
   fontSize?: { axis: number; label: number; title: number }; // Add fontSize prop
+  
+  // New styling props
+  lineWidth?: number;
+  pointRadius?: number;
+  gridOpacity?: number;
+  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
+  
+  // New axis props
+  xAxisRotation?: number;
+  yAxisRotation?: number;
+  showAxisLabels?: boolean;
+  showAxisTicks?: boolean;
+  
+  // New interaction props
+  enableZoom?: boolean;
+  showTooltip?: boolean;
+  
+  // New visual props
+  theme?: 'light' | 'dark' | 'auto';
+  backgroundColor?: string;
+  titleFontSize?: number;
+  labelFontSize?: number;
+  legendFontSize?: number;
 }
 
 export const defaultColors: Record<string, { light: string; dark: string }> = {
@@ -53,6 +88,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   disabledLines = [], // Default to no disabled lines
   colors = defaultColors,
   seriesNames = {}, // Default to empty object
+  seriesConfigs = {}, // Individual series configurations
   title,
   yAxisLabel,
   xAxisLabel,
@@ -66,12 +102,83 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   yAxisFormatter, // Optional custom Y-axis formatter
   xAxisFormatter, // Optional custom X-axis formatter
   fontSize = { axis: 12, label: 14, title: 16 }, // Default fontSize
+  
+  // New styling props with defaults
+  lineWidth = 2,
+  pointRadius = 4,
+  gridOpacity = 0.3,
+  legendPosition = 'bottom',
+  
+  // New axis props with defaults
+  xAxisRotation = 0,
+  yAxisRotation = 0,
+  showAxisLabels = true,
+  showAxisTicks = true,
+  
+  // New interaction props with defaults
+  enableZoom = true,
+  showTooltip = true,
+  
+  // New visual props with defaults
+  theme = 'auto',
+  backgroundColor = 'transparent',
+  titleFontSize = 16,
+  labelFontSize = 12,
+  legendFontSize = 11,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [dimensions, setDimensions] = React.useState({ width, height });
   const { t } = useTranslation();
+
+  // Helper function for data transformation
+  const transformSeriesData = (data: ChartDataPoint[], key: string, transformation: string): ChartDataPoint[] => {
+    switch (transformation) {
+      case 'cumulative': {
+        let cumSum = 0;
+        return data.map(d => {
+          cumSum += d[key] as number;
+          return { ...d, [key]: cumSum };
+        });
+      }
+      case 'percentage': {
+        const total = data.reduce((sum, d) => sum + (d[key] as number), 0);
+        return data.map(d => ({ ...d, [key]: ((d[key] as number) / total) * 100 }));
+      }
+      case 'normalized': {
+        const values = data.map(d => d[key] as number);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const range = max - min;
+        return data.map(d => ({ ...d, [key]: range === 0 ? 0 : ((d[key] as number) - min) / range }));
+      }
+      default:
+        return data;
+    }
+  };
+
+  // Helper function for different point shapes
+  const getPointPath = (style: string, radius: number): string => {
+    const r = radius;
+    switch (style) {
+      case 'square':
+        return `M${-r},${-r}L${r},${-r}L${r},${r}L${-r},${r}Z`;
+      case 'triangle':
+        return `M0,${-r}L${r * 0.866},${r * 0.5}L${-r * 0.866},${r * 0.5}Z`;
+      case 'diamond':
+        return `M0,${-r}L${r},0L0,${r}L${-r},0Z`;
+      default: // circle
+        return `M0,${-r}A${r},${r} 0 1,1 0,${r}A${r},${r} 0 1,1 0,${-r}`;
+    }
+  };
+
+  // Update fontSize object with new props
+  const responsiveFontSize = {
+    axis: fontSize.axis,
+    label: labelFontSize,
+    title: titleFontSize,
+  };
 
   // Convert arrayData to ChartDataPoint[] if provided
   const processedData = React.useMemo((): ChartDataPoint[] => {
@@ -118,21 +225,26 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   // Monitor theme changes
   useEffect(() => {
     const updateTheme = () => {
-      setIsDarkMode(document.documentElement.classList.contains('dark'));
+      if (theme === 'auto') {
+        setIsDarkMode(document.documentElement.classList.contains('dark'));
+      } else {
+        setIsDarkMode(theme === 'dark');
+      }
     };
 
     // Initial theme detection
     updateTheme();
 
-    // Listen for theme changes
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-
-    return () => observer.disconnect();
-  }, []);
+    // Listen for theme changes only if theme is auto
+    if (theme === 'auto') {
+      const observer = new MutationObserver(updateTheme);
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class'],
+      });
+      return () => observer.disconnect();
+    }
+  }, [theme]);
 
   useEffect(() => {
     if (!svgRef.current || !processedData.length) return;
@@ -159,7 +271,11 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     const axisColor = isDarkMode ? '#9ca3af' : '#374151';
     const gridColor = isDarkMode ? '#4b5563' : '#9ca3af';
     const textColor = isDarkMode ? '#f3f4f6' : '#1f2937';
-    const backgroundColor = isDarkMode ? '#111827' : '#ffffff';
+    
+    // Use backgroundColor prop or fallback to theme default
+    const chartBackgroundColor = backgroundColor !== 'transparent' 
+      ? backgroundColor 
+      : (isDarkMode ? '#111827' : '#ffffff');
 
     // Clear previous chart
     d3.select(svgRef.current).selectAll('*').remove();
@@ -183,7 +299,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .append('rect')
       .attr('width', currentWidth)
       .attr('height', currentHeight)
-      .attr('fill', backgroundColor)
+      .attr('fill', chartBackgroundColor)
       .attr('rx', 8);
 
     // Add subtle Y-axis background area
@@ -259,7 +375,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr('stroke', gridColor)
         .attr('stroke-width', 1)
         .attr('stroke-dasharray', '3,3')
-        .attr('opacity', isDarkMode ? 0.5 : 0.7); // Better opacity for light mode
+        .attr('opacity', gridOpacity); // Use gridOpacity prop
 
       // Vertical grid lines
       g.selectAll('.grid-line-vertical')
@@ -274,7 +390,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr('stroke', gridColor)
         .attr('stroke-width', 1)
         .attr('stroke-dasharray', '3,3')
-        .attr('opacity', isDarkMode ? 0.3 : 0.5); // Better opacity for light mode
+        .attr('opacity', gridOpacity * 0.7); // Use gridOpacity prop (slightly less for vertical)
     }
 
     // X Axis with flexible formatting
@@ -283,6 +399,8 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     
     const xAxis = d3.axisBottom(xScale)
       .tickValues(uniqueXValues) // Use actual data values as ticks
+      .tickSizeInner(showAxisTicks ? 6 : 0) // Control inner tick size
+      .tickSizeOuter(showAxisTicks ? 6 : 0) // Control outer tick size
       .tickFormat(d => {
         const value = d.valueOf();
         // Use custom formatter if provided, otherwise use integer formatting
@@ -292,17 +410,23 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         return d3.format('d')(value);
       });
 
-    g.append('g')
+    const xAxisGroup = g.append('g')
       .attr('transform', `translate(0,${innerHeight})`)
-      .call(xAxis)
+      .call(xAxis);
+
+    xAxisGroup
       .selectAll('text')
       .attr('fill', textColor)
-      .style('font-size', `${fontSize.axis}px`)
-      .style('font-weight', '500');
+      .style('font-size', `${responsiveFontSize.axis}px`)
+      .style('font-weight', '500')
+      .attr('transform', `rotate(${xAxisRotation})`)
+      .style('text-anchor', xAxisRotation === 0 ? 'middle' : xAxisRotation > 0 ? 'start' : 'end');
 
-    g.select('.domain').attr('stroke', axisColor).attr('stroke-width', 2);
+    xAxisGroup.select('.domain').attr('stroke', axisColor).attr('stroke-width', 2);
 
-    g.selectAll('.tick line').attr('stroke', axisColor);
+    if (showAxisTicks) {
+      xAxisGroup.selectAll('.tick line').attr('stroke', axisColor);
+    }
 
     // Y Axis with flexible formatting
     const yAxis = d3
@@ -315,7 +439,8 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         }
         return value.toLocaleString();
       })
-      .tickSize(-5) // Shorter tick lines for cleaner look
+      .tickSizeInner(showAxisTicks ? -5 : 0) // Control inner tick size
+      .tickSizeOuter(showAxisTicks ? 6 : 0) // Control outer tick size
       .tickPadding(8); // More space between ticks and labels
 
     const yAxisGroup = g.append('g').call(yAxis);
@@ -324,11 +449,12 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     yAxisGroup
       .selectAll('text')
       .attr('fill', textColor)
-      .style('font-size', `${fontSize.axis}px`)
+      .style('font-size', `${responsiveFontSize.axis}px`)
       .style('font-weight', '600')
       .style('font-family', 'system-ui, -apple-system, sans-serif')
       .attr('text-anchor', 'end')
-      .attr('x', -10); // Push labels further left for better spacing
+      .attr('x', -10) // Push labels further left for better spacing
+      .attr('transform', `rotate(${yAxisRotation})`);
 
     // Style Y-axis domain line
     yAxisGroup
@@ -338,34 +464,84 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .attr('opacity', 0.8);
 
     // Style Y-axis tick lines
-    yAxisGroup
-      .selectAll('.tick line')
-      .attr('stroke', axisColor)
-      .attr('stroke-width', 1)
-      .attr('opacity', 0.6);
+    if (showAxisTicks) {
+      yAxisGroup
+        .selectAll('.tick line')
+        .attr('stroke', axisColor)
+        .attr('stroke-width', 1)
+        .attr('opacity', 0.6);
+    }
 
-    // Create lines for each enabled yAxisKey
+    // Create lines for each enabled yAxisKey with individual configurations
     const enabledLines = yAxisKeys.filter(key => !disabledLines.includes(key));
-    enabledLines.forEach((key, index) => {
+    
+    // Sort by zIndex if available
+    const sortedLines = enabledLines.sort((a, b) => {
+      const aZIndex = seriesConfigs[a]?.zIndex ?? enabledLines.indexOf(a);
+      const bZIndex = seriesConfigs[b]?.zIndex ?? enabledLines.indexOf(b);
+      return aZIndex - bZIndex;
+    });
+    
+    sortedLines.forEach((key, index) => {
+      const seriesConfig = seriesConfigs[key] || {};
+      
+      // Get individual series configurations or fallback to global
+      const seriesLineWidth = seriesConfig.lineWidth ?? lineWidth;
+      const seriesPointRadius = seriesConfig.pointRadius ?? pointRadius;
+      const seriesOpacity = seriesConfig.opacity ?? 1;
+      const seriesLineStyle = seriesConfig.lineStyle ?? 'solid';
+      const seriesPointStyle = seriesConfig.pointStyle ?? 'circle';
+      
+      // Apply data transformation if specified
+      let processedSeriesData = [...processedData];
+      if (seriesConfig.dataTransform && seriesConfig.dataTransform !== 'none') {
+        processedSeriesData = transformSeriesData(processedData, key, seriesConfig.dataTransform);
+      }
+      
+      // Determine curve type for this series
+      let seriesCurve = curve;
+      if (seriesConfig.curveType) {
+        const curveMap: { [key: string]: d3.CurveFactory } = {
+          'Linear': d3.curveLinear,
+          'MonotoneX': d3.curveMonotoneX,
+          'MonotoneY': d3.curveMonotoneY,
+          'Basis': d3.curveBasis,
+          'Cardinal': d3.curveCardinal,
+          'CatmullRom': d3.curveCatmullRom,
+          'Step': d3.curveStep,
+          'StepBefore': d3.curveStepBefore,
+          'StepAfter': d3.curveStepAfter,
+        };
+        seriesCurve = curveMap[seriesConfig.curveType] || curve;
+      }
+
       // Custom line generator for this specific key
       const keyLine = d3
         .line<ChartDataPoint>()
         .x(d => xScale(d[xAxisKey] as number))
         .y(d => yScale(d[key] as number))
-        .curve(curve);
+        .curve(seriesCurve);
 
-      // Add the line path
+      // Add the line path with individual styling
       const path = g
         .append('path')
-        .datum(processedData)
+        .datum(processedSeriesData)
         .attr('fill', 'none')
         .attr('stroke', currentColors[key])
-        .attr('stroke-width', currentWidth < 768 ? 2 : 3)
+        .attr('stroke-width', seriesLineWidth)
         .attr('stroke-linecap', 'round')
         .attr('stroke-linejoin', 'round')
+        .attr('stroke-opacity', seriesOpacity)
         .attr('d', keyLine)
         .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
         .style('opacity', 0);
+
+      // Apply line style (dashed, dotted, etc.)
+      if (seriesLineStyle === 'dashed') {
+        path.attr('stroke-dasharray', `${seriesLineWidth * 3} ${seriesLineWidth * 2}`);
+      } else if (seriesLineStyle === 'dotted') {
+        path.attr('stroke-dasharray', `${seriesLineWidth} ${seriesLineWidth}`);
+      }
 
       // Animate the line
       const totalLength = path.node()?.getTotalLength() || 0;
@@ -379,47 +555,60 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .ease(d3.easeQuadInOut)
         .attr('stroke-dashoffset', 0)
         .on('end', () => {
-          path.attr('stroke-dasharray', 'none');
+          // Restore original dash array for line styles
+          if (seriesLineStyle === 'dashed') {
+            path.attr('stroke-dasharray', `${seriesLineWidth * 3} ${seriesLineWidth * 2}`);
+          } else if (seriesLineStyle === 'dotted') {
+            path.attr('stroke-dasharray', `${seriesLineWidth} ${seriesLineWidth}`);
+          } else {
+            path.attr('stroke-dasharray', 'none');
+          }
         });
 
-      // Add data points
+      // Add data points with individual styling
       if (showPoints) {
         g.selectAll(`.point-${index}`)
-          .data(processedData)
+          .data(processedSeriesData)
           .enter()
-          .append('circle')
+          .append('path')
           .attr('class', `point-${index}`)
-          .attr('cx', d => xScale(d[xAxisKey] as number))
-          .attr('cy', d => yScale(d[key] as number))
-          .attr('r', 0)
+          .attr('transform', d => `translate(${xScale(d[xAxisKey] as number)}, ${yScale(d[key] as number)})`)
+          .attr('d', getPointPath(seriesPointStyle, 0))
           .attr('fill', currentColors[key])
-          .attr('stroke', backgroundColor)
+          .attr('stroke', chartBackgroundColor)
           .attr('stroke-width', 2)
+          .attr('opacity', seriesOpacity)
           .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
           .on('mouseover', function (_event, d) {
+            if (!showTooltip) return;
+            
             // Enhanced tooltip on hover
             d3.select(this)
               .transition()
               .duration(200)
-              .attr('r', currentWidth < 640 ? 5 : 6)
+              .attr('d', getPointPath(seriesPointStyle, seriesPointRadius * 1.5))
               .attr('stroke-width', 3);
 
             // Create enhanced tooltip
+            const xValue = typeof d[xAxisKey] === 'number' ? d[xAxisKey].toLocaleString() : d[xAxisKey];
+            const yValue = typeof d[key] === 'number' ? d[key].toLocaleString() : d[key];
+            const seriesName = seriesNames[key] || key;
+            
             const tooltip = g
               .append('g')
               .attr('class', 'tooltip')
               .attr(
                 'transform',
-                `translate(${xScale(d[xAxisKey] as number)}, ${yScale(d[key] as number) - 15})`
+                `translate(${xScale(d[xAxisKey] as number)}, ${yScale(d[key] as number) - 25})`
               );
 
-            // Tooltip background with shadow
+            // Tooltip background with shadow - make it larger for more content
             tooltip
               .append('rect')
-              .attr('x', -30)
-              .attr('y', -30)
-              .attr('width', 60)
-              .attr('height', 25)
+              .attr('x', -50)
+              .attr('y', -35)
+              .attr('width', 100)
+              .attr('height', 45)
               .attr('fill', isDarkMode ? '#1f2937' : '#ffffff')
               .attr('stroke', currentColors[key])
               .attr('stroke-width', 2)
@@ -430,23 +619,54 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
               .duration(200)
               .style('opacity', 0.95);
 
-            // Tooltip text with better formatting
-            const value = typeof d[key] === 'number' ? d[key].toLocaleString() : d[key];
+            // Series name
+            tooltip
+              .append('text')
+              .attr('text-anchor', 'middle')
+              .attr('y', -25)
+              .attr('fill', textColor)
+              .style('font-size', `${Math.max(responsiveFontSize.axis - 1, 10)}px`)
+              .style('font-weight', '600')
+              .style('opacity', 0)
+              .text(seriesName)
+              .transition()
+              .duration(200)
+              .style('opacity', 1);
+
+            // X value
             tooltip
               .append('text')
               .attr('text-anchor', 'middle')
               .attr('y', -12)
               .attr('fill', textColor)
-              .style('font-size', `${fontSize.axis}px`)
+              .style('font-size', `${Math.max(responsiveFontSize.axis - 1, 10)}px`)
+              .style('font-weight', '500')
+              .style('opacity', 0)
+              .text(`${xAxisLabel || 'X'}: ${xValue}`)
+              .transition()
+              .duration(200)
+              .style('opacity', 0.8);
+
+            // Y value
+            tooltip
+              .append('text')
+              .attr('text-anchor', 'middle')
+              .attr('y', 2)
+              .attr('fill', textColor)
+              .style('font-size', `${responsiveFontSize.axis}px`)
               .style('font-weight', '600')
               .style('opacity', 0)
-              .text(value as string)
+              .text(`${yValue}`)
               .transition()
               .duration(200)
               .style('opacity', 1);
           })
           .on('mouseout', function () {
-            d3.select(this).transition().duration(200).attr('r', 4).attr('stroke-width', 2);
+            d3.select(this)
+              .transition()
+              .duration(200)
+              .attr('d', getPointPath(seriesPointStyle, seriesPointRadius))
+              .attr('stroke-width', 2);
 
             g.select('.tooltip').transition().duration(150).style('opacity', 0).remove();
           })
@@ -454,30 +674,50 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           .delay(animationDuration + index * 100)
           .duration(300)
           .ease(d3.easeBackOut)
-          .attr('r', 4);
+          .attr('d', getPointPath(seriesPointStyle, seriesPointRadius));
       }
     });
 
+    // Simple zoom with scroll wheel
+    if (enableZoom) {
+      let zoomLevel = 1;
+      
+      svg.on('wheel', function(event) {
+        event.preventDefault();
+        
+        const delta = event.deltaY;
+        const scaleFactor = delta > 0 ? 0.9 : 1.1;
+        zoomLevel *= scaleFactor;
+        
+        // Limit zoom
+        zoomLevel = Math.max(0.5, Math.min(3, zoomLevel));
+        
+        // Apply zoom transform
+        const transform = `scale(${zoomLevel})`;
+        g.attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top}) ${transform}`);
+      });
+    }
+
     // Add axis labels with responsive font sizes
-    if (xAxisLabel) {
+    if (xAxisLabel && showAxisLabels) {
       g.append('text')
         .attr('x', innerWidth / 2)
         .attr('y', innerHeight + (currentWidth < 768 ? 40 : 50))
         .attr('text-anchor', 'middle')
         .attr('fill', textColor)
-        .style('font-size', `${fontSize.label}px`)
+        .style('font-size', `${responsiveFontSize.label}px`)
         .style('font-weight', '600')
         .text(xAxisLabel);
     }
 
-    if (yAxisLabel) {
+    if (yAxisLabel && showAxisLabels) {
       g.append('text')
         .attr('transform', `rotate(-90)`)
         .attr('x', -innerHeight / 2)
         .attr('y', currentWidth < 768 ? -55 : -65) // Increased distance from Y-axis
         .attr('text-anchor', 'middle')
         .attr('fill', textColor)
-        .style('font-size', `${fontSize.label}px`)
+        .style('font-size', `${responsiveFontSize.label}px`)
         .style('font-weight', '600')
         .text(yAxisLabel);
     }
@@ -488,6 +728,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     yAxisKeys,
     disabledLines,
     colors,
+    seriesConfigs,
     showLegend,
     showGrid,
     showPoints,
@@ -500,89 +741,161 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     dimensions,
     yAxisFormatter,
     xAxisFormatter,
-    fontSize,
+    responsiveFontSize,
     xAxisStart,
     yAxisStart,
+    lineWidth,
+    pointRadius,
+    gridOpacity,
+    showTooltip,
+    legendPosition,
+    xAxisRotation,
+    yAxisRotation,
+    showAxisLabels,
+    showAxisTicks,
+    theme,
+    legendFontSize,
   ]);
 
   return (
-    <div ref={containerRef} className="w-full space-y-4">
-      {title && (
+    <div ref={containerRef} className={`w-full ${legendPosition === 'top' || legendPosition === 'bottom' ? 'space-y-4' : 'flex gap-4'}`}>
+      {title && title.trim() !== '' && (
         <h3
           className="font-bold text-gray-900 dark:text-white text-center"
-          style={{ fontSize: `${fontSize.title}px` }}
+          style={{ fontSize: `${responsiveFontSize.title}px` }}
         >
           {title}
         </h3>
       )}
 
-      {/* Chart Container */}
-      <div className="relative w-full bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3">
-        <svg
-          ref={svgRef}
-          width={dimensions.width}
-          height={dimensions.height}
-          className="w-full h-auto"
-          viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-          preserveAspectRatio="xMidYMid meet"
-        />
-      </div>
-
-      {/* Beautiful Legend Below Chart */}
-      {showLegend && (
+      {/* Legend Top */}
+      {showLegend && legendPosition === 'top' && (
         <div className="w-full">
           <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <h4 className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center">
+            <h4 
+              className="font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center"
+              style={{ fontSize: `${legendFontSize}px` }}
+            >
               {t('legend')}
             </h4>
-
-            {/* Responsive Grid Layout */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {yAxisKeys
-                .filter(key => !disabledLines.includes(key))
-                .map((key, index) => {
-                  const colorKey = colors[key] ? key : `line${index + 1}`;
-                  const color =
-                    colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
-                    defaultColors[`line${index + 1}`][isDarkMode ? 'dark' : 'light'];
-                  
-                  // Use series name if provided, otherwise fallback to key
-                  const displayName = seriesNames[key] || key;
+              {renderLegendItems()}
+            </div>
+          </div>
+        </div>
+      )}
 
-                  return (
-                    <div
-                      key={key}
-                      className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
-                    >
-                      {/* Color Indicator */}
-                      <div className="flex-shrink-0">
-                        <div
-                          className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
-                          style={{ backgroundColor: color }}
-                        />
-                      </div>
+      <div className={`${legendPosition === 'left' || legendPosition === 'right' ? 'flex gap-4' : ''}`}>
+        {/* Legend Left */}
+        {showLegend && legendPosition === 'left' && (
+          <div className="w-64 flex-shrink-0">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <h4 
+                className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center"
+                style={{ fontSize: `${legendFontSize}px` }}
+              >
+                {t('legend')}
+              </h4>
+              <div className="flex flex-col gap-3">
+                {renderLegendItems()}
+              </div>
+            </div>
+          </div>
+        )}
 
-                      {/* Label */}
-                      <span className="text-sm  font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200">
-                        {displayName}
-                      </span>
+        {/* Chart Container */}
+        <div className={`relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3 ${legendPosition === 'left' || legendPosition === 'right' ? 'flex-1' : 'w-full'}`}>
+          <svg
+            ref={svgRef}
+            width={dimensions.width}
+            height={dimensions.height}
+            className="w-full h-auto"
+            viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+            preserveAspectRatio="xMidYMid meet"
+          />
+        </div>
 
-                      {/* Line Preview */}
-                      <div className="flex-1 flex justify-end">
-                        <div
-                          className="w-8 sm:w-8 h-2 sm:h-3 rounded opacity-60 group-hover:opacity-100 transition-opacity duration-200"
-                          style={{ backgroundColor: color }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+        {/* Legend Right */}
+        {showLegend && legendPosition === 'right' && (
+          <div className="w-64 flex-shrink-0">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <h4 
+                className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center"
+                style={{ fontSize: `${legendFontSize}px` }}
+              >
+                {t('legend')}
+              </h4>
+              <div className="flex flex-col gap-3">
+                {renderLegendItems()}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Legend Bottom */}
+      {showLegend && legendPosition === 'bottom' && (
+        <div className="w-full">
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <h4 
+              className="font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center"
+              style={{ fontSize: `${legendFontSize}px` }}
+            >
+              {t('legend')}
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {renderLegendItems()}
             </div>
           </div>
         </div>
       )}
     </div>
   );
+
+  function renderLegendItems() {
+    return yAxisKeys
+      .filter(key => !disabledLines.includes(key))
+      .map((key, index) => {
+        const colorKey = colors[key] ? key : `line${index + 1}`;
+        const color =
+          colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
+          defaultColors[`line${index + 1}`][isDarkMode ? 'dark' : 'light'];
+        
+        // Use series name if provided, otherwise fallback to key
+        const displayName = seriesNames[key] || key;
+
+        return (
+          <div
+            key={key}
+            className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
+          >
+            {/* Color Indicator */}
+            <div className="flex-shrink-0">
+              <div
+                className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
+                style={{ backgroundColor: color }}
+              />
+            </div>
+
+            {/* Label */}
+            <span 
+              className="font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200"
+              style={{ fontSize: `${legendFontSize}px` }}
+            >
+              {displayName}
+            </span>
+
+            {/* Line Preview */}
+            <div className="flex-1 flex justify-end">
+              <div
+                className="w-8 sm:w-8 h-2 sm:h-3 rounded opacity-60 group-hover:opacity-100 transition-opacity duration-200"
+                style={{ backgroundColor: color }}
+              />
+            </div>
+          </div>
+        );
+      });
+  }
 };
 
 export default D3LineChart;
