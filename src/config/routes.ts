@@ -400,6 +400,32 @@ export const protectedRoutes: RouteConfig[] = [
     },
   },
   {
+    path: Routers.WORKSPACE_DATASETS,
+    name: 'workspace-datasets',
+    component: 'WorkspacePage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Workspace - Datasets',
+      description: 'Manage your datasets',
+    },
+  },
+  {
+    path: Routers.WORKSPACE_CHARTS,
+    name: 'workspace-charts',
+    component: 'WorkspacePage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Workspace - Charts',
+      description: 'Manage your charts',
+    },
+  },
+  {
     path: Routers.CHART_CREATOR,
     name: 'chart-creator',
     component: 'ChartCreatorPage',
