@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import D3LineChart from '@/components/charts/D3LineChart';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart3, Plus, Minus, Edit3, X, Save, Table } from 'lucide-react';
+import { BarChart3, Plus, Minus, Edit3, X, Save, Table, Type, ChevronDown, ChevronUp } from 'lucide-react';
 import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
 import { convertArrayToChartData } from '@/utils/dataConverter';
@@ -212,6 +212,23 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   const [formatters, setFormatters] = useState<FormatterConfig>(defaultFormatters);
   const [showDataModal, setShowDataModal] = useState(false);
   const [tempData, setTempData] = useState<ChartDataPoint[]>(processedInitialData);
+  
+  // Collapse state for sections
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    basicSettings: false,
+    axisConfiguration: false,
+    displayOptions: false,
+    seriesManagement: false,
+    dataEditor: false,
+  });
+
+  // Toggle section collapse
+  const toggleSection = (sectionKey: string) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey]
+    }));
+  };
 
   // Series management state
   const [seriesConfigs, setSeriesConfigs] = useState<SeriesConfig[]>(() => {
@@ -632,13 +649,24 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
               transition={{ duration: 0.6, delay: 0.1 }}
             >
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                <CardHeader className="pb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5" />
-                    {t('lineChart_editor_basicSettings')}
-                  </h3>
+                <CardHeader 
+                  className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg"
+                  onClick={() => toggleSection('basicSettings')}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5" />
+                      {t('lineChart_editor_basicSettings')}
+                    </h3>
+                    {collapsedSections.basicSettings ? (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    )}
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                {!collapsedSections.basicSettings && (
+                  <CardContent className="space-y-4">
                   {/* Size Presets */}
                   <div>
                     <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -885,24 +913,12 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       ))}
                     </select>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
 
-            {/* Display Options */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.25 }}
-            >
-              <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                <CardHeader className="pb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {t('lineChart_editor_displayOptions')}
-                  </h3>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center space-x-2">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {t('lineChart_editor_displayOptions')}
+                    </Label>
+                    <div className="flex items-center space-x-2 mt-1 mb-1">
                     <Checkbox
                       id="showLegend"
                       checked={config.showLegend}
@@ -916,7 +932,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     </Label>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 mb-1">
                     <Checkbox
                       id="showGrid"
                       checked={config.showGrid}
@@ -930,7 +946,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     </Label>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 mb-1">
                     <Checkbox
                       id="showPoints"
                       checked={config.showPoints}
@@ -943,24 +959,37 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       {t('lineChart_editor_showPoints')}
                     </Label>
                   </div>
-                </CardContent>
+                  </div>
+                  </CardContent>
+                )}
               </Card>
             </motion.div>
 
-            {/* Axis Configuration */}
+            {/* Axis Configuration & Formatters */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                <CardHeader className="pb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5" />
-                    Axis Configuration
-                  </h3>
+                <CardHeader 
+                  className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg"
+                  onClick={() => toggleSection('axisConfiguration')}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5" />
+                      Axis Configuration & Formatters
+                    </h3>
+                    {collapsedSections.axisConfiguration ? (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    )}
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                {!collapsedSections.axisConfiguration && (
+                  <CardContent className="space-y-4">
                   {/* X-Axis Column Selection */}
                   <div>
                     <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -1086,131 +1115,124 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                  
+                  {/* Formatters Section */}
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                      <Type className="h-4 w-4" />
+                      Formatters
+                    </h4>
+                    <div className="space-y-4">
+                      {/* Y Axis Formatter */}
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="useYFormatter"
+                            checked={formatters.useYFormatter}
+                            onCheckedChange={checked =>
+                              updateFormatters({ useYFormatter: !!checked })
+                            }
+                          />
+                          <Label
+                            htmlFor="useYFormatter"
+                            className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                          >
+                            {t('lineChart_editor_yAxisFormatter')}
+                          </Label>
+                        </div>
 
-            {/* Formatters */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
-              <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                <CardHeader className="pb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {t('lineChart_editor_formatters')}
-                  </h3>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    {/* Y Axis Formatter */}
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="useYFormatter"
-                          checked={formatters.useYFormatter}
-                          onCheckedChange={checked =>
-                            updateFormatters({ useYFormatter: !!checked })
-                          }
-                        />
-                        <Label
-                          htmlFor="useYFormatter"
-                          className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                        >
-                          {t('lineChart_editor_yAxisFormatter')}
-                        </Label>
+                        {formatters.useYFormatter && (
+                          <div className="space-y-2 ml-6">
+                            <select
+                              value={formatters.yFormatterType}
+                              onChange={e =>
+                                updateFormatters({
+                                  yFormatterType: e.target.value as FormatterConfig['yFormatterType'],
+                                })
+                              }
+                              className="w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                            >
+                              <option value="number">{t('lineChart_editor_number')}</option>
+                              <option value="currency">{t('lineChart_editor_currency')}</option>
+                              <option value="percentage">{t('lineChart_editor_percentage')}</option>
+                              <option value="decimal">{t('lineChart_editor_decimal')}</option>
+                              <option value="scientific">{t('lineChart_editor_scientific')}</option>
+                              <option value="bytes">{t('lineChart_editor_bytes')}</option>
+                              <option value="duration">{t('lineChart_editor_duration')}</option>
+                              <option value="date">{t('lineChart_editor_date')}</option>
+                              <option value="custom">{t('lineChart_editor_custom')}</option>
+                            </select>
+
+                            {formatters.yFormatterType === 'custom' && (
+                              <Input
+                                placeholder="e.g., `${value.toFixed(2)}M`"
+                                value={formatters.customYFormatter}
+                                onChange={e => updateFormatters({ customYFormatter: e.target.value })}
+                                className="text-sm"
+                              />
+                            )}
+                          </div>
+                        )}
                       </div>
 
-                      {formatters.useYFormatter && (
-                        <div className="space-y-2 ml-6">
-                          <select
-                            value={formatters.yFormatterType}
-                            onChange={e =>
-                              updateFormatters({
-                                yFormatterType: e.target.value as FormatterConfig['yFormatterType'],
-                              })
+                      {/* X Axis Formatter */}
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="useXFormatter"
+                            checked={formatters.useXFormatter}
+                            onCheckedChange={checked =>
+                              updateFormatters({ useXFormatter: !!checked })
                             }
-                            className="w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                          />
+                          <Label
+                            htmlFor="useXFormatter"
+                            className="text-sm font-medium text-gray-900 dark:text-gray-100"
                           >
-                            <option value="number">{t('lineChart_editor_number')}</option>
-                            <option value="currency">{t('lineChart_editor_currency')}</option>
-                            <option value="percentage">{t('lineChart_editor_percentage')}</option>
-                            <option value="decimal">{t('lineChart_editor_decimal')}</option>
-                            <option value="scientific">{t('lineChart_editor_scientific')}</option>
-                            <option value="bytes">{t('lineChart_editor_bytes')}</option>
-                            <option value="duration">{t('lineChart_editor_duration')}</option>
-                            <option value="date">{t('lineChart_editor_date')}</option>
-                            <option value="custom">{t('lineChart_editor_custom')}</option>
-                          </select>
-
-                          {formatters.yFormatterType === 'custom' && (
-                            <Input
-                              placeholder="e.g., `${value.toFixed(2)}M`"
-                              value={formatters.customYFormatter}
-                              onChange={e => updateFormatters({ customYFormatter: e.target.value })}
-                              className="text-sm"
-                            />
-                          )}
+                            {t('lineChart_editor_xAxisFormatter')}
+                          </Label>
                         </div>
-                      )}
-                    </div>
 
-                    {/* X Axis Formatter */}
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="useXFormatter"
-                          checked={formatters.useXFormatter}
-                          onCheckedChange={checked =>
-                            updateFormatters({ useXFormatter: !!checked })
-                          }
-                        />
-                        <Label
-                          htmlFor="useXFormatter"
-                          className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                        >
-                          {t('lineChart_editor_xAxisFormatter')}
-                        </Label>
+                        {formatters.useXFormatter && (
+                          <div className="space-y-2 ml-6">
+                            <select
+                              value={formatters.xFormatterType}
+                              onChange={e =>
+                                updateFormatters({
+                                  xFormatterType: e.target.value as FormatterConfig['xFormatterType'],
+                                })
+                              }
+                              className="w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                            >
+                              <option value="number">{t('lineChart_editor_number')}</option>
+                              <option value="currency">{t('lineChart_editor_currency')}</option>
+                              <option value="percentage">{t('lineChart_editor_percentage')}</option>
+                              <option value="decimal">{t('lineChart_editor_decimal')}</option>
+                              <option value="scientific">{t('lineChart_editor_scientific')}</option>
+                              <option value="bytes">{t('lineChart_editor_bytes')}</option>
+                              <option value="duration">{t('lineChart_editor_duration')}</option>
+                              <option value="date">{t('lineChart_editor_date')}</option>
+                              <option value="custom">{t('lineChart_editor_custom')}</option>
+                            </select>
+
+                            {formatters.xFormatterType === 'custom' && (
+                              <Input
+                                placeholder="e.g., `${new Date(value).getFullYear()}`"
+                                value={formatters.customXFormatter}
+                                onChange={e => updateFormatters({ customXFormatter: e.target.value })}
+                                className="text-sm"
+                              />
+                            )}
+                          </div>
+                        )}
                       </div>
-
-                      {formatters.useXFormatter && (
-                        <div className="space-y-2 ml-6">
-                          <select
-                            value={formatters.xFormatterType}
-                            onChange={e =>
-                              updateFormatters({
-                                xFormatterType: e.target.value as FormatterConfig['xFormatterType'],
-                              })
-                            }
-                            className="w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                          >
-                            <option value="number">{t('lineChart_editor_number')}</option>
-                            <option value="currency">{t('lineChart_editor_currency')}</option>
-                            <option value="percentage">{t('lineChart_editor_percentage')}</option>
-                            <option value="decimal">{t('lineChart_editor_decimal')}</option>
-                            <option value="scientific">{t('lineChart_editor_scientific')}</option>
-                            <option value="bytes">{t('lineChart_editor_bytes')}</option>
-                            <option value="duration">{t('lineChart_editor_duration')}</option>
-                            <option value="date">{t('lineChart_editor_date')}</option>
-                            <option value="custom">{t('lineChart_editor_custom')}</option>
-                          </select>
-
-                          {formatters.xFormatterType === 'custom' && (
-                            <Input
-                              placeholder="e.g., `${new Date(value).getFullYear()}`"
-                              value={formatters.customXFormatter}
-                              onChange={e => updateFormatters({ customXFormatter: e.target.value })}
-                              className="text-sm"
-                            />
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
-                </CardContent>
+                  </CardContent>
+                )}
               </Card>
             </motion.div>
+
 
             {/* Series Management */}
             <motion.div
@@ -1219,22 +1241,38 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
               transition={{ duration: 0.6, delay: 0.35 }}
             >
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader 
+                  className="flex flex-row items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg"
+                  onClick={() => toggleSection('seriesManagement')}
+                >
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <BarChart3 className="h-5 w-5" />
                     {t('lineChart_editor_seriesManagement')} ({seriesConfigs.length})
                   </h3>
-                  <Button
-                    onClick={addSeries}
-                    size="sm"
-                    variant="outline"
-                    className="bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={getAvailableColumns().length === 0}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    {t('lineChart_editor_addSeries')}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {!collapsedSections.seriesManagement && (
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addSeries();
+                        }}
+                        size="sm"
+                        variant="outline"
+                        className="bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={getAvailableColumns().length === 0}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        {t('lineChart_editor_addSeries')}
+                      </Button>
+                    )}
+                    {collapsedSections.seriesManagement ? (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    )}
+                  </div>
                 </CardHeader>
+                {!collapsedSections.seriesManagement && (
                 <CardContent className="space-y-4">
                   {seriesConfigs.map((series, index) => (
                     <div key={series.id} className="relative group">
@@ -1404,6 +1442,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     </div>
                   ))}
                 </CardContent>
+                )}
               </Card>
             </motion.div>
 
@@ -1414,18 +1453,36 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
               transition={{ duration: 0.6, delay: 0.4 }}
             >
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader 
+                  className="flex flex-row items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg"
+                  onClick={() => toggleSection('dataEditor')}
+                >
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Table className="h-5 w-5" />
                     {t('lineChart_editor_dataEditor')}
                   </h3>
-                  <div className="flex gap-2">
-                    <Button onClick={openDataModal} size="sm" variant="outline">
-                      <Edit3 className="h-4 w-4 mr-1" />
-                      {t('lineChart_editor_editData')}
-                    </Button>
+                  <div className="flex items-center gap-2">
+                    {!collapsedSections.dataEditor && (
+                      <Button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openDataModal();
+                        }} 
+                        size="sm" 
+                        variant="outline"
+                      >
+                        <Edit3 className="h-4 w-4 mr-1" />
+                        {t('lineChart_editor_editData')}
+                      </Button>
+                    )}
+                    {collapsedSections.dataEditor ? (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    )}
                   </div>
                 </CardHeader>
+                {!collapsedSections.dataEditor && (
                 <CardContent>
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -1496,6 +1553,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     </div>
                   </div>
                 </CardContent>
+                )}
               </Card>
             </motion.div>
           </div>
