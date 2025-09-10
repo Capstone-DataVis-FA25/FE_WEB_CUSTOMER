@@ -111,15 +111,9 @@ export interface SeriesConfig {
   lineStyle?: 'solid' | 'dashed' | 'dotted';
   pointStyle?: 'circle' | 'square' | 'triangle' | 'diamond';
   opacity?: number;
-  // Individual series curve type
-  curveType?: keyof typeof curveOptions;
   // Series-specific formatter
   formatter?: 'inherit' | 'custom';
   customFormatter?: string;
-  // Data transformation
-  dataTransform?: 'none' | 'cumulative' | 'percentage' | 'normalized';
-  // Series order/priority
-  zIndex?: number;
 }
 
 // Color configuration
@@ -2145,109 +2139,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                   placeholder="100"
                                 />
                               </div>
-
-                              {/* Curve Type */}
-                              <div>
-                                <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  Curve Type
-                                </Label>
-                                <select
-                                  value={series.curveType || 'inherit'}
-                                  onChange={e =>
-                                    updateSeriesConfig(series.id, { curveType: e.target.value === 'inherit' ? undefined : e.target.value as keyof typeof curveOptions })
-                                  }
-                                  className="w-full h-8 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2"
-                                >
-                                  <option value="inherit">Inherit Global</option>
-                                  {Object.keys(curveOptions).map(curve => (
-                                    <option key={curve} value={curve}>
-                                      {curve.replace('curve', '')}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-
-                            {/* Data Transformation */}
-                            <div className="mb-3">
-                              <Label className="text-xs text-gray-600 dark:text-gray-400 mb-2 block">
-                                Data Transformation
-                              </Label>
-                              <select
-                                value={series.dataTransform || 'none'}
-                                onChange={e =>
-                                  updateSeriesConfig(series.id, { dataTransform: e.target.value as 'none' | 'cumulative' | 'percentage' | 'normalized' })
-                                }
-                                className="w-full h-8 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2"
-                              >
-                                <option value="none">None</option>
-                                <option value="cumulative">Cumulative Sum</option>
-                                <option value="percentage">Percentage</option>
-                                <option value="normalized">Normalized (0-1)</option>
-                              </select>
-                            </div>
-
-                            {/* Series Order and Actions */}
-                            <div className="grid grid-cols-3 gap-2">
-                              <div>
-                                <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  Z-Index
-                                </Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  value={series.zIndex || index}
-                                  onChange={e =>
-                                    updateSeriesConfig(series.id, { zIndex: parseInt(e.target.value) || index })
-                                  }
-                                  className="h-8 text-sm"
-                                  placeholder={index.toString()}
-                                />
-                              </div>
-                              
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  // Duplicate series
-                                  const availableColumns = getAvailableColumns();
-                                  if (availableColumns.length > 0) {
-                                    const newSeries: SeriesConfig = {
-                                      ...series,
-                                      id: `series-${Date.now()}`,
-                                      name: `${series.name} Copy`,
-                                      dataColumn: availableColumns[0],
-                                    };
-                                    setSeriesConfigs(prev => [...prev, newSeries]);
-                                  }
-                                }}
-                                className="h-8 text-xs mt-5"
-                                disabled={getAvailableColumns().length === 0}
-                              >
-                                Duplicate
-                              </Button>
-                              
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  // Reset series settings
-                                  updateSeriesConfig(series.id, {
-                                    lineWidth: undefined,
-                                    pointRadius: undefined,
-                                    lineStyle: undefined,
-                                    pointStyle: undefined,
-                                    opacity: undefined,
-                                    curveType: undefined,
-                                    dataTransform: undefined,
-                                  });
-                                }}
-                                className="h-8 text-xs mt-5"
-                              >
-                                <RotateCcw className="h-3 w-3 mr-1" />
-                                Reset
-                              </Button>
                             </div>
                           </div>
                         </div>
@@ -2312,10 +2203,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                           lineStyle: series.lineStyle,
                           pointStyle: series.pointStyle,
                           opacity: series.opacity,
-                          curveType: series.curveType,
                           formatter: series.formatter,
-                          dataTransform: series.dataTransform,
-                          zIndex: series.zIndex,
                         },
                       ])
                     )}

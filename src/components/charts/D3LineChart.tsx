@@ -24,10 +24,7 @@ export interface D3LineChartProps {
     lineStyle?: 'solid' | 'dashed' | 'dotted';
     pointStyle?: 'circle' | 'square' | 'triangle' | 'diamond';
     opacity?: number;
-    curveType?: string;
     formatter?: string;
-    dataTransform?: 'none' | 'cumulative' | 'percentage' | 'normalized';
-    zIndex?: number;
   }>;
   title?: string;
   yAxisLabel?: string;
@@ -116,7 +113,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   showAxisTicks = true,
   
   // New interaction props with defaults
-  enableZoom = true,
+  enableZoom = false,
   showTooltip = true,
   
   // New visual props with defaults
@@ -132,31 +129,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   const [dimensions, setDimensions] = React.useState({ width, height });
   const { t } = useTranslation();
 
-  // Helper function for data transformation
-  const transformSeriesData = (data: ChartDataPoint[], key: string, transformation: string): ChartDataPoint[] => {
-    switch (transformation) {
-      case 'cumulative': {
-        let cumSum = 0;
-        return data.map(d => {
-          cumSum += d[key] as number;
-          return { ...d, [key]: cumSum };
-        });
-      }
-      case 'percentage': {
-        const total = data.reduce((sum, d) => sum + (d[key] as number), 0);
-        return data.map(d => ({ ...d, [key]: ((d[key] as number) / total) * 100 }));
-      }
-      case 'normalized': {
-        const values = data.map(d => d[key] as number);
-        const min = Math.min(...values);
-        const max = Math.max(...values);
-        const range = max - min;
-        return data.map(d => ({ ...d, [key]: range === 0 ? 0 : ((d[key] as number) - min) / range }));
-      }
-      default:
-        return data;
-    }
-  };
+
 
   // Helper function for different point shapes
   const getPointPath = (style: string, radius: number): string => {
@@ -475,14 +448,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     // Create lines for each enabled yAxisKey with individual configurations
     const enabledLines = yAxisKeys.filter(key => !disabledLines.includes(key));
     
-    // Sort by zIndex if available
-    const sortedLines = enabledLines.sort((a, b) => {
-      const aZIndex = seriesConfigs[a]?.zIndex ?? enabledLines.indexOf(a);
-      const bZIndex = seriesConfigs[b]?.zIndex ?? enabledLines.indexOf(b);
-      return aZIndex - bZIndex;
-    });
-    
-    sortedLines.forEach((key, index) => {
+    enabledLines.forEach((key, index) => {
       const seriesConfig = seriesConfigs[key] || {};
       
       // Get individual series configurations or fallback to global
@@ -492,40 +458,17 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       const seriesLineStyle = seriesConfig.lineStyle ?? 'solid';
       const seriesPointStyle = seriesConfig.pointStyle ?? 'circle';
       
-      // Apply data transformation if specified
-      let processedSeriesData = [...processedData];
-      if (seriesConfig.dataTransform && seriesConfig.dataTransform !== 'none') {
-        processedSeriesData = transformSeriesData(processedData, key, seriesConfig.dataTransform);
-      }
-      
-      // Determine curve type for this series
-      let seriesCurve = curve;
-      if (seriesConfig.curveType) {
-        const curveMap: { [key: string]: d3.CurveFactory } = {
-          'Linear': d3.curveLinear,
-          'MonotoneX': d3.curveMonotoneX,
-          'MonotoneY': d3.curveMonotoneY,
-          'Basis': d3.curveBasis,
-          'Cardinal': d3.curveCardinal,
-          'CatmullRom': d3.curveCatmullRom,
-          'Step': d3.curveStep,
-          'StepBefore': d3.curveStepBefore,
-          'StepAfter': d3.curveStepAfter,
-        };
-        seriesCurve = curveMap[seriesConfig.curveType] || curve;
-      }
-
       // Custom line generator for this specific key
       const keyLine = d3
         .line<ChartDataPoint>()
         .x(d => xScale(d[xAxisKey] as number))
         .y(d => yScale(d[key] as number))
-        .curve(seriesCurve);
+        .curve(curve);
 
       // Add the line path with individual styling
       const path = g
         .append('path')
-        .datum(processedSeriesData)
+        .datum(processedData)
         .attr('fill', 'none')
         .attr('stroke', currentColors[key])
         .attr('stroke-width', seriesLineWidth)
@@ -568,7 +511,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       // Add data points with individual styling
       if (showPoints) {
         g.selectAll(`.point-${index}`)
-          .data(processedSeriesData)
+          .data(processedData)
           .enter()
           .append('path')
           .attr('class', `point-${index}`)
@@ -678,23 +621,123 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       }
     });
 
-    // Simple zoom with scroll wheel
+    // Enhanced zoom and pan with mouse interactions
     if (enableZoom) {
       let zoomLevel = 1;
+      let translateX = 0;
+      let translateY = 0;
+      let isDragging = false;
+      let dragStartX = 0;
+      let dragStartY = 0;
+      let dragStartTranslateX = 0;
+      let dragStartTranslateY = 0;
       
+      // Mouse wheel zoom
       svg.on('wheel', function(event) {
         event.preventDefault();
         
+        // Get mouse position relative to the chart
+        const rect = svg.node()?.getBoundingClientRect();
+        if (!rect) return;
+        
+        const mouseX = event.clientX - rect.left - responsiveMargin.left;
+        const mouseY = event.clientY - rect.top - responsiveMargin.top;
+        
         const delta = event.deltaY;
         const scaleFactor = delta > 0 ? 0.9 : 1.1;
-        zoomLevel *= scaleFactor;
+        const newZoomLevel = zoomLevel * scaleFactor;
         
         // Limit zoom
-        zoomLevel = Math.max(0.5, Math.min(3, zoomLevel));
+        const clampedZoomLevel = Math.max(0.5, Math.min(3, newZoomLevel));
+        const actualScaleFactor = clampedZoomLevel / zoomLevel;
         
-        // Apply zoom transform
-        const transform = `scale(${zoomLevel})`;
-        g.attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top}) ${transform}`);
+        // Calculate new translation to zoom at mouse position
+        const newTranslateX = translateX + (mouseX - translateX) * (1 - actualScaleFactor);
+        const newTranslateY = translateY + (mouseY - translateY) * (1 - actualScaleFactor);
+        
+        // Update zoom state
+        zoomLevel = clampedZoomLevel;
+        translateX = newTranslateX;
+        translateY = newTranslateY;
+        
+        // Apply zoom and pan transform
+        const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
+        g.attr('transform', transform);
+      });
+      
+      // Mouse drag to pan
+      svg.on('mousedown', function(event) {
+        if (event.button !== 0) return; // Only left mouse button
+        
+        isDragging = true;
+        dragStartX = event.clientX;
+        dragStartY = event.clientY;
+        dragStartTranslateX = translateX;
+        dragStartTranslateY = translateY;
+        
+        // Change cursor to grabbing
+        svg.style('cursor', 'grabbing');
+        
+        // Prevent text selection during drag
+        event.preventDefault();
+      });
+      
+      svg.on('mousemove', function(event) {
+        if (!isDragging) {
+          // Show grab cursor when zoomed in
+          if (zoomLevel > 1) {
+            svg.style('cursor', 'grab');
+          } else {
+            svg.style('cursor', 'default');
+          }
+          return;
+        }
+        
+        const deltaX = event.clientX - dragStartX;
+        const deltaY = event.clientY - dragStartY;
+        
+        // Update translation based on drag distance
+        translateX = dragStartTranslateX + deltaX;
+        translateY = dragStartTranslateY + deltaY;
+        
+        // Apply pan transform
+        const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
+        g.attr('transform', transform);
+      });
+      
+      svg.on('mouseup', function() {
+        if (isDragging) {
+          isDragging = false;
+          
+          // Reset cursor
+          if (zoomLevel > 1) {
+            svg.style('cursor', 'grab');
+          } else {
+            svg.style('cursor', 'default');
+          }
+        }
+      });
+      
+      // Handle mouse leave to stop dragging
+      svg.on('mouseleave', function() {
+        if (isDragging) {
+          isDragging = false;
+          svg.style('cursor', 'default');
+        }
+      });
+      
+      // Double-click to reset zoom
+      svg.on('dblclick', function() {
+        zoomLevel = 1;
+        translateX = 0;
+        translateY = 0;
+        
+        svg.style('cursor', 'default');
+        
+        g.transition()
+          .duration(300)
+          .ease(d3.easeQuadOut)
+          .attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top}) scale(1)`);
       });
     }
 
