@@ -399,6 +399,59 @@ export const protectedRoutes: RouteConfig[] = [
       description: 'Edit dataset information and data',
     },
   },
+  // Workspace routes
+  {
+    path: Routers.WORKSPACE,
+    name: 'workspace',
+    component: 'WorkspacePage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Workspace',
+      description: 'Manage your datasets and charts',
+    },
+  },
+  {
+    path: Routers.WORKSPACE_DATASETS,
+    name: 'workspace-datasets',
+    component: 'WorkspacePage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Workspace - Datasets',
+      description: 'Manage your datasets',
+    },
+  },
+  {
+    path: Routers.WORKSPACE_CHARTS,
+    name: 'workspace-charts',
+    component: 'WorkspacePage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Workspace - Charts',
+      description: 'Manage your charts',
+    },
+  },
+  {
+    path: Routers.CHART_CREATOR,
+    name: 'chart-creator',
+    component: 'ChartCreatorPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Chart Creator',
+      description: 'Create new charts from your datasets',
+    },
+  },
 ];
 
 // Error routes

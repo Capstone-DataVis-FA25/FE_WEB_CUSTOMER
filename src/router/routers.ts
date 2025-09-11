@@ -40,6 +40,12 @@ const Routers = {
   BAR_CHART_EDITOR_DEMO: '/demo/bar-chart-editor',
   AREA_CHART_DEMO: '/chart/area-chart',
   AREA_CHART_EDITOR_DEMO: '/demo/area-chart-editor',
+
+  //Workspace routes
+  WORKSPACE: '/workspace',
+  WORKSPACE_DATASETS: '/workspace/datasets',
+  WORKSPACE_CHARTS: '/workspace/charts',
+  CHART_CREATOR: '/chart-creator',
 } as const;
 
 export default Routers;
