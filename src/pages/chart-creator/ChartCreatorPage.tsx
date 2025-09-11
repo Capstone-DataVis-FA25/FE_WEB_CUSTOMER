@@ -119,7 +119,7 @@ const ChartCreatorPage: React.FC = () => {
   const dataset = datasetId ? mockDatasets.find(d => d.id === parseInt(datasetId)) : null;
 
   const handleBack = () => {
-    navigate(Routers.WORKSPACE);
+    navigate(Routers.WORKSPACE_DATASETS);
   };
 
   const handleChartTypeSelect = (chartType: string) => {
@@ -142,7 +142,7 @@ const ChartCreatorPage: React.FC = () => {
   };
 
   const handleSelectDataset = () => {
-    navigate(Routers.WORKSPACE);
+    navigate(Routers.WORKSPACE_DATASETS);
   };
 
   return (
