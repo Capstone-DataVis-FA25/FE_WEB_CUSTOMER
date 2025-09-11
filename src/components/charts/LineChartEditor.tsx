@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,24 +8,29 @@ import D3LineChart from '@/components/charts/D3LineChart';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BarChart3,
   Plus,
   Minus,
   Edit3,
   X,
   Save,
-  Table,
-  Type,
   ChevronDown,
   ChevronUp,
   ArrowUp,
   ArrowDown,
-  Copy,
+  Download,
+  Upload,
+  Settings,
+  Database,
+  Sliders,
+  TrendingUp,
   RotateCcw,
+  Table,
 } from 'lucide-react';
 import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
 import { convertArrayToChartData } from '@/utils/dataConverter';
+import { useToast } from '@/hooks/useToast';
+import ToastContainer from '@/components/ui/toast-container';
 
 // LineChart configuration interface
 export interface LineChartConfig {
@@ -173,6 +178,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   onFormattersChange,
 }) => {
   const { t } = useTranslation();
+  const { toasts, showSuccess, showError, removeToast } = useToast();
 
   // Convert arrayData to ChartDataPoint[] if provided
   const processedInitialData = useMemo((): ChartDataPoint[] => {
@@ -292,6 +298,24 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     seriesManagement: true,
     dataEditor: true,
   });
+
+  // Config management dropdown state
+  const [showConfigDropdown, setShowConfigDropdown] = useState(false);
+  const configDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (configDropdownRef.current && !configDropdownRef.current.contains(event.target as Node)) {
+        setShowConfigDropdown(false);
+      }
+    };
+
+    if (showConfigDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showConfigDropdown]);
 
   // Toggle section collapse
   const toggleSection = (sectionKey: string) => {
@@ -754,6 +778,132 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     }
   };
 
+  // Export configuration to JSON (config only, no data)
+  const exportConfigToJSON = () => {
+    try {
+      const exportData = {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        config,
+        colors,
+        formatters,
+        seriesConfigs: seriesConfigs.map(series => ({
+          ...series,
+          // Don't export the id since it will be regenerated on import
+          id: undefined
+        })),
+        // Include metadata for reference
+        metadata: {
+          chartType: 'line-chart',
+          exportedFrom: 'LineChartEditor',
+          note: 'Configuration file - data not included'
+        }
+      };
+
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `line-chart-config-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showSuccess(t('lineChart_editor_configExported'));
+    } catch (error) {
+      console.error('Export error:', error);
+      showError(t('lineChart_editor_invalidConfigFile'));
+    }
+  };
+
+  // Reset configuration to default
+  const resetToDefaultConfig = () => {
+    try {
+      // Reset to default configuration
+      const resetConfig = {
+        ...defaultConfig,
+        xAxisKey: Object.keys(data[0] || {})[0] || 'x',
+        yAxisKeys: Object.keys(data[0] || {}).slice(1) || ['y'],
+      };
+      
+      updateConfig(resetConfig);
+      updateColors(defaultColors);
+      updateFormatters(defaultFormatters);
+      
+      // Reset series configs
+      const resetSeriesConfigs = resetConfig.yAxisKeys.map((key, index) => {
+        const colorKeys = Object.keys(defaultColors);
+        const colorIndex = index % colorKeys.length;
+        const selectedColorKey = colorKeys[colorIndex];
+        const selectedColor = defaultColors[selectedColorKey];
+
+        return {
+          id: `series-${Date.now()}-${index}`,
+          name: key,
+          dataColumn: key,
+          color: selectedColor.light,
+          visible: true,
+        };
+      });
+      
+      setSeriesConfigs(resetSeriesConfigs);
+      
+      showSuccess(t('lineChart_editor_resetToDefault'));
+    } catch (error) {
+      console.error('Reset error:', error);
+      showError(t('lineChart_editor_invalidConfigFile'));
+    }
+  };
+
+  // Import configuration from JSON
+  const importConfigFromJSON = () => {
+    try {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = async (event) => {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+
+        try {
+          const text = await file.text();
+          const importData = JSON.parse(text);
+
+          // Validate the imported data structure
+          if (!importData.config || !importData.colors || !importData.formatters) {
+            throw new Error('Invalid configuration file structure');
+          }
+
+          // Apply imported configuration
+          updateConfig(importData.config);
+          updateColors(importData.colors);
+          updateFormatters(importData.formatters);
+
+          // Handle series configurations
+          if (importData.seriesConfigs && Array.isArray(importData.seriesConfigs)) {
+            const newSeriesConfigs = importData.seriesConfigs.map((series: any, index: number) => ({
+              ...series,
+              id: `series-${Date.now()}-${index}` // Generate new IDs
+            }));
+            setSeriesConfigs(newSeriesConfigs);
+          }
+
+          showSuccess(t('lineChart_editor_configImported'));
+        } catch (parseError) {
+          console.error('Parse error:', parseError);
+          showError(t('lineChart_editor_invalidConfigFile'));
+        }
+      };
+      input.click();
+    } catch (error) {
+      console.error('Import error:', error);
+      showError(t('lineChart_editor_invalidConfigFile'));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
       <div className="w-full px-2">
@@ -772,7 +922,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                   onClick={() => toggleSection('dataEditor')}
                 >
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Table className="h-5 w-5" />
+                    <Database className="h-5 w-5" />
                     {t('lineChart_editor_dataEditor')}
                   </h3>
                   <div className="flex items-center gap-2">
@@ -886,14 +1036,101 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 >
                   <div className="flex items-center justify-between w-full">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5" />
+                      <Settings className="h-5 w-5" />
                       {t('lineChart_editor_basicSettings')}
                     </h3>
-                    {collapsedSections.basicSettings ? (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
-                    )}
+                    <div className="flex items-center gap-2">
+                      {!collapsedSections.basicSettings && (
+                        <div className="relative" ref={configDropdownRef}>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowConfigDropdown(!showConfigDropdown);
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            title={t('lineChart_editor_configManagement')}
+                          >
+                            <Settings className="h-4 w-4" />
+                            <span className="hidden sm:inline">{t('lineChart_editor_configManagement')}</span>
+                            <ChevronDown className="h-3 w-3" />
+                          </Button>
+                          
+                          {/* Dropdown Menu */}
+                          {showConfigDropdown && (
+                            <div className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 z-50 overflow-hidden">
+                              <div className="py-2">
+                                {/* Header */}
+                                <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-600">
+                                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <Settings className="h-4 w-4" />
+                                    {t('lineChart_editor_configManagement')}
+                                  </h4>
+                                </div>
+                                
+                                {/* Export/Import Actions */}
+                                <div className="px-2 py-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      exportConfigToJSON();
+                                      setShowConfigDropdown(false);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md flex items-center gap-3 transition-colors"
+                                  >
+                                    <Download className="h-4 w-4 text-green-600" />
+                                    <div>
+                                      <div className="font-medium">{t('lineChart_editor_downloadConfig')}</div>
+                                      <div className="text-xs text-gray-500 dark:text-gray-400">{t('lineChart_editor_exportSettingsAsJSON')}</div>
+                                    </div>
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      importConfigFromJSON();
+                                      setShowConfigDropdown(false);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md flex items-center gap-3 transition-colors"
+                                  >
+                                    <Upload className="h-4 w-4 text-blue-600" />
+                                    <div>
+                                      <div className="font-medium">{t('lineChart_editor_uploadConfig')}</div>
+                                      <div className="text-xs text-gray-500 dark:text-gray-400">{t('lineChart_editor_loadSettingsFromJSON')}</div>
+                                    </div>
+                                  </button>
+                                </div>
+                                
+                                <div className="border-t border-gray-200 dark:border-gray-600 mx-2"></div>
+                                
+                                {/* Reset Action */}
+                                <div className="px-2 py-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      resetToDefaultConfig();
+                                      setShowConfigDropdown(false);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-md flex items-center gap-3 transition-colors"
+                                  >
+                                    <RotateCcw className="h-4 w-4 text-orange-600" />
+                                    <div>
+                                      <div className="font-medium">{t('lineChart_editor_resetToDefault')}</div>
+                                      <div className="text-xs text-gray-500 dark:text-gray-400">{t('lineChart_editor_restoreDefaultSettings')}</div>
+                                    </div>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {collapsedSections.basicSettings ? (
+                        <ChevronDown className="h-5 w-5 text-gray-500" />
+                      ) : (
+                        <ChevronUp className="h-5 w-5 text-gray-500" />
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 {!collapsedSections.basicSettings && (
@@ -926,7 +1163,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     {/* Custom Width and Height */}
                     <div>
                       <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Custom Size
+                        {t('lineChart_editor_customSize')}
                       </Label>
                       <div className="grid grid-cols-2 gap-3 mt-2">
                         <div>
@@ -968,7 +1205,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       </div>
                       <div className="text-center mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
                         <p className="text-xs text-gray-600 dark:text-gray-300">
-                          Current: {config.width} × {config.height}px | Ratio:{' '}
+                          {t('lineChart_editor_currentSize')}: {config.width} × {config.height}px | {t('lineChart_editor_ratio')}:{' '}
                           {(config.width / config.height).toFixed(2)}:1
                         </p>
                       </div>
@@ -977,7 +1214,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     {/* Padding Configuration */}
                     <div>
                       <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Padding (Margin)
+                        {t('lineChart_editor_padding')}
                       </Label>
                       <div className="mt-2">
                         {/* Visual Padding Editor */}
@@ -1049,7 +1286,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                           {/* Center Chart Area Representation */}
                           <div className="bg-white dark:bg-gray-600 border-2 border-dashed border-gray-300 dark:border-gray-500 rounded h-20 flex items-center justify-center">
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                              Chart Area
+                              {t('lineChart_editor_chartArea')}
                             </span>
                           </div>
                         </div>
@@ -1058,19 +1295,19 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                         <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-600 rounded text-xs">
                           <div className="grid grid-cols-4 gap-2 text-center">
                             <div>
-                              <span className="text-gray-600 dark:text-gray-300">Top:</span>
+                              <span className="text-gray-600 dark:text-gray-300">{t('lineChart_editor_top')}:</span>
                               <div className="font-mono">{config.margin.top}px</div>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-300">Right:</span>
+                              <span className="text-gray-600 dark:text-gray-300">{t('lineChart_editor_right')}:</span>
                               <div className="font-mono">{config.margin.right}px</div>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-300">Bottom:</span>
+                              <span className="text-gray-600 dark:text-gray-300">{t('lineChart_editor_bottom')}:</span>
                               <div className="font-mono">{config.margin.bottom}px</div>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-300">Left:</span>
+                              <span className="text-gray-600 dark:text-gray-300">{t('lineChart_editor_left')}:</span>
                               <div className="font-mono">{config.margin.left}px</div>
                             </div>
                           </div>
@@ -1194,14 +1431,14 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       {/* Styling Configuration */}
                       <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                         <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-                          Default Styling
+                          {t('lineChart_editor_defaultStyling')}
                         </h4>
 
                         <div className="grid grid-cols-2 gap-4">
                           {/* Line Width */}
                           <div>
                             <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              Line Width
+                              {t('lineChart_editor_lineWidth')}
                             </Label>
                             <Input
                               type="number"
@@ -1218,7 +1455,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                           {/* Point Size */}
                           <div>
                             <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              Point Size
+                              {t('lineChart_editor_pointSize')}
                             </Label>
                             <Input
                               type="number"
@@ -1237,14 +1474,14 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       {/* Chart Configuration */}
                       <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                         <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-                          Chart Settings
+                          {t('lineChart_editor_chartSettings')}
                         </h4>
 
                         <div className="grid grid-cols-2 gap-4">
                           {/* Grid Opacity */}
                           <div>
                             <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              Grid Opacity
+                              {t('lineChart_editor_gridOpacity')}
                             </Label>
                             <Input
                               type="number"
@@ -1262,7 +1499,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                           {/* Legend Position */}
                           <div>
                             <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              Legend Position
+                              {t('lineChart_editor_legendPosition')}
                             </Label>
                             <select
                               value={config.legendPosition}
@@ -1277,10 +1514,10 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                               }
                               className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             >
-                              <option value="top">Top</option>
-                              <option value="bottom">Bottom</option>
-                              <option value="left">Left</option>
-                              <option value="right">Right</option>
+                              <option value="top">{t('lineChart_editor_top')}</option>
+                              <option value="bottom">{t('lineChart_editor_bottom')}</option>
+                              <option value="left">{t('lineChart_editor_left')}</option>
+                              <option value="right">{t('lineChart_editor_right')}</option>
                             </select>
                           </div>
                         </div>
@@ -1289,7 +1526,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       {/* Interactive Configuration */}
                       <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                         <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-                          Interactive Options
+                          {t('lineChart_editor_interactiveOptions')}
                         </h4>
 
                         <div className="space-y-3">
@@ -1303,7 +1540,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                               htmlFor="showTooltip"
                               className="text-sm font-medium text-gray-900 dark:text-gray-100"
                             >
-                              Show Tooltip
+                              {t('lineChart_editor_showTooltip')}
                             </Label>
                           </div>
 
@@ -1317,7 +1554,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                               htmlFor="enableZoom"
                               className="text-sm font-medium text-gray-900 dark:text-gray-100"
                             >
-                              Enable Zoom
+                              {t('lineChart_editor_enableZoom')}
                             </Label>
                           </div>
                         </div>
@@ -1326,14 +1563,14 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       {/* Theme Configuration */}
                       <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                         <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-                          Theme & Colors
+                          {t('lineChart_editor_themeColors')}
                         </h4>
 
                         <div className="grid grid-cols-2 gap-4 mb-2">
                           {/* Theme */}
                           <div>
                             <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              Theme
+                              {t('lineChart_editor_theme')}
                             </Label>
                             <select
                               value={config.theme}
@@ -1342,16 +1579,16 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                               }
                               className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             >
-                              <option value="auto">Auto</option>
-                              <option value="light">Light</option>
-                              <option value="dark">Dark</option>
+                              <option value="auto">{t('lineChart_editor_auto')}</option>
+                              <option value="light">{t('lineChart_editor_light')}</option>
+                              <option value="dark">{t('lineChart_editor_dark')}</option>
                             </select>
                           </div>
 
                           {/* Background Color */}
                           <div>
                             <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              Background Color
+                              {t('lineChart_editor_backgroundColor')}
                             </Label>
                             <div className="flex gap-2 mt-1">
                               <Input
@@ -1370,9 +1607,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                 size="sm"
                                 onClick={() => updateConfig({ backgroundColor: 'transparent' })}
                                 className="px-3 h-10 text-xs"
-                                title="Reset to transparent"
+                                title={t('lineChart_editor_resetToTransparent')}
                               >
-                                Reset
+                                {t('lineChart_editor_transparent')}
                               </Button>
                             </div>
                           </div>
@@ -1382,14 +1619,14 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       {/* Font Size Configuration */}
                       <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                         <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-                          Font Sizes
+                          {t('lineChart_editor_fontSizes')}
                         </h4>
 
                         <div className="grid grid-cols-3 gap-4">
                           {/* Title Font Size */}
                           <div>
                             <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              Title Size
+                              {t('lineChart_editor_titleSize')}
                             </Label>
                             <Input
                               type="number"
@@ -1406,7 +1643,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                           {/* Label Font Size */}
                           <div>
                             <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              Label Size
+                              {t('lineChart_editor_labelSize')}
                             </Label>
                             <Input
                               type="number"
@@ -1423,7 +1660,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                           {/* Legend Font Size */}
                           <div>
                             <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              Legend Size
+                              {t('lineChart_editor_legendSize')}
                             </Label>
                             <Input
                               type="number"
@@ -1457,8 +1694,8 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 >
                   <div className="flex items-center justify-between w-full">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5" />
-                      Axis Configuration & Formatters
+                      <Sliders className="h-5 w-5" />
+                      {t('lineChart_editor_axisConfigurationFormatters')}
                     </h3>
                     {collapsedSections.axisConfiguration ? (
                       <ChevronDown className="h-5 w-5 text-gray-500" />
@@ -1489,7 +1726,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     {/* X-Axis Start Configuration */}
                     <div>
                       <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        X-Axis Start
+                        {t('x_axis_start')}
                       </Label>
                       <div className="space-y-2 mt-2">
                         <select
@@ -1505,9 +1742,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                           }}
                           className="w-full h-9 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                         >
-                          <option value="auto">Auto (từ giá trị min của data)</option>
-                          <option value="zero">Zero (bắt đầu từ 0)</option>
-                          <option value="custom">Custom (giá trị tùy chỉnh)</option>
+                          <option value="auto">{t('lineChart_editor_axisAutoFromMin')}</option>
+                          <option value="zero">{t('lineChart_editor_axisZeroStart')}</option>
+                          <option value="custom">{t('lineChart_editor_axisCustomValue')}</option>
                         </select>
 
                         {typeof config.xAxisStart === 'number' && (
@@ -1520,7 +1757,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                 updateConfig({ xAxisStart: value });
                               }
                             }}
-                            placeholder="Nhập giá trị bắt đầu"
+                            placeholder={t('lineChart_editor_enterStartValue')}
                             className="h-9 text-sm"
                           />
                         )}
@@ -1530,7 +1767,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     {/* Y-Axis Start Configuration */}
                     <div>
                       <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Y-Axis Start
+                        {t('y_axis_start')}
                       </Label>
                       <div className="space-y-2 mt-2">
                         <select
@@ -1546,9 +1783,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                           }}
                           className="w-full h-9 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                         >
-                          <option value="auto">Auto (từ giá trị min của data)</option>
-                          <option value="zero">Zero (bắt đầu từ 0)</option>
-                          <option value="custom">Custom (giá trị tùy chỉnh)</option>
+                          <option value="auto">{t('lineChart_editor_axisAutoFromMin')}</option>
+                          <option value="zero">{t('lineChart_editor_axisZeroStart')}</option>
+                          <option value="custom">{t('lineChart_editor_axisCustomValue')}</option>
                         </select>
 
                         {typeof config.yAxisStart === 'number' && (
@@ -1561,7 +1798,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                 updateConfig({ yAxisStart: value });
                               }
                             }}
-                            placeholder="Nhập giá trị bắt đầu"
+                            placeholder={t('lineChart_editor_enterStartValue')}
                             className="h-9 text-sm"
                           />
                         )}
@@ -1572,7 +1809,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                       <div className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
                         <div className="flex justify-between">
-                          <span className="font-medium">X-Axis Start:</span>
+                          <span className="font-medium">{t('x_axis_start')}:</span>
                           <span className="font-mono bg-white dark:bg-gray-700 px-2 py-1 rounded">
                             {config.xAxisStart === 'auto'
                               ? 'Auto (min data)'
@@ -1582,7 +1819,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="font-medium">Y-Axis Start:</span>
+                          <span className="font-medium">{t('y_axis_start')}:</span>
                           <span className="font-mono bg-white dark:bg-gray-700 px-2 py-1 rounded">
                             {config.yAxisStart === 'auto'
                               ? 'Auto (min data)'
@@ -1593,7 +1830,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                         </div>
                         <div className="text-center mt-2 pt-2 border-t border-blue-300 dark:border-blue-600">
                           <span className="text-blue-600 dark:text-blue-300 font-medium">
-                            Chart sẽ cập nhật theo cấu hình trên
+                            {t('lineChart_editor_chartWillUpdate')}
                           </span>
                         </div>
                       </div>
@@ -1602,7 +1839,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     {/* Axis Labels & Appearance */}
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                       <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-                        Axis Labels & Appearance
+                        {t('lineChart_editor_axisLabelsAppearance')}
                       </h4>
 
                       <div className="space-y-4">
@@ -1617,7 +1854,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                             htmlFor="showAxisLabels"
                             className="text-sm font-medium text-gray-900 dark:text-gray-100"
                           >
-                            Show Axis Labels
+                            {t('lineChart_editor_showAxisLabels')}
                           </Label>
                         </div>
 
@@ -1632,7 +1869,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                             htmlFor="showAxisTicks"
                             className="text-sm font-medium text-gray-900 dark:text-gray-100"
                           >
-                            Show Axis Ticks
+                            {t('lineChart_editor_showAxisTicks')}
                           </Label>
                         </div>
 
@@ -1640,7 +1877,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                           {/* X-Axis Rotation */}
                           <div>
                             <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              X-Axis Label Rotation (°)
+                              {t('lineChart_editor_xAxisLabelRotation')}
                             </Label>
                             <Input
                               type="number"
@@ -1657,7 +1894,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                           {/* Y-Axis Rotation */}
                           <div>
                             <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              Y-Axis Label Rotation (°)
+                              {t('lineChart_editor_yAxisLabelRotation')}
                             </Label>
                             <Input
                               type="number"
@@ -1677,8 +1914,8 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     {/* Formatters Section */}
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                       <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                        <Type className="h-4 w-4" />
-                        Formatters
+                        <Settings className="h-4 w-4" />
+                        {t('lineChart_editor_formatters')}
                       </h4>
                       <div className="space-y-4">
                         {/* Y Axis Formatter */}
@@ -1817,7 +2054,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                   onClick={() => toggleSection('seriesManagement')}
                 >
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5" />
+                    <TrendingUp className="h-5 w-5" />
                     {t('lineChart_editor_seriesManagement')} ({seriesConfigs.length})
                   </h3>
                   <div className="flex items-center gap-2">
@@ -2041,14 +2278,14 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                           {/* Individual Series Styling */}
                           <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
                             <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
-                              Individual Series Styling
+                              {t('lineChart_editor_individualSeriesStyling')}
                             </Label>
                             
                             <div className="grid grid-cols-2 gap-3 mb-3">
                               {/* Line Width */}
                               <div>
                                 <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  Line Width
+                                  {t('lineChart_editor_lineWidth')}
                                 </Label>
                                 <Input
                                   type="number"
@@ -2068,7 +2305,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                               {/* Point Radius */}
                               <div>
                                 <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  Point Size
+                                  {t('lineChart_editor_pointSize')}
                                 </Label>
                                 <Input
                                   type="number"
@@ -2088,7 +2325,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                               {/* Line Style */}
                               <div>
                                 <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  Line Style
+                                  {t('lineChart_editor_lineStyle')}
                                 </Label>
                                 <select
                                   value={series.lineStyle || 'solid'}
@@ -2097,16 +2334,16 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                   }
                                   className="w-full h-8 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2"
                                 >
-                                  <option value="solid">Solid</option>
-                                  <option value="dashed">Dashed</option>
-                                  <option value="dotted">Dotted</option>
+                                  <option value="solid">{t('lineChart_editor_solid')}</option>
+                                  <option value="dashed">{t('lineChart_editor_dashed')}</option>
+                                  <option value="dotted">{t('lineChart_editor_dotted')}</option>
                                 </select>
                               </div>
 
                               {/* Point Style */}
                               <div>
                                 <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  Point Style
+                                  {t('lineChart_editor_pointStyle')}
                                 </Label>
                                 <select
                                   value={series.pointStyle || 'circle'}
@@ -2115,17 +2352,17 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                   }
                                   className="w-full h-8 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2"
                                 >
-                                  <option value="circle">Circle</option>
-                                  <option value="square">Square</option>
-                                  <option value="triangle">Triangle</option>
-                                  <option value="diamond">Diamond</option>
+                                  <option value="circle">{t('lineChart_editor_circle')}</option>
+                                  <option value="square">{t('lineChart_editor_square')}</option>
+                                  <option value="triangle">{t('lineChart_editor_triangle')}</option>
+                                  <option value="diamond">{t('lineChart_editor_diamond')}</option>
                                 </select>
                               </div>
 
                               {/* Opacity */}
                               <div>
                                 <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  Opacity (%)
+                                  {t('lineChart_editor_opacityPercent')}
                                 </Label>
                                 <Input
                                   type="number"
@@ -2488,6 +2725,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
     </div>
   );
 };
