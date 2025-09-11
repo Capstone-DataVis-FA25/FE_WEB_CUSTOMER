@@ -158,6 +158,20 @@ export const publicRoutes: RouteConfig[] = [
       description: 'Trang chủ website',
     },
   },
+
+  {
+    path: Routers.CHART_GALLERY,
+    name: 'chartgallery',
+    component: 'ChartGalleryPickerPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Dashboard',
+      description: 'Dashboard',
+    },
+  },
+
   {
     path: Routers.NEW_HOME,
     name: 'newHome',

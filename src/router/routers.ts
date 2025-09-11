@@ -13,6 +13,9 @@ const Routers = {
   PROFILE_NOTIFICATIONS: '/profile/notifications',
   PROFILE_SETTINGS: '/profile/settings',
 
+  // Chart Gallery
+  CHART_GALLERY: '/chart-gallery',
+
   // Dataset routes
   CREATE_CHART: '/create-chart',
   DATASETS: '/datasets',

@@ -23,12 +23,10 @@ import {
 } from 'lucide-react';
 import {
   containerVariants,
-  cardVariants,
-  slideVariants,
   scaleVariants,
-  fadeVariants,
   buttonVariants,
-  listItemVariants,
+  repeatableVariants,
+  viewportConfigs,
 } from '@/theme/animation/animation.config';
 import Lottie from 'lottie-react';
 
@@ -150,19 +148,24 @@ export default function AboutPage() {
       <motion.section
         className="relative py-20 px-4 overflow-hidden"
         initial="hidden"
-        animate="visible"
+        whileInView="visible"
+        viewport={viewportConfigs.repeat}
         variants={containerVariants}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 border-t border-blue-100 dark:border-gray-800" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 border-t border-blue-100 dark:border-gray-800"/>
         <div className="relative max-w-6xl mx-auto">
           <motion.div
             className="grid lg:grid-cols-2 gap-12 items-center"
             initial="hidden"
-            animate="visible"
+            whileInView="visible"
+            viewport={viewportConfigs.repeat}
             variants={containerVariants}
           >
-            <motion.div variants={slideVariants.slideInLeft} className="space-y-8">
-              <motion.div variants={fadeVariants}>
+            <motion.div variants={repeatableVariants.slideRepeatLeft} className="space-y-8">
+              <motion.div 
+                variants={repeatableVariants.slideRepeatBottom}
+                transition={{ delay: 0.2 }}
+              >
                 <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400 mb-6">
                   About Us
                 </h1>
@@ -171,7 +174,11 @@ export default function AboutPage() {
                   hiện đại.
                 </p>
               </motion.div>
-              <motion.div variants={scaleVariants} className="flex gap-4">
+              <motion.div 
+                variants={repeatableVariants.fadeElastic} 
+                transition={{ delay: 0.4 }}
+                className="flex gap-4"
+              >
                 <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
                   <Button className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 shadow-lg transition-all duration-300">
                     Xem sản phẩm
@@ -190,11 +197,12 @@ export default function AboutPage() {
 
             {/* Right Column - Space for Lottie Animation */}
             <motion.div
-              variants={slideVariants.slideInRight}
+              variants={repeatableVariants.slideRepeatRight}
               className="flex items-center justify-center min-h-[400px] lg:min-h-[500px]"
             >
               <motion.div
-                variants={scaleVariants}
+                variants={repeatableVariants.bounceIn}
+                transition={{ delay: 0.6 }}
                 className="w-full h-full max-w-lg max-h-lg rounded-2xl border-2 border-none flex items-center justify-center backdrop-blur-sm"
                 style={{ minHeight: '400px' }}
               >
@@ -212,11 +220,14 @@ export default function AboutPage() {
         className="py-16 px-4 bg-foreground dark:bg-gray-800"
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
+        viewport={viewportConfigs.repeat}
         variants={containerVariants}
       >
         <div className="max-w-6xl mx-auto">
-          <motion.div variants={fadeVariants} className="text-center mb-8">
+          <motion.div 
+            variants={repeatableVariants.bounceIn} 
+            className="text-center mb-8"
+          >
             <h2 className="text-3xl font-bold mb-2 text-blue-600 dark:text-blue-400">
               Achievements
             </h2>
@@ -225,16 +236,17 @@ export default function AboutPage() {
             className="grid md:grid-cols-4 gap-8"
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
+            viewport={viewportConfigs.repeat}
             variants={containerVariants}
           >
             {achievements.map((achievement, index) => (
               <motion.div
                 key={index}
-                variants={listItemVariants}
+                variants={repeatableVariants.slideRepeatBottom}
                 custom={index}
                 className="text-center"
                 whileHover="hover"
+                transition={{ delay: index * 0.1 }}
               >
                 <div className="text-4xl font-bold mb-2 text-blue-600 dark:text-blue-400">
                   {achievement.number}
@@ -252,11 +264,14 @@ export default function AboutPage() {
         className="py-16 px-4 bg-gradient-to-br bg-white dark:bg-gray-900  border-gray-200 dark:border-gray-700"
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, amount: 0.4 }}
+        viewport={viewportConfigs.repeat}
         variants={containerVariants}
       >
         <div className="max-w-6xl mx-auto">
-          <motion.div variants={fadeVariants} className="text-center mb-12">
+          <motion.div 
+            variants={repeatableVariants.fadeElastic} 
+            className="text-center mb-12"
+          >
             <h2 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
               Product Showcase
             </h2>
@@ -269,11 +284,17 @@ export default function AboutPage() {
             className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true }}
+            viewport={viewportConfigs.repeat}
             variants={containerVariants}
           >
             {showcaseImages.map((item, index) => (
-              <motion.div key={index} variants={listItemVariants} custom={index} whileHover="hover">
+              <motion.div 
+                key={index} 
+                variants={repeatableVariants.slideRepeatBottom} 
+                custom={index} 
+                whileHover="hover"
+                transition={{ delay: index * 0.1 }}
+              >
                 <Card className="h-full overflow-hidden hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                   <div className="relative overflow-hidden">
                     <motion.img
@@ -334,12 +355,22 @@ export default function AboutPage() {
         className="py-16 px-4 bg-white dark:bg-gray-800"
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true }}
+        viewport={viewportConfigs.repeat}
         variants={containerVariants}
       >
         <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8">
-            <motion.div variants={cardVariants} whileHover="hover">
+          <motion.div 
+            className="grid md:grid-cols-3 gap-8"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewportConfigs.repeat}
+          >
+            <motion.div 
+              variants={repeatableVariants.slideRepeatLeft} 
+              whileHover="hover"
+              transition={{ delay: 0.1 }}
+            >
               <Card className="h-full text-center p-8 border-2 border-blue-200 hover:border-blue-300 dark:border-blue-700 dark:hover:border-blue-600 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 bg-white dark:bg-gray-800 group">
                 <CardContent className="p-0">
                   <div className="w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center bg-blue-100 dark:bg-blue-900/50 group-hover:bg-blue-200 dark:group-hover:bg-blue-800/70 transition-colors duration-300">
@@ -356,7 +387,11 @@ export default function AboutPage() {
               </Card>
             </motion.div>
 
-            <motion.div variants={cardVariants} whileHover="hover">
+            <motion.div 
+              variants={repeatableVariants.slideRepeatBottom} 
+              whileHover="hover"
+              transition={{ delay: 0.2 }}
+            >
               <Card className="h-full text-center p-8 border-2 border-purple-200 hover:border-purple-300 dark:border-purple-700 dark:hover:border-purple-600 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 bg-white dark:bg-gray-800 group">
                 <CardContent className="p-0">
                   <div className="w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center bg-purple-100 dark:bg-purple-900/50 group-hover:bg-purple-200 dark:group-hover:bg-purple-800/70 transition-colors duration-300">
@@ -373,7 +408,11 @@ export default function AboutPage() {
               </Card>
             </motion.div>
 
-            <motion.div variants={cardVariants} whileHover="hover">
+            <motion.div 
+              variants={repeatableVariants.slideRepeatRight} 
+              whileHover="hover"
+              transition={{ delay: 0.3 }}
+            >
               <Card className="h-full text-center p-8 border-2 border-green-200 hover:border-green-300 dark:border-green-700 dark:hover:border-green-600 hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300 bg-white dark:bg-gray-800 group">
                 <CardContent className="p-0">
                   <div className="w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center bg-green-100 dark:bg-green-900/50 group-hover:bg-green-200 dark:group-hover:bg-green-800/70 transition-colors duration-300">
@@ -389,7 +428,7 @@ export default function AboutPage() {
                 </CardContent>
               </Card>
             </motion.div>
-          </div>
+          </motion.div>
         </div>
       </motion.section>
 
@@ -398,11 +437,14 @@ export default function AboutPage() {
         className="py-16 px-4 bg-white dark:bg-gray-900  border-gray-200 dark:border-gray-700"
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true }}
+        viewport={viewportConfigs.repeat}
         variants={containerVariants}
       >
         <div className="max-w-6xl mx-auto">
-          <motion.div variants={fadeVariants} className="text-center mb-12">
+          <motion.div 
+            variants={repeatableVariants.bounceIn} 
+            className="text-center mb-12"
+          >
             <h2 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
               Why Choose DataVis
             </h2>
@@ -411,9 +453,21 @@ export default function AboutPage() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <motion.div 
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewportConfigs.repeat}
+          >
             {features.map((feature, index) => (
-              <motion.div key={index} variants={cardVariants} whileHover="hover" custom={index}>
+              <motion.div 
+                key={index} 
+                variants={repeatableVariants.slideRepeatBottom} 
+                whileHover="hover" 
+                custom={index}
+                transition={{ delay: index * 0.1 }}
+              >
                 <Card className="h-full p-6 hover:shadow-lg dark:hover:shadow-xl transition-all duration-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 group">
                   <CardContent className="p-0">
                     <div className="w-12 h-12 rounded-lg mb-4 flex items-center justify-center bg-blue-100 dark:bg-blue-900/50 group-hover:bg-blue-200 dark:group-hover:bg-blue-800/70 transition-colors duration-300">
@@ -429,7 +483,7 @@ export default function AboutPage() {
                 </Card>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </motion.section>
 
@@ -438,11 +492,14 @@ export default function AboutPage() {
         className="py-16 px-4 bg-white dark:bg-gray-800"
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true }}
+        viewport={viewportConfigs.repeat}
         variants={containerVariants}
       >
         <div className="max-w-6xl mx-auto text-center">
-          <motion.div variants={fadeVariants} className="mb-12">
+          <motion.div 
+            variants={repeatableVariants.fadeElastic} 
+            className="mb-12"
+          >
             <h2 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
               Industry Recognition
             </h2>
@@ -451,8 +508,18 @@ export default function AboutPage() {
             </p>
           </motion.div>
 
-          <motion.div variants={containerVariants} className="grid md:grid-cols-4 gap-8">
-            <motion.div variants={scaleVariants} className="text-center group">
+          <motion.div 
+            variants={containerVariants} 
+            className="grid md:grid-cols-4 gap-8"
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewportConfigs.repeat}
+          >
+            <motion.div 
+              variants={repeatableVariants.slideRepeatLeft} 
+              className="text-center group"
+              transition={{ delay: 0.1 }}
+            >
               <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-blue-100 dark:bg-blue-900/50 group-hover:bg-blue-200 dark:group-hover:bg-blue-800/70 transition-colors duration-300">
                 <Award className="h-8 w-8 text-blue-600 dark:text-blue-400" />
               </div>
@@ -462,7 +529,11 @@ export default function AboutPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">TechCrunch Awards</p>
             </motion.div>
 
-            <motion.div variants={scaleVariants} className="text-center group">
+            <motion.div 
+              variants={repeatableVariants.slideRepeatBottom} 
+              className="text-center group"
+              transition={{ delay: 0.2 }}
+            >
               <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-purple-100 dark:bg-purple-900/50 group-hover:bg-purple-200 dark:group-hover:bg-purple-800/70 transition-colors duration-300">
                 <Globe className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               </div>
@@ -472,7 +543,11 @@ export default function AboutPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Forbes Tech Council</p>
             </motion.div>
 
-            <motion.div variants={scaleVariants} className="text-center group">
+            <motion.div 
+              variants={repeatableVariants.slideRepeatRight} 
+              className="text-center group"
+              transition={{ delay: 0.3 }}
+            >
               <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-green-100 dark:bg-green-900/50 group-hover:bg-green-200 dark:group-hover:bg-green-800/70 transition-colors duration-300">
                 <Users className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
@@ -482,7 +557,11 @@ export default function AboutPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Gartner Peer Insights</p>
             </motion.div>
 
-            <motion.div variants={scaleVariants} className="text-center group">
+            <motion.div 
+              variants={repeatableVariants.fadeElastic} 
+              className="text-center group"
+              transition={{ delay: 0.4 }}
+            >
               <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-orange-100 dark:bg-orange-900/50 group-hover:bg-orange-200 dark:group-hover:bg-orange-800/70 transition-colors duration-300">
                 <Clock className="h-8 w-8 text-orange-600 dark:text-orange-400" />
               </div>
@@ -500,11 +579,14 @@ export default function AboutPage() {
         className="py-16 px-4 bg-white dark:bg-gray-900  border-gray-200 dark:border-gray-700"
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true }}
+        viewport={viewportConfigs.repeat}
         variants={containerVariants}
       >
         <div className="max-w-6xl mx-auto">
-          <motion.div variants={fadeVariants} className="text-center mb-12">
+          <motion.div 
+            variants={repeatableVariants.bounceIn} 
+            className="text-center mb-12"
+          >
             <h2 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
               Development Team Members
             </h2>
@@ -517,11 +599,17 @@ export default function AboutPage() {
             className="grid md:grid-cols-2 lg:grid-cols-5 gap-8"
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true }}
+            viewport={viewportConfigs.repeat}
             variants={containerVariants}
           >
             {teamMembers.map((member, idx) => (
-              <motion.div key={idx} variants={listItemVariants} custom={idx} whileHover="hover">
+              <motion.div 
+                key={idx} 
+                variants={repeatableVariants.slideRepeatBottom} 
+                custom={idx} 
+                whileHover="hover"
+                transition={{ delay: idx * 0.1 }}
+              >
                 <Card className="h-full flex flex-col items-center p-6 hover:shadow-lg dark:hover:shadow-xl transition-all duration-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 group">
                   <CardContent className="flex flex-col items-center p-0">
                     <motion.img
@@ -551,11 +639,13 @@ export default function AboutPage() {
         className="py-16 px-4 bg-foreground dark:bg-gray-800"
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true }}
+        viewport={viewportConfigs.repeat}
         variants={containerVariants}
       >
         <div className="max-w-4xl mx-auto text-center">
-          <motion.div variants={fadeVariants}>
+          <motion.div 
+            variants={repeatableVariants.fadeElastic}
+          >
             <h2 className="text-4xl font-bold mb-6 text-gray-900 dark:text-white">
               Ready to Transform Your Data?
             </h2>
@@ -564,8 +654,18 @@ export default function AboutPage() {
             </p>
           </motion.div>
 
-          <motion.div variants={containerVariants} className="grid md:grid-cols-3 gap-8 mb-12">
-            <motion.div variants={cardVariants} className="text-center group">
+          <motion.div 
+            variants={containerVariants} 
+            className="grid md:grid-cols-3 gap-8 mb-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewportConfigs.repeat}
+          >
+            <motion.div 
+              variants={repeatableVariants.slideRepeatLeft} 
+              className="text-center group"
+              transition={{ delay: 0.1 }}
+            >
               <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-blue-100 dark:bg-blue-900/50 group-hover:bg-blue-200 dark:group-hover:bg-blue-800/70 transition-colors duration-300">
                 <Mail className="h-8 w-8 text-blue-600 dark:text-blue-400" />
               </div>
@@ -573,7 +673,11 @@ export default function AboutPage() {
               <p className="text-gray-600 dark:text-gray-400">hello@datavis.com</p>
             </motion.div>
 
-            <motion.div variants={cardVariants} className="text-center group">
+            <motion.div 
+              variants={repeatableVariants.slideRepeatBottom} 
+              className="text-center group"
+              transition={{ delay: 0.2 }}
+            >
               <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-purple-100 dark:bg-purple-900/50 group-hover:bg-purple-200 dark:group-hover:bg-purple-800/70 transition-colors duration-300">
                 <Phone className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               </div>
@@ -581,7 +685,11 @@ export default function AboutPage() {
               <p className="text-gray-600 dark:text-gray-400">+1 (555) 123-4567</p>
             </motion.div>
 
-            <motion.div variants={cardVariants} className="text-center group">
+            <motion.div 
+              variants={repeatableVariants.slideRepeatRight} 
+              className="text-center group"
+              transition={{ delay: 0.3 }}
+            >
               <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-green-100 dark:bg-green-900/50 group-hover:bg-green-200 dark:group-hover:bg-green-800/70 transition-colors duration-300">
                 <MapPin className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
@@ -590,7 +698,10 @@ export default function AboutPage() {
             </motion.div>
           </motion.div>
 
-          <motion.div variants={scaleVariants}>
+          <motion.div 
+            variants={repeatableVariants.bounceIn}
+            transition={{ delay: 0.4 }}
+          >
             <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
               <Button
                 size="lg"
