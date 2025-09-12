@@ -120,7 +120,7 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
   };
 
   return (
-    <div className="w-[420px] flex-shrink-0">
+  <div className="w-full flex-shrink-0">
       <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm h-fit">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg text-gray-900 dark:text-white flex items-center gap-2">
