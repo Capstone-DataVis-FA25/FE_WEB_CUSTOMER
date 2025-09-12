@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
-import { DELIMITER_OPTIONS } from '@/utils/fileProcessors';
+import { DELIMITER_OPTIONS } from '@/utils/dataProcessors';
 
 interface DelimiterSelectorProps {
   selectedDelimiter: string;

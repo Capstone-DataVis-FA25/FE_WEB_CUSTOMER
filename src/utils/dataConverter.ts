@@ -46,7 +46,7 @@ export const convertArrayToChartData = (
     })
     .map((row) => {
       const point: ChartDataPoint = {};
-      
+
       headers.forEach((header, colIndex) => {
         const key = headerTransform(header);
         let value = row[colIndex];
@@ -84,8 +84,8 @@ export const convertChartDataToArray = (
 
   // Get headers from first data point if not provided
   const dataHeaders = headers || Object.keys(chartData[0]);
-  
-  const dataRows = chartData.map(point => 
+
+  const dataRows = chartData.map(point =>
     dataHeaders.map(header => point[header] ?? 0)
   );
 
@@ -214,27 +214,27 @@ export const getDataStatistics = (chartData: ChartDataPoint[]): DataStatistics =
 export const HeaderTransforms = {
   /** Convert to lowercase */
   lowercase: (header: string) => header.toLowerCase(),
-  
+
   /** Convert to camelCase */
-  camelCase: (header: string) => 
+  camelCase: (header: string) =>
     header.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (_, char) => char.toUpperCase()),
-  
+
   /** Convert to snake_case */
-  snakeCase: (header: string) => 
+  snakeCase: (header: string) =>
     header.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '_'),
-  
+
   /** Keep original */
   original: (header: string) => header,
-  
+
   /** Remove spaces and special characters */
-  clean: (header: string) => 
+  clean: (header: string) =>
     header.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
 };
 
 /**
  * Quick conversion with default options
  */
-export const quickConvert = (arrayData: (string | number)[][]) => 
+export const quickConvert = (arrayData: (string | number)[][]) =>
   convertArrayToChartData(arrayData);
 
 /**
@@ -245,7 +245,7 @@ export const safeConvert = (arrayData: (string | number)[][]) => {
   if (!validation.isValid) {
     throw new Error(`Invalid data: ${validation.errors.join(', ')}`);
   }
-  
+
   return {
     data: convertArrayToChartData(arrayData, { validateTypes: true }),
     warnings: validation.warnings,

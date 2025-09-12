@@ -21,7 +21,8 @@ import {
   processFileContent,
   readExcelAsText,
   validateFileSize,
-} from '@/utils/fileProcessors';
+  type DataHeader,
+} from '@/utils/dataProcessors';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -88,9 +89,15 @@ function CreateDatasetPageContent() {
         // Then process it
         const result = await processFileContent(file, { delimiter: detectedDelimiter });
         await new Promise(resolve => setTimeout(resolve, 1000));
-        setParsedData(result);
-        setOriginalHeaders(result[0] || []);
-        console.log(result);
+
+        // Convert result back to 2D array format for backward compatibility
+        const headers = result.headers.map(h => h.name);
+        const data = [headers, ...result.data];
+
+        setParsedData(data);
+        setOriginalHeaders(headers);
+        console.log('Processed result:', result);
+        console.log('Backward compatible format:', data);
         setPreviousViewMode(viewMode);
         setViewMode('view');
       } catch (error) {
@@ -167,15 +174,36 @@ function CreateDatasetPageContent() {
     setIsUploading(true);
 
     try {
-      // Prepare the data to send
+      // Transform parsedData from 2D array to headers format for the new API
+      const headers: DataHeader[] = [];
+
+      if (parsedData && parsedData.length > 0) {
+        const headerRow = parsedData[0]; // First row contains column names
+        const dataRows = parsedData.slice(1); // Remaining rows contain data
+
+        // Create headers array in the new format
+        for (let columnIndex = 0; columnIndex < headerRow.length; columnIndex++) {
+          const columnName = headerRow[columnIndex] || `Column ${columnIndex + 1}`;
+          const columnData = dataRows.map(row => row[columnIndex] || ''); // Extract column data
+
+          headers.push({
+            name: columnName,
+            type: 'string', // For now, all columns are strings as requested
+            index: columnIndex,
+            data: columnData, // This will be the actual column data for the API
+          } as any); // Type assertion since we're extending the interface for API usage
+        }
+      }
+
+      // Prepare the data to send in the new format
       const requestBody = {
         name: datasetName.trim(),
-        data: parsedData || [],
+        headers: headers,
         ...(description && { description: description.trim() }),
       };
 
       // Send POST request to create dataset using axios
-      const response = await axiosPrivate.post('/datasets', requestBody);
+      await axiosPrivate.post('/datasets', requestBody);
 
       showSuccess('Dataset Created Successfully', 'Your dataset has been created and saved');
 
@@ -199,7 +227,7 @@ function CreateDatasetPageContent() {
     } finally {
       setIsUploading(false);
     }
-  }, [parsedData, showWarning, showSuccess, showError]);
+  }, [parsedData, showWarning, showSuccess, showError, datasetName, description]);
 
   // Handle change data (go back to previous upload method and reset shared state)
   const handleChangeData = useCallback(() => {
@@ -231,15 +259,25 @@ function CreateDatasetPageContent() {
           // Parse JSON directly - no delimiter needed
           const result = parseJsonDirectly(content);
           setSelectedDelimiter(','); // Set a default delimiter for display purposes
-          setParsedData(result);
-          setOriginalHeaders(result[0] || []);
+
+          // Convert result back to 2D array format for backward compatibility
+          const headers = result.headers.map(h => h.name);
+          const data = [headers, ...result.data];
+
+          setParsedData(data);
+          setOriginalHeaders(headers);
         } else {
           // Parse as regular CSV/text data
           const detectedDelimiter = detectDelimiter(content);
           setSelectedDelimiter(detectedDelimiter);
           const result = parseTabularContent(content, { delimiter: detectedDelimiter });
-          setParsedData(result);
-          setOriginalHeaders(result[0] || []);
+
+          // Convert result back to 2D array format for backward compatibility
+          const headers = result.headers.map(h => h.name);
+          const data = [headers, ...result.data];
+
+          setParsedData(data);
+          setOriginalHeaders(headers);
         }
 
         setPreviousViewMode(viewMode);
