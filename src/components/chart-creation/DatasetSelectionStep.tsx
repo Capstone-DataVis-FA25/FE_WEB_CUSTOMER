@@ -28,7 +28,7 @@ import {
   processFileContent,
   readExcelAsText,
   validateFileSize,
-} from '@/utils/fileProcessors';
+} from '@/utils/dataProcessors';
 import type { Dataset } from '@/contexts/ChartCreationContext';
 
 interface DatasetSelectionStepProps {
