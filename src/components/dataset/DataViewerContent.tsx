@@ -1,40 +1,29 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileSpreadsheet } from 'lucide-react';
-import SpreadsheetEditor from '../excel/SpreadsheetEditor';
+import CustomExcel from '../excel/CustomExcel';
+// Local column type (mirrors the spreadsheet component's definition)
+type Column = { name: string; type: 'string' | 'number' | 'decimal' };
+import { useDataset } from '@/contexts/DatasetContext';
 
-interface DataViewerContentProps {
-  data: string[][] | null;
-  onDataChange?: (data: string[][]) => void;
-  onSave?: (data: string[][]) => void;
-  readOnly?: boolean;
-}
+function DataViewerContent() {
+  const { parsedData, setParsedData, setOriginalHeaders } = useDataset();
 
-function DataViewerContent({ data, onDataChange, onSave, readOnly = false }: DataViewerContentProps) {
-  if (!data || data.length === 0) {
-    return (
-      <Card className="border-0 shadow-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-        <CardHeader className="pb-6">
-          <CardTitle className="text-2xl text-gray-900 dark:text-white flex items-center gap-3">
-            <FileSpreadsheet className="w-6 h-6 text-blue-600" />
-            Data Preview
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="p-8 text-center">
-            <p className="text-gray-500 dark:text-gray-400 italic">No content to display</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const handleDataChange = (data: string[][], columns: Column[]) => {
+    const newHeaders = columns.map(c => c.name);
+    const newData = [newHeaders, ...data];
+    setParsedData(newData);
+    setOriginalHeaders(newHeaders);
+  };
+
+  const initialData = parsedData ? parsedData.slice(1) : [];
+  const initialColumns = parsedData
+    ? parsedData[0].map(name => ({ name, type: 'string' as const }))
+    : [];
 
   return (
-    <SpreadsheetEditor
-      initialData={data}
-      onDataChange={onDataChange}
-      onSave={onSave}
-      readOnly={readOnly}
-      title="Data Preview"
+    <CustomExcel
+      initialData={initialData}
+      initialColumns={initialColumns}
+      onDataChange={handleDataChange}
+      mode="edit" // can be toggled to 'view' where needed
     />
   );
 }
