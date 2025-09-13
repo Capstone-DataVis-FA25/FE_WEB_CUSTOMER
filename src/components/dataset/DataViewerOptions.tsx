@@ -8,10 +8,15 @@ import { NumberFormatSelector } from './NumberFormatSelector';
 import DataTransformationSelector from './DataTransformationSelector';
 import { useDataset } from '@/contexts/DatasetContext';
 import { DATASET_NAME_MAX_LENGTH, DATASET_DESCRIPTION_MAX_LENGTH } from '@/utils/Consts';
-import { transformWideToLong, parseJsonDirectly, parseTabularContent } from '@/utils/dataProcessors';
+import {
+  transformWideToLong,
+  parseJsonDirectly,
+  parseTabularContent,
+} from '@/utils/dataProcessors';
 import './scrollbar.css';
 import { useCallback } from 'react';
 import { useToastContext } from '../providers/ToastProvider';
+import { useAppSelector } from '@/store/hooks';
 
 interface DataViewerOptionsProps {
   onUpload?: () => void;
@@ -21,6 +26,7 @@ interface DataViewerOptionsProps {
 function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
   const { t } = useTranslation();
   const { showError } = useToastContext();
+  const { creating: isUploading } = useAppSelector(state => state.dataset);
 
   // Get states from context
   const {
@@ -32,7 +38,6 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
     setSelectedDelimiter,
     numberFormat,
     setNumberFormat,
-    isUploading,
     parsedData,
     originalHeaders,
     setOriginalHeaders,
