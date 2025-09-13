@@ -8,9 +8,8 @@ import { NumberFormatSelector } from './NumberFormatSelector';
 import DataTransformationSelector from './DataTransformationSelector';
 import { useDataset } from '@/contexts/DatasetContext';
 import { DATASET_NAME_MAX_LENGTH, DATASET_DESCRIPTION_MAX_LENGTH } from '@/utils/Consts';
-import { transformWideToLong, parseJsonDirectly } from '@/utils/fileProcessors';
+import { transformWideToLong, parseJsonDirectly, parseTabularContent } from '@/utils/dataProcessors';
 import './scrollbar.css';
-import { parseTabularContent } from '@/utils/fileProcessors';
 import { useCallback } from 'react';
 import { useToastContext } from '../providers/ToastProvider';
 
@@ -54,8 +53,11 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
       setTransformationColumn(null);
       try {
         const result = parseTabularContent(originalTextContent, { delimiter });
-        setParsedData(result);
-        setOriginalHeaders(result[0] || []);
+        // Convert result back to 2D array format for backward compatibility
+        const headers = result.headers.map(h => h.name);
+        const data = [headers, ...result.data];
+        setParsedData(data);
+        setOriginalHeaders(headers);
       } catch (error) {
         showError('Parse Error', 'Failed to parse with the selected delimiter');
       }
@@ -86,11 +88,17 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
 
       // Use the stored format flag instead of recalculating
       if (isJsonFormat) {
-        originalData = parseJsonDirectly(originalTextContent);
+        const result = parseJsonDirectly(originalTextContent);
+        // Convert result back to 2D array format for backward compatibility
+        const headers = result.headers.map(h => h.name);
+        originalData = [headers, ...result.data];
       } else {
-        originalData = parseTabularContent(originalTextContent, {
+        const result = parseTabularContent(originalTextContent, {
           delimiter: selectedDelimiter,
         });
+        // Convert result back to 2D array format for backward compatibility
+        const headers = result.headers.map(h => h.name);
+        originalData = [headers, ...result.data];
       }
 
       // If no column selected, use original data
@@ -112,7 +120,7 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
   };
 
   return (
-    <div className="w-[420px] flex-shrink-0">
+  <div className="w-full flex-shrink-0">
       <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm h-fit">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg text-gray-900 dark:text-white flex items-center gap-2">

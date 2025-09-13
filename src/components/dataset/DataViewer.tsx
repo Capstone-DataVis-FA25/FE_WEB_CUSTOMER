@@ -1,6 +1,5 @@
 import DataViewerOptions from './DataViewerOptions';
 import DataViewerContent from './DataViewerContent';
-import { useDataset } from '@/contexts/DatasetContext';
 
 interface DataViewerProps {
   onUpload?: () => void;
@@ -8,17 +7,16 @@ interface DataViewerProps {
 }
 
 function DataViewer({ onUpload, onChangeData }: DataViewerProps) {
-  // Get states from context
-  const { parsedData } = useDataset();
-
   return (
-    <div className="flex gap-6 p-6">
+    <div className="flex flex-col lg:flex-row gap-6 p-4 sm:p-6 relative">
       {/* Left Sidebar - Options */}
-      <DataViewerOptions onUpload={onUpload} onChangeData={onChangeData} />
+      <div className="w-full lg:w-[420px] lg:flex-shrink-0 relative z-20">
+        <DataViewerOptions onUpload={onUpload} onChangeData={onChangeData} />
+      </div>
 
       {/* Main Content - Takes remaining width */}
-      <div className="flex-1 min-w-0">
-        <DataViewerContent data={parsedData || null} />
+      <div className="flex-1 min-w-0 relative z-10">
+        <DataViewerContent />
       </div>
     </div>
   );

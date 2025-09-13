@@ -1,6 +1,6 @@
 /**
- * File Processing Utilities
- * General-purpose functions for processing various file types
+ * Data Processing Utilities
+ * General-purpose functions for processing various data types and formats
  */
 
 import Papa from 'papaparse';
@@ -33,6 +33,17 @@ export interface FileProcessingOptions {
   skipEmptyLines?: boolean;
   trimValues?: boolean;
   hasHeaders?: boolean;
+}
+
+export interface DataHeader {
+  name: string;
+  type: string;
+  index: number;
+}
+
+export interface ParsedDataResult {
+  headers: DataHeader[];
+  data: string[][];
 }
 
 
@@ -161,7 +172,7 @@ export const detectDelimiter = (
 export const parseTabularContent = (
   text: string,
   options: FileProcessingOptions
-): string[][] => {
+): ParsedDataResult => {
   const delimiter = options.delimiter;
 
   const config: Papa.ParseConfig = {
@@ -184,21 +195,38 @@ export const parseTabularContent = (
   }
 
   // Normalize all rows to have the same length as the header (first row)
+  let normalizedData: string[][];
   if (result.data.length > 0) {
-    return normalizeArrayData(result.data);
+    normalizedData = normalizeArrayData(result.data);
+  } else {
+    normalizedData = result.data;
   }
 
-  return result.data;
+  // Separate headers and data
+  const headerRow = normalizedData[0] || [];
+  const dataRows = normalizedData.slice(1);
+
+  // Create headers array with type detection (defaulting to string for now)
+  const headers: DataHeader[] = headerRow.map((headerName, index) => ({
+    name: headerName || `Column ${index + 1}`,
+    type: 'string', // Default to string for now
+    index: index
+  }));
+
+  return {
+    headers,
+    data: dataRows
+  };
 };
 
 /**
- * Process file and return 2D array directly
+ * Process file and return ParsedDataResult with headers and data
  * Accepts any readable text file and attempts to parse as tabular data
  */
 export const processFileContent = async (
   file: File,
   options: FileProcessingOptions
-): Promise<string[][]> => {
+): Promise<ParsedDataResult> => {
   if (!isValidFileType(file)) {
     throw new Error(`dataset_unsupportedFileType:${file.type || 'unknown'}`);
   }
@@ -360,11 +388,11 @@ export const isJsonFormat = (text: string): boolean => {
 };
 
 /**
- * Parse JSON content as 2D array directly
+ * Parse JSON content and return ParsedDataResult with headers and data
  * @param jsonText - JSON text content
- * @returns string[][] format
+ * @returns ParsedDataResult format
  */
-export const parseJsonDirectly = (jsonText: string): string[][] => {
+export const parseJsonDirectly = (jsonText: string): ParsedDataResult => {
   try {
     const parsed = JSON.parse(jsonText);
 
@@ -387,7 +415,23 @@ export const parseJsonDirectly = (jsonText: string): string[][] => {
     );
 
     // Normalize the data directly
-    return normalizeArrayData(stringData);
+    const normalizedData = normalizeArrayData(stringData);
+
+    // Separate headers and data
+    const headerRow = normalizedData[0] || [];
+    const dataRows = normalizedData.slice(1);
+
+    // Create headers array with type detection (defaulting to string for now)
+    const headers: DataHeader[] = headerRow.map((headerName, index) => ({
+      name: headerName || `Column ${index + 1}`,
+      type: 'string', // Default to string for now
+      index: index
+    }));
+
+    return {
+      headers,
+      data: dataRows
+    };
 
   } catch (error) {
     // If it's already a translation key, throw it directly
@@ -398,7 +442,6 @@ export const parseJsonDirectly = (jsonText: string): string[][] => {
     throw new Error(`dataset_jsonUnknownError:${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
-
 
 
 
