@@ -6,7 +6,8 @@ import UploadMethodNavigation from '@/components/dataset/UploadMethodNavigation'
 import { useToastContext } from '@/components/providers/ToastProvider';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
-import { axiosPrivate } from '@/services/axios';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { createDatasetThunk } from '@/features/dataset/datasetThunk';
 import { SlideInUp } from '@/theme/animation';
 import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
 import {
@@ -21,7 +22,6 @@ import {
   processFileContent,
   readExcelAsText,
   validateFileSize,
-  type DataHeader,
 } from '@/utils/dataProcessors';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +32,8 @@ type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view';
 function CreateDatasetPageContent() {
   const { t } = useTranslation();
   const { showSuccess, showError, showWarning } = useToastContext();
+  const dispatch = useAppDispatch();
+  const { creating } = useAppSelector(state => state.dataset);
 
   // Get states from context
   const {
@@ -42,7 +44,6 @@ function CreateDatasetPageContent() {
     setOriginalHeaders,
     isJsonFormat,
     setIsJsonFormat,
-    setIsUploading,
     setSelectedDelimiter,
     resetState,
     datasetName,
@@ -171,11 +172,9 @@ function CreateDatasetPageContent() {
       return;
     }
 
-    setIsUploading(true);
-
     try {
       // Transform parsedData from 2D array to headers format for the new API
-      const headers: DataHeader[] = [];
+      const headers = [];
 
       if (parsedData && parsedData.length > 0) {
         const headerRow = parsedData[0]; // First row contains column names
@@ -191,43 +190,43 @@ function CreateDatasetPageContent() {
             type: 'string', // For now, all columns are strings as requested
             index: columnIndex,
             data: columnData, // This will be the actual column data for the API
-          } as any); // Type assertion since we're extending the interface for API usage
+          });
         }
       }
 
       // Prepare the data to send in the new format
-      const requestBody = {
+      const requestData = {
         name: datasetName.trim(),
         headers: headers,
         ...(description && { description: description.trim() }),
       };
 
-      // Send POST request to create dataset using axios
-      await axiosPrivate.post('/datasets', requestBody);
+      // Use Redux thunk instead of direct axios call
+      const result = await dispatch(createDatasetThunk(requestData));
 
-      showSuccess('Dataset Created Successfully', 'Your dataset has been created and saved');
+      if (createDatasetThunk.fulfilled.match(result)) {
+        showSuccess('Dataset Created Successfully', 'Your dataset has been created and saved');
 
-      // Reset state after successful upload
-      setSelectedFile(null);
-      setParsedData(null);
-      setViewMode('upload');
-    } catch (error: any) {
-      // Check for unique constraint violation
-      if (error.response?.status === 409) {
-        showError(
-          t('dataset_nameExists'),
-          t('dataset_nameExistsMessage', { name: datasetName.trim() })
-        );
+        // Reset state after successful upload
+        setSelectedFile(null);
+        setParsedData(null);
+        setViewMode('upload');
       } else {
-        showError(
-          t('dataset_uploadFailed'),
-          error.response?.data?.message || error.message || t('dataset_uploadFailedMessage')
-        );
+        // Handle thunk rejection
+        const error = result.payload as any;
+        if (error?.status === 409) {
+          showError(
+            t('dataset_nameExists'),
+            t('dataset_nameExistsMessage', { name: datasetName.trim() })
+          );
+        } else {
+          showError(t('dataset_uploadFailed'), error?.message || t('dataset_uploadFailedMessage'));
+        }
       }
-    } finally {
-      setIsUploading(false);
+    } catch (error: any) {
+      showError(t('dataset_uploadFailed'), error.message || t('dataset_uploadFailedMessage'));
     }
-  }, [parsedData, showWarning, showSuccess, showError, datasetName, description]);
+  }, [parsedData, showWarning, showSuccess, showError, datasetName, description, dispatch, t]);
 
   // Handle change data (go back to previous upload method and reset shared state)
   const handleChangeData = useCallback(() => {
