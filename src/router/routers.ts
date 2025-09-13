@@ -46,6 +46,7 @@ const Routers = {
   WORKSPACE_DATASETS: '/workspace/datasets',
   WORKSPACE_CHARTS: '/workspace/charts',
   CHART_CREATOR: '/chart-creator',
+  CHART_EDITOR: '/chart-editor',
 } as const;
 
 export default Routers;

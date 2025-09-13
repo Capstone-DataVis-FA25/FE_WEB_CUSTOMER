@@ -16,16 +16,16 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
   const tabs = [
     {
       id: 'template' as TabType,
-      label: t('chart_gallery_choose_template', 'Choose Template'),
+      label: t('chart_gallery_choose_template'),
       icon: Grid3X3,
-      description: t('chart_gallery_template_desc', '🎨 Browse premium chart templates'),
+      description: t('chart_gallery_template_desc'),
       gradient: 'from-blue-500 to-cyan-500',
     },
     {
       id: 'data' as TabType,
-      label: t('chart_gallery_select_with_data', 'Start with Data'),
+      label: t('chart_gallery_select_with_data'),
       icon: BarChart3,
-      description: t('chart_gallery_data_desc', '🤖 AI-powered chart suggestions'),
+      description: t('chart_gallery_data_desc'),
       badge: 'BETA',
       gradient: 'from-purple-500 to-pink-500',
     },

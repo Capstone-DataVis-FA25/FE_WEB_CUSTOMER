@@ -38,7 +38,7 @@ export default function SelectWithDataTab() {
             <span>{t('chart_gallery_beta_feature')}</span>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            {t('chart_gallery_start_with_data')}
+            {t('chart_gallery_select_with_data')}
           </h2>
           <p className="text-gray-600 dark:text-gray-300">{t('chart_gallery_data_description')}</p>
         </div>
@@ -112,10 +112,7 @@ export default function SelectWithDataTab() {
                   {t('chart_gallery_ai_suggestions')}
                 </h4>
                 <p className="text-gray-600 dark:text-gray-300 text-xs">
-                  {t(
-                    'chart_gallery_ai_suggestions_desc',
-                    'Get intelligent chart type recommendations'
-                  )}
+                  {t('chart_gallery_ai_suggestions_desc')}
                 </p>
               </div>
             </div>
@@ -138,13 +135,10 @@ export default function SelectWithDataTab() {
         {/* CTA */}
         <div className="text-center mt-8">
           <p className="text-gray-600 dark:text-gray-300 mb-4">
-            {t(
-              'chart_gallery_beta_notice',
-              'This feature is currently in development. Try our template gallery for now!'
-            )}
+            {t('chart_gallery_beta_notice')}
           </p>
           <Button variant="outline">
-            {t('chart_gallery_notify_when_ready', 'Notify When Ready')}
+            {t('chart_gallery_notify_when_ready')}
           </Button>
         </div>
       </div>

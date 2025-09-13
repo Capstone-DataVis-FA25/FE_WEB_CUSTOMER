@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { containerVariants } from '@/theme/animation/animation.config';
 import SelectWithDataTab from './SelectWithDataTab';
@@ -9,7 +8,6 @@ import ChooseTemplateTab from './ChooseTemplateTab';
 type TabType = 'template' | 'data';
 
 export default function ChartGalleryPickerPage() {
-  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('template');
 
   const handleTabChange = (tab: TabType) => {

@@ -197,6 +197,18 @@ export const publicRoutes: RouteConfig[] = [
       description: 'Về chúng tôi website',
     },
   },
+  {
+    path: Routers.CHART_EDITOR,
+    name: 'chart-editor',
+    component: 'ChartEditorPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Chart Editor',
+      description: 'Interactive chart editor with customizable settings and data management',
+    },
+  },
 ];
 
 // Auth routes
