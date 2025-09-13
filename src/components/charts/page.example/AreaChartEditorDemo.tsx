@@ -1,26 +1,27 @@
 import React from 'react';
 import AreaChartEditor from '../AreaChartEditor';
 
-// Sample data for area chart demo
-const sampleData = [
-  { month: 1, sales: 120, marketing: 80, support: 40 },
-  { month: 2, sales: 150, marketing: 95, support: 55 },
-  { month: 3, sales: 180, marketing: 110, support: 70 },
-  { month: 4, sales: 200, marketing: 125, support: 85 },
-  { month: 5, sales: 165, marketing: 100, support: 60 },
-  { month: 6, sales: 220, marketing: 140, support: 95 },
-  { month: 7, sales: 250, marketing: 160, support: 110 },
-  { month: 8, sales: 280, marketing: 180, support: 130 },
-  { month: 9, sales: 310, marketing: 200, support: 145 },
-  { month: 10, sales: 290, marketing: 185, support: 125 },
-  { month: 11, sales: 320, marketing: 210, support: 155 },
-  { month: 12, sales: 350, marketing: 230, support: 170 },
+// Sample data for area chart demo (as array format)
+const sampleArrayData = [
+  ['month', 'sales', 'marketing', 'support'],
+  [1, 120, 80, 40],
+  [2, 150, 95, 55],
+  [3, 180, 110, 70],
+  [4, 200, 125, 85],
+  [5, 165, 100, 60],
+  [6, 220, 140, 95],
+  [7, 250, 160, 110],
+  [8, 280, 180, 130],
+  [9, 310, 200, 145],
+  [10, 290, 185, 125],
+  [11, 320, 210, 155],
+  [12, 350, 230, 170],
 ];
 
 const AreaChartEditorDemo: React.FC = () => {
   return (
     <AreaChartEditor
-      initialData={sampleData}
+      initialArrayData={sampleArrayData}
       initialConfig={{
         title: 'Monthly Department Performance',
         xAxisLabel: 'Month',

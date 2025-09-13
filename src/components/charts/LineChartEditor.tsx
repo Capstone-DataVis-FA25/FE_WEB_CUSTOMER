@@ -26,54 +26,18 @@ import {
   RotateCcw,
   Table,
 } from 'lucide-react';
-import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
 import { convertArrayToChartData } from '@/utils/dataConverter';
 import { useToast } from '@/hooks/useToast';
 import ToastContainer from '@/components/ui/toast-container';
-
-// LineChart configuration interface
-export interface LineChartConfig {
-  width: number;
-  height: number;
-  margin: { top: number; right: number; bottom: number; left: number };
-  xAxisKey: string;
-  yAxisKeys: string[];
-  disabledLines: string[]; // New field for disabled lines
-  title: string;
-  xAxisLabel: string;
-  yAxisLabel: string;
-  showLegend: boolean;
-  showGrid: boolean;
-  showPoints: boolean;
-  animationDuration: number;
-  curve: keyof typeof curveOptions;
-  xAxisStart: 'auto' | 'zero' | number; // New field for X-axis start
-  yAxisStart: 'auto' | 'zero' | number; // New field for Y-axis start
-
-  // New styling configs
-  lineWidth: number; // Thickness of lines
-  pointRadius: number; // Size of data points
-  gridOpacity: number; // Grid transparency
-  legendPosition: 'top' | 'bottom' | 'left' | 'right'; // Legend position
-
-  // New axis configs
-  xAxisRotation: number; // X-axis label rotation in degrees
-  yAxisRotation: number; // Y-axis label rotation in degrees
-  showAxisLabels: boolean; // Show/hide axis labels
-  showAxisTicks: boolean; // Show/hide axis ticks
-
-  // New interaction configs
-  enableZoom: boolean; // Enable zoom functionality
-  showTooltip: boolean; // Show/hide tooltips
-
-  // New visual configs
-  theme: 'light' | 'dark' | 'auto'; // Chart theme
-  backgroundColor: string; // Chart background color
-  titleFontSize: number; // Title font size
-  labelFontSize: number; // Axis label font size
-  legendFontSize: number; // Legend font size
-}
+import {
+  curveOptions,
+  sizePresets,
+  type ChartConfig,
+  type ColorConfig,
+  type SeriesConfig,
+} from '../../types/chart';
+import { getResponsiveDefaults, getResponsiveFontSize, isColumnAvailableForSeries } from '@/helpers/chart';
 
 // Formatter configuration
 export interface FormatterConfig {
@@ -103,63 +67,13 @@ export interface FormatterConfig {
   customXFormatter: string;
 }
 
-// Series configuration interface for Data Series management
-export interface SeriesConfig {
-  id: string;
-  name: string;
-  dataColumn: string;
-  color: string;
-  visible: boolean;
-  // Individual series styling
-  lineWidth?: number;
-  pointRadius?: number;
-  lineStyle?: 'solid' | 'dashed' | 'dotted';
-  pointStyle?: 'circle' | 'square' | 'triangle' | 'diamond';
-  opacity?: number;
-  // Series-specific formatter
-  formatter?: 'inherit' | 'custom';
-  customFormatter?: string;
-}
-
-// Color configuration
-export type ColorConfig = Record<string, { light: string; dark: string }>;
-
-// Common chart size presets
-const sizePresets = {
-  tiny: { width: 300, height: 200, labelKey: 'lineChart_editor_preset_tiny' },
-  small: { width: 400, height: 250, labelKey: 'lineChart_editor_preset_small' },
-  medium: { width: 600, height: 375, labelKey: 'lineChart_editor_preset_medium' },
-  large: { width: 800, height: 500, labelKey: 'lineChart_editor_preset_large' },
-  xlarge: { width: 1000, height: 625, labelKey: 'lineChart_editor_preset_xlarge' },
-  wide: { width: 1200, height: 400, labelKey: 'lineChart_editor_preset_wide' },
-  ultrawide: { width: 1400, height: 350, labelKey: 'lineChart_editor_preset_ultrawide' },
-  square: { width: 500, height: 500, labelKey: 'lineChart_editor_preset_square' },
-  presentation: { width: 1024, height: 768, labelKey: 'lineChart_editor_preset_presentation' },
-  mobile: { width: 350, height: 300, labelKey: 'lineChart_editor_preset_mobile' },
-  tablet: { width: 768, height: 480, labelKey: 'lineChart_editor_preset_tablet' },
-  responsive: { width: 0, height: 0, labelKey: 'lineChart_editor_preset_responsive' },
-};
-
-// Curve options
-const curveOptions = {
-  curveLinear: d3.curveLinear,
-  curveMonotoneX: d3.curveMonotoneX,
-  curveMonotoneY: d3.curveMonotoneY,
-  curveBasis: d3.curveBasis,
-  curveCardinal: d3.curveCardinal,
-  curveCatmullRom: d3.curveCatmullRom,
-  curveStep: d3.curveStep,
-  curveStepBefore: d3.curveStepBefore,
-  curveStepAfter: d3.curveStepAfter,
-};
-
 // Props for LineChart Editor
 export interface LineChartEditorProps {
   initialArrayData?: (string | number)[][]; // Array data input
-  initialConfig?: Partial<LineChartConfig>;
+  initialConfig?: Partial<ChartConfig>;
   initialColors?: ColorConfig;
   initialFormatters?: Partial<FormatterConfig>;
-  onConfigChange?: (config: LineChartConfig) => void;
+  onConfigChange?: (config: ChartConfig) => void;
   onDataChange?: (data: ChartDataPoint[]) => void;
   onColorsChange?: (colors: ColorConfig) => void;
   onFormattersChange?: (formatters: FormatterConfig) => void;
@@ -189,22 +103,10 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     return [];
   }, [initialArrayData]);
 
-  // Calculate responsive default dimensions
-  const getResponsiveDefaults = () => {
-    const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
-    const containerWidth = Math.min(screenWidth * 0.7, 1000); // 70% of screen, max 1000px
-    const aspectRatio = 16 / 9; // Golden ratio for charts
-
-    return {
-      width: Math.max(600, Math.min(containerWidth, 1000)), // Min 600px, max 1000px
-      height: Math.max(300, Math.min(containerWidth / aspectRatio, 600)), // Min 300px, max 600px
-    };
-  };
-
   const responsiveDefaults = getResponsiveDefaults();
 
   // Default configuration
-  const defaultConfig: LineChartConfig = {
+  const defaultConfig: ChartConfig = {
     width: responsiveDefaults.width,
     height: responsiveDefaults.height,
     margin: { top: 20, right: 40, bottom: 60, left: 80 },
@@ -283,7 +185,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   };
 
   // State management
-  const [config, setConfig] = useState<LineChartConfig>(defaultConfig);
+  const [config, setConfig] = useState<ChartConfig>(defaultConfig);
   const [colors, setColors] = useState<ColorConfig>(defaultColors);
   const [data, setData] = useState<ChartDataPoint[]>(processedInitialData);
   const [formatters, setFormatters] = useState<FormatterConfig>(defaultFormatters);
@@ -343,16 +245,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       };
     });
   });
-
-  // Calculate responsive fontSize based on chart dimensions
-  const getResponsiveFontSize = () => {
-    const baseSize = Math.min(config.width, config.height);
-    if (baseSize <= 300) return { axis: 10, label: 12, title: 14 };
-    if (baseSize <= 500) return { axis: 11, label: 13, title: 16 };
-    if (baseSize <= 700) return { axis: 12, label: 14, title: 18 };
-    if (baseSize <= 900) return { axis: 13, label: 15, title: 20 };
-    return { axis: 14, label: 16, title: 22 };
-  };
 
   // Generate formatter functions
   const getYAxisFormatter = useMemo(() => {
@@ -468,7 +360,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   }, [formatters]);
 
   // Update handlers
-  const updateConfig = (newConfig: Partial<LineChartConfig>) => {
+  const updateConfig = (newConfig: Partial<ChartConfig>) => {
     const updatedConfig = { ...config, ...newConfig };
     setConfig(updatedConfig);
     onConfigChange?.(updatedConfig);
@@ -497,16 +389,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         key !== config.xAxisKey && // Không được là xAxisKey
         !seriesConfigs.some(s => s.dataColumn === key)
     );
-  };
-
-  // Helper function to check if a column is available for a specific series
-  const isColumnAvailableForSeries = (column: string, seriesId: string) => {
-    const isNotXAxis = column !== config.xAxisKey; // Không được là xAxisKey
-    const currentSeries = seriesConfigs.find(s => s.id === seriesId);
-    const isCurrentColumn = currentSeries?.dataColumn === column;
-    const isUsedByOther = seriesConfigs.some(s => s.id !== seriesId && s.dataColumn === column);
-
-    return isNotXAxis && (isCurrentColumn || !isUsedByOther);
   };
 
   // Series management functions
@@ -674,9 +556,11 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       const currentIndex = prev.findIndex(s => s.id === seriesId);
       if (currentIndex > 0) {
         const updatedSeries = [...prev];
-        [updatedSeries[currentIndex - 1], updatedSeries[currentIndex]] = 
-        [updatedSeries[currentIndex], updatedSeries[currentIndex - 1]];
-        
+        [updatedSeries[currentIndex - 1], updatedSeries[currentIndex]] = [
+          updatedSeries[currentIndex],
+          updatedSeries[currentIndex - 1],
+        ];
+
         // Update config with new order
         const allDataColumns = updatedSeries.map(s => s.dataColumn);
         const newDisabledLines = updatedSeries.filter(s => !s.visible).map(s => s.dataColumn);
@@ -685,7 +569,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
           yAxisKeys: allDataColumns,
           disabledLines: newDisabledLines,
         });
-        
+
         return updatedSeries;
       }
       return prev;
@@ -697,9 +581,11 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       const currentIndex = prev.findIndex(s => s.id === seriesId);
       if (currentIndex < prev.length - 1) {
         const updatedSeries = [...prev];
-        [updatedSeries[currentIndex], updatedSeries[currentIndex + 1]] = 
-        [updatedSeries[currentIndex + 1], updatedSeries[currentIndex]];
-        
+        [updatedSeries[currentIndex], updatedSeries[currentIndex + 1]] = [
+          updatedSeries[currentIndex + 1],
+          updatedSeries[currentIndex],
+        ];
+
         // Update config with new order
         const allDataColumns = updatedSeries.map(s => s.dataColumn);
         const newDisabledLines = updatedSeries.filter(s => !s.visible).map(s => s.dataColumn);
@@ -708,7 +594,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
           yAxisKeys: allDataColumns,
           disabledLines: newDisabledLines,
         });
-        
+
         return updatedSeries;
       }
       return prev;
@@ -790,20 +676,20 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         seriesConfigs: seriesConfigs.map(series => ({
           ...series,
           // Don't export the id since it will be regenerated on import
-          id: undefined
+          id: undefined,
         })),
         // Include metadata for reference
         metadata: {
           chartType: 'line-chart',
           exportedFrom: 'LineChartEditor',
-          note: 'Configuration file - data not included'
-        }
+          note: 'Configuration file - data not included',
+        },
       };
 
       const jsonString = JSON.stringify(exportData, null, 2);
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      
+
       const a = document.createElement('a');
       a.href = url;
       a.download = `line-chart-config-${new Date().toISOString().split('T')[0]}.json`;
@@ -828,11 +714,11 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         xAxisKey: Object.keys(data[0] || {})[0] || 'x',
         yAxisKeys: Object.keys(data[0] || {}).slice(1) || ['y'],
       };
-      
+
       updateConfig(resetConfig);
       updateColors(defaultColors);
       updateFormatters(defaultFormatters);
-      
+
       // Reset series configs
       const resetSeriesConfigs = resetConfig.yAxisKeys.map((key, index) => {
         const colorKeys = Object.keys(defaultColors);
@@ -848,9 +734,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
           visible: true,
         };
       });
-      
+
       setSeriesConfigs(resetSeriesConfigs);
-      
+
       showSuccess(t('lineChart_editor_resetToDefault'));
     } catch (error) {
       console.error('Reset error:', error);
@@ -864,7 +750,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '.json';
-      input.onchange = async (event) => {
+      input.onchange = async event => {
         const file = (event.target as HTMLInputElement).files?.[0];
         if (!file) return;
 
@@ -886,7 +772,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
           if (importData.seriesConfigs && Array.isArray(importData.seriesConfigs)) {
             const newSeriesConfigs = importData.seriesConfigs.map((series: any, index: number) => ({
               ...series,
-              id: `series-${Date.now()}-${index}` // Generate new IDs
+              id: `series-${Date.now()}-${index}`, // Generate new IDs
             }));
             setSeriesConfigs(newSeriesConfigs);
           }
@@ -1043,7 +929,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       {!collapsedSections.basicSettings && (
                         <div className="relative" ref={configDropdownRef}>
                           <Button
-                            onClick={(e) => {
+                            onClick={e => {
                               e.stopPropagation();
                               setShowConfigDropdown(!showConfigDropdown);
                             }}
@@ -1053,10 +939,12 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                             title={t('lineChart_editor_configManagement')}
                           >
                             <Settings className="h-4 w-4" />
-                            <span className="hidden sm:inline">{t('lineChart_editor_configManagement')}</span>
+                            <span className="hidden sm:inline">
+                              {t('lineChart_editor_configManagement')}
+                            </span>
                             <ChevronDown className="h-3 w-3" />
                           </Button>
-                          
+
                           {/* Dropdown Menu */}
                           {showConfigDropdown && (
                             <div className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 z-50 overflow-hidden">
@@ -1068,11 +956,11 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                     {t('lineChart_editor_configManagement')}
                                   </h4>
                                 </div>
-                                
+
                                 {/* Export/Import Actions */}
                                 <div className="px-2 py-1">
                                   <button
-                                    onClick={(e) => {
+                                    onClick={e => {
                                       e.stopPropagation();
                                       exportConfigToJSON();
                                       setShowConfigDropdown(false);
@@ -1081,12 +969,16 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                   >
                                     <Download className="h-4 w-4 text-green-600" />
                                     <div>
-                                      <div className="font-medium">{t('lineChart_editor_downloadConfig')}</div>
-                                      <div className="text-xs text-gray-500 dark:text-gray-400">{t('lineChart_editor_exportSettingsAsJSON')}</div>
+                                      <div className="font-medium">
+                                        {t('lineChart_editor_downloadConfig')}
+                                      </div>
+                                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        {t('lineChart_editor_exportSettingsAsJSON')}
+                                      </div>
                                     </div>
                                   </button>
                                   <button
-                                    onClick={(e) => {
+                                    onClick={e => {
                                       e.stopPropagation();
                                       importConfigFromJSON();
                                       setShowConfigDropdown(false);
@@ -1095,18 +987,22 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                   >
                                     <Upload className="h-4 w-4 text-blue-600" />
                                     <div>
-                                      <div className="font-medium">{t('lineChart_editor_uploadConfig')}</div>
-                                      <div className="text-xs text-gray-500 dark:text-gray-400">{t('lineChart_editor_loadSettingsFromJSON')}</div>
+                                      <div className="font-medium">
+                                        {t('lineChart_editor_uploadConfig')}
+                                      </div>
+                                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        {t('lineChart_editor_loadSettingsFromJSON')}
+                                      </div>
                                     </div>
                                   </button>
                                 </div>
-                                
+
                                 <div className="border-t border-gray-200 dark:border-gray-600 mx-2"></div>
-                                
+
                                 {/* Reset Action */}
                                 <div className="px-2 py-1">
                                   <button
-                                    onClick={(e) => {
+                                    onClick={e => {
                                       e.stopPropagation();
                                       resetToDefaultConfig();
                                       setShowConfigDropdown(false);
@@ -1115,8 +1011,12 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                   >
                                     <RotateCcw className="h-4 w-4 text-orange-600" />
                                     <div>
-                                      <div className="font-medium">{t('lineChart_editor_resetToDefault')}</div>
-                                      <div className="text-xs text-gray-500 dark:text-gray-400">{t('lineChart_editor_restoreDefaultSettings')}</div>
+                                      <div className="font-medium">
+                                        {t('lineChart_editor_resetToDefault')}
+                                      </div>
+                                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        {t('lineChart_editor_restoreDefaultSettings')}
+                                      </div>
                                     </div>
                                   </button>
                                 </div>
@@ -1205,8 +1105,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       </div>
                       <div className="text-center mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
                         <p className="text-xs text-gray-600 dark:text-gray-300">
-                          {t('lineChart_editor_currentSize')}: {config.width} × {config.height}px | {t('lineChart_editor_ratio')}:{' '}
-                          {(config.width / config.height).toFixed(2)}:1
+                          {t('lineChart_editor_currentSize')}: {config.width} × {config.height}px |{' '}
+                          {t('lineChart_editor_ratio')}: {(config.width / config.height).toFixed(2)}
+                          :1
                         </p>
                       </div>
                     </div>
@@ -1295,19 +1196,27 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                         <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-600 rounded text-xs">
                           <div className="grid grid-cols-4 gap-2 text-center">
                             <div>
-                              <span className="text-gray-600 dark:text-gray-300">{t('lineChart_editor_top')}:</span>
+                              <span className="text-gray-600 dark:text-gray-300">
+                                {t('lineChart_editor_top')}:
+                              </span>
                               <div className="font-mono">{config.margin.top}px</div>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-300">{t('lineChart_editor_right')}:</span>
+                              <span className="text-gray-600 dark:text-gray-300">
+                                {t('lineChart_editor_right')}:
+                              </span>
                               <div className="font-mono">{config.margin.right}px</div>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-300">{t('lineChart_editor_bottom')}:</span>
+                              <span className="text-gray-600 dark:text-gray-300">
+                                {t('lineChart_editor_bottom')}:
+                              </span>
                               <div className="font-mono">{config.margin.bottom}px</div>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-300">{t('lineChart_editor_left')}:</span>
+                              <span className="text-gray-600 dark:text-gray-300">
+                                {t('lineChart_editor_left')}:
+                              </span>
                               <div className="font-mono">{config.margin.left}px</div>
                             </div>
                           </div>
@@ -2126,7 +2035,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                 >
                                   <ArrowUp className="h-4 w-4" />
                                 </Button>
-                                
+
                                 {/* Move Down Button */}
                                 <Button
                                   size="sm"
@@ -2138,7 +2047,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                 >
                                   <ArrowDown className="h-4 w-4" />
                                 </Button>
-                                
+
                                 {/* Delete Button */}
                                 <Button
                                   size="sm"
@@ -2180,7 +2089,14 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                 className="w-full h-9 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               >
                                 {Object.keys(data[0] || {})
-                                  .filter(key => isColumnAvailableForSeries(key, series.id))
+                                  .filter(key =>
+                                    isColumnAvailableForSeries(
+                                      seriesConfigs,
+                                      config,
+                                      key,
+                                      series.id
+                                    )
+                                  )
                                   .map(column => (
                                     <option key={column} value={column}>
                                       {column}
@@ -2280,7 +2196,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                             <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
                               {t('lineChart_editor_individualSeriesStyling')}
                             </Label>
-                            
+
                             <div className="grid grid-cols-2 gap-3 mb-3">
                               {/* Line Width */}
                               <div>
@@ -2294,8 +2210,8 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                   value={series.lineWidth || config.lineWidth}
                                   onChange={e => {
                                     const value = parseInt(e.target.value);
-                                    updateSeriesConfig(series.id, { 
-                                      lineWidth: value || undefined
+                                    updateSeriesConfig(series.id, {
+                                      lineWidth: value || undefined,
                                     });
                                   }}
                                   className="h-8 text-sm"
@@ -2314,8 +2230,8 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                   value={series.pointRadius || config.pointRadius}
                                   onChange={e => {
                                     const value = parseInt(e.target.value);
-                                    updateSeriesConfig(series.id, { 
-                                      pointRadius: value || undefined
+                                    updateSeriesConfig(series.id, {
+                                      pointRadius: value || undefined,
                                     });
                                   }}
                                   className="h-8 text-sm"
@@ -2330,7 +2246,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                 <select
                                   value={series.lineStyle || 'solid'}
                                   onChange={e =>
-                                    updateSeriesConfig(series.id, { lineStyle: e.target.value as 'solid' | 'dashed' | 'dotted' })
+                                    updateSeriesConfig(series.id, {
+                                      lineStyle: e.target.value as 'solid' | 'dashed' | 'dotted',
+                                    })
                                   }
                                   className="w-full h-8 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2"
                                 >
@@ -2348,7 +2266,13 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                 <select
                                   value={series.pointStyle || 'circle'}
                                   onChange={e =>
-                                    updateSeriesConfig(series.id, { pointStyle: e.target.value as 'circle' | 'square' | 'triangle' | 'diamond' })
+                                    updateSeriesConfig(series.id, {
+                                      pointStyle: e.target.value as
+                                        | 'circle'
+                                        | 'square'
+                                        | 'triangle'
+                                        | 'diamond',
+                                    })
                                   }
                                   className="w-full h-8 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2"
                                 >
@@ -2370,7 +2294,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                                   max="100"
                                   value={Math.round((series.opacity || 1) * 100)}
                                   onChange={e =>
-                                    updateSeriesConfig(series.id, { opacity: parseInt(e.target.value) / 100 || 1 })
+                                    updateSeriesConfig(series.id, {
+                                      opacity: parseInt(e.target.value) / 100 || 1,
+                                    })
                                   }
                                   className="h-8 text-sm"
                                   placeholder="100"
@@ -2454,7 +2380,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     curve={curveOptions[config.curve]}
                     yAxisFormatter={getYAxisFormatter}
                     xAxisFormatter={getXAxisFormatter}
-                    fontSize={getResponsiveFontSize()}
+                    fontSize={getResponsiveFontSize(config)}
                     xAxisStart={config.xAxisStart}
                     yAxisStart={config.yAxisStart}
                     // New styling props
