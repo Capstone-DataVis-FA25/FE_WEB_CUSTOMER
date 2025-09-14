@@ -39,8 +39,10 @@ const componentMap = {
   DatasetListPage: lazy(() => import('../pages/dataset/DatasetListPage')),
   DatasetDetailPage: lazy(() => import('../pages/dataset/DatasetDetailPage')),
   EditDatasetPage: lazy(() => import('../pages/dataset/EditDatasetPage')),
+  ChartGalleryPickerPage: lazy(() => import('../pages/chart-gallery/ChartGalleryPickerPage')),
   WorkspacePage: lazy(() => import('../pages/workspace/WorkspacePage')),
   ChartCreatorPage: lazy(() => import('../pages/chart-creator/ChartCreatorPage')),
+  ChartEditorPage: lazy(() => import('../pages/chart-creator/ChartEditorPage')),
 };
 
 // ================================

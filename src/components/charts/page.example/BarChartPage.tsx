@@ -2,10 +2,22 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import D3BarChart from '@/components/charts/D3BarChart';
 import { motion } from 'framer-motion';
-import { datasets } from '../data/data';
+import { salesData } from '../data/data';
 
 const BarChartPage: React.FC = () => {
-  const currentDataConfig = datasets.sales;
+  const currentDataConfig = {
+    data: salesData,
+    xKey: 'month',
+    yKeys: ['ecommerce', 'retail', 'wholesale'],
+    title: 'Monthly Sales by Channel',
+    xLabel: 'Month',
+    yLabel: 'Sales Revenue (VND)',
+    colors: {
+      ecommerce: { light: '#16a34a', dark: '#22c55e' },
+      retail: { light: '#9333ea', dark: '#a855f7' },
+      wholesale: { light: '#c2410c', dark: '#ea580c' },
+    },
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
@@ -19,7 +31,7 @@ const BarChartPage: React.FC = () => {
           <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
             <CardContent className="p-4 sm:p-6">
               <D3BarChart
-                data={currentDataConfig.data}
+                arrayData={currentDataConfig.data}
                 xAxisKey={currentDataConfig.xKey}
                 yAxisKeys={currentDataConfig.yKeys}
                 colors={currentDataConfig.colors}

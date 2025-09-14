@@ -158,6 +158,20 @@ export const publicRoutes: RouteConfig[] = [
       description: 'Trang chủ website',
     },
   },
+
+  {
+    path: Routers.CHART_GALLERY,
+    name: 'chartgallery',
+    component: 'ChartGalleryPickerPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Dashboard',
+      description: 'Dashboard',
+    },
+  },
+
   {
     path: Routers.NEW_HOME,
     name: 'newHome',
@@ -181,6 +195,18 @@ export const publicRoutes: RouteConfig[] = [
     meta: {
       title: 'Về chúng tôi',
       description: 'Về chúng tôi website',
+    },
+  },
+  {
+    path: Routers.CHART_EDITOR,
+    name: 'chart-editor',
+    component: 'ChartEditorPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Chart Editor',
+      description: 'Interactive chart editor with customizable settings and data management',
     },
   },
 ];

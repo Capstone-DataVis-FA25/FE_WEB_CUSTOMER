@@ -27,8 +27,10 @@ import {
 import {
   containerVariants,
   cardVariants,
-  fadeVariants,
   slideVariants,
+  scaleVariants,
+  repeatableVariants,
+  viewportConfigs,
 } from '@/theme/animation/animation.config';
 import D3BarChart from '@/components/charts/D3BarChart';
 import D3LineChart from '@/components/charts/D3LineChart';
@@ -432,15 +434,19 @@ const NewHomePage: React.FC = () => {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        viewport={{ once: true, amount: 0.2 }}
+        viewport={{ once: false, amount: 0.2 }}
         className="relative py-20 lg:py-32 z-10"
       >
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             {/* LEFT CONTENT */}
-            <div className="max-w-4xl mx-auto text-center lg:text-left">
+            <motion.div 
+              variants={slideVariants.slideInLeft}
+              className="max-w-4xl mx-auto text-center lg:text-left"
+            >
               <motion.h1
-                variants={fadeVariants}
+                variants={slideVariants.slideInLeft}
+                transition={{ delay: 0.2 }}
                 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-foreground mb-6 leading-tight"
               >
                 Create beautiful charts with{' '}
@@ -450,14 +456,16 @@ const NewHomePage: React.FC = () => {
               </motion.h1>
 
               <motion.p
-                variants={fadeVariants}
+                variants={slideVariants.slideInLeft}
+                transition={{ delay: 0.4 }}
                 className="text-xl lg:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto lg:mx-0 leading-relaxed"
               >
                 Responsive & easy-to-use chart types for every need. No coding required.
               </motion.p>
 
               <motion.div
-                variants={fadeVariants}
+                variants={slideVariants.slideInLeft}
+                transition={{ delay: 0.6 }}
                 className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center"
               >
                 <Button
@@ -473,20 +481,20 @@ const NewHomePage: React.FC = () => {
                   View Examples
                 </Button>
               </motion.div>
-            </div>
+            </motion.div>
             {/* RIGHT CONTENT: Animation */}
-            <div className="flex items-center justify-center w-full h-full py-5">
+            <motion.div 
+              variants={slideVariants.slideInRight}
+              className="flex items-center justify-center w-full h-full py-5"
+            >
               <motion.div
                 key={'video_section_1'}
-                variants={slideVariants.slideInLeft}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ delay: 0.2 }}
+                variants={scaleVariants}
+                transition={{ delay: 0.8 }}
               >
                 <Lottie animationData={ChartAnimationData} loop={true} className="w-full h-full" />
               </motion.div>
-            </div>
+            </motion.div>
           </div>
           {/* BACKGROUND ANIMATION */}
           <div className="absolute inset-0 -z-10">
@@ -502,11 +510,17 @@ const NewHomePage: React.FC = () => {
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true }}
+        viewport={{ once: false }}
         className="py-20 lg:py-32"
       >
         <div className="container mx-auto px-4  bg-gradient-to-br bg-[var(--gradient-main)]">
-          <motion.div variants={fadeVariants} className="text-center mb-16">
+          <motion.div 
+            variants={repeatableVariants.bounceIn}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewportConfigs.repeat}
+            className="text-center mb-16"
+          >
             <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
               {t('home_chartTypes_title')}
             </h2>
@@ -519,7 +533,13 @@ const NewHomePage: React.FC = () => {
           <div className="max-w-7xl mx-auto">
             <div className="grid lg:grid-cols-2 gap-12 items-start">
               {/* Left Column: Chart Types Grid */}
-              <div className="space-y-8">
+              <motion.div 
+                variants={repeatableVariants.slideRepeatLeft}
+                initial="hidden"
+                whileInView="visible"
+                viewport={viewportConfigs.repeat}
+                className="space-y-8"
+              >
                 <motion.div variants={containerVariants} className="grid grid-cols-5 gap-4">
                   {chartTypes.map((chart, index) => {
                     const IconComponent = chart.icon;
@@ -580,10 +600,16 @@ const NewHomePage: React.FC = () => {
                     </Button>
                   </motion.div>
                 </AnimatePresence>
-              </div>
+              </motion.div>
 
               {/* Right Column: Chart Preview */}
-              <div className="lg:sticky lg:top-8">
+              <motion.div 
+                variants={repeatableVariants.slideRepeatRight}
+                initial="hidden"
+                whileInView="visible"
+                viewport={viewportConfigs.repeat}
+                className="lg:sticky lg:top-8"
+              >
                 <Card className="overflow-hidden border-0">
                   <CardContent className="p-0">
                     <AnimatePresence mode="wait">
@@ -600,7 +626,7 @@ const NewHomePage: React.FC = () => {
                     </AnimatePresence>
                   </CardContent>
                 </Card>
-              </div>
+              </motion.div>
             </div>
           </div>
         </div>
@@ -611,11 +637,17 @@ const NewHomePage: React.FC = () => {
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, amount: 0.5 }}
+        viewport={{ once: false, amount: 0.5 }}
         className="py-20 lg:py-32"
       >
         <div className="container mx-auto px-4 bg-gradient-to-r ">
-          <motion.div variants={fadeVariants} className="text-center mb-16">
+          <motion.div 
+            variants={repeatableVariants.fadeElastic}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewportConfigs.repeat}
+            className="text-center mb-16"
+          >
             <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
               {t('home_features_title')}
             </h2>
@@ -636,10 +668,10 @@ const NewHomePage: React.FC = () => {
               return (
                 <motion.div
                   key={index}
-                  variants={slideVariants.slideInTop}
+                  variants={repeatableVariants.slideRepeatBottom}
                   custom={index}
                   whileHover="hover"
-                  transition={{ delay: index * 0.2 }}
+                  transition={{ delay: index * 0.1 }}
                 >
                   <Card className="h-full border-bg-primary/10 transform transition-transform duration-300 ease-in-out hover:scale-105 hover:delay-150">
                     <CardContent className="p-6">
@@ -668,7 +700,10 @@ const NewHomePage: React.FC = () => {
         <section className="py-20 lg:py-32 bg-gradient-to-l from-bg-blue-20 to-bg-blue-800 ">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-              <div className="rounded-4xl flex items-center justify-center w-full h-full">
+              <motion.div 
+                variants={slideVariants.slideInLeft}
+                className="rounded-4xl flex items-center justify-center w-full h-full"
+              >
                 {/* Animation added next to video */}
                 <video
                   src={CreateDemoVideo}
@@ -678,8 +713,11 @@ const NewHomePage: React.FC = () => {
                   muted
                   playsInline
                 />
-              </div>
-              <div className="flex items-center justify-center h-full">
+              </motion.div>
+              <motion.div 
+                variants={slideVariants.slideInRight}
+                className="flex items-center justify-center h-full"
+              >
                 <div className="rounded-2xl flex flex-col justify-center h-full">
                   <h2 className="text-3xl lg:text-5xl font-bold text-light mb-6">
                     {t('home_interactive_title')}
@@ -688,24 +726,36 @@ const NewHomePage: React.FC = () => {
                     {t('home_interactive_desc')}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
         </section>
       </motion.div>
 
-      <section className="py-20 lg:py-32">
+      <motion.section
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: false, amount: 0.3 }}
+        className="py-20 lg:py-32"
+      >
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-            <div className="rounded-2xl flex flex-col justify-center h-full">
+            <motion.div 
+              variants={slideVariants.slideInLeft}
+              className="rounded-2xl flex flex-col justify-center h-full"
+            >
               <h2 className="text-3xl lg:text-5xl font-bold text-light mb-6">
                 {t('home_share_title')}
               </h2>
               <p className="text-xl lg:text-2xl text-muted-foreground mb-8 max-w-3xl leading-relaxed">
                 {t('home_share_desc')}
               </p>
-            </div>
-            <div className="flex items-center justify-center h-full">
+            </motion.div>
+            <motion.div 
+              variants={slideVariants.slideInRight}
+              className="flex items-center justify-center h-full"
+            >
               <div className="rounded-4xl  flex items-center justify-center w-full h-full">
                 <video
                   src={BannerVideo}
@@ -716,10 +766,10 @@ const NewHomePage: React.FC = () => {
                   playsInline
                 />
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Success Stories */}
       <motion.section
@@ -730,7 +780,13 @@ const NewHomePage: React.FC = () => {
         className="py-20 lg:py-32 "
       >
         <div className="container mx-auto px-4">
-          <motion.div variants={fadeVariants} className="text-center mb-16">
+          <motion.div 
+            variants={slideVariants.slideInBottom}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.3 }}
+            className="text-center mb-16"
+          >
             <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
               {t('home_stories_title')}
             </h2>
@@ -739,7 +795,13 @@ const NewHomePage: React.FC = () => {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <motion.div 
+            className="grid md:grid-cols-3 gap-8"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.2 }}
+          >
             {successStories.map((story, index) => (
               <motion.div key={index} variants={cardVariants} custom={index} whileHover="hover">
                 <Card className="h-full">
@@ -759,7 +821,7 @@ const NewHomePage: React.FC = () => {
                 </Card>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </motion.section>
 
@@ -768,19 +830,34 @@ const NewHomePage: React.FC = () => {
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true }}
+        viewport={{ once: false }}
         className="py-20 lg:py-32 bg-muted/30"
       >
         <div className="container mx-auto px-4">
-          <motion.div variants={fadeVariants} className="text-center mb-16">
+          <motion.div 
+            variants={slideVariants.slideInBottom}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.3 }}
+            className="text-center mb-16"
+          >
             <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
               {t('home_help_title')}
             </h2>
             <p className="text-xl text-muted-foreground">{t('home_help_desc')}</p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <motion.div variants={cardVariants} whileHover="hover">
+          <motion.div 
+            className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.3 }}
+          >
+            <motion.div 
+              variants={slideVariants.slideInLeft}
+              whileHover="hover"
+            >
               <Card className="h-full">
                 <CardContent className="p-8 text-center">
                   <div className="w-16 h-16 bg-blue-500/10 rounded-lg flex items-center justify-center mx-auto mb-6">
@@ -799,7 +876,10 @@ const NewHomePage: React.FC = () => {
               </Card>
             </motion.div>
 
-            <motion.div variants={cardVariants} whileHover="hover">
+            <motion.div 
+              variants={slideVariants.slideInRight}
+              whileHover="hover"
+            >
               <Card className="h-full">
                 <CardContent className="p-8 text-center">
                   <div className="w-16 h-16 bg-green-500/10 rounded-lg flex items-center justify-center mx-auto mb-6">
@@ -817,7 +897,7 @@ const NewHomePage: React.FC = () => {
                 </CardContent>
               </Card>
             </motion.div>
-          </div>
+          </motion.div>
         </div>
       </motion.section>
 
@@ -826,14 +906,26 @@ const NewHomePage: React.FC = () => {
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true }}
+        viewport={{ once: false }}
         className="py-20 lg:py-32"
       >
         <div className="container mx-auto px-4">
-          <motion.div variants={cardVariants} whileHover="hover">
+          <motion.div 
+            variants={cardVariants} 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.3 }}
+            whileHover="hover"
+          >
             <Card className="relative overflow-hidden">
               <CardContent className="p-12 text-center relative z-10">
-                <motion.div variants={fadeVariants}>
+                <motion.div 
+                  variants={slideVariants.slideInBottom}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: false, amount: 0.3 }}
+                  transition={{ delay: 0.2 }}
+                >
                   <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
                     {t('home_cta_title')}
                   </h2>

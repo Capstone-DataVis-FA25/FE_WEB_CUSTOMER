@@ -40,7 +40,7 @@ export const convertArrayToChartData = (
     headerTransform = (header: string) => header.toLowerCase(),
     skipEmptyRows = true,
     defaultValue = 0,
-    validateTypes = false
+    validateTypes = false,
   } = options;
 
   if (!arrayData || arrayData.length === 0) {
@@ -59,7 +59,7 @@ export const convertArrayToChartData = (
       if (!skipEmptyRows) return true;
       return row.some(cell => cell !== null && cell !== undefined && cell !== '');
     })
-    .map((row) => {
+    .map(row => {
       const point: ChartDataPoint = {};
 
       headers.forEach((header, colIndex) => {
@@ -100,9 +100,7 @@ export const convertChartDataToArray = (
   // Get headers from first data point if not provided
   const dataHeaders = headers || Object.keys(chartData[0]);
 
-  const dataRows = chartData.map(point =>
-    dataHeaders.map(header => point[header] ?? 0)
-  );
+  const dataRows = chartData.map(point => dataHeaders.map(header => point[header] ?? 0));
 
   return [dataHeaders, ...dataRows];
 };
@@ -122,7 +120,7 @@ export const validateArrayData = (arrayData: (string | number)[][]): ValidationR
   const result: ValidationResult = {
     isValid: true,
     errors: [],
-    warnings: []
+    warnings: [],
   };
 
   if (!arrayData || arrayData.length === 0) {
@@ -183,7 +181,7 @@ export const getDataStatistics = (chartData: ChartDataPoint[]): DataStatistics =
       totalColumns: 0,
       numericColumns: [],
       stringColumns: [],
-      missingValues: {}
+      missingValues: {},
     };
   }
 
@@ -193,7 +191,7 @@ export const getDataStatistics = (chartData: ChartDataPoint[]): DataStatistics =
     totalColumns: headers.length,
     numericColumns: [],
     stringColumns: [],
-    missingValues: {}
+    missingValues: {},
   };
 
   headers.forEach(header => {
@@ -235,15 +233,13 @@ export const HeaderTransforms = {
     header.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (_, char) => char.toUpperCase()),
 
   /** Convert to snake_case */
-  snakeCase: (header: string) =>
-    header.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '_'),
+  snakeCase: (header: string) => header.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '_'),
 
   /** Keep original */
   original: (header: string) => header,
 
   /** Remove spaces and special characters */
-  clean: (header: string) =>
-    header.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+  clean: (header: string) => header.replace(/[^a-zA-Z0-9]/g, '').toLowerCase(),
 };
 
 /**
@@ -264,7 +260,7 @@ export const safeConvert = (arrayData: (string | number)[][]) => {
   return {
     data: convertArrayToChartData(arrayData, { validateTypes: true }),
     warnings: validation.warnings,
-    statistics: getDataStatistics(convertArrayToChartData(arrayData))
+    statistics: getDataStatistics(convertArrayToChartData(arrayData)),
   };
 };
 
@@ -284,7 +280,7 @@ export const convertBackendDataToChartData = (
     headerTransform = (header: string) => header.toLowerCase(),
     skipEmptyRows = true,
     defaultValue = 0,
-    validateTypes = false
+    validateTypes = false,
   } = options;
 
   // Handle both formats: full response or just headers array
@@ -310,7 +306,7 @@ export const convertBackendDataToChartData = (
     const point: ChartDataPoint = {};
     let isEmpty = true;
 
-    sortedHeaders.forEach((header) => {
+    sortedHeaders.forEach(header => {
       const key = headerTransform(header.name);
       let value = header.data[rowIndex];
 
@@ -322,7 +318,10 @@ export const convertBackendDataToChartData = (
       }
 
       // Type validation and conversion based on header type
-      if (header.type === 'number' || (validateTypes && typeof value === 'string' && !isNaN(Number(value)))) {
+      if (
+        header.type === 'number' ||
+        (validateTypes && typeof value === 'string' && !isNaN(Number(value)))
+      ) {
         value = Number(value);
       }
 
@@ -386,7 +385,7 @@ export const validateBackendData = (
   const result: ValidationResult = {
     isValid: true,
     errors: [],
-    warnings: []
+    warnings: [],
   };
 
   if (!backendData) {
@@ -425,7 +424,9 @@ export const validateBackendData = (
     const expectedLength = headers[0].data.length;
     headers.forEach((header, index) => {
       if (header.data && header.data.length !== expectedLength) {
-        result.warnings.push(`Header "${header.name}" has ${header.data.length} data points, expected ${expectedLength}`);
+        result.warnings.push(
+          `Header "${header.name}" has ${header.data.length} data points, expected ${expectedLength}`
+        );
       }
     });
   }
@@ -469,6 +470,6 @@ export const safeConvertBackend = (backendData: BackendDatasetResponse | Backend
   return {
     data: convertBackendDataToChartData(backendData, { validateTypes: true }),
     warnings: validation.warnings,
-    statistics: getDataStatistics(convertBackendDataToChartData(backendData))
+    statistics: getDataStatistics(convertBackendDataToChartData(backendData)),
   };
 };

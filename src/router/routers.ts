@@ -13,6 +13,9 @@ const Routers = {
   PROFILE_NOTIFICATIONS: '/profile/notifications',
   PROFILE_SETTINGS: '/profile/settings',
 
+  // Chart Gallery
+  CHART_GALLERY: '/chart-gallery',
+
   // Dataset routes
   CREATE_CHART: '/create-chart',
   DATASETS: '/datasets',
@@ -43,6 +46,7 @@ const Routers = {
   WORKSPACE_DATASETS: '/workspace/datasets',
   WORKSPACE_CHARTS: '/workspace/charts',
   CHART_CREATOR: '/chart-creator',
+  CHART_EDITOR: '/chart-editor',
 } as const;
 
 export default Routers;

@@ -324,4 +324,95 @@ export const animationPresets = {
   page: pageVariants,
 };
 
+// Repeatable animation variants (for elements that should animate every time they come into view)
+export const repeatableVariants = {
+  // Slide variants that work well with repeat animations
+  slideRepeatLeft: {
+    hidden: { x: -100, opacity: 0 },
+    visible: { 
+      x: 0, 
+      opacity: 1, 
+      transition: { 
+        type: 'spring' as const,
+        stiffness: 100,
+        damping: 15
+      } 
+    },
+    exit: { x: -100, opacity: 0, transition: transitions.fast },
+  },
+  slideRepeatRight: {
+    hidden: { x: 100, opacity: 0 },
+    visible: { 
+      x: 0, 
+      opacity: 1, 
+      transition: { 
+        type: 'spring' as const,
+        stiffness: 100,
+        damping: 15
+      } 
+    },
+    exit: { x: 100, opacity: 0, transition: transitions.fast },
+  },
+  slideRepeatBottom: {
+    hidden: { y: 80, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1, 
+      transition: { 
+        type: 'spring' as const,
+        stiffness: 100,
+        damping: 15
+      } 
+    },
+    exit: { y: 80, opacity: 0, transition: transitions.fast },
+  },
+  // Fade with elastic effect
+  fadeElastic: {
+    hidden: { opacity: 0, scale: 0.5 },
+    visible: { 
+      opacity: 1, 
+      scale: 1,
+      transition: {
+        type: 'spring' as const,
+        stiffness: 200,
+        damping: 20,
+        duration: 0.6
+      }
+    },
+    exit: { opacity: 0, scale: 0.5, transition: transitions.fast },
+  },
+  // Bounce effect
+  bounceIn: {
+    hidden: { opacity: 0, scale: 0.3, y: 50 },
+    visible: { 
+      opacity: 1, 
+      scale: 1,
+      y: 0,
+      transition: {
+        type: 'spring' as const,
+        stiffness: 300,
+        damping: 10,
+        duration: 0.8
+      }
+    },
+    exit: { opacity: 0, scale: 0.3, y: 50, transition: transitions.fast },
+  }
+} as const;
+
+// Viewport configuration presets
+export const viewportConfigs = {
+  // Standard - triggers once when 30% visible
+  standard: { once: true, amount: 0.3 },
+  // Repeat - triggers every time when 30% visible  
+  repeat: { once: false, amount: 0.3 },
+  // Early - triggers once when 10% visible
+  early: { once: true, amount: 0.1 },
+  // Late - triggers once when 50% visible
+  late: { once: true, amount: 0.5 },
+  // Repeat early - triggers every time when 10% visible
+  repeatEarly: { once: false, amount: 0.1 },
+  // Repeat late - triggers every time when 50% visible
+  repeatLate: { once: false, amount: 0.5 },
+};
+
 export default animationPresets;

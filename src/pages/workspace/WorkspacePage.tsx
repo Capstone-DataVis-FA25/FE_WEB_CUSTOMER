@@ -7,14 +7,10 @@ import {
   AreaChart,
   Database,
   Search,
-  TrendingUp,
   Calendar,
-  Users,
   Eye,
   Edit3,
   Share,
-  FileText,
-  Filter,
   Edit,
   Trash2,
 } from 'lucide-react';
@@ -38,8 +34,6 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import type { Dataset } from '@/features/dataset/datasetAPI';
-
-
 
 const mockCharts = [
   {
@@ -147,18 +141,11 @@ const WorkspacePage: React.FC = () => {
   const location = useLocation();
   const { showSuccess, showError } = useToastContext();
   const modalConfirm = useModalConfirm();
-  
+
   // Dataset API integration
-  const {
-    datasets,
-    loading,
-    deleting,
-    error,
-    getDatasets,
-    deleteDataset,
-    clearDatasetError,
-  } = useDataset();
-  
+  const { datasets, loading, deleting, error, getDatasets, deleteDataset, clearDatasetError } =
+    useDataset();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [chartTypeFilter, setChartTypeFilter] = useState<string>('all');
   const [datasetTypeFilter, setDatasetTypeFilter] = useState<string>('all');
@@ -207,11 +194,12 @@ const WorkspacePage: React.FC = () => {
   };
 
   // Filter datasets - using real API data
-  const filteredDatasets = Array.isArray(datasets) 
+  const filteredDatasets = Array.isArray(datasets)
     ? datasets.filter(dataset => {
         const matchesSearch =
           dataset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (dataset.description && dataset.description.toLowerCase().includes(searchTerm.toLowerCase()));
+          (dataset.description &&
+            dataset.description.toLowerCase().includes(searchTerm.toLowerCase()));
         // Note: Real datasets don't have type field, so we'll show all for now
         return matchesSearch;
       })
@@ -255,7 +243,10 @@ const WorkspacePage: React.FC = () => {
         await deleteDataset(dataset.id).unwrap();
         showSuccess(
           t('dataset_deleteSuccess', 'Dataset Deleted'),
-          t('dataset_deleteSuccessMessage', `Dataset "${dataset.name}" has been deleted successfully`)
+          t(
+            'dataset_deleteSuccessMessage',
+            `Dataset "${dataset.name}" has been deleted successfully`
+          )
         );
       } catch (error: any) {
         showError(
@@ -275,9 +266,9 @@ const WorkspacePage: React.FC = () => {
   const handleCreateChart = (datasetId?: number) => {
     // Navigate to chart creation page
     if (datasetId) {
-      navigate(`${Routers.CHART_CREATOR}?datasetId=${datasetId}`);
+      navigate(`${Routers.CHART_GALLERY}?datasetId=${datasetId}`);
     } else {
-      navigate(Routers.CHART_CREATOR);
+      navigate(Routers.CHART_GALLERY);
     }
   };
 
@@ -393,11 +384,17 @@ const WorkspacePage: React.FC = () => {
         <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-8">
           <div className="flex justify-center">
             <TabsList className="grid w-full max-w-md grid-cols-2 h-14 p-1 bg-white/70 backdrop-blur-sm dark:bg-gray-800/70 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
-              <TabsTrigger value="datasets" className="flex items-center space-x-2 h-12 rounded-lg text-sm font-medium">
+              <TabsTrigger
+                value="datasets"
+                className="flex items-center space-x-2 h-12 rounded-lg text-sm font-medium"
+              >
                 <Database className="h-4 w-4" />
                 <span>Datasets ({filteredDatasets.length})</span>
               </TabsTrigger>
-              <TabsTrigger value="charts" className="flex items-center space-x-2 h-12 rounded-lg text-sm font-medium">
+              <TabsTrigger
+                value="charts"
+                className="flex items-center space-x-2 h-12 rounded-lg text-sm font-medium"
+              >
                 <BarChart3 className="h-4 w-4" />
                 <span>Charts ({filteredCharts.length})</span>
               </TabsTrigger>
@@ -489,11 +486,15 @@ const WorkspacePage: React.FC = () => {
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
                           <p className="text-xs text-muted-foreground font-medium">Rows</p>
-                          <p className="font-bold text-blue-600 dark:text-blue-400">{dataset.rowCount || 0}</p>
+                          <p className="font-bold text-blue-600 dark:text-blue-400">
+                            {dataset.rowCount || 0}
+                          </p>
                         </div>
                         <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800">
                           <p className="text-xs text-muted-foreground font-medium">Columns</p>
-                          <p className="font-bold text-emerald-600 dark:text-emerald-400">{dataset.columnCount || 0}</p>
+                          <p className="font-bold text-emerald-600 dark:text-emerald-400">
+                            {dataset.columnCount || 0}
+                          </p>
                         </div>
                       </div>
 
@@ -643,7 +644,10 @@ const WorkspacePage: React.FC = () => {
         loading={modalConfirm.isLoading}
         type="danger"
         title={t('dataset_deleteConfirmTitle', 'Delete Dataset')}
-        message={t('dataset_deleteConfirmMessage', 'Are you sure you want to delete this dataset? This action cannot be undone.')}
+        message={t(
+          'dataset_deleteConfirmMessage',
+          'Are you sure you want to delete this dataset? This action cannot be undone.'
+        )}
         confirmText={t('dataset_delete', 'Delete')}
         cancelText={t('common_cancel', 'Cancel')}
       />
