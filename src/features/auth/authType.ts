@@ -58,6 +58,11 @@ export interface ResendEmailResponse {
   message: string;
 }
 
+export interface RefreshTokenResponse {
+  access_token: string;
+  refresh_token: string
+}
+
 // ## INITSTATE - Dựa theo initialState trong authSlice
 export interface AuthState {
   user: User | null;

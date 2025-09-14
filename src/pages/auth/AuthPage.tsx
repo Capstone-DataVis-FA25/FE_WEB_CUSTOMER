@@ -81,33 +81,21 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   // Chỉ điều hướng khi thành công
   useEffect(() => {
     if (isAuthenticated && user) {
-      console.log(`User trong auth-page: ${JSON.stringify(user, null, 2)}`);
-      console.log(`Mode: ${mode}`);
-      console.log(`isLogin: ${isLogin}`);
-      console.log(`successMessage: ${successMessage}`);
-      console.log(`user.isVerified: ${user.isVerified}`);
-
       if (mode === 'reset-password') {
-        console.log('Navigating to auth due to reset-password mode');
         goToAuth();
       } else if (user.isVerified === true) {
-        console.log('User is verified, navigating to home');
         goToHome();
       } else if (mode === 'register' && successMessage) {
-        // Chỉ định rõ điều kiện: đăng ký thành công và có successMessage
-        console.log('SignUp successful, navigating to sendEmailVerify');
         goToSendEmailVerify();
       } else {
-        console.log('Default case, navigating to auth');
         goToAuth();
       }
     }
   }, [isAuthenticated, user, mode, successMessage, goToHome, goToSendEmailVerify, goToAuth]);
 
-  // Reset khi logout - không cần thiết nữa vì không dùng hasShownSuccessToast
-  useEffect(() => {
-    // Component cleanup logic nếu cần
-  }, [isAuthenticated]);
+  // useEffect(() => {
+  //   // Component cleanup logic nếu cần
+  // }, [isAuthenticated]);
 
   // Validation form
   const validateForm = (): string | null => {
@@ -142,13 +130,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
       }
     }
 
-    return null; // Không có lỗi
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate form - CHỈ show toast nếu có lỗi
     const validationError = validateForm();
     if (validationError) {
       showError(t('validation_error'), validationError, 3000);
@@ -158,7 +145,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     try {
       let result;
 
-      // Dispatch action
       if (isLogin) {
         result = await signIn({
           email: formData.email,
