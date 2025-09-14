@@ -18,9 +18,6 @@ interface DatasetState {
   numberFormat: NumberFormat;
   transformationColumn?: string | null;
 
-  // UI states
-  isUploading: boolean;
-
   // Form states
   datasetName: string;
   description: string;
@@ -37,9 +34,6 @@ interface DatasetContextType extends DatasetState {
   setSelectedDelimiter: (delimiter: string) => void;
   setNumberFormat: (format: NumberFormat) => void;
   setTransformationColumn: (column: string | null) => void;
-
-  // UI actions
-  setIsUploading: (uploading: boolean) => void;
 
   // Form actions
   setDatasetName: (name: string) => void;
@@ -63,7 +57,6 @@ const initialState: DatasetState = {
     decimalSeparator: '.',
   },
   transformationColumn: null,
-  isUploading: false,
   datasetName: '',
   description: '',
 };
@@ -106,11 +99,6 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
     setState(prev => ({ ...prev, transformationColumn: column }));
   };
 
-  // UI actions
-  const setIsUploading = (uploading: boolean) => {
-    setState(prev => ({ ...prev, isUploading: uploading }));
-  };
-
   // Form actions
   const setDatasetName = (name: string) => {
     setState(prev => ({ ...prev, datasetName: name }));
@@ -134,7 +122,6 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
     setSelectedDelimiter,
     setNumberFormat,
     setTransformationColumn,
-    setIsUploading,
     setDatasetName,
     setDescription,
     resetState,

@@ -1,5 +1,6 @@
 import { axiosPrivate } from '@/services/axios';
 import { API_ENDPOINTS } from '@/constants/endpoints';
+import type { BackendDataHeader } from '@/utils/dataConverter';
 
 export interface Dataset {
   id: string;
@@ -10,28 +11,30 @@ export interface Dataset {
   createdAt: string;
   updatedAt: string;
   userId: string;
+  headers: BackendDataHeader[];
 }
 
-export interface DatasetDetail extends Dataset {
-  data: any[][];
-  user?: {
-    id: string;
-    email: string;
-    firstName?: string;
-    lastName?: string;
-  };
-}
-
+// New format for creating datasets with headers
 export interface CreateDatasetRequest {
   name: string;
   description?: string;
-  data: any[][];
+  headers: {
+    name: string;
+    type: string;
+    index: number;
+    data: any[];
+  }[];
 }
 
 export interface UpdateDatasetRequest {
   name?: string;
   description?: string;
-  data?: any[][];
+  headers?: {
+    name: string;
+    type: string;
+    index: number;
+    data: any[];
+  }[];
 }
 
 // Get all datasets for authenticated user
@@ -45,7 +48,7 @@ export const getAllDatasets = async (): Promise<Dataset[]> => {
 };
 
 // Get dataset by ID
-export const getDatasetById = async (id: string): Promise<DatasetDetail> => {
+export const getDatasetById = async (id: string): Promise<Dataset> => {
   const response = await axiosPrivate.get(API_ENDPOINTS.DATASETS.GET_BY_ID(id));
   // Handle wrapped API response format
   if (response.data && typeof response.data === 'object' && 'data' in response.data) {

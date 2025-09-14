@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { Dataset, DatasetDetail } from './datasetAPI';
+import type { Dataset } from './datasetAPI';
 import {
   fetchDatasets,
   fetchDatasetById,
@@ -11,7 +11,7 @@ import {
 
 export interface DatasetState {
   datasets: Dataset[];
-  currentDataset: DatasetDetail | null;
+  currentDataset: Dataset | null;
   loading: boolean;
   creating: boolean;
   updating: boolean;
@@ -60,7 +60,7 @@ const datasetSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchDatasetById.fulfilled, (state, action: PayloadAction<DatasetDetail>) => {
+      .addCase(fetchDatasetById.fulfilled, (state, action: PayloadAction<Dataset>) => {
         state.loading = false;
         state.currentDataset = action.payload;
       })
