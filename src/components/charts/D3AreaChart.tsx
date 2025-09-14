@@ -1,17 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
-import type { ColorConfig } from './chartConstants';
+import type { ColorConfig } from '../../types/chart';
 
 const defaultAreaColors: ColorConfig = {
-    area1: { light: '#3b82f6', dark: '#60a5fa' },
-    area2: { light: '#f97316', dark: '#fb923c' },
-    area3: { light: '#6b7280', dark: '#9ca3af' },
-    area4: { light: '#eab308', dark: '#facc15' },
-    area5: { light: '#ef4444', dark: '#f87171' },
-    area6: { light: '#10b981', dark: '#34d399' },
-    area7: { light: '#8b5cf6', dark: '#a78bfa' },
-    area8: { light: '#f59e0b', dark: '#fbbf24' },
+  area1: { light: '#3b82f6', dark: '#60a5fa' },
+  area2: { light: '#f97316', dark: '#fb923c' },
+  area3: { light: '#6b7280', dark: '#9ca3af' },
+  area4: { light: '#eab308', dark: '#facc15' },
+  area5: { light: '#ef4444', dark: '#f87171' },
+  area6: { light: '#10b981', dark: '#34d399' },
+  area7: { light: '#8b5cf6', dark: '#a78bfa' },
+  area8: { light: '#f59e0b', dark: '#fbbf24' },
 };
 export interface ChartDataPoint {
   [key: string]: number | string;
@@ -45,7 +45,7 @@ export interface D3AreaChartProps {
 const D3AreaChart: React.FC<D3AreaChartProps> = ({
   data,
   width = 800,
-  height = 600, 
+  height = 600,
   margin = { top: 20, right: 40, bottom: 60, left: 80 }, // Same as line chart
   xAxisKey,
   yAxisKeys,
@@ -265,9 +265,13 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       const enabledAreas = yAxisKeys.filter(key => !disabledLines.includes(key));
       const allYValues = data.flatMap(d => enabledAreas.map(key => d[key] as number));
 
+      // Ensure domain starts from 0 for consistent positioning
+      const maxValue = d3.max(allYValues) || 0;
+      const minValue = Math.min(0, d3.min(allYValues) || 0);
+
       yScale = d3
         .scaleLinear()
-        .domain(d3.extent(allYValues) as [number, number])
+        .domain([minValue, maxValue])
         .nice()
         .range([innerHeight, 0]);
 
