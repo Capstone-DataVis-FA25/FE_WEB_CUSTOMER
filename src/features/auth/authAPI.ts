@@ -8,7 +8,6 @@ import type {
   UpdateProfileResponse,
   ResendEmailRequest,
   ResendEmailResponse,
-  RefreshTokenResponse,
 } from './authType';
 
 const SIGN_IN = '/auth/signin';
@@ -17,7 +16,6 @@ const GOOGLE_AUTH = '/auth/google/token';
 const CHANGE_PASSWORD = '/users/me/change-password';
 const FORGOT_PASSWORD = '/auth/forgot-password';
 const RESET_PASSWORD = '/auth/reset-password';
-const REFRESH_TOKEN = '/auth/refresh';
 const UPDATE_PROFILE = 'users/me/update-profile';
 const VIEW_PROFILE = 'users/me';
 const DELETE_USER = '/users';
@@ -115,11 +113,4 @@ export const authAPI = {
     const response = await axiosPublic.post(`${RESEND_VERIFY_EMAIL}`, data);
     return { message: response.data.message };
   },
-
-  // Refresh token
-  refreshToken: async (): Promise<RefreshTokenResponse> => {
-    const response = await axiosPrivate.post(REFRESH_TOKEN);
-    return response.data;
-  }
-
 };
