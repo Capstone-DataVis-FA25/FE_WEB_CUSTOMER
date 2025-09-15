@@ -457,7 +457,11 @@ const WorkspacePage: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/datasets/${dataset.id}/edit`)}
+                            onClick={() =>
+                              navigate(Routers.EDIT_DATASET, {
+                                state: { datasetId: dataset.id, from: Routers.WORKSPACE_DATASETS },
+                              })
+                            }
                             className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-50 hover:text-purple-600"
                           >
                             <Edit className="h-4 w-4" />
