@@ -378,6 +378,8 @@
   "lineChart_editor_preset_responsive": "Auto Responsive",
   "barChart_editor_title": "BarChart Editor",
   "barChart_editor_description": "Interactive bar chart configuration and data editor",
+  "watch_data_before": "View data before",
+  "press_data_before": "Press Database Edit Button to show the main screen by table form ",
   "barChart_editor_basicSettings": "Basic Settings",
   "barChart_editor_sizePresets": "Size Presets",
   "barChart_editor_width": "Width",

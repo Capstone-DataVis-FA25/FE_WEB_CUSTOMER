@@ -7,7 +7,7 @@ import LineChartEditor from '@/components/charts/LineChartEditor';
 import BarChartEditor from '@/components/charts/BarChartEditor';
 import AreaChartEditor from '@/components/charts/AreaChartEditor';
 import { salesData } from '@/components/charts/data/data';
-import { convertArrayToChartData } from '@/utils/dataConverter';
+// import { convertArrayToChartData } from '@/utils/dataConverter';
 import { Database, BarChart3, Palette, Settings } from 'lucide-react';
 
 const ChartEditorPage: React.FC = () => {
@@ -84,10 +84,10 @@ const ChartEditorPage: React.FC = () => {
           />
         );
       case 'area':
-        const convertedData = convertArrayToChartData(salesData);
+        // const convertedData = convertArrayToChartData(salesData);
         return (
           <AreaChartEditor
-            initialData={convertedData}
+            initialArrayData={salesData}
             initialConfig={config}
             initialFormatters={formatters}
             title={config.title}
