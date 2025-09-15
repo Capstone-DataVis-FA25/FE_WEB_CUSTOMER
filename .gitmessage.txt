@@ -1,5 +1,5 @@
 # === Commit Message Template ===
-# Format: <type>(<scope>): <message>
+<type>(<scope>): <message>
 #
 # type:    feat | fix | docs | style | refactor | perf | test | chore
 # scope:   module/feature ảnh hưởng (vd: auth, ui, api, cart…)
@@ -11,5 +11,3 @@
 # docs(readme): update installation guide
 
 # Ghi chú: Xóa các dòng bắt đầu bằng # trước khi commit
-
-<type>(<scope>): <message>

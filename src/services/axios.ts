@@ -96,6 +96,7 @@ axiosPrivate.interceptors.response.use(
           );
 
           // Tùy backend có ResponseInterceptor hay không, lấy đúng structure
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const wrapped = (response as any)?.data?.data ?? (response as any)?.data ?? {};
           const accessToken = wrapped.access_token ?? wrapped.accessToken;
           const newRefreshToken = wrapped.refresh_token ?? wrapped.refreshToken;

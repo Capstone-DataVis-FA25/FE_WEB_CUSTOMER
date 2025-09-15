@@ -478,7 +478,6 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
   const addSeries = () => {
     const available = getAvailableColumns();
     const newKey = available.length > 0 ? available[0] : `series${seriesConfigs.length + 1}`;
-
     // Add a new series config
     setSeriesConfigs(prev => {
       const newSeries: SeriesConfig = {

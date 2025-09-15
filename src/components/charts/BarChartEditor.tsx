@@ -322,6 +322,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
   };
 
   // Helper: shallow array equality
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const arraysEqual = (a: any[], b: any[]) =>
     a.length === b.length && a.every((v, i) => v === b[i]);
 
