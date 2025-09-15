@@ -8,4 +8,5 @@
 /build
 /dist
 
-
+#package
+package-lock.json

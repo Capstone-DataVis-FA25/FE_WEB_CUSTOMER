@@ -189,7 +189,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     yAxisStart: 'auto', // Default to auto
 
     // New styling configs defaults
-    barWidth: 2,
+    barWidth: 0,
     barSpacing: 4,
     gridOpacity: 0.3,
     legendPosition: 'bottom',
@@ -262,6 +262,30 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
   const [showDataModal, setShowDataModal] = useState(false);
   const [tempData, setTempData] = useState<ChartDataPoint[]>(processedInitialData);
 
+  // Series management state (like LineChart): each series maps to a data column
+  type SeriesConfig = {
+    id: string;
+    name: string;
+    dataColumn: string;
+    color: string;
+    visible: boolean;
+  };
+
+  const [seriesConfigs, setSeriesConfigs] = useState<SeriesConfig[]>(() => {
+    const colorKeys = Object.keys(defaultColors);
+    return (defaultConfig.yAxisKeys || []).map((key, index) => {
+      const colorKey = colorKeys[index % colorKeys.length];
+      const selected = defaultColors[colorKey] || { light: '#3b82f6', dark: '#60a5fa' };
+      return {
+        id: `series-${index}`,
+        name: key,
+        dataColumn: key,
+        color: selected.light,
+        visible: !defaultConfig.disabledBars?.includes?.(key),
+      };
+    });
+  });
+
   // Collapse state for sections - THÊM MỚI
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     basicSettings: false, // Open basic settings by default
@@ -296,6 +320,20 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
       [sectionKey]: !prev[sectionKey],
     }));
   };
+
+  // Helper: shallow array equality
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const arraysEqual = (a: any[], b: any[]) =>
+    a.length === b.length && a.every((v, i) => v === b[i]);
+
+  // Keep config.yAxisKeys and disabledBars in sync with seriesConfigs
+  useEffect(() => {
+    const yKeys = seriesConfigs.map(s => s.dataColumn);
+    const disabled = seriesConfigs.filter(s => !s.visible).map(s => s.dataColumn);
+    if (!arraysEqual(yKeys, config.yAxisKeys) || !arraysEqual(disabled, config.disabledBars)) {
+      updateConfig({ yAxisKeys: yKeys, disabledBars: disabled });
+    }
+  }, [seriesConfigs]);
 
   // Calculate responsive fontSize based on chart dimensions (for future use)
   // const getResponsiveFontSize = () => {
@@ -514,58 +552,13 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     setTempData(tempData.filter((_, i) => i !== index));
   };
 
-  // Y-axis keys management
-  const addYAxisKey = () => {
-    const newKey = `bar${config.yAxisKeys.length + 1}`;
-    updateConfig({
-      yAxisKeys: [...config.yAxisKeys, newKey],
-    });
-
-    updateColors({
-      ...colors,
-      [newKey]: { light: '#6366f1', dark: '#818cf8' },
-    });
-
-    const newData = data.map(point => ({
-      ...point,
-      [newKey]: 100,
-    }));
-    updateData(newData);
-  };
-
-  const removeYAxisKey = (keyToRemove: string) => {
-    if (config.yAxisKeys.length <= 1) return;
-
-    updateConfig({
-      yAxisKeys: config.yAxisKeys.filter(key => key !== keyToRemove),
-    });
-
-    const newColors = { ...colors };
-    delete newColors[keyToRemove];
-    updateColors(newColors);
-
-    const newData = data.map(point => {
-      const newPoint = { ...point };
-      delete newPoint[keyToRemove];
-      return newPoint;
-    });
-    updateData(newData);
-  };
+  // Note: Y-axis keys are managed by seriesConfigs now
 
   // Toggle bar visibility
   const toggleBarVisibility = (key: string) => {
-    const isCurrentlyDisabled = config.disabledBars.includes(key);
-    if (isCurrentlyDisabled) {
-      // Enable the bar
-      updateConfig({
-        disabledBars: config.disabledBars.filter(bar => bar !== key),
-      });
-    } else {
-      // Disable the bar
-      updateConfig({
-        disabledBars: [...config.disabledBars, key],
-      });
-    }
+    setSeriesConfigs(prev =>
+      prev.map(s => (s.dataColumn === key ? { ...s, visible: !s.visible } : s))
+    );
   };
 
   const updateColor = (key: string, theme: 'light' | 'dark', value: string) => {
@@ -576,6 +569,85 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
         [theme]: value,
       },
     });
+  };
+
+  // Series helpers similar to LineChart
+  const getAvailableColumns = () => {
+    return Object.keys(data[0] || {}).filter(
+      key => key !== config.xAxisKey && !seriesConfigs.some(s => s.dataColumn === key)
+    );
+  };
+
+  const updateSeriesConfig = (seriesId: string, updates: Partial<SeriesConfig>) => {
+    setSeriesConfigs(prev => {
+      const oldSeries = prev.find(s => s.id === seriesId);
+      const updated = prev.map(s => {
+        if (s.id !== seriesId) return s;
+        const next = { ...s, ...updates } as SeriesConfig;
+        if (updates.dataColumn && updates.dataColumn !== s.dataColumn) {
+          next.name = updates.dataColumn;
+        }
+        return next;
+      });
+
+      // If dataColumn changed, sync colors mapping key to new column
+      if (updates.dataColumn && oldSeries && oldSeries.dataColumn !== updates.dataColumn) {
+        const newColors = { ...colors };
+        if (newColors[oldSeries.dataColumn]) {
+          newColors[updates.dataColumn] = newColors[oldSeries.dataColumn];
+          delete newColors[oldSeries.dataColumn];
+          updateColors(newColors);
+        } else if (!newColors[updates.dataColumn]) {
+          // Seed with current series color
+          updateColors({
+            ...newColors,
+            [updates.dataColumn]: { light: oldSeries.color, dark: oldSeries.color },
+          });
+        }
+      }
+
+      return updated;
+    });
+  };
+
+  const addSeries = () => {
+    const available = getAvailableColumns();
+    if (available.length === 0) return;
+    const nextColumn = available[0];
+    // pick a non-used color from defaultColors
+    const usedColors = seriesConfigs.map(s => s.color);
+    const palette = Object.values(defaultColors);
+    let chosen = palette[0];
+    for (const c of palette) {
+      if (!usedColors.includes(c.light)) {
+        chosen = c;
+        break;
+      }
+    }
+    setSeriesConfigs(prev => [
+      ...prev,
+      {
+        id: `series-${prev.length}`,
+        name: nextColumn,
+        dataColumn: nextColumn,
+        color: chosen.light,
+        visible: true,
+      },
+    ]);
+    if (!colors[nextColumn]) {
+      updateColors({ ...colors, [nextColumn]: { light: chosen.light, dark: chosen.dark } });
+    }
+  };
+
+  const removeSeries = (seriesId: string) => {
+    if (seriesConfigs.length <= 1) return;
+    const toRemove = seriesConfigs.find(s => s.id === seriesId);
+    setSeriesConfigs(prev => prev.filter(s => s.id !== seriesId));
+    if (toRemove) {
+      const nc = { ...colors } as ColorConfig;
+      delete nc[toRemove.dataColumn];
+      updateColors(nc);
+    }
   };
 
   // Export config to JSON file
@@ -647,7 +719,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
       barType: 'grouped',
       xAxisStart: 'auto',
       yAxisStart: 'auto',
-      barWidth: 2,
+      barWidth: 0,
       barSpacing: 4,
       gridOpacity: 0.3,
       legendPosition: 'bottom',
@@ -666,6 +738,15 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     setColors({
       value: { light: '#3b82f6', dark: '#60a5fa' },
     });
+    setSeriesConfigs([
+      {
+        id: 'series-0',
+        name: 'value',
+        dataColumn: 'value',
+        color: '#3b82f6',
+        visible: true,
+      },
+    ]);
     setFormatters({
       useYFormatter: true,
       useXFormatter: true,
@@ -675,6 +756,32 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
       customXFormatter: '',
     });
   };
+
+  // When config is externally changed (import/reset), regenerate seriesConfigs to match
+  useEffect(() => {
+    const colsFromSeries = seriesConfigs.map(s => s.dataColumn);
+    const disabledFromSeries = seriesConfigs.filter(s => !s.visible).map(s => s.dataColumn);
+    const yKeys = config.yAxisKeys || [];
+    const disabled = config.disabledBars || [];
+    const sameCols = arraysEqual(colsFromSeries, yKeys);
+    const sameDisabled = arraysEqual(disabledFromSeries, disabled);
+    if (!sameCols || !sameDisabled) {
+      const keys = yKeys;
+      const newSeries = keys.map((key, idx) => {
+        const palette = Object.values(defaultColors);
+        const chosen = palette[idx % palette.length] || { light: '#3b82f6', dark: '#60a5fa' };
+        const existing = colors[key]?.light || chosen.light;
+        return {
+          id: `series-${idx}`,
+          name: key,
+          dataColumn: key,
+          color: existing,
+          visible: !disabled.includes(key),
+        };
+      });
+      setSeriesConfigs(newSeries);
+    }
+  }, [config.yAxisKeys, config.disabledBars]);
 
   // Apply color preset
   const applyColorPreset = (preset: 'default' | 'warm' | 'cool' | 'pastel') => {
@@ -718,7 +825,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                 >
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Database className="h-5 w-5" />
-                    {t('barChart_editor_dataEditor', 'Chỉnh sửa dữ liệu')}
+                    {t('barChart_editor_editData')}
                   </h3>
                   <div className="flex items-center gap-2">
                     {!collapsedSections.dataEditor && (
@@ -731,7 +838,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                         variant="outline"
                       >
                         <Edit3 className="h-4 w-4 mr-1" />
-                        {t('barChart_editor_editData', 'Edit')}
+                        {t('barChart_editor_editData')}
                       </Button>
                     )}
                     {collapsedSections.dataEditor ? (
@@ -743,65 +850,90 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                 </CardHeader>
                 {!collapsedSections.dataEditor && (
                   <CardContent>
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mt-2">
+                    <div className="space-y-3">
+                      <div className="mb-2 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg mt-2">
                         <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
                           <Table className="h-4 w-4" />
-                          <span className="text-sm font-medium">
-                            {t('barChart_editor_dataPreview', 'Data Preview')}
-                          </span>
+                          <span className="text-sm font-medium">{t('watch_data_before')}</span>
                         </div>
-                        <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                          {t('barChart_editor_editDataDescription', 'Click edit to modify data')}
+                        <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                          {t('press_data_before')}
                         </p>
+                      </div>
 
-                        {/* Data Preview Table */}
-                        {data && data.length > 0 && (
-                          <div className="mt-3 max-h-48 overflow-auto">
-                            <table className="w-full text-xs border border-gray-200 dark:border-gray-600">
-                              <thead>
-                                <tr className="bg-gray-100 dark:bg-gray-700">
-                                  {Object.keys(data[0]).map(key => (
-                                    <th
-                                      key={key}
-                                      className="px-2 py-1 text-left border border-gray-200 dark:border-gray-600"
-                                    >
-                                      {key}
-                                    </th>
-                                  ))}
+                      {data && data.length > 0 && (
+                        <>
+                          <div className="max-h-48 overflow-auto rounded-md border border-gray-200 dark:border-gray-700">
+                            <table className="w-full text-xs">
+                              <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10">
+                                <tr>
+                                  <th className="px-3 py-2 text-left text-gray-600 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 w-10">
+                                    #
+                                  </th>
+                                  {Object.keys(data[0]).map(key => {
+                                    const firstVal = data[0][
+                                      key as keyof (typeof data)[0]
+                                    ] as unknown;
+                                    const isNum =
+                                      typeof firstVal === 'number' ||
+                                      (!isNaN(Number(firstVal)) &&
+                                        firstVal !== '' &&
+                                        firstVal !== null);
+                                    return (
+                                      <th
+                                        key={key}
+                                        className={`px-3 py-2 border-r last:border-r-0 border-gray-200 dark:border-gray-600 ${isNum ? 'text-right' : 'text-left'} text-gray-600 dark:text-gray-300`}
+                                      >
+                                        {String(key).toUpperCase()}
+                                      </th>
+                                    );
+                                  })}
                                 </tr>
                               </thead>
                               <tbody>
                                 {data.slice(0, 5).map((row, index) => (
                                   <tr
                                     key={index}
-                                    className="hover:bg-gray-50 dark:hover:bg-gray-600"
+                                    className={`${index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700/50'} hover:bg-gray-50 dark:hover:bg-gray-700`}
                                   >
-                                    {Object.values(row).map((value, valueIndex) => (
-                                      <td
-                                        key={valueIndex}
-                                        className="px-2 py-1 border border-gray-200 dark:border-gray-600"
-                                      >
-                                        {String(value)}
-                                      </td>
-                                    ))}
+                                    <td className="px-3 py-2 border-r border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200">
+                                      {index + 1}
+                                    </td>
+                                    {Object.keys(row).map((key, valueIndex) => {
+                                      const value = row[key];
+                                      const isNum =
+                                        typeof value === 'number' ||
+                                        (!isNaN(Number(value)) && value !== '' && value !== null);
+                                      return (
+                                        <td
+                                          key={`${index}-${valueIndex}`}
+                                          className={`px-3 py-2 border-r last:border-r-0 border-gray-200 dark:border-gray-600 ${isNum ? 'text-right tabular-nums' : 'text-left'} text-gray-800 dark:text-gray-100`}
+                                        >
+                                          {String(value)}
+                                        </td>
+                                      );
+                                    })}
                                   </tr>
                                 ))}
                                 {data.length > 5 && (
                                   <tr>
                                     <td
-                                      colSpan={Object.keys(data[0]).length}
-                                      className="px-2 py-1 text-center text-gray-500 italic"
+                                      colSpan={1 + Object.keys(data[0]).length}
+                                      className="px-3 py-2 text-center text-gray-500 dark:text-gray-400"
                                     >
-                                      ... và {data.length - 5} dòng khác
+                                      Và {data.length - 5} dòng khác... (Nhấp `Chỉnh sửa dữ liệu` để
+                                      xem tất cả)
                                     </td>
                                   </tr>
                                 )}
                               </tbody>
                             </table>
                           </div>
-                        )}
-                      </div>
+                          <div className="text-center text-xs text-gray-600 dark:text-gray-300 mt-2">
+                            Tổng cộng {data.length} điểm dữ liệu
+                          </div>
+                        </>
+                      )}
                     </div>
                   </CardContent>
                 )}
@@ -1663,92 +1795,135 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                       <TrendingUp className="h-5 w-5" />
                       {t('barChart_editor_seriesManagement', 'Quản Lý Chuỗi Dữ Liệu')} (
-                      {config.yAxisKeys.length})
+                      {seriesConfigs.length})
                     </h3>
-                    {collapsedSections.seriesManagement ? (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
-                    )}
+                    <div className="flex items-center gap-2">
+                      {!collapsedSections.seriesManagement && (
+                        <Button
+                          onClick={e => {
+                            e.stopPropagation();
+                            addSeries();
+                          }}
+                          size="sm"
+                          variant="outline"
+                          className="bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={getAvailableColumns().length === 0}
+                        >
+                          <Plus className="h-4 w-4 mr-1" /> Thêm
+                        </Button>
+                      )}
+                      {collapsedSections.seriesManagement ? (
+                        <ChevronDown className="h-5 w-5 text-gray-500" />
+                      ) : (
+                        <ChevronUp className="h-5 w-5 text-gray-500" />
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 {!collapsedSections.seriesManagement && (
                   <CardContent className="space-y-4">
-                    {/* Y-Axis Keys Management */}
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Chuỗi dữ liệu ({config.yAxisKeys.length})
-                        </Label>
-                        <Button onClick={addYAxisKey} size="sm" variant="outline">
-                          <Plus className="h-4 w-4 mr-1" />
-                          Thêm
-                        </Button>
-                      </div>
-
-                      <div className="space-y-3 max-h-48 overflow-y-auto">
-                        {config.yAxisKeys.map((key, index) => (
-                          <div
-                            key={key}
-                            className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                    {/* Series list with selects */}
+                    <div className="space-y-3 max-h-72 overflow-y-auto">
+                      {seriesConfigs.map((series, index) => (
+                        <div
+                          key={series.id}
+                          className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                        >
+                          {/* Visibility toggle */}
+                          <Button
+                            onClick={() => toggleBarVisibility(series.dataColumn)}
+                            variant="ghost"
+                            size="sm"
+                            className="p-1 h-8 w-8"
                           >
+                            {series.visible ? (
+                              <Eye className="h-4 w-4 text-blue-600" />
+                            ) : (
+                              <EyeOff className="h-4 w-4 text-gray-400" />
+                            )}
+                          </Button>
+
+                          {/* Color swatch */}
+                          <div
+                            className="w-4 h-4 rounded border-2"
+                            style={{
+                              backgroundColor:
+                                colors[series.dataColumn]?.light ||
+                                series.color ||
+                                `hsl(${index * 60}, 70%, 50%)`,
+                              borderColor:
+                                colors[series.dataColumn]?.dark ||
+                                series.color ||
+                                `hsl(${index * 60}, 70%, 40%)`,
+                            }}
+                          />
+
+                          {/* Series name */}
+                          <Input
+                            value={series.name}
+                            onChange={e => updateSeriesConfig(series.id, { name: e.target.value })}
+                            placeholder="Tên chuỗi"
+                            className="h-8 text-sm w-40"
+                          />
+
+                          {/* Data column select */}
+                          <div className="flex-1">
+                            <select
+                              value={series.dataColumn}
+                              onChange={e =>
+                                updateSeriesConfig(series.id, { dataColumn: e.target.value })
+                              }
+                              className="w-full h-9 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3"
+                            >
+                              {Object.keys(data[0] || {})
+                                .filter(
+                                  key =>
+                                    key === series.dataColumn ||
+                                    (key !== config.xAxisKey &&
+                                      !seriesConfigs.some(s => s.dataColumn === key))
+                                )
+                                .map(column => (
+                                  <option key={column} value={column}>
+                                    {column}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+
+                          {/* Light/Dark color pickers */}
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              value={colors[series.dataColumn]?.light || series.color}
+                              onChange={e => {
+                                updateColor(series.dataColumn, 'light', e.target.value);
+                                updateSeriesConfig(series.id, { color: e.target.value });
+                              }}
+                              className="w-8 h-8 border rounded cursor-pointer"
+                              title="Màu sáng"
+                            />
+                            <input
+                              type="color"
+                              value={colors[series.dataColumn]?.dark || series.color}
+                              onChange={e => updateColor(series.dataColumn, 'dark', e.target.value)}
+                              className="w-8 h-8 border rounded cursor-pointer"
+                              title="Màu tối"
+                            />
+                          </div>
+
+                          {/* Remove */}
+                          {seriesConfigs.length > 1 && (
                             <Button
-                              onClick={() => toggleBarVisibility(key)}
+                              onClick={() => removeSeries(series.id)}
                               variant="ghost"
                               size="sm"
-                              className="p-1 h-8 w-8"
+                              className="p-1 h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
-                              {config.disabledBars.includes(key) ? (
-                                <EyeOff className="h-4 w-4 text-gray-400" />
-                              ) : (
-                                <Eye className="h-4 w-4 text-blue-600" />
-                              )}
+                              <Trash2 className="h-4 w-4" />
                             </Button>
-
-                            <div className="flex items-center space-x-2 flex-1">
-                              <div
-                                className="w-4 h-4 rounded border-2"
-                                style={{
-                                  backgroundColor:
-                                    colors[key]?.light || `hsl(${index * 60}, 70%, 50%)`,
-                                  borderColor: colors[key]?.dark || `hsl(${index * 60}, 70%, 40%)`,
-                                }}
-                              />
-                              <span className="font-medium text-gray-900 dark:text-white text-sm">
-                                {key}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="color"
-                                value={colors[key]?.light || `hsl(${index * 60}, 70%, 50%)`}
-                                onChange={e => updateColor(key, 'light', e.target.value)}
-                                className="w-8 h-8 border rounded cursor-pointer"
-                                title="Màu sáng"
-                              />
-                              <input
-                                type="color"
-                                value={colors[key]?.dark || `hsl(${index * 60}, 70%, 40%)`}
-                                onChange={e => updateColor(key, 'dark', e.target.value)}
-                                className="w-8 h-8 border rounded cursor-pointer"
-                                title="Màu tối"
-                              />
-                            </div>
-
-                            {config.yAxisKeys.length > 1 && (
-                              <Button
-                                onClick={() => removeYAxisKey(key)}
-                                variant="ghost"
-                                size="sm"
-                                className="p-1 h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
 
                     {/* Color Preset Buttons */}
@@ -1794,11 +1969,10 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
 
                     {/* Series Statistics */}
                     <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                      <div>Tổng chuỗi: {config.yAxisKeys.length}</div>
-                      <div>
-                        Đang hiển thị: {config.yAxisKeys.length - config.disabledBars.length}
-                      </div>
-                      <div>Đã ẩn: {config.disabledBars.length}</div>
+                      <div>Tổng chuỗi: {seriesConfigs.length}</div>
+                      <div>Đang hiển thị: {seriesConfigs.filter(s => s.visible).length}</div>
+                      <div>Đã ẩn: {seriesConfigs.filter(s => !s.visible).length}</div>
+                      <div>Cột khả dụng còn lại: {getAvailableColumns().length}</div>
                     </div>
                   </CardContent>
                 )}
@@ -1842,6 +2016,19 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                     yAxisFormatter={getYAxisFormatter}
                     xAxisFormatter={getXAxisFormatter}
                     barType={config.barType}
+                    // Advanced wiring
+                    gridOpacity={config.gridOpacity}
+                    legendPosition={config.legendPosition === 'top' ? 'top' : 'bottom'}
+                    xAxisRotation={config.xAxisRotation}
+                    yAxisRotation={config.yAxisRotation}
+                    showAxisLabels={config.showAxisLabels}
+                    showAxisTicks={config.showAxisTicks}
+                    yAxisStart={config.yAxisStart}
+                    theme={config.theme}
+                    backgroundColor={config.backgroundColor}
+                    showTooltip={config.showTooltip}
+                    barWidth={config.barWidth}
+                    barSpacing={config.barSpacing}
                   />
                 </CardContent>
               </Card>

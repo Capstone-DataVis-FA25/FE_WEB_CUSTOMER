@@ -85,12 +85,21 @@ axiosPrivate.interceptors.response.use(
       const refreshToken = tokenStorage.getRefreshToken();
       if (refreshToken) {
         try {
-          // Gọi API refresh token
-          const response = await axiosPublic.post('/auth/refresh', {
-            refreshToken,
-          });
+          const response = await axiosPublic.post(
+            '/auth/refresh',
+            {},
+            {
+              headers: {
+                Authorization: `Bearer ${refreshToken}`,
+              },
+            }
+          );
 
-          const { accessToken, refreshToken: newRefreshToken } = response.data;
+          // Tùy backend có ResponseInterceptor hay không, lấy đúng structure
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const wrapped = (response as any)?.data?.data ?? (response as any)?.data ?? {};
+          const accessToken = wrapped.access_token ?? wrapped.accessToken;
+          const newRefreshToken = wrapped.refresh_token ?? wrapped.refreshToken;
           tokenStorage.setTokens(accessToken, newRefreshToken);
 
           // Retry request với token mới
