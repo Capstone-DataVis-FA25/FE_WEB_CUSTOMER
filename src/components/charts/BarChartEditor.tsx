@@ -288,7 +288,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
 
   // Collapse state for sections - THÊM MỚI
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
-    basicSettings: false, // Open basic settings by default
+    basicSettings: true, // Open basic settings by default
     axisConfiguration: true,
     displayOptions: true,
     seriesManagement: true,
