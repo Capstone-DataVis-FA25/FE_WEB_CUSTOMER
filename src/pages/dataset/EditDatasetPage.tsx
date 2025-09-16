@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,11 +8,12 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft, Save, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useDataset } from '@/features/dataset/useDataset';
 import { useToastContext } from '@/components/providers/ToastProvider';
-import SpreadsheetEditor from '@/components/excel/SpreadsheetEditor';
+
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { SlideInUp, FadeIn } from '@/theme/animation';
 import Routers from '@/router/routers';
 import { Textarea } from '@/components/ui/textarea';
+import CustomExcel from '@/components/excel/CustomExcel';
 
 interface EditFormData {
   name: string;
@@ -22,18 +23,15 @@ interface EditFormData {
 
 const EditDatasetPage: React.FC = () => {
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
+  const { id: legacyId, slug } = useParams<{ id?: string; slug?: string }>();
+  const location = useLocation() as any;
+  const stateDatasetId = location?.state?.datasetId as string | undefined;
+  const rawParam = slug || legacyId || stateDatasetId || '';
+  const extractedId = rawParam.split('-').pop() || rawParam;
   const navigate = useNavigate();
   const { showSuccess, showError } = useToastContext();
-  
-  const {
-    currentDataset,
-    loading,
-    error,
-    updating,
-    getDatasetById,
-    updateDataset,
-  } = useDataset();
+
+  const { currentDataset, loading, error, updating, getDatasetById, updateDataset } = useDataset();
 
   const [formData, setFormData] = useState<EditFormData>({
     name: '',
@@ -46,27 +44,47 @@ const EditDatasetPage: React.FC = () => {
 
   // Load dataset on mount
   useEffect(() => {
-    if (id) {
-      getDatasetById(id);
+    if (extractedId) {
+      getDatasetById(extractedId);
     }
-  }, [id, getDatasetById]);
+  }, [extractedId, getDatasetById]);
 
   // Update form data when dataset is loaded
   useEffect(() => {
     if (currentDataset) {
+      // Convert headers + column data into 2D array (first row header names)
+      let twoD: string[][] = [];
+      if ((currentDataset as any).data) {
+        twoD = (currentDataset as any).data;
+      } else if (currentDataset.headers && currentDataset.headers.length) {
+        const headerNames = currentDataset.headers.map(h => h.name);
+        const rowCount = currentDataset.rowCount;
+        const rows: string[][] = Array.from({ length: rowCount }, () =>
+          Array(headerNames.length).fill('')
+        );
+        currentDataset.headers.forEach((h, idx) => {
+          (h as any).data?.forEach((cell: any, rowIdx: number) => {
+            if (rows[rowIdx]) rows[rowIdx][idx] = String(cell ?? '');
+          });
+        });
+        twoD = [headerNames, ...rows];
+      }
       setFormData({
         name: currentDataset.name || '',
         description: currentDataset.description || '',
-        data: currentDataset.data || [],
+        data: twoD,
       });
     }
   }, [currentDataset]);
 
   // Handle input changes
-  const handleInputChange = useCallback((field: keyof Omit<EditFormData, 'data'>, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setFormChanged(true);
-  }, []);
+  const handleInputChange = useCallback(
+    (field: keyof Omit<EditFormData, 'data'>, value: string) => {
+      setFormData(prev => ({ ...prev, [field]: value }));
+      setFormChanged(true);
+    },
+    []
+  );
 
   // Handle data changes from spreadsheet editor
   const handleDataChange = useCallback((newData: string[][]) => {
@@ -76,7 +94,7 @@ const EditDatasetPage: React.FC = () => {
 
   // Handle save
   const handleSave = useCallback(async () => {
-    if (!id) return;
+    if (!extractedId) return;
 
     if (!formData.name.trim()) {
       showError(
@@ -88,7 +106,7 @@ const EditDatasetPage: React.FC = () => {
 
     try {
       const updateData: any = {};
-      
+
       // Only include changed fields
       if (formChanged) {
         if (formData.name !== currentDataset?.name) {
@@ -98,9 +116,19 @@ const EditDatasetPage: React.FC = () => {
           updateData.description = formData.description || null;
         }
       }
-      
+
       if (dataChanged) {
-        updateData.data = formData.data;
+        // Convert 2D data back to headers format expected by API
+        if (formData.data.length > 0) {
+          const headerRow = formData.data[0];
+          const bodyRows = formData.data.slice(1);
+          updateData.headers = headerRow.map((name, idx) => ({
+            name: name || `Column ${idx + 1}`,
+            type: 'string',
+            index: idx,
+            data: bodyRows.map(r => r[idx] ?? ''),
+          }));
+        }
       }
 
       // If nothing changed, show a message
@@ -112,7 +140,7 @@ const EditDatasetPage: React.FC = () => {
         return;
       }
 
-      await updateDataset(id, updateData).unwrap();
+      await updateDataset(extractedId, updateData).unwrap();
 
       showSuccess(
         t('dataset_updateSuccess', 'Dataset Updated'),
@@ -125,16 +153,29 @@ const EditDatasetPage: React.FC = () => {
 
       // Navigate back to dataset detail page after a short delay
       setTimeout(() => {
-        navigate(Routers.DATASET_DETAIL.replace(':id', id));
-      }, 1500);
-
+        navigate(
+          Routers.DATASET_DETAIL.replace(
+            ':slug',
+            slug ||
+              `${formData.name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .substring(0, 60)}-${extractedId}`
+          ),
+          { replace: true }
+        );
+      }, 800);
     } catch (error: any) {
       console.error('Update error:', error);
-      
+
       if (error.status === 409) {
         showError(
           t('dataset_nameExists', 'Dataset Name Already Exists'),
-          t('dataset_nameExistsMessage', `A dataset with the name "${formData.name.trim()}" already exists. Please choose a different name.`)
+          t(
+            'dataset_nameExistsMessage',
+            `A dataset with the name "${formData.name.trim()}" already exists. Please choose a different name.`
+          )
         );
       } else if (error.status === 404) {
         showError(
@@ -149,22 +190,39 @@ const EditDatasetPage: React.FC = () => {
       } else {
         showError(
           t('dataset_updateFailed', 'Update Failed'),
-          error.message || t('dataset_updateFailedMessage', 'Failed to update dataset. Please try again.')
+          error.message ||
+            t('dataset_updateFailedMessage', 'Failed to update dataset. Please try again.')
         );
       }
     }
-  }, [id, formData, currentDataset, formChanged, dataChanged, updateDataset, showSuccess, showError, t, navigate]);
+  }, [
+    extractedId,
+    formData,
+    currentDataset,
+    formChanged,
+    dataChanged,
+    updateDataset,
+    showSuccess,
+    showError,
+    t,
+    navigate,
+  ]);
 
   // Handle cancel/back
   const handleBack = useCallback(() => {
+    const backTarget = location?.state?.from || Routers.WORKSPACE_DATASETS;
     if (formChanged || dataChanged) {
-      if (window.confirm(t('dataset_unsavedChanges', 'You have unsaved changes. Are you sure you want to leave?'))) {
-        navigate(Routers.DATASET_DETAIL.replace(':id', id || ''));
+      if (
+        window.confirm(
+          t('dataset_unsavedChanges', 'You have unsaved changes. Are you sure you want to leave?')
+        )
+      ) {
+        navigate(backTarget);
       }
     } else {
-      navigate(Routers.DATASET_DETAIL.replace(':id', id || ''));
+      navigate(backTarget);
     }
-  }, [formChanged, dataChanged, navigate, id, t]);
+  }, [formChanged, dataChanged, navigate, t, location?.state?.from]);
 
   if (loading) {
     return <LoadingSpinner />;
@@ -183,7 +241,7 @@ const EditDatasetPage: React.FC = () => {
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               {error || t('dataset_loadErrorMessage', 'Failed to load dataset information')}
             </p>
-            <Button onClick={() => navigate(Routers.DATASET_DETAIL.replace(':id', id || ''))} className="w-full">
+            <Button onClick={() => navigate(Routers.DATASETS)} className="w-full">
               {t('dataset_backToDetail', 'Back to Dataset Detail')}
             </Button>
           </CardContent>
@@ -205,7 +263,7 @@ const EditDatasetPage: React.FC = () => {
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               {t('dataset_notFoundMessage', 'The dataset you are looking for was not found')}
             </p>
-            <Button onClick={() => navigate(Routers.DATASET_DETAIL.replace(':id', id || ''))} className="w-full">
+            <Button onClick={() => navigate(Routers.DATASETS)} className="w-full">
               {t('dataset_backToDetail', 'Back to Dataset Detail')}
             </Button>
           </CardContent>
@@ -215,6 +273,10 @@ const EditDatasetPage: React.FC = () => {
   }
 
   const hasChanges = formChanged || dataChanged;
+
+  // Derive header/body rows for editor & stats (first row is headers)
+  const headerRow = formData.data[0] || [];
+  const bodyRows = formData.data.length > 1 ? formData.data.slice(1) : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
@@ -269,27 +331,35 @@ const EditDatasetPage: React.FC = () => {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label
+                      htmlFor="name"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >
                       {t('dataset_name', 'Dataset Name')} *
                     </label>
                     <Input
                       id="name"
                       type="text"
                       value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      onChange={e => handleInputChange('name', e.target.value)}
                       placeholder={t('dataset_namePlaceholder', 'Enter dataset name')}
                       className="w-full"
                       disabled={updating}
                     />
                   </div>
                   <div>
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label
+                      htmlFor="description"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >
                       {t('dataset_description', 'Description')}
                     </label>
                     <Textarea
                       id="description"
                       value={formData.description}
-                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('description', e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                        handleInputChange('description', e.target.value)
+                      }
                       placeholder={t('dataset_descriptionPlaceholder', 'Enter dataset description')}
                       className="w-full resize-none"
                       rows={3}
@@ -313,7 +383,7 @@ const EditDatasetPage: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {formData.data.length}
+                      {bodyRows.length}
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
                       {t('dataset_rows', 'Rows')}
@@ -321,7 +391,7 @@ const EditDatasetPage: React.FC = () => {
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {formData.data[0]?.length || 0}
+                      {headerRow.length}
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
                       {t('dataset_columns', 'Columns')}
@@ -329,7 +399,9 @@ const EditDatasetPage: React.FC = () => {
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                      {currentDataset.createdAt ? new Date(currentDataset.createdAt).toLocaleDateString() : '-'}
+                      {currentDataset.createdAt
+                        ? new Date(currentDataset.createdAt).toLocaleDateString()
+                        : '-'}
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
                       {t('dataset_created', 'Created')}
@@ -337,7 +409,9 @@ const EditDatasetPage: React.FC = () => {
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                      {currentDataset.updatedAt ? new Date(currentDataset.updatedAt).toLocaleDateString() : '-'}
+                      {currentDataset.updatedAt
+                        ? new Date(currentDataset.updatedAt).toLocaleDateString()
+                        : '-'}
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
                       {t('dataset_updated', 'Updated')}
@@ -362,11 +436,15 @@ const EditDatasetPage: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <SpreadsheetEditor
-                  initialData={formData.data}
-                  onDataChange={handleDataChange}
-                  readOnly={updating}
-                  title=""
+                <CustomExcel
+                  initialData={bodyRows}
+                  initialColumns={headerRow.map(name => ({ name, type: 'string' as const }))}
+                  onDataChange={(rows, cols) => {
+                    const newHeader = cols.map(c => c.name);
+                    const new2D = [newHeader, ...rows];
+                    handleDataChange(new2D);
+                  }}
+                  mode={updating ? 'view' : 'edit'}
                 />
               </CardContent>
             </Card>

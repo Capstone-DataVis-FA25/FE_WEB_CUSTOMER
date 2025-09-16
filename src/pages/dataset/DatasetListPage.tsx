@@ -10,6 +10,7 @@ import { useToastContext } from '@/components/providers/ToastProvider';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import type { Dataset } from '@/features/dataset/datasetAPI';
+import Routers from '@/router/routers';
 
 const DatasetListPage: React.FC = () => {
   const { t } = useTranslation();
@@ -17,15 +18,8 @@ const DatasetListPage: React.FC = () => {
   const { showSuccess, showError } = useToastContext();
   const modalConfirm = useModalConfirm();
 
-  const {
-    datasets,
-    loading,
-    deleting,
-    error,
-    getDatasets,
-    deleteDataset,
-    clearDatasetError,
-  } = useDataset();
+  const { datasets, loading, deleting, error, getDatasets, deleteDataset, clearDatasetError } =
+    useDataset();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -44,10 +38,12 @@ const DatasetListPage: React.FC = () => {
   }, [error, showError, t, clearDatasetError]);
 
   // Filter datasets based on search query
-  const filteredDatasets = Array.isArray(datasets) 
-    ? datasets.filter((dataset) =>
-        dataset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (dataset.description && dataset.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredDatasets = Array.isArray(datasets)
+    ? datasets.filter(
+        dataset =>
+          dataset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (dataset.description &&
+            dataset.description.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     : [];
 
@@ -59,7 +55,10 @@ const DatasetListPage: React.FC = () => {
         await deleteDataset(dataset.id).unwrap();
         showSuccess(
           t('dataset_deleteSuccess', 'Dataset Deleted'),
-          t('dataset_deleteSuccessMessage', `Dataset "${dataset.name}" has been deleted successfully`)
+          t(
+            'dataset_deleteSuccessMessage',
+            `Dataset "${dataset.name}" has been deleted successfully`
+          )
         );
       } catch (error: any) {
         showError(
@@ -129,7 +128,7 @@ const DatasetListPage: React.FC = () => {
                 type="text"
                 placeholder={t('dataset_searchPlaceholder', 'Search datasets...')}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               />
             </div>
@@ -142,9 +141,7 @@ const DatasetListPage: React.FC = () => {
             <CardTitle className="flex items-center gap-2">
               <Database className="w-5 h-5" />
               {t('dataset_yourDatasets', 'Your Datasets')}
-              <span className="text-sm font-normal text-gray-500">
-                ({filteredDatasets.length})
-              </span>
+              <span className="text-sm font-normal text-gray-500">({filteredDatasets.length})</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -152,16 +149,14 @@ const DatasetListPage: React.FC = () => {
               <div className="text-center py-12">
                 <Database className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  {searchQuery 
+                  {searchQuery
                     ? t('dataset_noSearchResults', 'No datasets found')
-                    : t('dataset_noDatasets', 'No datasets yet')
-                  }
+                    : t('dataset_noDatasets', 'No datasets yet')}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 mb-4">
                   {searchQuery
                     ? t('dataset_noSearchResultsDesc', 'Try adjusting your search criteria')
-                    : t('dataset_noDatasetsDesc', 'Create your first dataset to get started')
-                  }
+                    : t('dataset_noDatasetsDesc', 'Create your first dataset to get started')}
                 </p>
                 {!searchQuery && (
                   <Button onClick={() => navigate('/datasets/create')}>
@@ -193,9 +188,9 @@ const DatasetListPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredDatasets.map((dataset) => (
-                      <tr 
-                        key={dataset.id} 
+                    {filteredDatasets.map(dataset => (
+                      <tr
+                        key={dataset.id}
                         className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
                       >
                         <td className="py-3 px-4">
@@ -224,7 +219,7 @@ const DatasetListPage: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => navigate(`/datasets/${dataset.id}`)}
+                              onClick={() => navigate(`/datasets/${buildSlug(dataset)}`)}
                               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
                             >
                               <Eye className="w-4 h-4" />
@@ -232,7 +227,11 @@ const DatasetListPage: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => navigate(`/datasets/${dataset.id}/edit`)}
+                              onClick={() =>
+                                navigate(Routers.EDIT_DATASET, {
+                                  state: { datasetId: dataset.id, from: Routers.DATASETS },
+                                })
+                              }
                               className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-all duration-200"
                             >
                               <Edit className="w-4 h-4" />
@@ -266,7 +265,10 @@ const DatasetListPage: React.FC = () => {
         loading={modalConfirm.isLoading}
         type="danger"
         title={t('dataset_deleteConfirmTitle', 'Delete Dataset')}
-        message={t('dataset_deleteConfirmMessage', 'Are you sure you want to delete this dataset? This action cannot be undone.')}
+        message={t(
+          'dataset_deleteConfirmMessage',
+          'Are you sure you want to delete this dataset? This action cannot be undone.'
+        )}
         confirmText={t('dataset_delete', 'Delete')}
         cancelText={t('common_cancel', 'Cancel')}
       />
@@ -275,3 +277,13 @@ const DatasetListPage: React.FC = () => {
 };
 
 export default DatasetListPage;
+
+// helper to build slug from dataset (duplicated also in detail page; consider centralizing later)
+function buildSlug(ds: { id: string; name?: string }) {
+  const namePart = (ds.name || 'dataset')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 60);
+  return `${namePart}-${ds.id}`;
+}

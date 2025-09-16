@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { 
-  ArrowLeft, 
-  Edit, 
-  Trash2, 
-  Download, 
-  Database, 
+import {
+  ArrowLeft,
+  Edit,
+  Trash2,
+  Download,
+  Database,
   Calendar,
-  User,
   FileText,
   BarChart3,
-  Settings
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,11 +19,14 @@ import { useDataset } from '@/features/dataset/useDataset';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
-import SpreadsheetEditor from '@/components/excel/SpreadsheetEditor';
+
 import Routers from '@/router/routers';
+import CustomExcel from '@/components/excel/CustomExcel';
 
 const DatasetDetailPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id: legacyId, slug } = useParams<{ id?: string; slug?: string }>();
+  const rawParam = slug || legacyId || '';
+  const extractedId = rawParam.split('-').pop() || rawParam;
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { showSuccess, showError } = useToastContext();
@@ -45,13 +47,13 @@ const DatasetDetailPage: React.FC = () => {
 
   // Fetch dataset on component mount
   useEffect(() => {
-    if (id) {
-      getDatasetById(id);
+    if (extractedId) {
+      getDatasetById(extractedId);
     }
     return () => {
       clearCurrent();
     };
-  }, [id, getDatasetById, clearCurrent]);
+  }, [extractedId, getDatasetById, clearCurrent]);
 
   // Show error toast when error occurs
   useEffect(() => {
@@ -64,15 +66,19 @@ const DatasetDetailPage: React.FC = () => {
   // Handle delete dataset
   const handleDeleteDataset = async () => {
     if (!currentDataset) return;
-    
+
     modalConfirm.openConfirm(async () => {
       try {
         await deleteDataset(currentDataset.id).unwrap();
+        // build list route
+        navigate(Routers.DATASETS);
         showSuccess(
           t('dataset_deleteSuccess', 'Dataset Deleted'),
-          t('dataset_deleteSuccessMessage', `Dataset "${currentDataset.name}" has been deleted successfully`)
+          t(
+            'dataset_deleteSuccessMessage',
+            `Dataset "${currentDataset.name}" has been deleted successfully`
+          )
         );
-        navigate('/datasets');
       } catch (error: any) {
         showError(
           t('dataset_deleteError', 'Delete Failed'),
@@ -86,8 +92,20 @@ const DatasetDetailPage: React.FC = () => {
   const handleExportDataset = () => {
     if (!currentDataset) return;
 
-    const csvContent = currentDataset.data
-      .map(row => row.map(cell => `"${cell}"`).join(','))
+    // Build tableData from headers (same logic as below)
+    const headerNames = currentDataset.headers?.map(h => h.name) || [];
+    const rowCount = currentDataset.rowCount || 0;
+    const rows: string[][] = Array.from({ length: rowCount }, () =>
+      Array(headerNames.length).fill('')
+    );
+    currentDataset.headers?.forEach((h, colIdx) => {
+      (h as any).data?.forEach((cell: any, rowIdx: number) => {
+        if (rows[rowIdx]) rows[rowIdx][colIdx] = String(cell ?? '');
+      });
+    });
+
+    const csvContent = [headerNames, ...rows]
+      .map((row: string[]) => row.map((cell: string) => `"${cell.replace(/"/g, '""')}"`).join(','))
       .join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -130,10 +148,13 @@ const DatasetDetailPage: React.FC = () => {
             {t('dataset_notFound', 'Dataset Not Found')}
           </h2>
           <p className="text-gray-600 dark:text-gray-300 mb-4">
-            {t('dataset_notFoundMessage', 'The dataset you are looking for does not exist or you do not have access to it.')}
+            {t(
+              'dataset_notFoundMessage',
+              'The dataset you are looking for does not exist or you do not have access to it.'
+            )}
           </p>
-          <Button 
-            onClick={() => navigate('/datasets')}
+          <Button
+            onClick={() => navigate(Routers.WORKSPACE_DATASETS)}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -144,6 +165,20 @@ const DatasetDetailPage: React.FC = () => {
     );
   }
 
+  // Build structured columns + rows for CustomExcel (first row is headers in edit page; here we send body & columns separately)
+  let bodyRows: string[][] = [];
+  let columnDefs: { name: string; type: 'string' }[] = [];
+  if (currentDataset.headers && currentDataset.headers.length) {
+    columnDefs = currentDataset.headers.map(h => ({ name: h.name, type: 'string' as const }));
+    const rowCount = currentDataset.rowCount;
+    bodyRows = Array.from({ length: rowCount }, () => Array(columnDefs.length).fill(''));
+    currentDataset.headers.forEach((h, idx) => {
+      (h as any).data?.forEach((cell: any, rowIdx: number) => {
+        if (bodyRows[rowIdx]) bodyRows[rowIdx][idx] = String(cell ?? '');
+      });
+    });
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -152,7 +187,7 @@ const DatasetDetailPage: React.FC = () => {
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
-              onClick={() => navigate('/datasets')}
+              onClick={() => navigate(Routers.WORKSPACE_DATASETS)}
               className="flex items-center gap-2 backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -179,7 +214,11 @@ const DatasetDetailPage: React.FC = () => {
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate(Routers.EDIT_DATASET.replace(':id', currentDataset.id))}
+              onClick={() =>
+                navigate(Routers.EDIT_DATASET, {
+                  state: { datasetId: currentDataset.id, from: window.location.pathname },
+                })
+              }
               className="flex items-center gap-2 backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
             >
               <Edit className="w-4 h-4" />
@@ -225,7 +264,7 @@ const DatasetDetailPage: React.FC = () => {
 
         {/* Tab Content */}
         {activeTab === 'data' ? (
-          <Card>
+          <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
@@ -236,11 +275,7 @@ const DatasetDetailPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <SpreadsheetEditor
-                initialData={currentDataset.data}
-                readOnly={true}
-                title=""
-              />
+              <CustomExcel initialData={bodyRows} initialColumns={columnDefs} mode="view" />
             </CardContent>
           </Card>
         ) : (
@@ -304,22 +339,6 @@ const DatasetDetailPage: React.FC = () => {
                     {formatDate(currentDataset.updatedAt)}
                   </p>
                 </div>
-                {currentDataset.user && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      {t('dataset_owner', 'Owner')}
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-gray-400" />
-                      <p className="text-gray-900 dark:text-white">
-                        {currentDataset.user.firstName && currentDataset.user.lastName
-                          ? `${currentDataset.user.firstName} ${currentDataset.user.lastName}`
-                          : currentDataset.user.email
-                        }
-                      </p>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
@@ -334,7 +353,10 @@ const DatasetDetailPage: React.FC = () => {
         loading={modalConfirm.isLoading}
         type="danger"
         title={t('dataset_deleteConfirmTitle', 'Delete Dataset')}
-        message={t('dataset_deleteConfirmMessage', 'Are you sure you want to delete this dataset? This action cannot be undone.')}
+        message={t(
+          'dataset_deleteConfirmMessage',
+          'Are you sure you want to delete this dataset? This action cannot be undone.'
+        )}
         confirmText={t('dataset_delete', 'Delete')}
         cancelText={t('common_cancel', 'Cancel')}
       />

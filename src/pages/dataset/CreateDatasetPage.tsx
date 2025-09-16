@@ -1,3 +1,4 @@
+import React from 'react';
 import DataViewer from '@/components/dataset/DataViewer';
 import FileUpload from '@/components/dataset/FileUpload';
 import SampleDataUpload from '@/components/dataset/SampleDataUpload';
@@ -6,7 +7,7 @@ import UploadMethodNavigation from '@/components/dataset/UploadMethodNavigation'
 import { useToastContext } from '@/components/providers/ToastProvider';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useAppDispatch } from '@/store/hooks';
 import { createDatasetThunk } from '@/features/dataset/datasetThunk';
 import { SlideInUp } from '@/theme/animation';
 import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
@@ -25,6 +26,7 @@ import {
 } from '@/utils/dataProcessors';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import buildSlug from '@/utils/slug';
 
 type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view';
 
@@ -33,7 +35,6 @@ function CreateDatasetPageContent() {
   const { t } = useTranslation();
   const { showSuccess, showError, showWarning } = useToastContext();
   const dispatch = useAppDispatch();
-  const { creating } = useAppSelector(state => state.dataset);
 
   // Get states from context
   const {
@@ -42,7 +43,6 @@ function CreateDatasetPageContent() {
     parsedData,
     setParsedData,
     setOriginalHeaders,
-    isJsonFormat,
     setIsJsonFormat,
     setSelectedDelimiter,
     resetState,
@@ -206,6 +206,15 @@ function CreateDatasetPageContent() {
 
       if (createDatasetThunk.fulfilled.match(result)) {
         showSuccess('Dataset Created Successfully', 'Your dataset has been created and saved');
+
+        // Navigate to detail page with pretty slug
+        const created = result.payload as any; // dataset object
+        if (created && created.id) {
+          const slug = buildSlug({ id: created.id, name: created.name });
+          window.setTimeout(() => {
+            window.location.href = `/datasets/${slug}`; // using href to fully reset state/context
+          }, 300);
+        }
 
         // Reset state after successful upload
         setSelectedFile(null);
