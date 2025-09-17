@@ -1,24 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Plus,
-  Eye,
-  EyeOff,
-  Trash2,
-  Table,
-  Save,
-  X,
-  Settings,
-  Database,
-  Sliders,
-  TrendingUp,
-  Edit3,
-  ChevronDown,
-  ChevronUp,
-  Download,
-  Upload,
-  RotateCcw,
-} from 'lucide-react';
+import { Plus, Trash2, Table, Save, X, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { convertArrayToChartData } from '@/utils/dataConverter';
 import D3BarChart from './D3BarChart';
@@ -26,101 +8,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 
-// Common chart size presets
-const sizePresets = {
-  tiny: { width: 300, height: 200, labelKey: 'barChart_editor_preset_tiny' },
-  small: { width: 400, height: 250, labelKey: 'barChart_editor_preset_small' },
-  medium: { width: 600, height: 375, labelKey: 'barChart_editor_preset_medium' },
-  large: { width: 800, height: 500, labelKey: 'barChart_editor_preset_large' },
-  xlarge: { width: 1000, height: 625, labelKey: 'barChart_editor_preset_xlarge' },
-  wide: { width: 1200, height: 400, labelKey: 'barChart_editor_preset_wide' },
-  ultrawide: { width: 1400, height: 350, labelKey: 'barChart_editor_preset_ultrawide' },
-  square: { width: 500, height: 500, labelKey: 'barChart_editor_preset_square' },
-  presentation: { width: 1024, height: 768, labelKey: 'barChart_editor_preset_presentation' },
-  mobile: { width: 350, height: 300, labelKey: 'barChart_editor_preset_mobile' },
-  tablet: { width: 768, height: 480, labelKey: 'barChart_editor_preset_tablet' },
-  responsive: { width: 0, height: 0, labelKey: 'barChart_editor_preset_responsive' },
-};
-
-// Types
-export interface ChartDataPoint {
-  [key: string]: string | number;
-}
-
-// BarChart configuration interface
-export interface BarChartConfig {
-  width: number;
-  height: number;
-  margin: { top: number; right: number; bottom: number; left: number };
-  xAxisKey: string;
-  yAxisKeys: string[];
-  disabledBars: string[]; // New field for disabled bars
-  title: string;
-  xAxisLabel: string;
-  yAxisLabel: string;
-  showLegend: boolean;
-  showGrid: boolean;
-  animationDuration: number;
-  barType: 'grouped' | 'stacked';
-  xAxisStart: 'auto' | 'zero' | number; // New field for X-axis start
-  yAxisStart: 'auto' | 'zero' | number; // New field for Y-axis start
-
-  // New styling configs
-  barWidth: number; // Width of bars
-  barSpacing: number; // Spacing between bars
-  gridOpacity: number; // Grid transparency
-  legendPosition: 'top' | 'bottom' | 'left' | 'right'; // Legend position
-
-  // New axis configs
-  xAxisRotation: number; // X-axis label rotation in degrees
-  yAxisRotation: number; // Y-axis label rotation in degrees
-  showAxisLabels: boolean; // Show/hide axis labels
-  showAxisTicks: boolean; // Show/hide axis ticks
-
-  // New interaction configs
-  enableZoom: boolean; // Enable zoom functionality
-  showTooltip: boolean; // Show/hide tooltips
-
-  // New visual configs
-  theme: 'light' | 'dark' | 'auto'; // Chart theme
-  backgroundColor: string; // Chart background color
-  titleFontSize: number; // Title font size
-  labelFontSize: number; // Axis label font size
-  legendFontSize: number; // Legend font size
-}
-
-// Formatter configuration
-export interface FormatterConfig {
-  useYFormatter: boolean;
-  useXFormatter: boolean;
-  yFormatterType:
-    | 'currency'
-    | 'percentage'
-    | 'number'
-    | 'decimal'
-    | 'scientific'
-    | 'bytes'
-    | 'duration'
-    | 'date'
-    | 'custom';
-  xFormatterType:
-    | 'currency'
-    | 'percentage'
-    | 'number'
-    | 'decimal'
-    | 'scientific'
-    | 'bytes'
-    | 'duration'
-    | 'date'
-    | 'custom';
-  customYFormatter: string;
-  customXFormatter: string;
-}
-
-// Color configuration
-export type ColorConfig = Record<string, { light: string; dark: string }>;
+import {
+  sizePresets,
+  type ChartDataPoint,
+  type BarChartConfig,
+  type ColorConfig,
+  type FormatterConfig,
+} from '@/types/chart';
+import {
+  DataEditorSection,
+  BasicSettingsSection,
+  ChartSettingsSection,
+  AxisConfigurationSection,
+  SeriesManagement,
+} from '@/components/charts/ChartEditorShared';
 
 // Props for BarChart Editor
 export interface BarChartEditorProps {
@@ -202,6 +104,8 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
 
     // New interaction configs defaults
     enableZoom: false,
+    enablePan: false,
+    zoomExtent: 8,
     showTooltip: true,
 
     // New visual configs defaults
@@ -289,6 +193,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
   // Collapse state for sections - THÊM MỚI
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     basicSettings: true, // Open basic settings by default
+    chartSettings: true,
     axisConfiguration: true,
     displayOptions: true,
     seriesManagement: true,
@@ -333,6 +238,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     if (!arraysEqual(yKeys, config.yAxisKeys) || !arraysEqual(disabled, config.disabledBars)) {
       updateConfig({ yAxisKeys: yKeys, disabledBars: disabled });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seriesConfigs]);
 
   // Calculate responsive fontSize based on chart dimensions (for future use)
@@ -554,23 +460,6 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
 
   // Note: Y-axis keys are managed by seriesConfigs now
 
-  // Toggle bar visibility
-  const toggleBarVisibility = (key: string) => {
-    setSeriesConfigs(prev =>
-      prev.map(s => (s.dataColumn === key ? { ...s, visible: !s.visible } : s))
-    );
-  };
-
-  const updateColor = (key: string, theme: 'light' | 'dark', value: string) => {
-    updateColors({
-      ...colors,
-      [key]: {
-        ...colors[key],
-        [theme]: value,
-      },
-    });
-  };
-
   // Series helpers similar to LineChart
   const getAvailableColumns = () => {
     return Object.keys(data[0] || {}).filter(
@@ -728,6 +617,8 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
       showAxisLabels: true,
       showAxisTicks: true,
       enableZoom: false,
+      enablePan: false,
+      zoomExtent: 8,
       showTooltip: true,
       theme: 'auto',
       backgroundColor: 'transparent',
@@ -781,6 +672,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
       });
       setSeriesConfigs(newSeries);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.yAxisKeys, config.disabledBars]);
 
   // Apply color preset
@@ -818,126 +710,14 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                <CardHeader
-                  className="flex flex-row items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
-                  onClick={() => toggleSection('dataEditor')}
-                >
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Database className="h-5 w-5" />
-                    {t('barChart_editor_editData')}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    {!collapsedSections.dataEditor && (
-                      <Button
-                        onClick={e => {
-                          e.stopPropagation();
-                          openDataModal();
-                        }}
-                        size="sm"
-                        variant="outline"
-                      >
-                        <Edit3 className="h-4 w-4 mr-1" />
-                        {t('barChart_editor_editData')}
-                      </Button>
-                    )}
-                    {collapsedSections.dataEditor ? (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
-                    )}
-                  </div>
-                </CardHeader>
-                {!collapsedSections.dataEditor && (
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="mb-2 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg mt-2">
-                        <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
-                          <Table className="h-4 w-4" />
-                          <span className="text-sm font-medium">{t('watch_data_before')}</span>
-                        </div>
-                        <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                          {t('press_data_before')}
-                        </p>
-                      </div>
-
-                      {data && data.length > 0 && (
-                        <>
-                          <div className="max-h-48 overflow-auto rounded-md border border-gray-200 dark:border-gray-700">
-                            <table className="w-full text-xs">
-                              <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10">
-                                <tr>
-                                  <th className="px-3 py-2 text-left text-gray-600 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 w-10">
-                                    #
-                                  </th>
-                                  {Object.keys(data[0]).map(key => {
-                                    const firstVal = data[0][
-                                      key as keyof (typeof data)[0]
-                                    ] as unknown;
-                                    const isNum =
-                                      typeof firstVal === 'number' ||
-                                      (!isNaN(Number(firstVal)) &&
-                                        firstVal !== '' &&
-                                        firstVal !== null);
-                                    return (
-                                      <th
-                                        key={key}
-                                        className={`px-3 py-2 border-r last:border-r-0 border-gray-200 dark:border-gray-600 ${isNum ? 'text-right' : 'text-left'} text-gray-600 dark:text-gray-300`}
-                                      >
-                                        {String(key).toUpperCase()}
-                                      </th>
-                                    );
-                                  })}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {data.slice(0, 5).map((row, index) => (
-                                  <tr
-                                    key={index}
-                                    className={`${index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700/50'} hover:bg-gray-50 dark:hover:bg-gray-700`}
-                                  >
-                                    <td className="px-3 py-2 border-r border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200">
-                                      {index + 1}
-                                    </td>
-                                    {Object.keys(row).map((key, valueIndex) => {
-                                      const value = row[key];
-                                      const isNum =
-                                        typeof value === 'number' ||
-                                        (!isNaN(Number(value)) && value !== '' && value !== null);
-                                      return (
-                                        <td
-                                          key={`${index}-${valueIndex}`}
-                                          className={`px-3 py-2 border-r last:border-r-0 border-gray-200 dark:border-gray-600 ${isNum ? 'text-right tabular-nums' : 'text-left'} text-gray-800 dark:text-gray-100`}
-                                        >
-                                          {String(value)}
-                                        </td>
-                                      );
-                                    })}
-                                  </tr>
-                                ))}
-                                {data.length > 5 && (
-                                  <tr>
-                                    <td
-                                      colSpan={1 + Object.keys(data[0]).length}
-                                      className="px-3 py-2 text-center text-gray-500 dark:text-gray-400"
-                                    >
-                                      Và {data.length - 5} dòng khác... (Nhấp `Chỉnh sửa dữ liệu` để
-                                      xem tất cả)
-                                    </td>
-                                  </tr>
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                          <div className="text-center text-xs text-gray-600 dark:text-gray-300 mt-2">
-                            Tổng cộng {data.length} điểm dữ liệu
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
+              <DataEditorSection
+                data={data}
+                xAxisKey={config.xAxisKey}
+                yAxisKeys={config.yAxisKeys}
+                isCollapsed={collapsedSections.dataEditor}
+                onToggleCollapse={() => toggleSection('dataEditor')}
+                onOpenModal={openDataModal}
+              />
             </motion.div>
 
             {/* Basic Settings */}
@@ -946,839 +726,74 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
-              <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                <CardHeader
-                  className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
-                  onClick={() => toggleSection('basicSettings')}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                      <Settings className="h-5 w-5" />
-                      {t('barChart_editor_basicSettings')}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      {!collapsedSections.basicSettings && (
-                        <div className="relative" ref={configDropdownRef}>
-                          <Button
-                            onClick={e => {
-                              e.stopPropagation();
-                              setShowConfigDropdown(!showConfigDropdown);
-                            }}
-                            size="sm"
-                            variant="outline"
-                            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                            title={t('barChart_editor_configManagement')}
-                          >
-                            <Settings className="h-4 w-4" />
-                            <span className="hidden sm:inline">
-                              {t('barChart_editor_configManagement')}
-                            </span>
-                            <ChevronDown className="h-3 w-3" />
-                          </Button>
-
-                          {/* Dropdown Menu */}
-                          {showConfigDropdown && (
-                            <div className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 z-50 overflow-hidden">
-                              <div className="py-2">
-                                {/* Header */}
-                                <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-600">
-                                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <Settings className="h-4 w-4" />
-                                    {t('barChart_editor_configManagement')}
-                                  </h4>
-                                </div>
-
-                                {/* Export/Import Actions */}
-                                <div className="px-2 py-1">
-                                  <button
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      exportConfigToJSON();
-                                      setShowConfigDropdown(false);
-                                    }}
-                                    className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md flex items-center gap-3 transition-colors"
-                                  >
-                                    <Download className="h-4 w-4 text-green-600" />
-                                    <div>
-                                      <div className="font-medium">
-                                        {t('barChart_editor_downloadConfig')}
-                                      </div>
-                                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                                        {t('barChart_editor_exportSettingsAsJSON')}
-                                      </div>
-                                    </div>
-                                  </button>
-                                  <button
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      importConfigFromJSON();
-                                      setShowConfigDropdown(false);
-                                    }}
-                                    className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md flex items-center gap-3 transition-colors"
-                                  >
-                                    <Upload className="h-4 w-4 text-blue-600" />
-                                    <div>
-                                      <div className="font-medium">
-                                        {t('barChart_editor_uploadConfig')}
-                                      </div>
-                                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                                        {t('barChart_editor_loadSettingsFromJSON')}
-                                      </div>
-                                    </div>
-                                  </button>
-                                </div>
-
-                                <div className="border-t border-gray-200 dark:border-gray-600 mx-2"></div>
-
-                                {/* Reset Action */}
-                                <div className="px-2 py-1">
-                                  <button
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      resetToDefaultConfig();
-                                      setShowConfigDropdown(false);
-                                    }}
-                                    className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-md flex items-center gap-3 transition-colors"
-                                  >
-                                    <RotateCcw className="h-4 w-4 text-orange-600" />
-                                    <div>
-                                      <div className="font-medium">
-                                        {t('barChart_editor_resetToDefault')}
-                                      </div>
-                                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                                        {t('barChart_editor_restoreDefaultSettings')}
-                                      </div>
-                                    </div>
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {collapsedSections.basicSettings ? (
-                        <ChevronDown className="h-5 w-5 text-gray-500" />
-                      ) : (
-                        <ChevronUp className="h-5 w-5 text-gray-500" />
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                {!collapsedSections.basicSettings && (
-                  <CardContent className="space-y-4">
-                    {/* Size Presets */}
-                    <div>
-                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {t('barChart_editor_sizePresets')}
-                      </Label>
-                      <div className="grid grid-cols-2 gap-2 mt-2 max-h overflow-y-auto">
-                        {Object.entries(sizePresets).map(([key, preset]) => (
-                          <Button
-                            key={key}
-                            variant={
-                              (preset.width === config.width && preset.height === config.height) ||
-                              (key === 'responsive' && preset.width === 0)
-                                ? 'default'
-                                : 'outline'
-                            }
-                            size="sm"
-                            onClick={() => applySizePreset(key as keyof typeof sizePresets)}
-                            className="text-xs h-8 justify-start hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            {t(preset.labelKey)}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Custom Width and Height */}
-                    <div>
-                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {t('barChart_editor_customSize')}
-                      </Label>
-                      <div className="grid grid-cols-2 gap-3 mt-2">
-                        <div>
-                          <Label className="text-xs text-gray-600 dark:text-gray-400">
-                            {t('barChart_editor_width')}
-                          </Label>
-                          <Input
-                            type="number"
-                            value={config.width}
-                            onChange={e => {
-                              const newWidth = parseInt(e.target.value);
-                              if (!isNaN(newWidth) && newWidth > 0) {
-                                updateConfig({ width: newWidth });
-                              }
-                            }}
-                            className="mt-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                            min="1"
-                            step="10"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-600 dark:text-gray-400">
-                            {t('barChart_editor_height')}
-                          </Label>
-                          <Input
-                            type="number"
-                            value={config.height}
-                            onChange={e => {
-                              const newHeight = parseInt(e.target.value);
-                              if (!isNaN(newHeight) && newHeight > 0) {
-                                updateConfig({ height: newHeight });
-                              }
-                            }}
-                            className="mt-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                            min="1"
-                            step="10"
-                          />
-                        </div>
-                      </div>
-                      <div className="text-center mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                        <p className="text-xs text-gray-600 dark:text-gray-300">
-                          {t('barChart_editor_currentSize')}: {config.width} × {config.height}px |{' '}
-                          {t('barChart_editor_ratio')}: {(config.width / config.height).toFixed(2)}
-                          :1
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Padding Configuration */}
-                    <div>
-                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {t('barChart_editor_padding')}
-                      </Label>
-                      <div className="mt-2">
-                        {/* Visual Padding Editor */}
-                        <div className="relative bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                          {/* Top */}
-                          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                            <Input
-                              type="number"
-                              value={config.margin.top}
-                              onChange={e => {
-                                const newTop = parseInt(e.target.value) || 0;
-                                updateConfig({
-                                  margin: { ...config.margin, top: Math.max(0, newTop) },
-                                });
-                              }}
-                              className="w-16 h-8 text-xs text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                              min="0"
-                            />
-                          </div>
-
-                          {/* Left */}
-                          <div className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                            <Input
-                              type="number"
-                              value={config.margin.left}
-                              onChange={e => {
-                                const newLeft = parseInt(e.target.value) || 0;
-                                updateConfig({
-                                  margin: { ...config.margin, left: Math.max(0, newLeft) },
-                                });
-                              }}
-                              className="w-16 h-8 text-xs text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                              min="0"
-                            />
-                          </div>
-
-                          {/* Right */}
-                          <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2">
-                            <Input
-                              type="number"
-                              value={config.margin.right}
-                              onChange={e => {
-                                const newRight = parseInt(e.target.value) || 0;
-                                updateConfig({
-                                  margin: { ...config.margin, right: Math.max(0, newRight) },
-                                });
-                              }}
-                              className="w-16 h-8 text-xs text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                              min="0"
-                            />
-                          </div>
-
-                          {/* Bottom */}
-                          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
-                            <Input
-                              type="number"
-                              value={config.margin.bottom}
-                              onChange={e => {
-                                const newBottom = parseInt(e.target.value) || 0;
-                                updateConfig({
-                                  margin: { ...config.margin, bottom: Math.max(0, newBottom) },
-                                });
-                              }}
-                              className="w-16 h-8 text-xs text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                              min="0"
-                            />
-                          </div>
-
-                          {/* Center Chart Area Representation */}
-                          <div className="bg-white dark:bg-gray-600 border-2 border-dashed border-gray-300 dark:border-gray-500 rounded h-20 flex items-center justify-center">
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {t('barChart_editor_chartArea')}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Padding Values Display */}
-                        <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-600 rounded text-xs">
-                          <div className="grid grid-cols-4 gap-2 text-center">
-                            <div>
-                              <span className="text-gray-600 dark:text-gray-300">
-                                {t('barChart_editor_top')}:
-                              </span>
-                              <div className="font-mono">{config.margin.top}px</div>
-                            </div>
-                            <div>
-                              <span className="text-gray-600 dark:text-gray-300">
-                                {t('barChart_editor_right')}:
-                              </span>
-                              <div className="font-mono">{config.margin.right}px</div>
-                            </div>
-                            <div>
-                              <span className="text-gray-600 dark:text-gray-300">
-                                {t('barChart_editor_bottom')}:
-                              </span>
-                              <div className="font-mono">{config.margin.bottom}px</div>
-                            </div>
-                            <div>
-                              <span className="text-gray-600 dark:text-gray-300">
-                                {t('barChart_editor_left')}:
-                              </span>
-                              <div className="font-mono">{config.margin.left}px</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {t('barChart_editor_title_chart')}
-                      </Label>
-                      <Input
-                        value={config.title}
-                        onChange={e => updateConfig({ title: e.target.value })}
-                        className="mt-1"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {t('barChart_editor_xAxisLabel')}
-                        </Label>
-                        <Input
-                          value={config.xAxisLabel}
-                          onChange={e => updateConfig({ xAxisLabel: e.target.value })}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {t('barChart_editor_yAxisLabel')}
-                        </Label>
-                        <Input
-                          value={config.yAxisLabel}
-                          onChange={e => updateConfig({ yAxisLabel: e.target.value })}
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {t('barChart_editor_animationDuration')}
-                      </Label>
-                      <Input
-                        type="number"
-                        value={config.animationDuration}
-                        onChange={e =>
-                          updateConfig({ animationDuration: parseInt(e.target.value) || 1000 })
-                        }
-                        className="mt-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {t('barChart_editor_displayOptions')}
-                      </Label>
-                      <div className="flex items-center space-x-2 mt-1 mb-1">
-                        <Checkbox
-                          id="showLegend"
-                          checked={config.showLegend}
-                          onCheckedChange={checked => updateConfig({ showLegend: !!checked })}
-                        />
-                        <Label
-                          htmlFor="showLegend"
-                          className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                        >
-                          {t('barChart_editor_showLegend')}
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2 mb-1">
-                        <Checkbox
-                          id="showGrid"
-                          checked={config.showGrid}
-                          onCheckedChange={checked => updateConfig({ showGrid: !!checked })}
-                        />
-                        <Label
-                          htmlFor="showGrid"
-                          className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                        >
-                          {t('barChart_editor_showGrid')}
-                        </Label>
-                      </div>
-
-                      {/* Styling Configuration */}
-                      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                        <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-                          {t('barChart_editor_defaultStyling')}
-                        </h4>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          {/* Bar Width */}
-                          <div>
-                            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {t('barChart_editor_barWidth')}
-                            </Label>
-                            <Input
-                              type="number"
-                              min="0.1"
-                              max="1"
-                              step="0.05"
-                              value={config.barWidth}
-                              onChange={e =>
-                                updateConfig({ barWidth: parseFloat(e.target.value) || 0.8 })
-                              }
-                              className="mt-1"
-                            />
-                          </div>
-
-                          {/* Bar Spacing */}
-                          <div>
-                            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {t('barChart_editor_barSpacing')}
-                            </Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              max="0.5"
-                              step="0.05"
-                              value={config.barSpacing}
-                              onChange={e =>
-                                updateConfig({ barSpacing: parseFloat(e.target.value) || 0.1 })
-                              }
-                              className="mt-1"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Chart Configuration */}
-                      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                        <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-                          {t('barChart_editor_chartSettings')}
-                        </h4>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          {/* Grid Opacity */}
-                          <div>
-                            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {t('barChart_editor_gridOpacity')}
-                            </Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              max="1"
-                              step="0.1"
-                              value={config.gridOpacity}
-                              onChange={e =>
-                                updateConfig({ gridOpacity: parseFloat(e.target.value) || 0.3 })
-                              }
-                              className="mt-1"
-                            />
-                          </div>
-
-                          {/* Legend Position */}
-                          <div>
-                            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {t('barChart_editor_legendPosition')}
-                            </Label>
-                            <select
-                              value={config.legendPosition}
-                              onChange={e =>
-                                updateConfig({
-                                  legendPosition: e.target.value as
-                                    | 'top'
-                                    | 'bottom'
-                                    | 'left'
-                                    | 'right',
-                                })
-                              }
-                              className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                            >
-                              <option value="top">{t('barChart_editor_top')}</option>
-                              <option value="bottom">{t('barChart_editor_bottom')}</option>
-                              <option value="left">{t('barChart_editor_left')}</option>
-                              <option value="right">{t('barChart_editor_right')}</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Interactive Configuration */}
-                      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                        <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-                          {t('barChart_editor_interactiveOptions')}
-                        </h4>
-
-                        <div className="space-y-3">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="showTooltip"
-                              checked={config.showTooltip}
-                              onCheckedChange={checked => updateConfig({ showTooltip: !!checked })}
-                            />
-                            <Label
-                              htmlFor="showTooltip"
-                              className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                            >
-                              {t('barChart_editor_showTooltip')}
-                            </Label>
-                          </div>
-
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="enableZoom"
-                              checked={config.enableZoom}
-                              onCheckedChange={checked => updateConfig({ enableZoom: !!checked })}
-                            />
-                            <Label
-                              htmlFor="enableZoom"
-                              className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                            >
-                              {t('barChart_editor_enableZoom')}
-                            </Label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Theme Configuration */}
-                      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                        <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-                          {t('barChart_editor_themeColors')}
-                        </h4>
-
-                        <div className="grid grid-cols-2 gap-4 mb-2">
-                          {/* Theme */}
-                          <div>
-                            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {t('barChart_editor_theme')}
-                            </Label>
-                            <select
-                              value={config.theme}
-                              onChange={e =>
-                                updateConfig({ theme: e.target.value as 'light' | 'dark' | 'auto' })
-                              }
-                              className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                            >
-                              <option value="auto">{t('barChart_editor_auto')}</option>
-                              <option value="light">{t('barChart_editor_light')}</option>
-                              <option value="dark">{t('barChart_editor_dark')}</option>
-                            </select>
-                          </div>
-
-                          {/* Background Color */}
-                          <div>
-                            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {t('barChart_editor_backgroundColor')}
-                            </Label>
-                            <div className="flex gap-2 mt-1">
-                              <Input
-                                type="color"
-                                value={
-                                  config.backgroundColor === 'transparent'
-                                    ? '#ffffff'
-                                    : config.backgroundColor
-                                }
-                                onChange={e => updateConfig({ backgroundColor: e.target.value })}
-                                className="h-10 flex-1"
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => updateConfig({ backgroundColor: 'transparent' })}
-                                className="px-3 h-10 text-xs"
-                                title={t('barChart_editor_resetToTransparent')}
-                              >
-                                {t('barChart_editor_transparent')}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Font Size Configuration */}
-                      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                        <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-                          {t('barChart_editor_fontSizes')}
-                        </h4>
-
-                        <div className="grid grid-cols-3 gap-4">
-                          {/* Title Font Size */}
-                          <div>
-                            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {t('barChart_editor_titleSize')}
-                            </Label>
-                            <Input
-                              type="number"
-                              min="8"
-                              max="36"
-                              value={config.titleFontSize}
-                              onChange={e =>
-                                updateConfig({ titleFontSize: parseInt(e.target.value) || 16 })
-                              }
-                              className="mt-1"
-                            />
-                          </div>
-
-                          {/* Label Font Size */}
-                          <div>
-                            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {t('barChart_editor_labelSize')}
-                            </Label>
-                            <Input
-                              type="number"
-                              min="6"
-                              max="24"
-                              value={config.labelFontSize}
-                              onChange={e =>
-                                updateConfig({ labelFontSize: parseInt(e.target.value) || 12 })
-                              }
-                              className="mt-1"
-                            />
-                          </div>
-
-                          {/* Legend Font Size */}
-                          <div>
-                            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {t('barChart_editor_legendSize')}
-                            </Label>
-                            <Input
-                              type="number"
-                              min="6"
-                              max="20"
-                              value={config.legendFontSize}
-                              onChange={e =>
-                                updateConfig({ legendFontSize: parseInt(e.target.value) || 11 })
-                              }
-                              className="mt-1"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
+              <BasicSettingsSection
+                config={{
+                  width: config.width,
+                  height: config.height,
+                  margin: config.margin,
+                  title: config.title,
+                }}
+                isCollapsed={collapsedSections.basicSettings}
+                onToggleCollapse={() => toggleSection('basicSettings')}
+                onUpdateConfig={updates => updateConfig(updates)}
+                onApplySizePreset={applySizePreset}
+                onExportConfig={exportConfigToJSON}
+                onImportConfig={importConfigFromJSON}
+                onResetToDefault={resetToDefaultConfig}
+                showConfigDropdown={showConfigDropdown}
+                onToggleConfigDropdown={() => setShowConfigDropdown(!showConfigDropdown)}
+                configDropdownRef={configDropdownRef}
+              />
             </motion.div>
 
-            {/* 3. AXIS CONFIGURATION SECTION */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                <CardHeader
-                  className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
-                  onClick={() => toggleSection('axisConfiguration')}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                      <Sliders className="h-5 w-5" />
-                      {t('barChart_editor_axisConfiguration', 'Cấu Hình Trục & Định Dạng')}
-                    </h3>
-                    {collapsedSections.axisConfiguration ? (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
-                    )}
-                  </div>
-                </CardHeader>
-                {!collapsedSections.axisConfiguration && (
-                  <CardContent className="space-y-4">
-                    {/* X-Axis Key Selection */}
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                        Khóa trục X
-                      </Label>
-                      <select
-                        value={config.xAxisKey}
-                        onChange={e => updateConfig({ xAxisKey: e.target.value })}
-                        className="w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      >
-                        {Object.keys(data[0] || {}).map(key => (
-                          <option key={key} value={key}>
-                            {key}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+            {/* Chart-Specific Settings */}
+            <ChartSettingsSection
+              chartType="bar"
+              config={{
+                xAxisLabel: config.xAxisLabel,
+                yAxisLabel: config.yAxisLabel,
+                animationDuration: config.animationDuration,
+                showLegend: config.showLegend,
+                showGrid: config.showGrid,
+                showTooltip: config.showTooltip,
+                enableZoom: config.enableZoom,
+                enablePan: config.enablePan || false,
+                zoomExtent: config.zoomExtent || 8,
+                gridOpacity: config.gridOpacity,
+                legendPosition: config.legendPosition,
+                theme: config.theme,
+                backgroundColor: config.backgroundColor,
+                titleFontSize: config.titleFontSize,
+                labelFontSize: config.labelFontSize,
+                legendFontSize: config.legendFontSize,
+              }}
+              barType={config.barType}
+              barWidth={config.barWidth}
+              barSpacing={config.barSpacing}
+              isCollapsed={collapsedSections.chartSettings}
+              onToggleCollapse={() => toggleSection('chartSettings')}
+              onUpdateConfig={updateConfig}
+              onUpdateChartSpecific={updateConfig}
+            />
 
-                    {/* Animation Duration */}
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                        Thời gian hoạt ảnh (ms)
-                      </Label>
-                      <Input
-                        type="number"
-                        value={config.animationDuration}
-                        onChange={e =>
-                          updateConfig({ animationDuration: parseInt(e.target.value) || 750 })
-                        }
-                        className="w-full"
-                        min="0"
-                        max="3000"
-                        step="250"
-                      />
-                    </div>
-
-                    {/* Margin Configuration */}
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
-                        Lề biểu đồ
-                      </Label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-xs text-gray-600 dark:text-gray-400">Trên</Label>
-                          <Input
-                            type="number"
-                            value={config.margin.top}
-                            onChange={e =>
-                              updateConfig({
-                                margin: { ...config.margin, top: parseInt(e.target.value) || 0 },
-                              })
-                            }
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-600 dark:text-gray-400">Phải</Label>
-                          <Input
-                            type="number"
-                            value={config.margin.right}
-                            onChange={e =>
-                              updateConfig({
-                                margin: { ...config.margin, right: parseInt(e.target.value) || 0 },
-                              })
-                            }
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-600 dark:text-gray-400">Dưới</Label>
-                          <Input
-                            type="number"
-                            value={config.margin.bottom}
-                            onChange={e =>
-                              updateConfig({
-                                margin: { ...config.margin, bottom: parseInt(e.target.value) || 0 },
-                              })
-                            }
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-600 dark:text-gray-400">Trái</Label>
-                          <Input
-                            type="number"
-                            value={config.margin.left}
-                            onChange={e =>
-                              updateConfig({
-                                margin: { ...config.margin, left: parseInt(e.target.value) || 0 },
-                              })
-                            }
-                            className="mt-1"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Formatter Options */}
-                    <div className="space-y-3">
-                      <div>
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Checkbox
-                            id="useYFormatter"
-                            checked={formatters.useYFormatter}
-                            onCheckedChange={checked =>
-                              updateFormatters({ useYFormatter: !!checked })
-                            }
-                          />
-                          <Label htmlFor="useYFormatter" className="text-sm">
-                            Định dạng trục Y
-                          </Label>
-                        </div>
-                        {formatters.useYFormatter && (
-                          <select
-                            value={formatters.yFormatterType}
-                            onChange={e =>
-                              updateFormatters({
-                                yFormatterType: e.target.value as FormatterConfig['yFormatterType'],
-                              })
-                            }
-                            className="w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          >
-                            <option value="number">Số</option>
-                            <option value="currency">Tiền tệ</option>
-                            <option value="percentage">Phần trăm</option>
-                            <option value="decimal">Thập phân</option>
-                          </select>
-                        )}
-                      </div>
-
-                      <div>
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Checkbox
-                            id="useXFormatter"
-                            checked={formatters.useXFormatter}
-                            onCheckedChange={checked =>
-                              updateFormatters({ useXFormatter: !!checked })
-                            }
-                          />
-                          <Label htmlFor="useXFormatter" className="text-sm">
-                            Định dạng trục X
-                          </Label>
-                        </div>
-                        {formatters.useXFormatter && (
-                          <select
-                            value={formatters.xFormatterType}
-                            onChange={e =>
-                              updateFormatters({
-                                xFormatterType: e.target.value as FormatterConfig['xFormatterType'],
-                              })
-                            }
-                            className="w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          >
-                            <option value="string">Chuỗi</option>
-                            <option value="number">Số</option>
-                            <option value="date">Ngày</option>
-                          </select>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
-            </motion.div>
+            {/* Axis Configuration & Formatters */}
+            <AxisConfigurationSection
+              config={{
+                xAxisKey: config.xAxisKey,
+                xAxisStart: config.xAxisStart || 'auto',
+                yAxisStart: config.yAxisStart || 'auto',
+                showAxisLabels: config.showAxisLabels,
+                showAxisTicks: config.showAxisTicks,
+                xAxisRotation: config.xAxisRotation,
+                yAxisRotation: config.yAxisRotation,
+              }}
+              data={data}
+              formatters={formatters}
+              isCollapsed={collapsedSections.axisConfiguration}
+              onToggleCollapse={() => toggleSection('axisConfiguration')}
+              onUpdateConfig={updateConfig}
+              onUpdateFormatters={updateFormatters}
+            />
 
             {/* 4. SERIES MANAGEMENT SECTION */}
             <motion.div
@@ -1794,8 +809,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                   <div className="flex items-center justify-between w-full">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                       <TrendingUp className="h-5 w-5" />
-                      {t('barChart_editor_seriesManagement', 'Quản Lý Chuỗi Dữ Liệu')} (
-                      {seriesConfigs.length})
+                      {t('chart_editor_seriesManagement')}
                     </h3>
                     <div className="flex items-center gap-2">
                       {!collapsedSections.seriesManagement && (
@@ -1809,7 +823,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                           className="bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={getAvailableColumns().length === 0}
                         >
-                          <Plus className="h-4 w-4 mr-1" /> Thêm
+                          <Plus className="h-4 w-4 mr-1" /> {t('common.add', 'Thêm')}
                         </Button>
                       )}
                       {collapsedSections.seriesManagement ? (
@@ -1822,114 +836,41 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                 </CardHeader>
                 {!collapsedSections.seriesManagement && (
                   <CardContent className="space-y-4">
-                    {/* Series list with selects */}
-                    <div className="space-y-3 max-h-72 overflow-y-auto">
-                      {seriesConfigs.map((series, index) => (
-                        <div
-                          key={series.id}
-                          className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                        >
-                          {/* Visibility toggle */}
-                          <Button
-                            onClick={() => toggleBarVisibility(series.dataColumn)}
-                            variant="ghost"
-                            size="sm"
-                            className="p-1 h-8 w-8"
-                          >
-                            {series.visible ? (
-                              <Eye className="h-4 w-4 text-blue-600" />
-                            ) : (
-                              <EyeOff className="h-4 w-4 text-gray-400" />
-                            )}
-                          </Button>
-
-                          {/* Color swatch */}
-                          <div
-                            className="w-4 h-4 rounded border-2"
-                            style={{
-                              backgroundColor:
-                                colors[series.dataColumn]?.light ||
-                                series.color ||
-                                `hsl(${index * 60}, 70%, 50%)`,
-                              borderColor:
-                                colors[series.dataColumn]?.dark ||
-                                series.color ||
-                                `hsl(${index * 60}, 70%, 40%)`,
-                            }}
-                          />
-
-                          {/* Series name */}
-                          <Input
-                            value={series.name}
-                            onChange={e => updateSeriesConfig(series.id, { name: e.target.value })}
-                            placeholder="Tên chuỗi"
-                            className="h-8 text-sm w-40"
-                          />
-
-                          {/* Data column select */}
-                          <div className="flex-1">
-                            <select
-                              value={series.dataColumn}
-                              onChange={e =>
-                                updateSeriesConfig(series.id, { dataColumn: e.target.value })
-                              }
-                              className="w-full h-9 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3"
-                            >
-                              {Object.keys(data[0] || {})
-                                .filter(
-                                  key =>
-                                    key === series.dataColumn ||
-                                    (key !== config.xAxisKey &&
-                                      !seriesConfigs.some(s => s.dataColumn === key))
-                                )
-                                .map(column => (
-                                  <option key={column} value={column}>
-                                    {column}
-                                  </option>
-                                ))}
-                            </select>
-                          </div>
-
-                          {/* Light/Dark color pickers */}
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="color"
-                              value={colors[series.dataColumn]?.light || series.color}
-                              onChange={e => {
-                                updateColor(series.dataColumn, 'light', e.target.value);
-                                updateSeriesConfig(series.id, { color: e.target.value });
-                              }}
-                              className="w-8 h-8 border rounded cursor-pointer"
-                              title="Màu sáng"
-                            />
-                            <input
-                              type="color"
-                              value={colors[series.dataColumn]?.dark || series.color}
-                              onChange={e => updateColor(series.dataColumn, 'dark', e.target.value)}
-                              className="w-8 h-8 border rounded cursor-pointer"
-                              title="Màu tối"
-                            />
-                          </div>
-
-                          {/* Remove */}
-                          {seriesConfigs.length > 1 && (
-                            <Button
-                              onClick={() => removeSeries(series.id)}
-                              variant="ghost"
-                              size="sm"
-                              className="p-1 h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                    {/* Series Management using shared component */}
+                    <SeriesManagement
+                      series={seriesConfigs}
+                      onUpdateSeries={updateSeriesConfig}
+                      onAddSeries={addSeries}
+                      onRemoveSeries={removeSeries}
+                      onMoveSeriesUp={(seriesId: string) => {
+                        const index = seriesConfigs.findIndex(s => s.id === seriesId);
+                        if (index > 0) {
+                          const newSeries = [...seriesConfigs];
+                          [newSeries[index], newSeries[index - 1]] = [
+                            newSeries[index - 1],
+                            newSeries[index],
+                          ];
+                          setSeriesConfigs(newSeries);
+                        }
+                      }}
+                      onMoveSeriesDown={(seriesId: string) => {
+                        const index = seriesConfigs.findIndex(s => s.id === seriesId);
+                        if (index < seriesConfigs.length - 1) {
+                          const newSeries = [...seriesConfigs];
+                          [newSeries[index], newSeries[index + 1]] = [
+                            newSeries[index + 1],
+                            newSeries[index],
+                          ];
+                          setSeriesConfigs(newSeries);
+                        }
+                      }}
+                      availableColumns={getAvailableColumns()}
+                    />
 
                     {/* Color Preset Buttons */}
                     <div>
                       <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                        Bảng màu có sẵn
+                        {t('chart_editor_color_presets', 'Bảng màu có sẵn')}
                       </Label>
                       <div className="grid grid-cols-2 gap-2">
                         <Button
@@ -1938,7 +879,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                           size="sm"
                           className="text-xs"
                         >
-                          Mặc định
+                          {t('chart_editor_preset_default', 'Mặc định')}
                         </Button>
                         <Button
                           onClick={() => applyColorPreset('warm')}
@@ -1946,7 +887,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                           size="sm"
                           className="text-xs"
                         >
-                          Ấm áp
+                          {t('chart_editor_preset_warm', 'Ấm áp')}
                         </Button>
                         <Button
                           onClick={() => applyColorPreset('cool')}
@@ -1954,7 +895,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                           size="sm"
                           className="text-xs"
                         >
-                          Mát mẻ
+                          {t('chart_editor_preset_cool', 'Mát mẻ')}
                         </Button>
                         <Button
                           onClick={() => applyColorPreset('pastel')}
@@ -1962,17 +903,9 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                           size="sm"
                           className="text-xs"
                         >
-                          Pastel
+                          {t('chart_editor_preset_pastel', 'Pastel')}
                         </Button>
                       </div>
-                    </div>
-
-                    {/* Series Statistics */}
-                    <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                      <div>Tổng chuỗi: {seriesConfigs.length}</div>
-                      <div>Đang hiển thị: {seriesConfigs.filter(s => s.visible).length}</div>
-                      <div>Đã ẩn: {seriesConfigs.filter(s => !s.visible).length}</div>
-                      <div>Cột khả dụng còn lại: {getAvailableColumns().length}</div>
                     </div>
                   </CardContent>
                 )}

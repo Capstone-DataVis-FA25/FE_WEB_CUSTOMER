@@ -1,6 +1,5 @@
 import * as d3 from 'd3';
 
-
 // Color configuration
 export type ColorConfig = Record<string, { light: string; dark: string }>;
 
@@ -17,23 +16,42 @@ export const curveOptions = {
   curveStepAfter: d3.curveStepAfter,
 };
 
-
-// Common chart size presets
+// Common chart size presets (unified for all chart types)
 export const sizePresets = {
-  tiny: { width: 300, height: 200, labelKey: 'lineChart_editor_preset_tiny' },
-  small: { width: 400, height: 250, labelKey: 'lineChart_editor_preset_small' },
-  medium: { width: 600, height: 375, labelKey: 'lineChart_editor_preset_medium' },
-  large: { width: 800, height: 500, labelKey: 'lineChart_editor_preset_large' },
-  xlarge: { width: 1000, height: 625, labelKey: 'lineChart_editor_preset_xlarge' },
-  wide: { width: 1200, height: 400, labelKey: 'lineChart_editor_preset_wide' },
-  ultrawide: { width: 1400, height: 350, labelKey: 'lineChart_editor_preset_ultrawide' },
-  square: { width: 500, height: 500, labelKey: 'lineChart_editor_preset_square' },
-  presentation: { width: 1024, height: 768, labelKey: 'lineChart_editor_preset_presentation' },
-  mobile: { width: 350, height: 300, labelKey: 'lineChart_editor_preset_mobile' },
-  tablet: { width: 768, height: 480, labelKey: 'lineChart_editor_preset_tablet' },
-  responsive: { width: 0, height: 0, labelKey: 'lineChart_editor_preset_responsive' }
+  tiny: { width: 300, height: 200, labelKey: 'size_preset_tiny', label: 'Tiny' },
+  small: { width: 400, height: 250, labelKey: 'size_preset_small', label: 'Small' },
+  medium: { width: 600, height: 375, labelKey: 'size_preset_medium', label: 'Medium' },
+  large: { width: 800, height: 500, labelKey: 'size_preset_large', label: 'Large' },
+  xlarge: { width: 1000, height: 625, labelKey: 'size_preset_xlarge', label: 'X-Large' },
+  wide: { width: 1200, height: 400, labelKey: 'size_preset_wide', label: 'Wide' },
+  ultrawide: { width: 1400, height: 350, labelKey: 'size_preset_ultrawide', label: 'Ultra Wide' },
+  square: { width: 500, height: 500, labelKey: 'size_preset_square', label: 'Square' },
+  presentation: {
+    width: 1024,
+    height: 768,
+    labelKey: 'size_preset_presentation',
+    label: 'Presentation',
+  },
+  mobile: { width: 350, height: 300, labelKey: 'size_preset_mobile', label: 'Mobile' },
+  tablet: { width: 768, height: 480, labelKey: 'size_preset_tablet', label: 'Tablet' },
+  responsive: { width: 0, height: 0, labelKey: 'size_preset_responsive', label: 'Responsive' },
 };
 
+// Common utility function to get responsive defaults
+export const getResponsiveDefaults = () => {
+  if (typeof window === 'undefined') {
+    return { width: 600, height: 400 };
+  }
+
+  const screenWidth = window.innerWidth;
+  const containerWidth = Math.min(screenWidth * 0.8, 1200);
+  const aspectRatio = 0.6; // 16:10 aspect ratio
+
+  return {
+    width: Math.max(containerWidth, 300),
+    height: Math.max(containerWidth * aspectRatio, 200),
+  };
+};
 
 // Series configuration interface for Data Series management
 export interface SeriesConfig {
@@ -51,51 +69,77 @@ export interface SeriesConfig {
   customFormatter?: string;
 }
 
-// Chart configuration interface
-export interface ChartConfig {
+// Base chart configuration interface (common properties)
+export interface BaseChartConfig {
   width: number;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
   xAxisKey: string;
   yAxisKeys: string[];
-  disabledLines: string[]; // New field for disabled areas (same as line chart)
   title: string;
   xAxisLabel: string;
   yAxisLabel: string;
   showLegend: boolean;
   showGrid: boolean;
-  showPoints: boolean;
-  showStroke?: boolean;
   animationDuration: number;
-  curve: keyof typeof curveOptions;
-  opacity?: number;
-  stackedMode?: boolean;
-  // Additional axis/visual/interactions to match LineChartEditor
   xAxisStart: 'auto' | 'zero' | number;
   yAxisStart: 'auto' | 'zero' | number;
-  // New styling configs
-  lineWidth: number; // Thickness of lines
-  pointRadius: number; // Size of data points
-  gridOpacity: number; // Grid transparency
-  legendPosition: 'top' | 'bottom' | 'left' | 'right'; // Legend position
 
-  // New axis configs
-  xAxisRotation: number; // X-axis label rotation in degrees
-  yAxisRotation: number; // Y-axis label rotation in degrees
-  showAxisLabels: boolean; // Show/hide axis labels
-  showAxisTicks: boolean; // Show/hide axis ticks
+  // Styling configs
+  gridOpacity: number;
+  legendPosition: 'top' | 'bottom' | 'left' | 'right';
 
-  // New interaction configs
-  enableZoom: boolean; // Enable zoom functionality
-  showTooltip: boolean; // Show/hide tooltips
+  // Axis configs
+  xAxisRotation: number;
+  yAxisRotation: number;
+  showAxisLabels: boolean;
+  showAxisTicks: boolean;
 
-  // New visual configs
-  theme: 'light' | 'dark' | 'auto'; // Chart theme
-  backgroundColor: string; // Chart background color
-  titleFontSize: number; // Title font size
-  labelFontSize: number; // Axis label font size
-  legendFontSize: number; // Legend font size
+  // Interaction configs
+  enableZoom: boolean;
+  enablePan: boolean;
+  zoomExtent: number;
+  showTooltip: boolean;
+
+  // Visual configs
+  theme: 'light' | 'dark' | 'auto';
+  backgroundColor: string;
+  titleFontSize: number;
+  labelFontSize: number;
+  legendFontSize: number;
 }
+
+// Line chart specific configuration
+export interface LineChartConfig extends BaseChartConfig {
+  disabledLines: string[];
+  showPoints: boolean;
+  curve: keyof typeof curveOptions;
+  lineWidth: number;
+  pointRadius: number;
+}
+
+// Area chart specific configuration
+export interface AreaChartConfig extends BaseChartConfig {
+  disabledLines: string[];
+  showPoints: boolean;
+  showStroke: boolean;
+  curve: keyof typeof curveOptions;
+  lineWidth: number;
+  pointRadius: number;
+  opacity: number;
+  stackedMode: boolean;
+}
+
+// Bar chart specific configuration
+export interface BarChartConfig extends BaseChartConfig {
+  disabledBars: string[];
+  barType: 'grouped' | 'stacked';
+  barWidth: number;
+  barSpacing: number;
+}
+
+// For backward compatibility, keep ChartConfig as LineChartConfig
+export type ChartConfig = LineChartConfig;
 
 // Formatter configuration
 export interface FormatterConfig {
