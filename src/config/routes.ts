@@ -171,20 +171,6 @@ export const publicRoutes: RouteConfig[] = [
       description: 'Dashboard',
     },
   },
-
-  {
-    path: Routers.NEW_HOME,
-    name: 'newHome',
-    component: 'NewHomePage',
-    layout: 'USER',
-    isProtected: false,
-    permissions: [Permission.VIEW_PUBLIC],
-    meta: {
-      title: 'DataVis - Create Beautiful Charts',
-      description:
-        'Create beautiful, responsive charts with DataVis. Easy-to-use chart types for every need.',
-    },
-  },
   {
     path: Routers.ABOUT_US,
     name: 'about-us',

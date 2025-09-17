@@ -20,7 +20,7 @@ const BarChartPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
+    <div className="bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
       <div className="container mx-auto px-4">
         {/* HIỆN CHART COMPONENT */}
         <motion.div
@@ -38,7 +38,7 @@ const BarChartPage: React.FC = () => {
                 title=""
                 xAxisLabel={currentDataConfig.xLabel}
                 yAxisLabel={currentDataConfig.yLabel}
-                showLegend={true}
+                showLegend={false}
                 showGrid={true}
                 animationDuration={1500}
                 barType="grouped"

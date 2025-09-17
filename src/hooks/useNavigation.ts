@@ -13,7 +13,7 @@ export const useNavigation = () => {
   // Navigation functions
   const goToHome = useCallback(
     (options?: NavigationOptions) => {
-      navigate(Routers.NEW_HOME, options);
+      navigate(Routers.HOME, options);
     },
     [navigate]
   );

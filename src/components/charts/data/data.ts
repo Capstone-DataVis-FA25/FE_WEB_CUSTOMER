@@ -269,3 +269,19 @@ export const datasets = {
     title: 'Employee Information',
   },
 };
+
+// Sample data for area chart
+export const sampleData = [
+  { month: 1, revenue: 120, expenses: 80, profit: 40 },
+  { month: 2, revenue: 150, expenses: 95, profit: 55 },
+  { month: 3, revenue: 180, expenses: 110, profit: 70 },
+  { month: 4, revenue: 200, expenses: 125, profit: 75 },
+  { month: 5, revenue: 165, expenses: 100, profit: 65 },
+  { month: 6, revenue: 220, expenses: 140, profit: 80 },
+  { month: 7, revenue: 250, expenses: 160, profit: 90 },
+  { month: 8, revenue: 280, expenses: 180, profit: 100 },
+  { month: 9, revenue: 310, expenses: 200, profit: 110 },
+  { month: 10, revenue: 290, expenses: 185, profit: 105 },
+  { month: 11, revenue: 320, expenses: 210, profit: 110 },
+  { month: 12, revenue: 350, expenses: 230, profit: 120 },
+];
