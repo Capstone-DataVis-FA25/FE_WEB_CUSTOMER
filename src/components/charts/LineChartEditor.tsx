@@ -816,56 +816,70 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
               />
             </motion.div>
 
-            {/* Chart-Specific Settings */}
-            <ChartSettingsSection
-              chartType="line"
-              config={{
-                xAxisLabel: config.xAxisLabel,
-                yAxisLabel: config.yAxisLabel,
-                animationDuration: config.animationDuration,
-                showLegend: config.showLegend,
-                showGrid: config.showGrid,
-                showTooltip: config.showTooltip,
-                enableZoom: config.enableZoom,
-                enablePan: config.enablePan,
-                zoomExtent: config.zoomExtent,
-                gridOpacity: config.gridOpacity,
-                legendPosition: config.legendPosition,
-                theme: config.theme,
-                backgroundColor: config.backgroundColor,
-                titleFontSize: config.titleFontSize,
-                labelFontSize: config.labelFontSize,
-                legendFontSize: config.legendFontSize,
-              }}
-              curveType={config.curve}
-              curveOptions={curveOptions}
-              showPoints={config.showPoints}
-              lineWidth={config.lineWidth}
-              pointRadius={config.pointRadius}
-              isCollapsed={collapsedSections.chartSettings}
-              onToggleCollapse={() => toggleSection('chartSettings')}
-              onUpdateConfig={updateConfig}
-              onUpdateChartSpecific={updateConfig}
-            />
+            {/* Chart Settings */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.15 }}
+            >
+              {/* Chart-Specific Settings */}
+              <ChartSettingsSection
+                chartType="line"
+                config={{
+                  xAxisLabel: config.xAxisLabel,
+                  yAxisLabel: config.yAxisLabel,
+                  animationDuration: config.animationDuration,
+                  showLegend: config.showLegend,
+                  showGrid: config.showGrid,
+                  showTooltip: config.showTooltip,
+                  enableZoom: config.enableZoom,
+                  enablePan: config.enablePan,
+                  zoomExtent: config.zoomExtent,
+                  gridOpacity: config.gridOpacity,
+                  legendPosition: config.legendPosition,
+                  theme: config.theme,
+                  backgroundColor: config.backgroundColor,
+                  titleFontSize: config.titleFontSize,
+                  labelFontSize: config.labelFontSize,
+                  legendFontSize: config.legendFontSize,
+                }}
+                curveType={config.curve}
+                curveOptions={curveOptions}
+                showPoints={config.showPoints}
+                lineWidth={config.lineWidth}
+                pointRadius={config.pointRadius}
+                isCollapsed={collapsedSections.chartSettings}
+                onToggleCollapse={() => toggleSection('chartSettings')}
+                onUpdateConfig={updateConfig}
+                onUpdateChartSpecific={updateConfig}
+              />
+              {/* Chart Settings */}
+            </motion.div>
 
-            {/* Axis Configuration & Formatters */}
-            <AxisConfigurationSection
-              config={{
-                xAxisKey: config.xAxisKey,
-                xAxisStart: config.xAxisStart || 'auto',
-                yAxisStart: config.yAxisStart || 'auto',
-                showAxisLabels: config.showAxisLabels,
-                showAxisTicks: config.showAxisTicks,
-                xAxisRotation: config.xAxisRotation,
-                yAxisRotation: config.yAxisRotation,
-              }}
-              data={data}
-              formatters={formatters}
-              isCollapsed={collapsedSections.axisConfiguration}
-              onToggleCollapse={() => toggleSection('axisConfiguration')}
-              onUpdateConfig={updateConfig}
-              onUpdateFormatters={updateFormatters}
-            />
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.15 }}
+            >
+              {/* Axis Configuration & Formatters */}
+              <AxisConfigurationSection
+                config={{
+                  xAxisKey: config.xAxisKey,
+                  xAxisStart: config.xAxisStart || 'auto',
+                  yAxisStart: config.yAxisStart || 'auto',
+                  showAxisLabels: config.showAxisLabels,
+                  showAxisTicks: config.showAxisTicks,
+                  xAxisRotation: config.xAxisRotation,
+                  yAxisRotation: config.yAxisRotation,
+                }}
+                data={data}
+                formatters={formatters}
+                isCollapsed={collapsedSections.axisConfiguration}
+                onToggleCollapse={() => toggleSection('axisConfiguration')}
+                onUpdateConfig={updateConfig}
+                onUpdateFormatters={updateFormatters}
+              />
+            </motion.div>
 
             {/* Series Management */}
             <motion.div

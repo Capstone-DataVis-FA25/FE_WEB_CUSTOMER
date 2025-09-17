@@ -724,7 +724,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
             >
               <BasicSettingsSection
                 config={{
@@ -747,53 +747,65 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
             </motion.div>
 
             {/* Chart-Specific Settings */}
-            <ChartSettingsSection
-              chartType="bar"
-              config={{
-                xAxisLabel: config.xAxisLabel,
-                yAxisLabel: config.yAxisLabel,
-                animationDuration: config.animationDuration,
-                showLegend: config.showLegend,
-                showGrid: config.showGrid,
-                showTooltip: config.showTooltip,
-                enableZoom: config.enableZoom,
-                enablePan: config.enablePan || false,
-                zoomExtent: config.zoomExtent || 8,
-                gridOpacity: config.gridOpacity,
-                legendPosition: config.legendPosition,
-                theme: config.theme,
-                backgroundColor: config.backgroundColor,
-                titleFontSize: config.titleFontSize,
-                labelFontSize: config.labelFontSize,
-                legendFontSize: config.legendFontSize,
-              }}
-              barType={config.barType}
-              barWidth={config.barWidth}
-              barSpacing={config.barSpacing}
-              isCollapsed={collapsedSections.chartSettings}
-              onToggleCollapse={() => toggleSection('chartSettings')}
-              onUpdateConfig={updateConfig}
-              onUpdateChartSpecific={updateConfig}
-            />
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <ChartSettingsSection
+                chartType="bar"
+                config={{
+                  xAxisLabel: config.xAxisLabel,
+                  yAxisLabel: config.yAxisLabel,
+                  animationDuration: config.animationDuration,
+                  showLegend: config.showLegend,
+                  showGrid: config.showGrid,
+                  showTooltip: config.showTooltip,
+                  enableZoom: config.enableZoom,
+                  enablePan: config.enablePan || false,
+                  zoomExtent: config.zoomExtent || 8,
+                  gridOpacity: config.gridOpacity,
+                  legendPosition: config.legendPosition,
+                  theme: config.theme,
+                  backgroundColor: config.backgroundColor,
+                  titleFontSize: config.titleFontSize,
+                  labelFontSize: config.labelFontSize,
+                  legendFontSize: config.legendFontSize,
+                }}
+                barType={config.barType}
+                barWidth={config.barWidth}
+                barSpacing={config.barSpacing}
+                isCollapsed={collapsedSections.chartSettings}
+                onToggleCollapse={() => toggleSection('chartSettings')}
+                onUpdateConfig={updateConfig}
+                onUpdateChartSpecific={updateConfig}
+              />
+            </motion.div>
 
             {/* Axis Configuration & Formatters */}
-            <AxisConfigurationSection
-              config={{
-                xAxisKey: config.xAxisKey,
-                xAxisStart: config.xAxisStart || 'auto',
-                yAxisStart: config.yAxisStart || 'auto',
-                showAxisLabels: config.showAxisLabels,
-                showAxisTicks: config.showAxisTicks,
-                xAxisRotation: config.xAxisRotation,
-                yAxisRotation: config.yAxisRotation,
-              }}
-              data={data}
-              formatters={formatters}
-              isCollapsed={collapsedSections.axisConfiguration}
-              onToggleCollapse={() => toggleSection('axisConfiguration')}
-              onUpdateConfig={updateConfig}
-              onUpdateFormatters={updateFormatters}
-            />
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <AxisConfigurationSection
+                config={{
+                  xAxisKey: config.xAxisKey,
+                  xAxisStart: config.xAxisStart || 'auto',
+                  yAxisStart: config.yAxisStart || 'auto',
+                  showAxisLabels: config.showAxisLabels,
+                  showAxisTicks: config.showAxisTicks,
+                  xAxisRotation: config.xAxisRotation,
+                  yAxisRotation: config.yAxisRotation,
+                }}
+                data={data}
+                formatters={formatters}
+                isCollapsed={collapsedSections.axisConfiguration}
+                onToggleCollapse={() => toggleSection('axisConfiguration')}
+                onUpdateConfig={updateConfig}
+                onUpdateFormatters={updateFormatters}
+              />
+            </motion.div>
 
             {/* 4. SERIES MANAGEMENT SECTION */}
             <motion.div

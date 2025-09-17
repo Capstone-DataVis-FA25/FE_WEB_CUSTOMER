@@ -711,25 +711,31 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
                 pointRadius={config.pointRadius}
               />
             </motion.div>
-            {/* Axis Configuration & Formatters*/}
-            {/* Axis Configuration & Formatters */}
-            <AxisConfigurationSection
-              config={{
-                xAxisKey: config.xAxisKey,
-                xAxisStart: config.xAxisStart || 'auto',
-                yAxisStart: config.yAxisStart || 'auto',
-                showAxisLabels: config.showAxisLabels,
-                showAxisTicks: config.showAxisTicks,
-                xAxisRotation: config.xAxisRotation,
-                yAxisRotation: config.yAxisRotation,
-              }}
-              data={data}
-              formatters={formatters}
-              isCollapsed={collapsedSections.axisConfiguration}
-              onToggleCollapse={() => toggleSection('axisConfiguration')}
-              onUpdateConfig={updateConfig}
-              onUpdateFormatters={updateFormatters}
-            />
+
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.15 }}
+            >
+              {/* Axis Configuration & Formatters*/}
+              <AxisConfigurationSection
+                config={{
+                  xAxisKey: config.xAxisKey,
+                  xAxisStart: config.xAxisStart || 'auto',
+                  yAxisStart: config.yAxisStart || 'auto',
+                  showAxisLabels: config.showAxisLabels,
+                  showAxisTicks: config.showAxisTicks,
+                  xAxisRotation: config.xAxisRotation,
+                  yAxisRotation: config.yAxisRotation,
+                }}
+                data={data}
+                formatters={formatters}
+                isCollapsed={collapsedSections.axisConfiguration}
+                onToggleCollapse={() => toggleSection('axisConfiguration')}
+                onUpdateConfig={updateConfig}
+                onUpdateFormatters={updateFormatters}
+              />
+            </motion.div>
 
             {/* 4. SERIES MANAGEMENT SECTION */}
             <motion.div
