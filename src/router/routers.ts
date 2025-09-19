@@ -41,6 +41,11 @@ const Routers = {
   AREA_CHART_DEMO: '/chart/area-chart',
   AREA_CHART_EDITOR_DEMO: '/demo/area-chart-editor',
 
+  // Chart Editor routes with ID parameter
+  LINE_CHART_EDITOR: '/chart-editor/line/:id',
+  BAR_CHART_EDITOR: '/chart-editor/bar/:id',
+  AREA_CHART_EDITOR: '/chart-editor/area/:id',
+
   //Workspace routes
   WORKSPACE: '/workspace',
   WORKSPACE_DATASETS: '/workspace/datasets',

@@ -42,6 +42,9 @@ const componentMap = {
   WorkspacePage: lazy(() => import('../pages/workspace/WorkspacePage')),
   ChartCreatorPage: lazy(() => import('../pages/chart-creator/ChartCreatorPage')),
   ChartEditorPage: lazy(() => import('../pages/chart-creator/ChartEditorPage')),
+  LineChartEditorPage: lazy(() => import('@/pages/chart-editor/LineChartEditorPage')),
+  BarChartEditorPage: lazy(() => import('@/pages/chart-editor/BarChartEditorPage')),
+  AreaChartEditorPage: lazy(() => import('@/pages/chart-editor/AreaChartEditorPage')),
 };
 
 // ================================

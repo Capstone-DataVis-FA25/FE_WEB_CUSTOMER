@@ -1,23 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Plus,
-  BarChart3,
-  LineChart,
-  AreaChart,
-  Database,
-  Search,
-  Calendar,
-  Eye,
-  Edit3,
-  Share,
-  Edit,
-  Trash2,
-} from 'lucide-react';
+import { Plus, BarChart3, Database, Search, Calendar, Eye, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -29,111 +15,14 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import Routers from '@/router/routers';
 import { useDataset } from '@/features/dataset/useDataset';
+import { useCharts } from '@/features/charts/useCharts';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import type { Dataset } from '@/features/dataset/datasetAPI';
-
-const mockCharts = [
-  {
-    id: 1,
-    name: 'Sales Performance Trend',
-    description: 'Monthly sales analysis showing growth patterns across all channels',
-    type: 'line',
-    datasetId: 1,
-    datasetName: 'Monthly Sales Data',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-03-10',
-    category: 'Performance',
-    isPublic: true,
-    views: 245,
-    color: 'from-blue-500 to-cyan-500',
-  },
-  {
-    id: 2,
-    name: 'Revenue by Industry',
-    description: 'Quarterly revenue comparison highlighting top-performing sectors',
-    type: 'bar',
-    datasetId: 2,
-    datasetName: 'Quarterly Revenue by Industry',
-    createdAt: '2024-02-05',
-    updatedAt: '2024-03-08',
-    category: 'Finance',
-    isPublic: false,
-    views: 156,
-    color: 'from-emerald-500 to-teal-500',
-  },
-  {
-    id: 3,
-    name: 'Device Usage Distribution',
-    description: 'Area chart showing cumulative device usage over time periods',
-    type: 'area',
-    datasetId: 4,
-    datasetName: 'Device Usage Trends',
-    createdAt: '2024-02-15',
-    updatedAt: '2024-03-01',
-    category: 'Analytics',
-    isPublic: true,
-    views: 189,
-    color: 'from-orange-500 to-red-500',
-  },
-  {
-    id: 4,
-    name: 'Product Performance Matrix',
-    description: 'Comprehensive view of product sales, profits, and customer metrics',
-    type: 'bar',
-    datasetId: 3,
-    datasetName: 'Product Performance Metrics',
-    createdAt: '2024-03-01',
-    updatedAt: '2024-03-12',
-    category: 'Performance',
-    isPublic: false,
-    views: 98,
-    color: 'from-purple-500 to-pink-500',
-  },
-];
-
-const getChartIcon = (type: string) => {
-  switch (type) {
-    case 'line':
-      return <LineChart className="h-4 w-4" />;
-    case 'bar':
-      return <BarChart3 className="h-4 w-4" />;
-    case 'area':
-      return <AreaChart className="h-4 w-4" />;
-    default:
-      return <BarChart3 className="h-4 w-4" />;
-  }
-};
-
-const getChartTypeLabel = (type: string) => {
-  switch (type) {
-    case 'line':
-      return 'Line Chart';
-    case 'bar':
-      return 'Bar Chart';
-    case 'area':
-      return 'Area Chart';
-    default:
-      return 'Chart';
-  }
-};
-
-const getCategoryColor = (category: string) => {
-  switch (category) {
-    case 'Sales':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-    case 'Finance':
-      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
-    case 'Analytics':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-    case 'Performance':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-  }
-};
+import type { Chart } from '@/features/charts/chartTypes';
+import ChartCard from './components/ChartCard';
 
 const WorkspacePage: React.FC = () => {
   const { t } = useTranslation();
@@ -146,15 +35,28 @@ const WorkspacePage: React.FC = () => {
   const { datasets, loading, deleting, error, getDatasets, deleteDataset, clearDatasetError } =
     useDataset();
 
+  // Charts API integration - using real charts feature
+  const {
+    charts,
+    loading: chartsLoading,
+    deleting: chartDeleting,
+    error: chartsError,
+    getCharts,
+    deleteChart,
+    clearChartError,
+  } = useCharts();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [chartTypeFilter, setChartTypeFilter] = useState<string>('all');
   const [datasetTypeFilter, setDatasetTypeFilter] = useState<string>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingChartId, setDeletingChartId] = useState<string | null>(null);
 
-  // Fetch datasets on component mount
+  // Fetch datasets and charts on component mount
   useEffect(() => {
     getDatasets();
-  }, [getDatasets]);
+    getCharts();
+  }, [getDatasets, getCharts]);
 
   // Show error toast when error occurs
   useEffect(() => {
@@ -163,6 +65,14 @@ const WorkspacePage: React.FC = () => {
       clearDatasetError();
     }
   }, [error, showError, t, clearDatasetError]);
+
+  // Show error toast when charts error occurs
+  useEffect(() => {
+    if (chartsError) {
+      showError(t('charts_error', 'Charts Error'), chartsError);
+      clearChartError();
+    }
+  }, [chartsError, showError, t, clearChartError]);
 
   // Determine current tab based on URL
   const getCurrentTab = () => {
@@ -205,14 +115,16 @@ const WorkspacePage: React.FC = () => {
       })
     : [];
 
-  // Filter charts
-  const filteredCharts = mockCharts.filter(chart => {
-    const matchesSearch =
-      chart.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      chart.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = chartTypeFilter === 'all' || chart.type === chartTypeFilter;
-    return matchesSearch && matchesType;
-  });
+  // Filter charts - using real API data
+  const filteredCharts = Array.isArray(charts)
+    ? charts.filter(chart => {
+        const matchesSearch =
+          chart.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (chart.description && chart.description.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesType = chartTypeFilter === 'all' || chart.type === chartTypeFilter;
+        return matchesSearch && matchesType;
+      })
+    : [];
 
   // Format date helper (same as DatasetListPage)
   const formatDate = (dateString: string) => {
@@ -248,13 +160,36 @@ const WorkspacePage: React.FC = () => {
             `Dataset "${dataset.name}" has been deleted successfully`
           )
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as { message?: string };
         showError(
           t('dataset_deleteError', 'Delete Failed'),
-          error.message || t('dataset_deleteErrorMessage', 'Failed to delete dataset')
+          err.message || t('dataset_deleteErrorMessage', 'Failed to delete dataset')
         );
       } finally {
         setDeletingId(null);
+      }
+    });
+  };
+
+  // Handle delete chart
+  const handleDeleteChart = async (chart: Chart) => {
+    setDeletingChartId(chart.id);
+    modalConfirm.openConfirm(async () => {
+      try {
+        await deleteChart(chart.id).unwrap();
+        showSuccess(
+          t('chart_deleteSuccess', 'Chart Deleted'),
+          t('chart_deleteSuccessMessage', `Chart "${chart.name}" has been deleted successfully`)
+        );
+      } catch (error: unknown) {
+        const err = error as { message?: string };
+        showError(
+          t('chart_deleteError', 'Delete Failed'),
+          err.message || t('chart_deleteErrorMessage', 'Failed to delete chart')
+        );
+      } finally {
+        setDeletingChartId(null);
       }
     });
   };
@@ -263,30 +198,27 @@ const WorkspacePage: React.FC = () => {
     navigate(Routers.CREATE_DATASET);
   };
 
-  const handleCreateChart = (datasetId?: number) => {
+  const handleCreateChart = () => {
     // Navigate to chart creation page
-    if (datasetId) {
-      navigate(`${Routers.CHART_GALLERY}?datasetId=${datasetId}`);
-    } else {
-      navigate(Routers.CHART_GALLERY);
-    }
+    navigate(Routers.CHART_GALLERY);
   };
 
-  const handleEditChart = (chartId: number) => {
-    // Navigate to chart editor based on chart type
-    const chart = mockCharts.find(c => c.id === chartId);
+  const handleEditChart = (chartId: string) => {
+    const chart = charts.find(c => c.id === chartId);
     if (chart) {
       switch (chart.type) {
         case 'line':
-          navigate(Routers.LINE_CHART_EDITOR_DEMO);
+          navigate(`/chart-editor/line/${chartId}`);
           break;
         case 'bar':
-          navigate(Routers.BAR_CHART_EDITOR_DEMO);
+          navigate(`/chart-editor/bar/${chartId}`);
           break;
         case 'area':
-          navigate(Routers.AREA_CHART_EDITOR_DEMO);
+          navigate(`/chart-editor/area/${chartId}`);
           break;
         default:
+          // Fallback to generic chart editor or show error
+          console.warn(`Unknown chart type: ${chart.type}`);
           break;
       }
     }
@@ -511,7 +443,7 @@ const WorkspacePage: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleCreateChart(parseInt(dataset.id))}
+                          onClick={() => navigate(Routers.CHART_GALLERY)}
                           className="flex-1 group-hover:border-blue-500 group-hover:text-blue-600 group-hover:bg-blue-50 transition-all duration-200"
                         >
                           <Plus className="h-3 w-3 mr-1" />
@@ -527,7 +459,11 @@ const WorkspacePage: React.FC = () => {
 
           {/* Charts Tab */}
           <TabsContent value="charts" className="space-y-6">
-            {filteredCharts.length === 0 ? (
+            {chartsLoading && filteredCharts.length === 0 ? (
+              <div className="flex justify-center items-center py-16">
+                <LoadingSpinner />
+              </div>
+            ) : filteredCharts.length === 0 ? (
               <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm dark:bg-gray-800/80">
                 <CardContent className="flex flex-col items-center justify-center py-16">
                   <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center mb-6">
@@ -537,7 +473,7 @@ const WorkspacePage: React.FC = () => {
                   <p className="text-muted-foreground text-center mb-6 max-w-md">
                     {searchTerm
                       ? 'Try adjusting your search terms'
-                      : 'Transform your data into beautiful visualizations'}
+                      : 'Create your first chart to start visualizing your data!'}
                   </p>
                   {!searchTerm && (
                     <Button
@@ -554,85 +490,13 @@ const WorkspacePage: React.FC = () => {
             ) : (
               <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredCharts.map(chart => (
-                  <Card
+                  <ChartCard
                     key={chart.id}
-                    className="group border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1"
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div
-                          className={`p-3 rounded-xl bg-gradient-to-br ${chart.color} text-white shadow-lg`}
-                        >
-                          {getChartIcon(chart.type)}
-                        </div>
-                        <div className="flex flex-col space-y-1 items-end">
-                          <Badge variant="outline" className="text-xs font-medium">
-                            {getChartTypeLabel(chart.type)}
-                          </Badge>
-                          <Badge variant="outline" className={getCategoryColor(chart.category)}>
-                            {chart.category}
-                          </Badge>
-                          {chart.isPublic && (
-                            <Badge variant="secondary" className="text-xs">
-                              Public
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <CardTitle className="text-lg leading-tight hover:text-emerald-600 transition-colors cursor-pointer">
-                          {chart.name}
-                        </CardTitle>
-                        <CardDescription className="text-sm line-clamp-2">
-                          {chart.description}
-                        </CardDescription>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-1 text-muted-foreground">
-                          <Database className="h-3 w-3" />
-                          <span className="truncate">{chart.datasetName}</span>
-                        </div>
-                        <div className="flex items-center space-x-1 text-muted-foreground">
-                          <Eye className="h-3 w-3" />
-                          <span>{chart.views}</span>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-muted-foreground flex items-center space-x-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>Updated {new Date(chart.updatedAt).toLocaleDateString()}</span>
-                      </div>
-
-                      <div className="flex space-x-2 pt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditChart(chart.id)}
-                          className="flex-1 group-hover:border-emerald-500 group-hover:text-emerald-600"
-                        >
-                          <Edit3 className="h-3 w-3 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="group-hover:bg-emerald-50 group-hover:text-emerald-600"
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="group-hover:bg-blue-50 group-hover:text-blue-600"
-                        >
-                          <Share className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    chart={chart}
+                    onEdit={handleEditChart}
+                    onDelete={handleDeleteChart}
+                    isDeleting={chartDeleting && deletingChartId === chart.id}
+                  />
                 ))}
               </div>
             )}

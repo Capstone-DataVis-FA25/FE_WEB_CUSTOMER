@@ -550,7 +550,8 @@ export const DataEditorSection: React.FC<DataEditorSectionProps> = ({
   onOpenModal,
 }) => {
   const { t } = useTranslation();
-
+  console.log('Data at editor section', data);
+  console.log('Y axis keys at editor section', yAxisKeys);
   return (
     <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
       <CardHeader
@@ -617,24 +618,27 @@ export const DataEditorSection: React.FC<DataEditorSectionProps> = ({
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
-                  {data.slice(0, 5).map((point, index) => (
-                    <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                        {index + 1}
-                      </td>
-                      <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
-                        {point[xAxisKey] as number}
-                      </td>
-                      {yAxisKeys.map(key => (
-                        <td
-                          key={key}
-                          className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100"
-                        >
-                          {point[key] as number}
+                  {data.slice(0, 5).map((point, index) => {
+                    console.log('Data at editor section point', point);
+                    return (
+                      <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                          {index + 1}
                         </td>
-                      ))}
-                    </tr>
-                  ))}
+                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
+                          {Number.parseFloat(point[xAxisKey.toLowerCase()] as string)}
+                        </td>
+                        {yAxisKeys.map(key => (
+                          <td
+                            key={key}
+                            className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100"
+                          >
+                            {Number.parseFloat(point[key] as string).toFixed(2)}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               {data.length > 5 && (
@@ -1030,7 +1034,7 @@ interface ChartSettingsProps {
   onUpdateChartSpecific: (updates: Record<string, unknown>) => void;
 
   // Chart type specific props
-  chartType: 'line' | 'bar';
+  chartType: 'line' | 'bar' | 'area';
 
   // Line chart specific
   curveType?: string;

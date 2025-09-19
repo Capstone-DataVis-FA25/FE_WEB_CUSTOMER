@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Save, Table, X, Minus, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 
-import { Card, CardContent, CardHeader } from '../ui/card';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import D3AreaChart from './D3AreaChart';
 import { useToast } from '@/hooks/useToast';
-import ToastContainer from '../ui/toast-container';
+import ToastContainer from '@/components/ui/toast-container';
 import { convertArrayToChartData } from '@/utils/dataConverter';
 import {
   sizePresets,
@@ -18,7 +18,7 @@ import {
   type AreaChartConfig,
   type FormatterConfig,
   type ChartDataPoint,
-} from '../../types/chart';
+} from '@/types/chart';
 import {
   BasicSettingsSection,
   ChartSettingsSection,
@@ -142,8 +142,8 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
   // Collapse state for sections
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     basicSettings: true,
+    chartSettings: true,
     axisConfiguration: true,
-    displayOptions: true,
     seriesManagement: true,
     dataEditor: true,
   });
@@ -698,17 +698,34 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
               transition={{ duration: 0.6, delay: 0.15 }}
             >
               <ChartSettingsSection
-                config={config}
-                isCollapsed={collapsedSections.displayOptions || false}
-                onToggleCollapse={() => toggleSection('displayOptions')}
-                onUpdateConfig={updateConfig}
-                onUpdateChartSpecific={updateConfig}
                 chartType="line"
+                config={{
+                  xAxisLabel: config.xAxisLabel,
+                  yAxisLabel: config.yAxisLabel,
+                  animationDuration: config.animationDuration,
+                  showLegend: config.showLegend,
+                  showGrid: config.showGrid,
+                  showTooltip: config.showTooltip,
+                  enableZoom: config.enableZoom,
+                  enablePan: config.enablePan,
+                  zoomExtent: config.zoomExtent,
+                  gridOpacity: config.gridOpacity,
+                  legendPosition: config.legendPosition,
+                  theme: config.theme,
+                  backgroundColor: config.backgroundColor,
+                  titleFontSize: config.titleFontSize,
+                  labelFontSize: config.labelFontSize,
+                  legendFontSize: config.legendFontSize,
+                }}
                 curveType={config.curve}
                 curveOptions={curveOptions}
                 showPoints={config.showPoints}
                 lineWidth={config.lineWidth}
                 pointRadius={config.pointRadius}
+                isCollapsed={collapsedSections.chartSettings}
+                onToggleCollapse={() => toggleSection('chartSettings')}
+                onUpdateConfig={updateConfig}
+                onUpdateChartSpecific={updateConfig}
               />
             </motion.div>
 
@@ -866,6 +883,17 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
             >
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                 <CardContent className="p-4 sm:p-6">
+                  {/* Chart Title - Always Visible */}
+                  {config.title && (
+                    <div className="mb-4 text-center">
+                      <h3
+                        className="font-bold text-gray-900 dark:text-white"
+                        style={{ fontSize: `${config.titleFontSize}px` }}
+                      >
+                        {config.title}
+                      </h3>
+                    </div>
+                  )}
                   <D3AreaChart
                     data={data}
                     width={config.width}
@@ -875,7 +903,7 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
                     yAxisKeys={config.yAxisKeys}
                     disabledLines={config.disabledLines}
                     colors={colors}
-                    title={config.title}
+                    title=""
                     xAxisLabel={config.xAxisLabel}
                     yAxisLabel={config.yAxisLabel}
                     showLegend={config.showLegend}

@@ -70,7 +70,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   // Convert arrayData to ChartDataPoint[] if provided
   const processedInitialData = useMemo((): ChartDataPoint[] => {
     if (initialArrayData && initialArrayData.length > 0) {
-      return convertArrayToChartData(initialArrayData);
+      const dataAfter = convertArrayToChartData(initialArrayData);
+      console.log('Data after conversion:', dataAfter);
+      return dataAfter;
     }
 
     return [];
@@ -124,6 +126,8 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
 
     ...initialConfig,
   };
+
+  console.log('initialConfig', initialConfig);
 
   const defaultColors: ColorConfig = {
     line1: { light: '#3b82f6', dark: '#60a5fa' }, // Blue
