@@ -1,121 +1,146 @@
-"use client"
+'use client';
 
-import type React from "react"
-import { useEffect } from "react"
-import { useParams, useNavigate } from "react-router-dom"
-import { useTranslation } from "react-i18next"
-import { SlideInUp } from "@/theme/animation"
-import { ArrowLeft, Edit, Trash2, Download, Database, BarChart3 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import LoadingSpinner from "@/components/ui/LoadingSpinner"
-import { useDataset } from "@/features/dataset/useDataset"
-import { useToastContext } from "@/components/providers/ToastProvider"
-import { ModalConfirm } from "@/components/ui/modal-confirm"
-import { useModalConfirm } from "@/hooks/useModal"
+import type React from 'react';
+import { useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { SlideInUp } from '@/theme/animation';
+import { ArrowLeft, Edit, Trash2, Download, Database, BarChart3 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useDataset } from '@/features/dataset/useDataset';
+import { useToastContext } from '@/components/providers/ToastProvider';
+import { ModalConfirm } from '@/components/ui/modal-confirm';
+import { useModalConfirm } from '@/hooks/useModal';
 
-import Routers from "@/router/routers"
-import CustomExcel from "@/components/excel/CustomExcel"
+import Routers from '@/router/routers';
+import CustomExcel from '@/components/excel/CustomExcel';
+
+// Define types for dataset header and cell
+interface DatasetHeader {
+  name: string;
+  data?: (string | number | null)[];
+}
 
 const DatasetDetailPage: React.FC = () => {
-  const { id: legacyId, slug } = useParams<{ id?: string; slug?: string }>()
-  const rawParam = slug || legacyId || ""
-  const extractedId = rawParam.split("-").pop() || rawParam
-  const navigate = useNavigate()
-  const { t } = useTranslation()
-  const { showSuccess, showError } = useToastContext()
-  const modalConfirm = useModalConfirm()
+  const { id: legacyId, slug } = useParams<{ id?: string; slug?: string }>();
+  const rawParam = slug || legacyId || '';
+  const extractedId = rawParam.split('-').pop() || rawParam;
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { showSuccess, showError } = useToastContext();
+  const modalConfirm = useModalConfirm();
 
-  const { currentDataset, loading, deleting, error, getDatasetById, deleteDataset, clearDatasetError, clearCurrent } =
-    useDataset()
+  const {
+    currentDataset,
+    loading,
+    deleting,
+    error,
+    getDatasetById,
+    deleteDataset,
+    clearDatasetError,
+    clearCurrent,
+  } = useDataset();
 
   // Fetch dataset on component mount
   useEffect(() => {
     if (extractedId) {
-      getDatasetById(extractedId)
+      getDatasetById(extractedId);
     }
     return () => {
-      clearCurrent()
-    }
-  }, [extractedId, getDatasetById, clearCurrent])
+      clearCurrent();
+    };
+  }, [extractedId, getDatasetById, clearCurrent]);
 
   // Show error toast when error occurs
   useEffect(() => {
     if (error) {
-      showError(t("dataset_error", "Error"), error)
-      clearDatasetError()
+      showError(t('dataset_error', 'Error'), error);
+      clearDatasetError();
     }
-  }, [error, showError, t, clearDatasetError])
+  }, [error, showError, t, clearDatasetError]);
 
   // Handle delete dataset
   const handleDeleteDataset = async () => {
-    if (!currentDataset) return
+    if (!currentDataset) return;
 
     modalConfirm.openConfirm(async () => {
       try {
-        await deleteDataset(currentDataset.id).unwrap()
+        await deleteDataset(currentDataset.id).unwrap();
         // build list route
-        navigate(Routers.DATASETS)
+        navigate(Routers.DATASETS);
         showSuccess(
-          t("dataset_deleteSuccess", "Dataset Deleted"),
-          t("dataset_deleteSuccessMessage", `Dataset "${currentDataset.name}" has been deleted successfully`),
-        )
-      } catch (error: any) {
-        showError(
-          t("dataset_deleteError", "Delete Failed"),
-          error.message || t("dataset_deleteErrorMessage", "Failed to delete dataset"),
-        )
+          t('dataset_deleteSuccess', 'Dataset Deleted'),
+          t(
+            'dataset_deleteSuccessMessage',
+            `Dataset "${currentDataset.name}" has been deleted successfully`
+          )
+        );
+      } catch (error: unknown) {
+        let errorMessage = t('dataset_deleteErrorMessage', 'Failed to delete dataset');
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof (error as { message?: unknown }).message === 'string'
+        ) {
+          errorMessage = (error as { message: string }).message;
+        }
+        showError(t('dataset_deleteError', 'Delete Failed'), errorMessage);
       }
-    })
-  }
+    });
+  };
 
   // Handle export dataset
   const handleExportDataset = () => {
-    if (!currentDataset) return
+    if (!currentDataset) return;
 
     // Build tableData from headers (same logic as below)
-    const headerNames = currentDataset.headers?.map((h) => h.name) || []
-    const rowCount = currentDataset.rowCount || 0
-    const rows: string[][] = Array.from({ length: rowCount }, () => Array(headerNames.length).fill(""))
-    currentDataset.headers?.forEach((h, colIdx) => {
-      ;(h as any).data?.forEach((cell: any, rowIdx: number) => {
-        if (rows[rowIdx]) rows[rowIdx][colIdx] = String(cell ?? "")
-      })
-    })
+    const headerNames = currentDataset.headers?.map((h: DatasetHeader) => h.name) || [];
+    const rowCount = currentDataset.rowCount || 0;
+    const rows: string[][] = Array.from({ length: rowCount }, () =>
+      Array(headerNames.length).fill('')
+    );
+    currentDataset.headers?.forEach((h: DatasetHeader, colIdx: number) => {
+      h.data?.forEach((cell: string | number | null, rowIdx: number) => {
+        if (rows[rowIdx]) rows[rowIdx][colIdx] = String(cell ?? '');
+      });
+    });
 
     const csvContent = [headerNames, ...rows]
-      .map((row: string[]) => row.map((cell: string) => `"${cell.replace(/"/g, '""')}"`).join(","))
-      .join("\n")
+      .map((row: string[]) => row.map((cell: string) => `"${cell.replace(/"/g, '""')}"`).join(','))
+      .join('\n');
 
-    const blob = new Blob([csvContent], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `${currentDataset.name}.csv`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentDataset.name}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
     showSuccess(
-      t("dataset_exportSuccess", "Export Successful"),
-      t("dataset_exportSuccessMessage", "Dataset has been exported successfully"),
-    )
-  }
+      t('dataset_exportSuccess', 'Export Successful'),
+      t('dataset_exportSuccessMessage', 'Dataset has been exported successfully')
+    );
+  };
 
   // Format date
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   if (loading) {
-    return <LoadingSpinner />
+    return <LoadingSpinner />;
   }
 
   if (!currentDataset) {
@@ -125,12 +150,12 @@ const DatasetDetailPage: React.FC = () => {
           <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl p-8 text-center max-w-md">
             <Database className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              {t("dataset_notFound", "Dataset Not Found")}
+              {t('dataset_notFound', 'Dataset Not Found')}
             </h2>
             <p className="text-gray-600 dark:text-gray-300 mb-4">
               {t(
-                "dataset_notFoundMessage",
-                "The dataset you are looking for does not exist or you do not have access to it.",
+                'dataset_notFoundMessage',
+                'The dataset you are looking for does not exist or you do not have access to it.'
               )}
             </p>
             <Button
@@ -138,26 +163,31 @@ const DatasetDetailPage: React.FC = () => {
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              {t("dataset_backToList", "Back to Datasets")}
+              {t('dataset_backToList', 'Back to Datasets')}
             </Button>
           </Card>
         </SlideInUp>
       </div>
-    )
+    );
   }
 
   // Build structured columns + rows for CustomExcel (first row is headers in edit page; here we send body & columns separately)
-  let bodyRows: string[][] = []
-  let columnDefs: { name: string; type: "string" }[] = []
+  let bodyRows: string[][] = [];
+  let columnDefs: { name: string; type: 'string' }[] = [];
+  let headerRow: string[] = [];
   if (currentDataset.headers && currentDataset.headers.length) {
-    columnDefs = currentDataset.headers.map((h) => ({ name: h.name, type: "string" as const }))
-    const rowCount = currentDataset.rowCount
-    bodyRows = Array.from({ length: rowCount }, () => Array(columnDefs.length).fill(""))
-    currentDataset.headers.forEach((h, idx) => {
-      ;(h as any).data?.forEach((cell: any, rowIdx: number) => {
-        if (bodyRows[rowIdx]) bodyRows[rowIdx][idx] = String(cell ?? "")
-      })
-    })
+    headerRow = currentDataset.headers.map((h: DatasetHeader) => h.name);
+    columnDefs = headerRow.map(name => ({ name, type: 'string' as const }));
+    const rowCount = currentDataset.rowCount;
+    const rows: string[][] = Array.from({ length: rowCount }, () =>
+      Array(headerRow.length).fill('')
+    );
+    currentDataset.headers.forEach((h: DatasetHeader, idx: number) => {
+      h.data?.forEach((cell: string | number | null, rowIdx: number) => {
+        if (rows[rowIdx]) rows[rowIdx][idx] = String(cell ?? '');
+      });
+    });
+    bodyRows = rows;
   }
 
   return (
@@ -170,12 +200,12 @@ const DatasetDetailPage: React.FC = () => {
             <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl p-8 text-center max-w-md">
               <Database className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                {t("dataset_notFound", "Dataset Not Found")}
+                {t('dataset_notFound', 'Dataset Not Found')}
               </h2>
               <p className="text-gray-600 dark:text-gray-300 mb-4">
                 {t(
-                  "dataset_notFoundMessage",
-                  "The dataset you are looking for does not exist or you do not have access to it.",
+                  'dataset_notFoundMessage',
+                  'The dataset you are looking for does not exist or you do not have access to it.'
                 )}
               </p>
               <Button
@@ -183,7 +213,7 @@ const DatasetDetailPage: React.FC = () => {
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                {t("dataset_backToList", "Back to Datasets")}
+                {t('dataset_backToList', 'Back to Datasets')}
               </Button>
             </Card>
           </SlideInUp>
@@ -204,7 +234,7 @@ const DatasetDetailPage: React.FC = () => {
                     </CardHeader>
                     <CardContent className="space-y-2">
                       <div className="text-gray-600 dark:text-gray-300 text-sm">
-                        {currentDataset.description || t("dataset_noDescription", "No description")}
+                        {currentDataset.description || t('dataset_noDescription', 'No description')}
                       </div>
                     </CardContent>
                   </Card>
@@ -214,27 +244,28 @@ const DatasetDetailPage: React.FC = () => {
                   <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                     <CardHeader>
                       <CardTitle className="text-lg font-semibold text-foreground">
-                        {t("dataset_information", "Dataset Information")}
+                        {t('dataset_information', 'Dataset Information')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                          {t("dataset_name", "Name")}
+                          {t('dataset_name', 'Name')}
                         </label>
                         <p className="text-gray-900 dark:text-white">{currentDataset.name}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                          {t("dataset_description", "Description")}
+                          {t('dataset_description', 'Description')}
                         </label>
                         <p className="text-gray-900 dark:text-white">
-                          {currentDataset.description || t("dataset_noDescription", "No description")}
+                          {currentDataset.description ||
+                            t('dataset_noDescription', 'No description')}
                         </p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                          {t("dataset_dimensions", "Dimensions")}
+                          {t('dataset_dimensions', 'Dimensions')}
                         </label>
                         <p className="text-gray-900 dark:text-white">
                           {currentDataset.rowCount} rows × {currentDataset.columnCount} columns
@@ -248,21 +279,25 @@ const DatasetDetailPage: React.FC = () => {
                   <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                     <CardHeader>
                       <CardTitle className="text-lg font-semibold text-foreground">
-                        {t("dataset_metadata", "Metadata")}
+                        {t('dataset_metadata', 'Metadata')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                          {t("dataset_createdAt", "Created")}
+                          {t('dataset_createdAt', 'Created')}
                         </label>
-                        <p className="text-gray-900 dark:text-white">{formatDate(currentDataset.createdAt)}</p>
+                        <p className="text-gray-900 dark:text-white">
+                          {formatDate(currentDataset.createdAt)}
+                        </p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                          {t("dataset_updatedAt", "Last Updated")}
+                          {t('dataset_updatedAt', 'Last Updated')}
                         </label>
-                        <p className="text-gray-900 dark:text-white">{formatDate(currentDataset.updatedAt)}</p>
+                        <p className="text-gray-900 dark:text-white">
+                          {formatDate(currentDataset.updatedAt)}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -272,7 +307,7 @@ const DatasetDetailPage: React.FC = () => {
                   <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                     <CardHeader>
                       <CardTitle className="text-lg font-semibold text-foreground">
-                        {t("dataset_statistics", "Dataset Statistics")}
+                        {t('dataset_statistics', 'Dataset Statistics')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -281,14 +316,16 @@ const DatasetDetailPage: React.FC = () => {
                           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                             {currentDataset.rowCount}
                           </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">{t("dataset_rows", "Rows")}</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            {t('dataset_rows', 'Rows')}
+                          </div>
                         </div>
                         <div className="text-center">
                           <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                             {currentDataset.columnCount}
                           </div>
                           <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {t("dataset_columns", "Columns")}
+                            {t('dataset_columns', 'Columns')}
                           </div>
                         </div>
                       </div>
@@ -305,7 +342,7 @@ const DatasetDetailPage: React.FC = () => {
                         className="w-full flex items-center gap-2 backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
                       >
                         <ArrowLeft className="w-4 h-4" />
-                        {t("dataset_backToList", "Back to Datasets")}
+                        {t('dataset_backToList', 'Back to Datasets')}
                       </Button>
 
                       <Button
@@ -314,7 +351,7 @@ const DatasetDetailPage: React.FC = () => {
                         className="w-full flex items-center gap-2 backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
                       >
                         <Download className="w-4 h-4" />
-                        {t("dataset_export", "Export")}
+                        {t('dataset_export', 'Export')}
                       </Button>
 
                       <Button
@@ -327,7 +364,7 @@ const DatasetDetailPage: React.FC = () => {
                         className="w-full flex items-center gap-2 backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
                       >
                         <Edit className="w-4 h-4" />
-                        {t("dataset_edit", "Edit")}
+                        {t('dataset_edit', 'Edit')}
                       </Button>
 
                       <Button
@@ -337,7 +374,7 @@ const DatasetDetailPage: React.FC = () => {
                         className="w-full flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50"
                       >
                         <Trash2 className="w-4 h-4" />
-                        {t("dataset_delete", "Delete")}
+                        {t('dataset_delete', 'Delete')}
                       </Button>
                     </CardContent>
                   </Card>
@@ -351,24 +388,24 @@ const DatasetDetailPage: React.FC = () => {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <BarChart3 className="w-5 h-5" />
-                        {t("dataset_dataPreview", "Data Preview")}
+                        {t('dataset_dataPreview', 'Data Preview')}
                         <span className="text-sm font-normal text-gray-500">
                           ({currentDataset.rowCount} rows × {currentDataset.columnCount} columns)
                         </span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="mb-4">
-                        <Button
-                          variant="outline"
-                          onClick={handleExportDataset}
-                          className="flex items-center gap-2 backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
-                        >
-                          <Download className="w-4 h-4" />
-                          {t("dataset_export", "Export")}
-                        </Button>
+                      {/* Responsive, scrollable container for large tables */}
+                      <div
+                        className="overflow-auto max-w-5xl border rounded-lg shadow-inner bg-white/80 dark:bg-gray-800/80"
+                        style={{ minHeight: '300px' }}
+                      >
+                        <CustomExcel
+                          initialData={bodyRows}
+                          initialColumns={columnDefs}
+                          mode="view"
+                        />
                       </div>
-                      <CustomExcel initialData={bodyRows} initialColumns={columnDefs} mode="view" />
                     </CardContent>
                   </Card>
                 </SlideInUp>
@@ -385,16 +422,16 @@ const DatasetDetailPage: React.FC = () => {
         onConfirm={modalConfirm.confirm}
         loading={modalConfirm.isLoading}
         type="danger"
-        title={t("dataset_deleteConfirmTitle", "Delete Dataset")}
+        title={t('dataset_deleteConfirmTitle', 'Delete Dataset')}
         message={t(
-          "dataset_deleteConfirmMessage",
-          "Are you sure you want to delete this dataset? This action cannot be undone.",
+          'dataset_deleteConfirmMessage',
+          'Are you sure you want to delete this dataset? This action cannot be undone.'
         )}
-        confirmText={t("dataset_delete", "Delete")}
-        cancelText={t("common_cancel", "Cancel")}
+        confirmText={t('dataset_delete', 'Delete')}
+        cancelText={t('common_cancel', 'Cancel')}
       />
     </div>
-  )
-}
+  );
+};
 
-export default DatasetDetailPage
+export default DatasetDetailPage;
