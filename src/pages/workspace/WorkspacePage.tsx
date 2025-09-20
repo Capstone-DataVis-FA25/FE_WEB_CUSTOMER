@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, BarChart3, Database, Search, Calendar, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, BarChart3, Database, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -17,12 +17,12 @@ import Routers from '@/router/routers';
 import { useDataset } from '@/features/dataset/useDataset';
 import { useCharts } from '@/features/charts/useCharts';
 import { useToastContext } from '@/components/providers/ToastProvider';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import type { Dataset } from '@/features/dataset/datasetAPI';
 import type { Chart } from '@/features/charts/chartTypes';
-import ChartCard from './components/ChartCard';
+import DatasetTab from './components/DatasetTab';
+import ChartTab from './components/ChartTab';
 
 const WorkspacePage: React.FC = () => {
   const { t } = useTranslation();
@@ -206,21 +206,13 @@ const WorkspacePage: React.FC = () => {
   const handleEditChart = (chartId: string) => {
     const chart = charts.find(c => c.id === chartId);
     if (chart) {
-      switch (chart.type) {
-        case 'line':
-          navigate(`/chart-editor/line/${chartId}`);
-          break;
-        case 'bar':
-          navigate(`/chart-editor/bar/${chartId}`);
-          break;
-        case 'area':
-          navigate(`/chart-editor/area/${chartId}`);
-          break;
-        default:
-          // Fallback to generic chart editor or show error
-          console.warn(`Unknown chart type: ${chart.type}`);
-          break;
-      }
+      // Navigate to chart editor with chart ID and type as query parameters
+      const params = new URLSearchParams({
+        chartId: chartId,
+        typeChart: chart.type,
+        mode: 'edit',
+      });
+      navigate(`/chart-editor?${params.toString()}`);
     }
   };
 
@@ -335,171 +327,31 @@ const WorkspacePage: React.FC = () => {
 
           {/* Datasets Tab */}
           <TabsContent value="datasets" className="space-y-6">
-            {loading && filteredDatasets.length === 0 ? (
-              <div className="flex justify-center items-center py-16">
-                <LoadingSpinner />
-              </div>
-            ) : filteredDatasets.length === 0 ? (
-              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm dark:bg-gray-800/80">
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-6">
-                    <Database className="h-10 w-10 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-semibold mb-2">
-                    {searchTerm ? 'No datasets found' : 'No datasets yet'}
-                  </h3>
-                  <p className="text-muted-foreground text-center mb-6 max-w-md">
-                    {searchTerm
-                      ? 'Try adjusting your search terms'
-                      : 'Create your first dataset to get started with data visualization'}
-                  </p>
-                  {!searchTerm && (
-                    <Button
-                      onClick={handleCreateDataset}
-                      size="lg"
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                    >
-                      <Plus className="h-5 w-5 mr-2" />
-                      Create Your First Dataset
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredDatasets.map(dataset => (
-                  <Card
-                    key={dataset.id}
-                    className="group border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 hover:scale-[1.02]"
-                  >
-                    <CardHeader className="pb-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                          <Database className="h-6 w-6 text-white" />
-                        </div>
-                        <div className="flex space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/datasets/${dataset.id}`)}
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-50 hover:text-blue-600"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              navigate(Routers.EDIT_DATASET, {
-                                state: { datasetId: dataset.id, from: Routers.WORKSPACE_DATASETS },
-                              })
-                            }
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-50 hover:text-purple-600"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteDataset(dataset)}
-                            disabled={deleting && deletingId === dataset.id}
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <CardTitle className="text-lg leading-tight hover:text-blue-600 transition-colors cursor-pointer line-clamp-2">
-                          {dataset.name}
-                        </CardTitle>
-                        <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem]">
-                          {dataset.description || 'No description available'}
-                        </CardDescription>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
-                          <p className="text-xs text-muted-foreground font-medium">Rows</p>
-                          <p className="font-bold text-blue-600 dark:text-blue-400">
-                            {dataset.rowCount || 0}
-                          </p>
-                        </div>
-                        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800">
-                          <p className="text-xs text-muted-foreground font-medium">Columns</p>
-                          <p className="font-bold text-emerald-600 dark:text-emerald-400">
-                            {dataset.columnCount || 0}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-muted-foreground flex items-center space-x-2 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
-                        <Calendar className="h-3 w-3 text-blue-500" />
-                        <span className="font-medium">Updated {formatDate(dataset.updatedAt)}</span>
-                      </div>
-
-                      <div className="flex space-x-2 pt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(Routers.CHART_GALLERY)}
-                          className="flex-1 group-hover:border-blue-500 group-hover:text-blue-600 group-hover:bg-blue-50 transition-all duration-200"
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Create Chart
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+            <DatasetTab
+              datasets={datasets}
+              loading={loading}
+              deleting={deleting}
+              filteredDatasets={filteredDatasets}
+              searchTerm={searchTerm}
+              onCreateDataset={handleCreateDataset}
+              onDeleteDataset={handleDeleteDataset}
+              deletingId={deletingId}
+            />
           </TabsContent>
 
           {/* Charts Tab */}
           <TabsContent value="charts" className="space-y-6">
-            {chartsLoading && filteredCharts.length === 0 ? (
-              <div className="flex justify-center items-center py-16">
-                <LoadingSpinner />
-              </div>
-            ) : filteredCharts.length === 0 ? (
-              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm dark:bg-gray-800/80">
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center mb-6">
-                    <BarChart3 className="h-10 w-10 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-semibold mb-2">No charts found</h3>
-                  <p className="text-muted-foreground text-center mb-6 max-w-md">
-                    {searchTerm
-                      ? 'Try adjusting your search terms'
-                      : 'Create your first chart to start visualizing your data!'}
-                  </p>
-                  {!searchTerm && (
-                    <Button
-                      onClick={() => handleCreateChart()}
-                      size="lg"
-                      className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-                    >
-                      <Plus className="h-5 w-5 mr-2" />
-                      Create Your First Chart
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredCharts.map(chart => (
-                  <ChartCard
-                    key={chart.id}
-                    chart={chart}
-                    onEdit={handleEditChart}
-                    onDelete={handleDeleteChart}
-                    isDeleting={chartDeleting && deletingChartId === chart.id}
-                  />
-                ))}
-              </div>
-            )}
+            <ChartTab
+              charts={charts}
+              chartsLoading={chartsLoading}
+              chartDeleting={chartDeleting}
+              filteredCharts={filteredCharts}
+              searchTerm={searchTerm}
+              onCreateChart={handleCreateChart}
+              onDeleteChart={handleDeleteChart}
+              onEditChart={handleEditChart}
+              deletingChartId={deletingChartId}
+            />
           </TabsContent>
         </Tabs>
       </div>

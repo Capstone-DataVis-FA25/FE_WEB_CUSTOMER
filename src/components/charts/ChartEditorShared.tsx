@@ -550,8 +550,7 @@ export const DataEditorSection: React.FC<DataEditorSectionProps> = ({
   onOpenModal,
 }) => {
   const { t } = useTranslation();
-  console.log('Data at editor section', data);
-  console.log('Y axis keys at editor section', yAxisKeys);
+  console.log('Data at data editor section:', data);
   return (
     <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
       <CardHeader
@@ -619,21 +618,27 @@ export const DataEditorSection: React.FC<DataEditorSectionProps> = ({
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
                   {data.slice(0, 5).map((point, index) => {
-                    console.log('Data at editor section point', point);
+                    console.log('Point: ', point);
                     return (
                       <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
                           {index + 1}
                         </td>
                         <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
-                          {Number.parseFloat(point[xAxisKey.toLowerCase()] as string)}
+                          {typeof point[xAxisKey] === 'string'
+                            ? point[xAxisKey]
+                            : Number.parseFloat(point[xAxisKey] as unknown as string) || 'N/A'}
                         </td>
                         {yAxisKeys.map(key => (
                           <td
                             key={key}
                             className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100"
                           >
-                            {Number.parseFloat(point[key] as string).toFixed(2)}
+                            {typeof point[key] === 'string' && point[key] === 'N/A'
+                              ? 'N/A'
+                              : typeof point[key] === 'number'
+                                ? Number.parseFloat(point[key] as unknown as string).toFixed(2)
+                                : Number.parseFloat(point[key] as string) || 'N/A'}
                           </td>
                         ))}
                       </tr>
@@ -1563,7 +1568,6 @@ export const AxisConfigurationSection: React.FC<AxisConfigurationProps> = ({
   onUpdateFormatters,
 }) => {
   const { t } = useTranslation();
-
   return (
     <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
       <CardHeader
