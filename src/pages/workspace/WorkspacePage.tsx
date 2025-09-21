@@ -94,6 +94,7 @@ const mockCharts = [
   },
 ];
 
+// Chart icon
 const getChartIcon = (type: string) => {
   switch (type) {
     case 'line':
@@ -107,6 +108,7 @@ const getChartIcon = (type: string) => {
   }
 };
 
+// Thêm chart label ở đây
 const getChartTypeLabel = (type: string) => {
   switch (type) {
     case 'line':
@@ -248,11 +250,12 @@ const WorkspacePage: React.FC = () => {
             `Dataset "${dataset.name}" has been deleted successfully`
           )
         );
-      } catch (error: any) {
-        showError(
-          t('dataset_deleteError', 'Delete Failed'),
-          error.message || t('dataset_deleteErrorMessage', 'Failed to delete dataset')
-        );
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : t('dataset_deleteErrorMessage', 'Failed to delete dataset');
+        showError(t('dataset_deleteError', 'Delete Failed'), message);
       } finally {
         setDeletingId(null);
       }
@@ -263,10 +266,12 @@ const WorkspacePage: React.FC = () => {
     navigate(Routers.CREATE_DATASET);
   };
 
-  const handleCreateChart = (datasetId?: number) => {
+  const handleCreateChart = (datasetId?: string) => {
     // Navigate to chart creation page
     if (datasetId) {
-      navigate(`${Routers.CHART_GALLERY}?datasetId=${datasetId}`);
+      navigate(Routers.CHART_GALLERY, {
+        state: { datasetId },
+      });
     } else {
       navigate(Routers.CHART_GALLERY);
     }
@@ -511,7 +516,7 @@ const WorkspacePage: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleCreateChart(parseInt(dataset.id))}
+                          onClick={() => handleCreateChart(dataset.id)}
                           className="flex-1 group-hover:border-blue-500 group-hover:text-blue-600 group-hover:bg-blue-50 transition-all duration-200"
                         >
                           <Plus className="h-3 w-3 mr-1" />

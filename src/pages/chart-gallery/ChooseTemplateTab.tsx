@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { Button } from '@/components/ui/button';
@@ -20,15 +20,38 @@ import {
 import Pagination from '@/components/ui/pagination';
 import { Search, Star, Filter, Grid3X3, TrendingUp, Eye, ArrowRight, Info } from 'lucide-react';
 import { useToastContext } from '@/components/providers/ToastProvider';
+import { useChart } from '@/features/chart/useChart';
 import Routers from '@/router/routers';
 import type { ChartCategory, ChartTemplate } from '@/types/chart-gallery-types';
 
 export default function ChooseTemplateTab() {
   const { t } = useTranslation();
-  const { showError } = useToastContext();
+  const location = useLocation();
+  const { showError, showSuccess } = useToastContext();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { createChart } = useChart();
+
+  // Extract data from both location state AND query parameters
+  const locationState = location.state as {
+    datasetId?: string;
+    datasetName?: string;
+    chartType?: string;
+  } | null;
+
+  // Get datasetId from state first, then fallback to query params
+  const datasetIdFromState = locationState?.datasetId;
+  const datasetIdFromQuery = searchParams.get('datasetId');
+  const datasetId = datasetIdFromState || datasetIdFromQuery;
+  const datasetName = locationState?.datasetName;
+  // const preselectedChartType = locationState?.chartType; // reserved for future use
+
+  console.log('ChooseTemplateTab - datasetIdFromState:', datasetIdFromState);
+  console.log('ChooseTemplateTab - datasetIdFromQuery:', datasetIdFromQuery);
+  console.log('ChooseTemplateTab - Final datasetId:', datasetId);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreatingChart, setIsCreatingChart] = useState(false);
   const [categories, setCategories] = useState<ChartCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedTemplate, setSelectedTemplate] = useState<ChartTemplate | null>(null);
@@ -36,54 +59,304 @@ export default function ChooseTemplateTab() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['All']);
   const [selectedPurposes, setSelectedPurposes] = useState<string[]>(['All']);
   const [showFeatured, setShowFeatured] = useState(false);
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false); // Function to get default chart configuration based on template
+  const getDefaultChartConfig = (template: ChartTemplate) => {
+    const baseConfig = {
+      title: `${template.name} - ${datasetName || 'Chart'}`,
 
-  // Navigation function for continuing with selected template
-  const handleContinueWithTemplate = (template: ChartTemplate) => {
-    if (!template) return;
+      // Size settings
+      width: 800,
+      height: 400,
 
-    // Create URL search params
-    const params = new URLSearchParams({
-      typeChart: template.type,
-      datasetId: template.id, // Using template ID as dataset ID for now
-    });
+      // Margins
+      margin: {
+        top: 20,
+        right: 40,
+        bottom: 60,
+        left: 80,
+      },
 
-    // Navigate to chart editor with parameters
-    navigate(`${Routers.CHART_EDITOR}?${params.toString()}`);
+      // Animation
+      animationDuration: 1000,
+
+      // Display settings
+      showLegend: true,
+      showGrid: true,
+      showPoints: false,
+      showValues: false,
+      showTooltip: true,
+      enableZoom: false,
+      enablePan: false,
+
+      // Axis formatting
+      xAxisRotation: 0,
+      yAxisRotation: 0,
+      xAxisFormatterType: 'auto' as const,
+      yAxisFormatterType: 'number' as const,
+
+      // Colors
+      backgroundColor: '#ffffff',
+      gridColor: '#e0e0e0',
+      textColor: '#333333',
+      colorPalette: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#f97316'],
+
+      // Text & Font settings
+      titleFontSize: 18,
+      titleFontFamily: 'Arial, sans-serif',
+      axisLabelFontSize: 12,
+      axisLabelFontFamily: 'Arial, sans-serif',
+      legendFontSize: 12,
+      legendFontFamily: 'Arial, sans-serif',
+
+      // Legend positioning
+      legendPosition: 'right' as const,
+      legendAlignment: 'center' as const,
+      legendSize: 150,
+
+      // Border & Visual effects
+      borderWidth: 0,
+      borderColor: '#cccccc',
+      shadowEffect: false,
+
+      // Axis range & scale settings
+      xAxisMin: undefined,
+      xAxisMax: undefined,
+      yAxisMin: undefined,
+      yAxisMax: undefined,
+      xAxisTickInterval: undefined,
+      yAxisTickInterval: undefined,
+      xAxisScale: 'linear' as const,
+      yAxisScale: 'linear' as const,
+
+      // Padding & Spacing
+      titlePadding: 20,
+      legendPadding: 15,
+      axisPadding: 10,
+
+      // Zoom & pan
+      zoomLevel: 1,
+    };
+
+    // Type-specific configurations
+    switch (template.type) {
+      case 'line':
+        return {
+          ...baseConfig,
+          lineType: 'basic' as const,
+          showPoints: true,
+          curveType: 'curveMonotoneX' as const,
+          strokeWidth: 2,
+        };
+      case 'bar':
+        return {
+          ...baseConfig,
+          barType: 'grouped' as const,
+          barWidth: 0.8,
+          barGap: 0.2,
+          showValues: true,
+        };
+      case 'area':
+        return {
+          ...baseConfig,
+          areaType: 'basic' as const,
+          showPoints: false,
+          curveType: 'curveMonotoneX' as const,
+          fillOpacity: 0.6,
+          strokeWidth: 2,
+        };
+      case 'pie':
+        return {
+          ...baseConfig,
+          pieType: 'basic' as const,
+          showLabels: true,
+          showPercentages: true,
+          innerRadius: 0,
+        };
+      case 'donut':
+        return {
+          ...baseConfig,
+          donutType: 'basic' as const,
+          showLabels: true,
+          showPercentages: true,
+          innerRadius: 50,
+        };
+      case 'column':
+        return {
+          ...baseConfig,
+          barType: 'grouped' as const,
+          barWidth: 0.8,
+          barGap: 0.2,
+          showValues: true,
+        };
+      case 'scatter':
+        return {
+          ...baseConfig,
+          scatterType: 'basic' as const,
+          showPoints: true,
+          showGrid: true,
+          enableZoom: true,
+          enablePan: true,
+          strokeWidth: 0,
+        };
+      case 'bubble':
+        return {
+          ...baseConfig,
+          bubbleType: 'basic' as const,
+          showPoints: true,
+          showGrid: true,
+          enableZoom: true,
+          enablePan: true,
+          strokeWidth: 0,
+        };
+      case 'heatmap':
+        return {
+          ...baseConfig,
+          heatmapType: 'grid' as const,
+          colorScheme: 'blues' as const,
+          showGrid: false,
+        };
+      case 'radar':
+        return {
+          ...baseConfig,
+          radarType: 'polygon' as const,
+          fillOpacity: 0.2,
+          strokeWidth: 2,
+          showPoints: true,
+        };
+      case 'treemap':
+        return {
+          ...baseConfig,
+          treemapType: 'squarified' as const,
+          tiling: 'squarify' as const,
+          showLabels: true,
+        };
+      case 'sankey':
+        return {
+          ...baseConfig,
+          sankeyType: 'horizontal' as const,
+          nodeWidth: 20,
+          nodePadding: 10,
+        };
+      case 'gauge':
+        return {
+          ...baseConfig,
+          gaugeType: 'arc' as const,
+          minValue: 0,
+          maxValue: 100,
+          showThreshold: true,
+        };
+      case 'funnel':
+        return {
+          ...baseConfig,
+          funnelType: 'pyramid' as const,
+          showPercentages: true,
+          showLabels: true,
+        };
+      case 'waterfall':
+        return {
+          ...baseConfig,
+          waterfallType: 'standard' as const,
+          showConnectors: true,
+          showTotals: true,
+        };
+      default:
+        return baseConfig;
+    }
+  };
+
+  // Navigation function for continuing with selected template - now creates chart first
+  const handleContinueWithTemplate = async (template: ChartTemplate) => {
+    if (!template || !datasetId) {
+      showError(
+        t('chart_create_error', 'Error'),
+        t('chart_create_missing_data', 'Missing template or dataset')
+      );
+      return;
+    }
+
+    setIsCreatingChart(true);
+
+    try {
+      console.log('ChooseTemplateTab - Creating chart with template:', template);
+
+      // Get default configuration for this template
+      const defaultConfig = getDefaultChartConfig(template);
+
+      // Create chart with default settings
+      const chartData = {
+        name: defaultConfig.title,
+        datasetId: datasetId,
+        type: template.type,
+
+        // Auto-detection will be handled by backend
+        // We just provide the template type and let backend determine x/y axes
+        config: defaultConfig, // Send as object, not JSON string
+      };
+
+      console.log('ChooseTemplateTab - Creating chart with data:', chartData);
+
+      const result = await createChart(chartData).unwrap();
+
+      console.log('ChooseTemplateTab - Chart created successfully:', result);
+
+      showSuccess(
+        t('chart_create_success', 'Chart Created'),
+        t('chart_create_success_message', 'Chart has been created successfully')
+      );
+
+      // Navigate to chart editor with the new chart ID
+      navigate(`${Routers.CHART_EDITOR}?chartId=${result.id}&datasetId=${datasetId}`, {
+        state: {
+          chartId: result.id,
+          chartType: template.type,
+          datasetId: datasetId,
+          datasetName: datasetName,
+          chart: result,
+        },
+      });
+    } catch (error: unknown) {
+      console.error('ChooseTemplateTab - Failed to create chart:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      showError(
+        t('chart_create_error', 'Create Chart Failed'),
+        errorMessage || t('chart_create_error_message', 'Failed to create chart')
+      );
+    } finally {
+      setIsCreatingChart(false);
+    }
   };
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(12);
 
-  const chartTypes = [
-    'All',
-    'line',
-    'bar',
-    'pie',
-    'area',
-    'donut',
-    'column',
-    'scatter',
-    'map',
-    'heatmap',
-    'bubble',
-    'radar',
-    'treemap',
-    'sankey',
-    'gauge',
-    'funnel',
-    'waterfall',
-  ];
+  const chartTypes = useMemo(
+    () => [
+      'All',
+      'line',
+      'bar',
+      'pie',
+      'area',
+      'donut',
+      'column',
+      'scatter',
+      'map',
+      'heatmap',
+      'bubble',
+      'radar',
+      'treemap',
+      'sankey',
+      'gauge',
+      'funnel',
+      'waterfall',
+    ],
+    []
+  );
 
-  const purposes = [
-    'All',
-    'comparison',
-    'distribution',
-    'change-over-time',
-    'correlation',
-    'geographical',
-  ];
+  const purposes = useMemo(
+    () => ['All', 'comparison', 'distribution', 'change-over-time', 'correlation', 'geographical'],
+    []
+  );
 
   // Mock data - in a real app, this would come from an API
   useEffect(() => {
@@ -249,7 +522,7 @@ export default function ChooseTemplateTab() {
         ];
 
         setCategories(mockCategories);
-      } catch (error) {
+      } catch {
         showError(t('chart_gallery_error_loading'));
       } finally {
         setIsLoading(false);
@@ -274,7 +547,7 @@ export default function ChooseTemplateTab() {
       counts[type] = allTemplates.filter(template => template.type === type).length;
     });
     return counts;
-  }, [allTemplates]);
+  }, [allTemplates, chartTypes]);
 
   const purposeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -285,7 +558,7 @@ export default function ChooseTemplateTab() {
       ).length;
     });
     return counts;
-  }, [allTemplates]);
+  }, [allTemplates, purposes]);
 
   // Filter templates based on selected criteria
   const filteredTemplates = allTemplates.filter(template => {
@@ -757,6 +1030,46 @@ export default function ChooseTemplateTab() {
                   showInfo={true}
                   size="md"
                 />
+              </div>
+            )}
+
+            {/* Continue Button - Show when template is selected */}
+            {selectedTemplate && datasetId && (
+              <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    {t('chart_gallery_template_selected', 'Template Selected')}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                    {t('chart_gallery_template_selected_desc', 'Ready to create chart with')}{' '}
+                    <strong>{selectedTemplate.name}</strong>
+                    {datasetName && (
+                      <>
+                        {' '}
+                        {t('chart_gallery_for_dataset', 'for dataset')}{' '}
+                        <strong>{datasetName}</strong>
+                      </>
+                    )}
+                  </p>
+                  <Button
+                    onClick={() => handleContinueWithTemplate(selectedTemplate)}
+                    disabled={isCreatingChart}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
+                    size="lg"
+                  >
+                    {isCreatingChart ? (
+                      <>
+                        <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        {t('chart_gallery_creating', 'Creating Chart...')}
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRight className="w-4 h-4 mr-2" />
+                        {t('chart_gallery_continue', 'Create Chart')}
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
 

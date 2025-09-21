@@ -16,7 +16,6 @@ const Routers = {
   CHART_GALLERY: '/chart-gallery',
 
   // Dataset routes
-  CREATE_CHART: '/create-chart',
   DATASETS: '/datasets',
   DATASET_DETAIL: '/datasets/:slug',
   CREATE_DATASET: '/datasets/create',

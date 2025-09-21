@@ -134,12 +134,8 @@ export default function SelectWithDataTab() {
 
         {/* CTA */}
         <div className="text-center mt-8">
-          <p className="text-gray-600 dark:text-gray-300 mb-4">
-            {t('chart_gallery_beta_notice')}
-          </p>
-          <Button variant="outline">
-            {t('chart_gallery_notify_when_ready')}
-          </Button>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">{t('chart_gallery_beta_notice')}</p>
+          <Button variant="outline">{t('chart_gallery_notify_when_ready')}</Button>
         </div>
       </div>
     </div>

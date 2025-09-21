@@ -1,5 +1,5 @@
-import React from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
@@ -7,16 +7,77 @@ import LineChartEditor from '@/components/charts/LineChartEditor';
 import BarChartEditor from '@/components/charts/BarChartEditor';
 import AreaChartEditor from '@/components/charts/AreaChartEditor';
 import { salesData } from '@/components/charts/data/data';
-// import { convertArrayToChartData } from '@/utils/dataConverter';
+import { useDataset } from '@/features/dataset/useDataset';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { Database, BarChart3, Palette, Settings } from 'lucide-react';
+import type { Dataset } from '@/features/dataset/datasetAPI';
 
 const ChartEditorPage: React.FC = () => {
   const { t } = useTranslation();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { getDatasetById } = useDataset();
+  const [loading, setLoading] = useState(false);
+  const [dataset, setDataset] = useState<Dataset | null>(null);
 
-  // Get parameters from URL
-  const typeChart = searchParams.get('typeChart') || 'line';
-  const datasetId = searchParams.get('datasetId') || '';
+  // Get parameters from location state (priority) or URL parameters (fallback)
+  const locationState = location.state as {
+    datasetId?: string;
+    datasetName?: string;
+    chartType?: string; // preferred key
+    typeChart?: string; // legacy support from some callers
+    dataset?: Dataset;
+  } | null;
+
+  // Priority: location state > URL parameters > defaults
+  const datasetId = locationState?.datasetId || searchParams.get('datasetId') || '';
+  const datasetName = locationState?.datasetName || '';
+  const typeChart = (
+    locationState?.chartType ||
+    locationState?.typeChart ||
+    searchParams.get('typeChart') ||
+    'bar'
+  ).toLowerCase();
+  const passedDataset = locationState?.dataset;
+
+  console.log('ChartEditorPage received parameters:', {
+    datasetId,
+    datasetName,
+    typeChart,
+    passedDataset,
+  });
+  console.log('ChartEditorPage - Full location object:', location);
+  console.log('ChartEditorPage - locationState:', locationState);
+  console.log('ChartEditorPage - URL searchParams:', Object.fromEntries(searchParams));
+
+  // Load dataset if not passed directly and we have a datasetId
+  useEffect(() => {
+    const loadDataset = async () => {
+      // If dataset is passed directly, use it
+      if (passedDataset) {
+        console.log('Using passed dataset:', passedDataset);
+        setDataset(passedDataset);
+        return;
+      }
+
+      // If we have a datasetId, fetch it
+      if (datasetId) {
+        console.log('Loading dataset by ID:', datasetId);
+        setLoading(true);
+        try {
+          const result = await getDatasetById(datasetId).unwrap();
+          console.log('Dataset loaded:', result);
+          setDataset(result);
+        } catch (error) {
+          console.error('Failed to load dataset:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadDataset();
+  }, [datasetId, passedDataset, getDatasetById]);
 
   // Chart configuration based on type
   const getChartConfig = () => {
@@ -36,7 +97,93 @@ const ChartEditorPage: React.FC = () => {
       margin: { top: 20, right: 40, bottom: 60, left: 80 },
     };
 
-    return baseConfig;
+    // Add chart-type specific configurations based on typeChart
+    switch (typeChart) {
+      case 'line':
+        return {
+          ...baseConfig,
+          lineType: 'basic',
+          curveType: 'curveMonotoneX',
+          strokeWidth: 2,
+          showPoints: true,
+        };
+      case 'bar':
+      case 'column':
+        return {
+          ...baseConfig,
+          barType: 'grouped',
+          barWidth: 0.8,
+          barGap: 0.2,
+          showValues: true,
+          showPoints: false, // bars don't show points
+        };
+      case 'area':
+        return {
+          ...baseConfig,
+          areaType: 'basic',
+          fillOpacity: 0.6,
+          curveType: 'curveMonotoneX',
+          strokeWidth: 2,
+          showPoints: false,
+        };
+      case 'pie':
+        return {
+          ...baseConfig,
+          pieType: 'basic',
+          innerRadius: 0,
+          showLabels: true,
+          showPercentages: true,
+          showPoints: false, // pie charts don't show points
+          showGrid: false, // pie charts don't have grid
+        };
+      case 'donut':
+        return {
+          ...baseConfig,
+          donutType: 'basic',
+          innerRadius: 50,
+          showLabels: true,
+          showPercentages: true,
+          showPoints: false,
+          showGrid: false,
+        };
+      case 'scatter':
+        return {
+          ...baseConfig,
+          scatterType: 'basic',
+          showPoints: true,
+          strokeWidth: 0,
+          enableZoom: true,
+          enablePan: true,
+        };
+      case 'bubble':
+        return {
+          ...baseConfig,
+          bubbleType: 'basic',
+          showPoints: true,
+          strokeWidth: 0,
+          enableZoom: true,
+          enablePan: true,
+        };
+      case 'heatmap':
+        return {
+          ...baseConfig,
+          heatmapType: 'grid',
+          colorScheme: 'blues',
+          showGrid: false,
+          showPoints: false,
+        };
+      case 'radar':
+        return {
+          ...baseConfig,
+          radarType: 'polygon',
+          fillOpacity: 0.2,
+          strokeWidth: 2,
+          showPoints: true,
+          showGrid: false,
+        };
+      default:
+        return baseConfig;
+    }
   };
 
   const getChartFormatters = () => ({
@@ -48,16 +195,51 @@ const ChartEditorPage: React.FC = () => {
     customXFormatter: '',
   });
 
+  // Convert dataset to chart data format (string | number)[][]
+  const convertDatasetToChartData = (dataset: Dataset): (string | number)[][] => {
+    if (!dataset.headers || dataset.headers.length === 0) {
+      return salesData; // Fallback to sample data
+    }
+
+    // Create header row
+    const headerRow = dataset.headers.map(h => h.name);
+
+    // Create data rows
+    const dataRows: (string | number)[][] = [];
+
+    // Create data rows
+    for (let i = 0; i < dataset.rowCount; i++) {
+      const row: (string | number)[] = [];
+      dataset.headers.forEach(header => {
+        const cellValue = header.data?.[i] ?? '';
+        row.push(cellValue);
+      });
+      dataRows.push(row);
+    }
+
+    // Combine header and data rows
+    const chartData = [headerRow, ...dataRows];
+
+    console.log('Converted chart data:', chartData);
+    return chartData;
+  };
+
   // Render the appropriate chart editor based on type
   const renderChartEditor = () => {
+    // Use passed dataset or loaded dataset
+    const currentDataset = dataset || passedDataset;
+    const chartData = currentDataset ? convertDatasetToChartData(currentDataset) : salesData;
+
     const config = getChartConfig();
     const formatters = getChartFormatters();
 
-    switch (typeChart.toLowerCase()) {
+    console.log('Rendering chart editor for type:', typeChart);
+
+    switch (typeChart) {
       case 'line':
         return (
           <LineChartEditor
-            initialArrayData={salesData}
+            initialArrayData={chartData}
             initialConfig={config}
             initialFormatters={formatters}
             title={config.title}
@@ -70,7 +252,7 @@ const ChartEditorPage: React.FC = () => {
       case 'bar':
         return (
           <BarChartEditor
-            initialArrayData={salesData}
+            initialArrayData={chartData}
             initialConfig={{
               ...config,
               barType: 'grouped' as const,
@@ -84,10 +266,9 @@ const ChartEditorPage: React.FC = () => {
           />
         );
       case 'area':
-        // const convertedData = convertArrayToChartData(salesData);
         return (
           <AreaChartEditor
-            initialArrayData={salesData}
+            initialArrayData={chartData}
             initialConfig={config}
             initialFormatters={formatters}
             title={config.title}
@@ -98,15 +279,19 @@ const ChartEditorPage: React.FC = () => {
           />
         );
       default:
+        // Default to bar chart if type is not recognized
         return (
-          <LineChartEditor
-            initialArrayData={salesData}
-            initialConfig={config}
+          <BarChartEditor
+            initialArrayData={chartData}
+            initialConfig={{
+              ...config,
+              barType: 'grouped' as const,
+            }}
             initialFormatters={formatters}
             title={config.title}
             description={t(
-              'chart_editor_default_desc',
-              'Interactive chart editor with customizable settings'
+              'chart_editor_bar_desc',
+              'Interactive bar chart editor with customizable settings'
             )}
           />
         );
@@ -148,6 +333,10 @@ const ChartEditorPage: React.FC = () => {
 
   const chartInfo = getChartTypeInfo(typeChart);
 
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
   return (
     <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex flex-col">
       {/* Header Section */}
@@ -177,7 +366,7 @@ const ChartEditorPage: React.FC = () => {
                   {datasetId && (
                     <Badge variant="outline" className="flex items-center gap-1 text-xs">
                       <Database className="w-3 h-3" />
-                      {t('dataset_id', 'Dataset')}: {datasetId}
+                      {t('dataset_id', 'Dataset')}: {datasetName || datasetId}
                     </Badge>
                   )}
                 </div>

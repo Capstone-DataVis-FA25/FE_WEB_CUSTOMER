@@ -698,9 +698,81 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     setColors(newColors);
   };
 
+  // Function to convert editor config to simple chart config format
+  const getSimpleChartConfig = () => {
+    return {
+      config: {
+        width: config.width,
+        height: config.height,
+        margin: config.margin,
+        xAxisKey: config.xAxisKey,
+        yAxisKeys: config.yAxisKeys,
+        title: config.title,
+        xAxisLabel: config.xAxisLabel,
+        yAxisLabel: config.yAxisLabel,
+        showLegend: config.showLegend,
+        showGrid: config.showGrid,
+        animationDuration: config.animationDuration,
+        barType: config.barType,
+        gridOpacity: config.gridOpacity,
+        legendPosition: config.legendPosition,
+        xAxisRotation: config.xAxisRotation,
+        yAxisRotation: config.yAxisRotation,
+        showAxisLabels: config.showAxisLabels,
+        showAxisTicks: config.showAxisTicks,
+        yAxisStart: config.yAxisStart,
+        theme: config.theme,
+        backgroundColor: config.backgroundColor,
+        showTooltip: config.showTooltip,
+        barWidth: config.barWidth,
+        barSpacing: config.barSpacing,
+        titleFontSize: config.titleFontSize,
+        labelFontSize: config.labelFontSize,
+        legendFontSize: config.legendFontSize,
+        enableZoom: config.enableZoom,
+        enablePan: config.enablePan,
+        zoomExtent: config.zoomExtent,
+      },
+    };
+  };
+
+  // Function to save chart to database (example implementation)
+  const saveChartToDatabase = async () => {
+    try {
+      // Get the simplified chart configuration
+      const chartConfig = getSimpleChartConfig();
+
+      // Here you would typically call your API to save the chart
+      // For example:
+      // const response = await createChart({
+      //   name: config.title || 'Untitled Chart',
+      //   type: 'bar',
+      //   config: JSON.stringify(chartConfig),
+      //   datasetId: // your dataset ID
+      // });
+
+      // Return success or handle response
+      return { success: true, config: chartConfig };
+    } catch (error) {
+      console.error('Error saving chart:', error);
+      return { success: false, error };
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
       <div className="w-full px-2">
+        {/* Action Bar - NEW */}
+        <div className="mb-6 flex justify-end">
+          <Button
+            onClick={saveChartToDatabase}
+            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {t('chart_editor_save_chart', 'Save Chart')}
+          </Button>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
           {/* Configuration Panel - SIDEBAR BÊN TRÁI */}
           <div className="lg:col-span-2 space-y-6">
@@ -963,7 +1035,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                     barType={config.barType}
                     // Advanced wiring
                     gridOpacity={config.gridOpacity}
-                    legendPosition={config.legendPosition === 'top' ? 'top' : 'bottom'}
+                    legendPosition={config.legendPosition}
                     xAxisRotation={config.xAxisRotation}
                     yAxisRotation={config.yAxisRotation}
                     showAxisLabels={config.showAxisLabels}
@@ -974,6 +1046,14 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                     showTooltip={config.showTooltip}
                     barWidth={config.barWidth}
                     barSpacing={config.barSpacing}
+                    // Font size settings
+                    titleFontSize={config.titleFontSize}
+                    labelFontSize={config.labelFontSize}
+                    legendFontSize={config.legendFontSize}
+                    // Zoom settings
+                    enableZoom={config.enableZoom}
+                    enablePan={config.enablePan}
+                    zoomExtent={config.zoomExtent}
                   />
                 </CardContent>
               </Card>

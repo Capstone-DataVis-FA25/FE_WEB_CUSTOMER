@@ -14,6 +14,13 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useDataset } from '@/features/dataset/useDataset';
 import { useToastContext } from '@/components/providers/ToastProvider';
@@ -22,6 +29,12 @@ import { useModalConfirm } from '@/hooks/useModal';
 
 import Routers from '@/router/routers';
 import CustomExcel from '@/components/excel/CustomExcel';
+
+// Type for header with data
+interface DatasetHeader {
+  name: string;
+  data?: (string | number)[];
+}
 
 const DatasetDetailPage: React.FC = () => {
   const { id: legacyId, slug } = useParams<{ id?: string; slug?: string }>();
@@ -44,6 +57,7 @@ const DatasetDetailPage: React.FC = () => {
   } = useDataset();
 
   const [activeTab, setActiveTab] = useState<'data' | 'info'>('data');
+  const [selectedChartType, setSelectedChartType] = useState('bar');
 
   // Fetch dataset on component mount
   useEffect(() => {
@@ -79,11 +93,12 @@ const DatasetDetailPage: React.FC = () => {
             `Dataset "${currentDataset.name}" has been deleted successfully`
           )
         );
-      } catch (error: any) {
-        showError(
-          t('dataset_deleteError', 'Delete Failed'),
-          error.message || t('dataset_deleteErrorMessage', 'Failed to delete dataset')
-        );
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : t('dataset_deleteErrorMessage', 'Failed to delete dataset');
+        showError(t('dataset_deleteError', 'Delete Failed'), message);
       }
     });
   };
@@ -99,7 +114,7 @@ const DatasetDetailPage: React.FC = () => {
       Array(headerNames.length).fill('')
     );
     currentDataset.headers?.forEach((h, colIdx) => {
-      (h as any).data?.forEach((cell: any, rowIdx: number) => {
+      (h as DatasetHeader).data?.forEach((cell: string | number, rowIdx: number) => {
         if (rows[rowIdx]) rows[rowIdx][colIdx] = String(cell ?? '');
       });
     });
@@ -122,6 +137,27 @@ const DatasetDetailPage: React.FC = () => {
       t('dataset_exportSuccess', 'Export Successful'),
       t('dataset_exportSuccessMessage', 'Dataset has been exported successfully')
     );
+  };
+
+  // Handle create chart
+  const handleCreateChart = () => {
+    if (!currentDataset) return;
+
+    console.log('Navigating to chart gallery with dataset:', {
+      id: currentDataset.id,
+      name: currentDataset.name,
+      chartType: selectedChartType,
+    });
+
+    // Navigate to chart gallery page with dataset ID and selected chart type
+    navigate(Routers.CHART_GALLERY, {
+      state: {
+        datasetId: currentDataset.id,
+        datasetName: currentDataset.name,
+        chartType: selectedChartType,
+        activeTab: 'template', // Start with template selection
+      },
+    });
   };
 
   // Format date
@@ -173,7 +209,7 @@ const DatasetDetailPage: React.FC = () => {
     const rowCount = currentDataset.rowCount;
     bodyRows = Array.from({ length: rowCount }, () => Array(columnDefs.length).fill(''));
     currentDataset.headers.forEach((h, idx) => {
-      (h as any).data?.forEach((cell: any, rowIdx: number) => {
+      (h as DatasetHeader).data?.forEach((cell: string | number, rowIdx: number) => {
         if (bodyRows[rowIdx]) bodyRows[rowIdx][idx] = String(cell ?? '');
       });
     });
@@ -212,6 +248,26 @@ const DatasetDetailPage: React.FC = () => {
               <Download className="w-4 h-4" />
               {t('dataset_export', 'Export')}
             </Button>
+            <div className="flex items-center gap-2">
+              <Select value={selectedChartType} onValueChange={setSelectedChartType}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Chart Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bar">Bar Chart</SelectItem>
+                  <SelectItem value="line">Line Chart</SelectItem>
+                  <SelectItem value="area">Area Chart</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                onClick={handleCreateChart}
+                className="flex items-center gap-2 backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <BarChart3 className="w-4 h-4" />
+                {t('dataset_create_chart', 'Create Chart')}
+              </Button>
+            </div>
             <Button
               variant="outline"
               onClick={() =>

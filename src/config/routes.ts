@@ -346,16 +346,16 @@ export const protectedRoutes: RouteConfig[] = [
   },
   // Chart routes
   {
-    path: Routers.CREATE_CHART,
-    name: 'create-chart',
-    component: 'CreateChartPage',
+    path: Routers.CHART_GALLERY,
+    name: 'chart-gallery',
+    component: 'ChartGalleryPickerPage',
     layout: 'USER',
     isProtected: true,
     roles: [UserRole.USER],
     permissions: [Permission.VIEW_PROFILE],
     meta: {
-      title: 'Create Chart',
-      description: 'Create beautiful charts from your datasets with step-by-step wizard',
+      title: 'Chart Gallery',
+      description: 'Browse chart templates and create new charts',
     },
   },
   {
