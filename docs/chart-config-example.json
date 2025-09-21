@@ -1,0 +1,105 @@
+{
+  "version": "1.0",
+  "chartType": "line",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "width": 800,
+  "height": 400,
+  "margin": {
+    "top": 20,
+    "right": 40,
+    "bottom": 60,
+    "left": 80
+  },
+  "title": "Monthly Sales Performance",
+  "xAxisKey": "month",
+  "xAxisLabel": "Month",
+  "xAxisStart": "auto",
+  "xAxisRotation": 0,
+  "yAxisKeys": ["ecommerce", "retail", "wholesale"],
+  "yAxisLabel": "Sales (Million USD)",
+  "yAxisStart": "zero",
+  "yAxisRotation": 0,
+  "showAxisLabels": true,
+  "showAxisTicks": true,
+  "showLegend": true,
+  "showGrid": true,
+  "showPoints": true,
+  "showTooltip": true,
+  "animationDuration": 1000,
+  "curve": "curveMonotoneX",
+  "disabledLines": [],
+  "lineWidth": 2,
+  "pointRadius": 4,
+  "gridOpacity": 0.3,
+  "legendPosition": "bottom",
+  "theme": "auto",
+  "backgroundColor": "transparent",
+  "titleFontSize": 16,
+  "labelFontSize": 12,
+  "legendFontSize": 11,
+  "enableZoom": false,
+  "enablePan": false,
+  "zoomExtent": 8,
+  "colors": {
+    "ecommerce": {
+      "light": "#16a34a",
+      "dark": "#22c55e"
+    },
+    "retail": {
+      "light": "#9333ea",
+      "dark": "#a855f7"
+    },
+    "wholesale": {
+      "light": "#c2410c",
+      "dark": "#ea580c"
+    }
+  },
+  "formatters": {
+    "useYFormatter": true,
+    "useXFormatter": false,
+    "yFormatterType": "currency",
+    "xFormatterType": "number",
+    "customYFormatter": "",
+    "customXFormatter": ""
+  },
+  "seriesConfigs": [
+    {
+      "name": "E-commerce Sales",
+      "dataColumn": "ecommerce",
+      "color": "#16a34a",
+      "visible": true,
+      "lineWidth": 2,
+      "pointRadius": 4,
+      "lineStyle": "solid",
+      "pointStyle": "circle",
+      "opacity": 1
+    },
+    {
+      "name": "Retail Sales",
+      "dataColumn": "retail",
+      "color": "#9333ea",
+      "visible": true,
+      "lineWidth": 2,
+      "pointRadius": 4,
+      "lineStyle": "solid",
+      "pointStyle": "circle",
+      "opacity": 1
+    },
+    {
+      "name": "Wholesale Sales",
+      "dataColumn": "wholesale",
+      "color": "#c2410c",
+      "visible": true,
+      "lineWidth": 2,
+      "pointRadius": 4,
+      "lineStyle": "solid",
+      "pointStyle": "circle",
+      "opacity": 1
+    }
+  ],
+  "metadata": {
+    "createdBy": "LineChartEditor",
+    "lastModified": "2024-01-15T10:30:00.000Z",
+    "editorVersion": "1.0"
+  }
+}

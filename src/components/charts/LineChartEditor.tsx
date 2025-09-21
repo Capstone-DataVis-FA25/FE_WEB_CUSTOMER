@@ -20,7 +20,6 @@ import {
   Table,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { convertArrayToChartData } from '@/utils/dataConverter';
 import { useToast } from '@/hooks/useToast';
 import ToastContainer from '@/components/ui/toast-container';
 import {
@@ -67,12 +66,62 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
 
-  // Convert arrayData to ChartDataPoint[] if provided
+  // Convert arrayData to ChartDataPoint[] if provided - now using internal conversion
   const processedInitialData = useMemo((): ChartDataPoint[] => {
+    console.log('ProcessedInitialData useMemo running with initialArrayData:', initialArrayData);
+
     if (initialArrayData && initialArrayData.length > 0) {
-      return convertArrayToChartData(initialArrayData);
+      // Simple conversion function for LineChartEditor
+      const convertToChartData = (arrayData: (string | number)[][]) => {
+        if (!arrayData || arrayData.length === 0) return [];
+
+        const headers = arrayData[0] as string[];
+        const dataRows = arrayData.slice(1);
+
+        return dataRows.map((row, rowIndex) => {
+          const dataPoint: ChartDataPoint = {};
+          headers.forEach((header, index) => {
+            const value = row[index];
+            console.log(`Processing row ${rowIndex}, column ${index} (${header}):`, value);
+
+            // Handle undefined/null/N/A values
+            if (value === undefined || value === null || value === 'N/A' || value === '') {
+              console.warn(
+                `Invalid value at row ${rowIndex + 1}, column ${index} (${header}):`,
+                value
+              );
+              // For the first column (usually city/category), use a placeholder; for numeric columns, use 0
+              dataPoint[header] = index === 0 ? `Unknown_${rowIndex + 1}` : 0;
+              return;
+            }
+
+            if (typeof value === 'string') {
+              const numValue = parseFloat(value);
+              console.log(`  -> Attempting to parse '${value}' as number:`, numValue);
+
+              if (!isNaN(numValue)) {
+                // Keep as number, don't convert to string with toFixed
+                dataPoint[header] = numValue;
+                console.log(`  -> Converted to number: ${numValue}`);
+              } else {
+                dataPoint[header] = value; // Keep as string if not numeric
+                console.log(`  -> Kept as string: ${value}`);
+              }
+            } else {
+              dataPoint[header] = value;
+              console.log(`  -> Used as-is: ${value}`);
+            }
+          });
+          return dataPoint;
+        });
+      };
+
+      const dataAfter = convertToChartData(initialArrayData);
+      console.log('Converted data:', dataAfter);
+      return dataAfter;
     }
 
+    console.log('No initial array data, returning empty array');
     return [];
   }, [initialArrayData]);
 
@@ -83,8 +132,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     width: responsiveDefaults.width,
     height: responsiveDefaults.height,
     margin: { top: 20, right: 40, bottom: 60, left: 80 },
-    xAxisKey: Object.keys(processedInitialData[0] || {})[0] || 'x',
-    yAxisKeys: Object.keys(processedInitialData[0] || {}).slice(1) || ['y'], // Lấy tất cả columns trừ column đầu tiên (xAxisKey)
+    xAxisKey: processedInitialData.length > 0 ? Object.keys(processedInitialData[0])[0] : 'x',
+    yAxisKeys:
+      processedInitialData.length > 0 ? Object.keys(processedInitialData[0]).slice(1) : ['y'], // Lấy tất cả columns trừ column đầu tiên (xAxisKey)
     disabledLines: [], // Default to no disabled lines
     title: t('lineChart_editor_title'),
     xAxisLabel: t('lineChart_editor_xAxisLabel'),
@@ -176,6 +226,66 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     seriesManagement: true,
     dataEditor: true,
   });
+
+  // Effect to sync data when initialArrayData changes
+  useEffect(() => {
+    console.log('Process initial data', processedInitialData);
+    console.log('Data tracking before update', data);
+
+    // Only update data state if processedInitialData has actually changed
+    if (
+      processedInitialData.length > 0 &&
+      JSON.stringify(processedInitialData) !== JSON.stringify(data)
+    ) {
+      setData(processedInitialData);
+      setTempData(processedInitialData);
+      console.log('Updated data state to match processedInitialData', processedInitialData);
+    }
+  }, [processedInitialData]); // Only run when processedInitialData changes
+
+  // Effect to update config when data structure changes
+  useEffect(() => {
+    console.log('Config data structure effect running');
+    console.log('Current data:', data);
+    console.log('Current config xAxisKey:', config.xAxisKey);
+    console.log('Current config yAxisKeys:', config.yAxisKeys);
+
+    if (data.length > 0) {
+      const availableKeys = Object.keys(data[0]);
+      console.log('Available keys from data:', availableKeys);
+
+      // Handle the case where config keys might be arrays
+      const currentXAxisKey = Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey;
+      const currentYAxisKeys = Array.isArray(config.yAxisKeys)
+        ? config.yAxisKeys
+        : [config.yAxisKeys];
+
+      console.log('Processed current xAxisKey:', currentXAxisKey);
+      console.log('Processed current yAxisKeys:', currentYAxisKeys);
+
+      const newXAxisKey = availableKeys[0] || 'x';
+      const newYAxisKeys = availableKeys.slice(1).length > 0 ? availableKeys.slice(1) : ['y'];
+
+      console.log('Calculated new xAxisKey:', newXAxisKey);
+      console.log('Calculated new yAxisKeys:', newYAxisKeys);
+
+      // Only update if keys have actually changed
+      if (
+        currentXAxisKey !== newXAxisKey ||
+        JSON.stringify(currentYAxisKeys) !== JSON.stringify(newYAxisKeys)
+      ) {
+        console.log('Updating config due to data structure change');
+        updateConfig({
+          xAxisKey: newXAxisKey,
+          yAxisKeys: newYAxisKeys,
+        });
+      } else {
+        console.log('Config keys are already correct, no update needed');
+      }
+    } else {
+      console.log('No data available to determine keys');
+    }
+  }, [data]); // Run when data changes
 
   // Config management dropdown state
   const [showConfigDropdown, setShowConfigDropdown] = useState(false);
@@ -1269,19 +1379,42 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     arrayData={
                       data.length > 0
                         ? [
-                            [config.xAxisKey, ...config.yAxisKeys],
-                            ...data.map(point => [
-                              point[config.xAxisKey],
-                              ...config.yAxisKeys.map(key => point[key]),
-                            ]),
+                            [
+                              // Ensure xAxisKey is a string, not an array
+                              Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey,
+                              // Ensure yAxisKeys are strings, not arrays
+                              ...(Array.isArray(config.yAxisKeys)
+                                ? config.yAxisKeys
+                                : [config.yAxisKeys]
+                              ).filter(key => typeof key === 'string' && key.length > 0),
+                            ],
+                            ...data.map(point => {
+                              const xKey = Array.isArray(config.xAxisKey)
+                                ? config.xAxisKey[0]
+                                : config.xAxisKey;
+                              const yKeys = Array.isArray(config.yAxisKeys)
+                                ? config.yAxisKeys
+                                : [config.yAxisKeys];
+
+                              return [
+                                point[xKey],
+                                ...yKeys
+                                  .filter(key => typeof key === 'string')
+                                  .map(key => point[key]),
+                              ];
+                            }),
                           ]
                         : undefined
                     }
                     width={config.width}
                     height={config.height}
                     margin={config.margin}
-                    xAxisKey={config.xAxisKey}
-                    yAxisKeys={config.yAxisKeys}
+                    xAxisKey={Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey}
+                    yAxisKeys={
+                      Array.isArray(config.yAxisKeys)
+                        ? config.yAxisKeys.filter(key => typeof key === 'string')
+                        : [config.yAxisKeys].filter(key => typeof key === 'string')
+                    }
                     disabledLines={config.disabledLines}
                     colors={colors}
                     seriesNames={Object.fromEntries(

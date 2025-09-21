@@ -176,9 +176,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   const [viewportHeight, setViewportHeight] = useState(0);
   const ROW_HEIGHT = 40; // approximate row height incl. borders
 
-  // Initialization (run once). We avoid depending on initialData/initialColumns so that upstream re-renders (caused by onDataChange) do not wipe user edits.
+  // Always reset state when initialData, initialColumns, or mode changes
   useEffect(() => {
-    if (initializedRef.current) return;
     const initCols = (initialColumns.length ? initialColumns : DEFAULT_COLS).map(c => ({
       ...c,
       width: c.width || DEFAULT_WIDTH,
@@ -190,7 +189,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     setData(initData);
     setFilters(Array(initCols.length).fill(''));
     initializedRef.current = true;
-  }, []);
+  }, [initialColumns, initialData, mode]);
 
   useEffect(() => {
     if (historyEnabled && history.length === 0 && columns.length > 0 && data.length > 0) {

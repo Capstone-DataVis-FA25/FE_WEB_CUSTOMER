@@ -463,6 +463,46 @@ export const protectedRoutes: RouteConfig[] = [
       description: 'Create new charts from your datasets',
     },
   },
+  // Chart Editor routes with ID parameter
+  {
+    path: Routers.LINE_CHART_EDITOR_DEMO,
+    name: 'line-chart-editor',
+    component: 'LineChartEditorPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Line Chart Editor',
+      description: 'Edit line charts with advanced customization options',
+    },
+  },
+  {
+    path: Routers.BAR_CHART_EDITOR_DEMO,
+    name: 'bar-chart-editor',
+    component: 'BarChartEditorPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Bar Chart Editor',
+      description: 'Edit bar charts with advanced customization options',
+    },
+  },
+  {
+    path: Routers.AREA_CHART_EDITOR_DEMO,
+    name: 'area-chart-editor',
+    component: 'AreaChartEditorPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Area Chart Editor',
+      description: 'Edit area charts with advanced customization options',
+    },
+  },
 ];
 
 // Error routes
