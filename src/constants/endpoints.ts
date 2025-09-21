@@ -24,4 +24,11 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string) => `/datasets/${id}`,
     DELETE: (id: string) => `/datasets/${id}`,
   },
+  CHARTS: {
+    GET_ALL: '/charts',
+    GET_BY_ID: (id: string) => `/charts/${id}`,
+    CREATE: '/charts',
+    UPDATE: (id: string) => `/charts/${id}`,
+    DELETE: (id: string) => `/charts/${id}`,
+  },
 } as const;

@@ -7,7 +7,13 @@ export interface BackendDataHeader {
   name: string;
   type: string;
   index: number;
-  data: any[]; // Array of column values
+  // Encrypted fields from database
+  encryptedData?: string;
+  iv?: string;
+  authTag?: string;
+  encryptedDataKey?: string;
+  // Decrypted data (populated after decryption)
+  data?: any[];
 }
 
 export interface BackendDatasetResponse {
@@ -308,7 +314,7 @@ export const convertBackendDataToChartData = (
 
     sortedHeaders.forEach(header => {
       const key = headerTransform(header.name);
-      let value = header.data[rowIndex];
+      let value = header.data?.[rowIndex];
 
       // Handle missing values
       if (value === null || value === undefined || value === '') {
@@ -367,7 +373,7 @@ export const convertBackendDataToArray = (
   // Create data rows
   const dataRows: (string | number)[][] = [];
   for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-    const row = sortedHeaders.map(header => header.data[rowIndex] ?? '');
+    const row = sortedHeaders.map(header => header.data?.[rowIndex] ?? '');
     dataRows.push(row);
   }
 

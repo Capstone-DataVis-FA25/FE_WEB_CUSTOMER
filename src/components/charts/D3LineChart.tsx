@@ -1,7 +1,93 @@
-  import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
-import { convertArrayToChartData } from '@/utils/dataConverter';
+
+// Define convertArrayToChartData function directly in this file
+/**
+ * Converts 2D array data to ChartDataPoint format for D3 visualization
+ *
+ * Expected input format:
+ * [
+ *   ['column1', 'column2', 'column3'],  // Headers row
+ *   ['value1', 'value2', 'value3'],      // Data row 1
+ *   ['value4', 'value5', 'value6'],      // Data row 2
+ *   // ... more data rows
+ * ]
+ *
+ * Output format:
+ * [
+ *   { column1: 'value1', column2: 'value2', column3: 'value3' },
+ *   { column1: 'value4', column2: 'value5', column3: 'value6' },
+ *   // ... more data objects
+ * ]
+ */
+function convertArrayToChartData(arrayData: (string | number)[][]): ChartDataPoint[] {
+  console.log('convertArrayToChartData input:', arrayData);
+
+  if (!arrayData || arrayData.length === 0) {
+    console.log('No array data provided');
+    return [];
+  }
+
+  if (arrayData.length < 2) {
+    console.warn('Array data must have at least 2 rows (headers + data)');
+    return [];
+  }
+
+  // First row should contain headers
+  const headers = arrayData[0] as string[];
+  const dataRows = arrayData.slice(1);
+
+  console.log('Headers:', headers);
+  console.log('Data rows:', dataRows);
+
+  if (headers.length === 0) {
+    console.warn('No headers found in first row');
+    return [];
+  }
+
+  const chartData: ChartDataPoint[] = dataRows.map((row, rowIndex) => {
+    const dataPoint: ChartDataPoint = {};
+
+    headers.forEach((header, headerIndex) => {
+      const value = row[headerIndex];
+
+      // Handle undefined/null/N/A values
+      if (value === undefined || value === null || value === 'N/A' || value === '') {
+        console.warn(
+          `Missing/invalid value at row ${rowIndex + 1}, column ${headerIndex} (${header}):`,
+          value
+        );
+        // For the first column (usually category/label), use a placeholder; for numeric columns, use 0
+        if (headerIndex === 0) {
+          dataPoint[header] = `Unknown_${rowIndex + 1}`; // Placeholder for category
+        } else {
+          dataPoint[header] = 0; // Default to 0 for missing numeric values
+        }
+        return;
+      }
+
+      // Try to convert to number if it's a numeric string
+      if (typeof value === 'string') {
+        // Clean the string (remove commas, spaces, etc.)
+        const cleanedValue = value.replace(/[,\s]/g, '');
+        const numValue = parseFloat(cleanedValue);
+        if (!isNaN(numValue)) {
+          dataPoint[header] = numValue;
+        } else {
+          dataPoint[header] = value; // Keep as string if not numeric
+        }
+      } else {
+        dataPoint[header] = value;
+      }
+    });
+
+    return dataPoint;
+  });
+
+  console.log('Converted chart data:', chartData);
+  return chartData;
+}
 
 export interface ChartDataPoint {
   [key: string]: number | string;
@@ -18,44 +104,47 @@ export interface D3LineChartProps {
   colors?: Record<string, { light: string; dark: string }>;
   seriesNames?: Record<string, string>; // Add series names mapping
   // Individual series configurations
-  seriesConfigs?: Record<string, {
-    lineWidth?: number;
-    pointRadius?: number;
-    lineStyle?: 'solid' | 'dashed' | 'dotted';
-    pointStyle?: 'circle' | 'square' | 'triangle' | 'diamond';
-    opacity?: number;
-    formatter?: string;
-  }>;
+  seriesConfigs?: Record<
+    string,
+    {
+      lineWidth?: number;
+      pointRadius?: number;
+      lineStyle?: 'solid' | 'dashed' | 'dotted';
+      pointStyle?: 'circle' | 'square' | 'triangle' | 'diamond';
+      opacity?: number;
+      formatter?: string;
+    }
+  >;
   title?: string;
   yAxisLabel?: string;
   xAxisLabel?: string;
   showLegend?: boolean;
   showGrid?: boolean;
   showPoints?: boolean;
-  xAxisStart?: "auto" | "zero" | number; // Add custom X-axis start option
-  yAxisStart?: "auto" | "zero" | number; // Add custom Y-axis start option
+  xAxisStart?: 'auto' | 'zero' | number; // Add custom X-axis start option
+  yAxisStart?: 'auto' | 'zero' | number; // Add custom Y-axis start option
   animationDuration?: number;
   curve?: d3.CurveFactory;
   yAxisFormatter?: (value: number) => string; // Add custom Y-axis formatter
   xAxisFormatter?: (value: number) => string; // Add custom X-axis formatter
   fontSize?: { axis: number; label: number; title: number }; // Add fontSize prop
-  
+
   // New styling props
   lineWidth?: number;
   pointRadius?: number;
   gridOpacity?: number;
   legendPosition?: 'top' | 'bottom' | 'left' | 'right';
-  
+
   // New axis props
   xAxisRotation?: number;
   yAxisRotation?: number;
   showAxisLabels?: boolean;
   showAxisTicks?: boolean;
-  
+
   // New interaction props
   enableZoom?: boolean;
   showTooltip?: boolean;
-  
+
   // New visual props
   theme?: 'light' | 'dark' | 'auto';
   backgroundColor?: string;
@@ -92,30 +181,30 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   showLegend = true,
   showGrid = true,
   showPoints = true,
-  xAxisStart = "auto", // Default to auto
-  yAxisStart = "auto", // Default to auto
+  xAxisStart = 'auto', // Default to auto
+  yAxisStart = 'auto', // Default to auto
   animationDuration = 1000,
   curve = d3.curveMonotoneX,
   yAxisFormatter, // Optional custom Y-axis formatter
   xAxisFormatter, // Optional custom X-axis formatter
   fontSize = { axis: 12, label: 14, title: 16 }, // Default fontSize
-  
+
   // New styling props with defaults
   lineWidth = 2,
   pointRadius = 4,
   gridOpacity = 0.3,
   legendPosition = 'bottom',
-  
+
   // New axis props with defaults
   xAxisRotation = 0,
   yAxisRotation = 0,
   showAxisLabels = true,
   showAxisTicks = true,
-  
+
   // New interaction props with defaults
   enableZoom = false,
   showTooltip = true,
-  
+
   // New visual props with defaults
   theme = 'auto',
   backgroundColor = 'transparent',
@@ -128,8 +217,9 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [dimensions, setDimensions] = React.useState({ width, height });
   const { t } = useTranslation();
-
-
+  console.log('Arraydata: ', arrayData);
+  console.log('xAxisKey', xAxisKey);
+  console.log('yAxisKey', yAxisKeys);
 
   // Helper function for different point shapes
   const getPointPath = (style: string, radius: number): string => {
@@ -155,12 +245,68 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
   // Convert arrayData to ChartDataPoint[] if provided
   const processedData = React.useMemo((): ChartDataPoint[] => {
+    console.log('ProcessedData useMemo running with arrayData:', arrayData);
+
     if (arrayData && arrayData.length > 0) {
-      return convertArrayToChartData(arrayData);
+      const converted = convertArrayToChartData(arrayData);
+      console.log('Converted data in processedData:', converted);
+
+      // Validate the converted data
+      if (converted.length === 0) {
+        console.warn('No valid data after conversion');
+        return [];
+      }
+
+      // Check if we have valid xAxisKey and yAxisKeys in the data
+      const firstPoint = converted[0];
+      const availableKeys = Object.keys(firstPoint);
+
+      console.log('Available keys in data:', availableKeys);
+      console.log('Required xAxisKey:', xAxisKey);
+      console.log('Required yAxisKeys:', yAxisKeys);
+
+      // Validate xAxisKey exists
+      if (!availableKeys.includes(xAxisKey)) {
+        console.error(`xAxisKey '${xAxisKey}' not found in data. Available keys:`, availableKeys);
+        return [];
+      }
+
+      // Validate yAxisKeys exist and have numeric values
+      const validYAxisKeys = yAxisKeys.filter(key => {
+        if (!availableKeys.includes(key)) {
+          console.error(`yAxisKey '${key}' not found in data. Available keys:`, availableKeys);
+          return false;
+        }
+
+        // Check if the key has numeric values
+        const hasNumericValues = converted.some(point => {
+          const value = point[key];
+          return typeof value === 'number' && !isNaN(value);
+        });
+
+        if (!hasNumericValues) {
+          console.error(`yAxisKey '${key}' does not contain numeric values`);
+          return false;
+        }
+
+        return true;
+      });
+
+      if (validYAxisKeys.length === 0) {
+        console.error('No valid yAxisKeys with numeric data found');
+        return [];
+      }
+
+      // Note: xAxisKey can contain string or numeric values (for categories or continuous data)
+      console.log(`xAxisKey '${xAxisKey}' validation passed (can be string or numeric)`);
+      console.log(`Valid yAxisKeys with numeric data: ${validYAxisKeys.join(', ')}`);
+
+      return converted;
     }
-    
+
+    console.log('No array data provided, returning empty array');
     return [];
-  }, [arrayData]);
+  }, [arrayData, xAxisKey, yAxisKeys]);
 
   // Monitor container size for responsiveness
   useEffect(() => {
@@ -220,7 +366,43 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   }, [theme]);
 
   useEffect(() => {
-    if (!svgRef.current || !processedData.length) return;
+    console.log('D3LineChart useEffect running');
+    console.log('processedData:', processedData);
+    console.log('svgRef.current:', svgRef.current);
+
+    if (!svgRef.current) {
+      console.log('No svgRef, skipping chart creation');
+      return;
+    }
+
+    if (!processedData.length) {
+      console.log('No processed data, clearing any existing chart');
+      d3.select(svgRef.current).selectAll('*').remove();
+      return;
+    }
+
+    // Additional validation before creating chart
+    try {
+      // Validate that we have the required keys
+      const firstPoint = processedData[0];
+      if (!firstPoint[xAxisKey]) {
+        console.error(`xAxisKey '${xAxisKey}' not found in first data point:`, firstPoint);
+        return;
+      }
+
+      const validYAxisKeys = yAxisKeys.filter(key =>
+        Object.prototype.hasOwnProperty.call(firstPoint, key)
+      );
+      if (validYAxisKeys.length === 0) {
+        console.error(`No valid yAxisKeys found in first data point:`, firstPoint);
+        return;
+      }
+
+      console.log('All validations passed, proceeding with chart creation');
+    } catch (error) {
+      console.error('Error during data validation:', error);
+      return;
+    }
 
     // Use responsive dimensions
     const currentWidth = dimensions.width;
@@ -244,11 +426,10 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     const axisColor = isDarkMode ? '#9ca3af' : '#374151';
     const gridColor = isDarkMode ? '#4b5563' : '#9ca3af';
     const textColor = isDarkMode ? '#f3f4f6' : '#1f2937';
-    
+
     // Use backgroundColor prop or fallback to theme default
-    const chartBackgroundColor = backgroundColor !== 'transparent' 
-      ? backgroundColor 
-      : (isDarkMode ? '#111827' : '#ffffff');
+    const chartBackgroundColor =
+      backgroundColor !== 'transparent' ? backgroundColor : isDarkMode ? '#111827' : '#ffffff';
 
     // Clear previous chart
     d3.select(svgRef.current).selectAll('*').remove();
@@ -290,48 +471,81 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .append('g')
       .attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top})`);
 
-    // Scales
-    const xExtent = d3.extent(processedData, d => d[xAxisKey] as number) as [number, number];
-    
-    // Dynamic X scale domain based on xAxisStart prop
-    let xDomain: [number, number];
-    if (xAxisStart === "auto") {
-      xDomain = xExtent;
-    } else if (xAxisStart === "zero") {
-      xDomain = [0, xExtent[1]];
-    } else if (typeof xAxisStart === "number") {
-      xDomain = [xAxisStart, xExtent[1]];
-    } else {
-      // Fallback to old logic for backward compatibility
-      xDomain = xExtent[0] > 0 && xExtent[0] <= 1 ? [0, xExtent[1]] : xExtent;
-    }
-    
-    const xScale = d3
-      .scaleLinear()
-      .domain(xDomain)
-      .range([0, innerWidth]);
+    // Enhanced scales with support for categorical X-axis
+    const xValues = processedData.map(d => d[xAxisKey]);
+    const hasStringXValues = xValues.some(v => typeof v === 'string');
 
-    const allYValues = processedData.flatMap(d => yAxisKeys.map(key => d[key] as number));
+    console.log('X values:', xValues);
+    console.log('Has string X values:', hasStringXValues);
+
+    let xScale: any;
+
+    if (hasStringXValues) {
+      // Use ordinal scale for categorical data (like city names)
+      const uniqueXValues = [...new Set(xValues)] as string[];
+      console.log('Unique categorical X values:', uniqueXValues);
+
+      xScale = d3.scaleBand().domain(uniqueXValues).range([0, innerWidth]).padding(0.1);
+    } else {
+      // Use linear scale for numeric data
+      const numericXValues = xValues.filter(v => typeof v === 'number' && !isNaN(v)) as number[];
+      const xExtent = d3.extent(numericXValues) as [number, number];
+
+      if ((!xExtent[0] && xExtent[0] !== 0) || (!xExtent[1] && xExtent[1] !== 0)) {
+        console.error('Invalid xExtent:', xExtent, 'from numericXValues:', numericXValues);
+        return;
+      }
+
+      // Dynamic X scale domain based on xAxisStart prop
+      let xDomain: [number, number];
+      if (xAxisStart === 'auto') {
+        xDomain = xExtent;
+      } else if (xAxisStart === 'zero') {
+        xDomain = [0, xExtent[1]];
+      } else if (typeof xAxisStart === 'number') {
+        xDomain = [xAxisStart, xExtent[1]];
+      } else {
+        xDomain = xExtent[0] > 0 && xExtent[0] <= 1 ? [0, xExtent[1]] : xExtent;
+      }
+
+      console.log('xDomain:', xDomain);
+
+      xScale = d3.scaleLinear().domain(xDomain).range([0, innerWidth]);
+    }
+
+    // Get all Y values and validate they're numeric
+    const allYValues = processedData
+      .flatMap(d => yAxisKeys.map(key => d[key] as number))
+      .filter(v => typeof v === 'number' && !isNaN(v));
+
+    if (allYValues.length === 0) {
+      console.error('No valid numeric Y values found');
+      return;
+    }
+
     const yExtent = d3.extent(allYValues) as [number, number];
-    
+
+    if ((!yExtent[0] && yExtent[0] !== 0) || (!yExtent[1] && yExtent[1] !== 0)) {
+      console.error('Invalid yExtent:', yExtent, 'from allYValues:', allYValues);
+      return;
+    }
+
     // Dynamic Y scale domain based on yAxisStart prop
     let yDomain: [number, number];
-    if (yAxisStart === "auto") {
+    if (yAxisStart === 'auto') {
       yDomain = yExtent;
-    } else if (yAxisStart === "zero") {
+    } else if (yAxisStart === 'zero') {
       yDomain = [0, yExtent[1]];
-    } else if (typeof yAxisStart === "number") {
+    } else if (typeof yAxisStart === 'number') {
       yDomain = [yAxisStart, yExtent[1]];
     } else {
       // Fallback to old logic for backward compatibility
       yDomain = yExtent[0] > 0 ? [0, yExtent[1]] : yExtent;
     }
 
-    const yScale = d3
-      .scaleLinear()
-      .domain(yDomain)
-      .nice()
-      .range([innerHeight, 0]);
+    console.log('yDomain:', yDomain);
+
+    const yScale = d3.scaleLinear().domain(yDomain).nice().range([innerHeight, 0]);
 
     // Grid lines
     if (showGrid) {
@@ -350,14 +564,35 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr('stroke-dasharray', '3,3')
         .attr('opacity', gridOpacity); // Use gridOpacity prop
 
-      // Vertical grid lines
+      // Vertical grid lines - handle both scale types
+      let xTickValues: any[];
+      if (hasStringXValues) {
+        // For categorical data, use domain values
+        xTickValues = (xScale as any).domain();
+      } else {
+        // For numeric data, use ticks
+        xTickValues = xScale.ticks();
+      }
+
       g.selectAll('.grid-line-vertical')
-        .data(xScale.ticks())
+        .data(xTickValues)
         .enter()
         .append('line')
         .attr('class', 'grid-line-vertical')
-        .attr('x1', d => xScale(d))
-        .attr('x2', d => xScale(d))
+        .attr('x1', d => {
+          if (hasStringXValues) {
+            return (xScale as any)(d) + (xScale as any).bandwidth() / 2;
+          } else {
+            return xScale(d);
+          }
+        })
+        .attr('x2', d => {
+          if (hasStringXValues) {
+            return (xScale as any)(d) + (xScale as any).bandwidth() / 2;
+          } else {
+            return xScale(d);
+          }
+        })
         .attr('y1', 0)
         .attr('y2', innerHeight)
         .attr('stroke', gridColor)
@@ -366,26 +601,37 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr('opacity', gridOpacity * 0.7); // Use gridOpacity prop (slightly less for vertical)
     }
 
-    // X Axis with flexible formatting
-    // Get unique X values from actual data to avoid duplicate ticks
-    const uniqueXValues = [...new Set(processedData.map(d => d[xAxisKey] as number))].sort((a, b) => a - b);
-    
-    const xAxis = d3.axisBottom(xScale)
-      .tickValues(uniqueXValues) // Use actual data values as ticks
-      .tickSizeInner(showAxisTicks ? 6 : 0) // Control inner tick size
-      .tickSizeOuter(showAxisTicks ? 6 : 0) // Control outer tick size
-      .tickFormat(d => {
-        const value = d.valueOf();
-        // Use custom formatter if provided, otherwise use integer formatting
-        if (xAxisFormatter) {
-          return xAxisFormatter(value);
-        }
-        return d3.format('d')(value);
-      });
+    // X Axis with support for both categorical and numeric data
+    let xAxis: any;
 
-    const xAxisGroup = g.append('g')
-      .attr('transform', `translate(0,${innerHeight})`)
-      .call(xAxis);
+    if (hasStringXValues) {
+      // For categorical data, use all unique values as ticks
+      const uniqueXValues = [...new Set(xValues)] as string[];
+      xAxis = d3
+        .axisBottom(xScale)
+        .tickSizeInner(showAxisTicks ? 6 : 0)
+        .tickSizeOuter(showAxisTicks ? 6 : 0)
+        .tickFormat((d: any) => String(d));
+    } else {
+      // For numeric data, use actual data values as ticks
+      const uniqueXValues = [...new Set(processedData.map(d => d[xAxisKey] as number))].sort(
+        (a, b) => a - b
+      );
+      xAxis = d3
+        .axisBottom(xScale)
+        .tickValues(uniqueXValues)
+        .tickSizeInner(showAxisTicks ? 6 : 0)
+        .tickSizeOuter(showAxisTicks ? 6 : 0)
+        .tickFormat((d: any) => {
+          const value = Number(d);
+          if (xAxisFormatter && !isNaN(value)) {
+            return xAxisFormatter(value);
+          }
+          return d3.format('d')(value);
+        });
+    }
+
+    const xAxisGroup = g.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis);
 
     xAxisGroup
       .selectAll('text')
@@ -445,25 +691,77 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr('opacity', 0.6);
     }
 
-    // Create lines for each enabled yAxisKey with individual configurations
+    // Create lines for each enabled yAxisKey with individual configurations and enhanced validation
     const enabledLines = yAxisKeys.filter(key => !disabledLines.includes(key));
-    
+
     enabledLines.forEach((key, index) => {
+      console.log(`Creating line for key: ${key}`);
+
+      // Validate that this key has valid data
+      const keyData = processedData.filter(d => {
+        const xVal = d[xAxisKey];
+        const yVal = d[key] as number;
+
+        // For categorical X-axis, validate string values; for numeric X-axis, validate numbers
+        const isValidX = hasStringXValues
+          ? typeof xVal === 'string' && xVal.length > 0
+          : typeof xVal === 'number' && !isNaN(xVal);
+
+        const isValidY = typeof yVal === 'number' && !isNaN(yVal);
+
+        return isValidX && isValidY;
+      });
+
+      if (keyData.length === 0) {
+        console.warn(`No valid data points for key: ${key}`);
+        return;
+      }
+
+      console.log(`Valid data points for ${key}:`, keyData.length);
+
       const seriesConfig = seriesConfigs[key] || {};
-      
+
       // Get individual series configurations or fallback to global
       const seriesLineWidth = seriesConfig.lineWidth ?? lineWidth;
       const seriesPointRadius = seriesConfig.pointRadius ?? pointRadius;
       const seriesOpacity = seriesConfig.opacity ?? 1;
       const seriesLineStyle = seriesConfig.lineStyle ?? 'solid';
       const seriesPointStyle = seriesConfig.pointStyle ?? 'circle';
-      
-      // Custom line generator for this specific key
+
+      // Custom line generator for this specific key with validation
       const keyLine = d3
         .line<ChartDataPoint>()
-        .x(d => xScale(d[xAxisKey] as number))
-        .y(d => yScale(d[key] as number))
-        .curve(curve);
+        .x(d => {
+          const xVal = d[xAxisKey];
+          let scaledVal: number;
+
+          if (hasStringXValues) {
+            // For categorical data, use band scale
+            scaledVal = (xScale as any)(xVal) + (xScale as any).bandwidth() / 2;
+          } else {
+            // For numeric data, use linear scale
+            scaledVal = xScale(xVal as number);
+          }
+
+          return isNaN(scaledVal) ? 0 : scaledVal;
+        })
+        .y(d => {
+          const val = yScale(d[key] as number);
+          return isNaN(val) ? 0 : val;
+        })
+        .curve(curve)
+        .defined(d => {
+          const xVal = d[xAxisKey];
+          const yVal = d[key] as number;
+
+          if (hasStringXValues) {
+            return xVal !== undefined && xVal !== null && typeof yVal === 'number' && !isNaN(yVal);
+          } else {
+            return (
+              typeof xVal === 'number' && !isNaN(xVal) && typeof yVal === 'number' && !isNaN(yVal)
+            );
+          }
+        });
 
       // Add the line path with individual styling
       const path = g
@@ -475,7 +773,6 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr('stroke-linecap', 'round')
         .attr('stroke-linejoin', 'round')
         .attr('stroke-opacity', seriesOpacity)
-        .attr('d', keyLine)
         .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
         .style('opacity', 0);
 
@@ -486,36 +783,88 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         path.attr('stroke-dasharray', `${seriesLineWidth} ${seriesLineWidth}`);
       }
 
+      // Try to generate the path and handle errors
+      try {
+        const pathData = keyLine(processedData);
+        if (pathData) {
+          path.attr('d', pathData);
+        } else {
+          console.warn(`Failed to generate path data for key: ${key}`);
+          path.remove();
+          return;
+        }
+      } catch (error) {
+        console.error(`Error generating path for key ${key}:`, error);
+        path.remove();
+        return;
+      }
+
       // Animate the line
       const totalLength = path.node()?.getTotalLength() || 0;
 
-      path
-        .attr('stroke-dasharray', `${totalLength} ${totalLength}`)
-        .attr('stroke-dashoffset', totalLength)
-        .style('opacity', 1)
-        .transition()
-        .duration(animationDuration)
-        .ease(d3.easeQuadInOut)
-        .attr('stroke-dashoffset', 0)
-        .on('end', () => {
-          // Restore original dash array for line styles
-          if (seriesLineStyle === 'dashed') {
-            path.attr('stroke-dasharray', `${seriesLineWidth * 3} ${seriesLineWidth * 2}`);
-          } else if (seriesLineStyle === 'dotted') {
-            path.attr('stroke-dasharray', `${seriesLineWidth} ${seriesLineWidth}`);
+      if (totalLength > 0) {
+        path
+          .attr('stroke-dasharray', `${totalLength} ${totalLength}`)
+          .attr('stroke-dashoffset', totalLength)
+          .style('opacity', 1)
+          .transition()
+          .duration(animationDuration)
+          .ease(d3.easeQuadInOut)
+          .attr('stroke-dashoffset', 0)
+          .on('end', () => {
+            // Restore original dash array for line styles
+            if (seriesLineStyle === 'dashed') {
+              path.attr('stroke-dasharray', `${seriesLineWidth * 3} ${seriesLineWidth * 2}`);
+            } else if (seriesLineStyle === 'dotted') {
+              path.attr('stroke-dasharray', `${seriesLineWidth} ${seriesLineWidth}`);
+            } else {
+              path.attr('stroke-dasharray', 'none');
+            }
+          });
+      } else {
+        path.style('opacity', 1);
+      }
+
+      // Add data points with individual styling and validation
+      if (showPoints) {
+        const validPoints = processedData.filter(d => {
+          const xVal = d[xAxisKey];
+          const yVal = d[key] as number;
+
+          if (hasStringXValues) {
+            return xVal !== undefined && xVal !== null && typeof yVal === 'number' && !isNaN(yVal);
           } else {
-            path.attr('stroke-dasharray', 'none');
+            return (
+              typeof xVal === 'number' && !isNaN(xVal) && typeof yVal === 'number' && !isNaN(yVal)
+            );
           }
         });
 
-      // Add data points with individual styling
-      if (showPoints) {
         g.selectAll(`.point-${index}`)
-          .data(processedData)
+          .data(validPoints)
           .enter()
           .append('path')
           .attr('class', `point-${index}`)
-          .attr('transform', d => `translate(${xScale(d[xAxisKey] as number)}, ${yScale(d[key] as number)})`)
+          .attr('transform', d => {
+            const xVal = d[xAxisKey];
+            let x: number;
+
+            if (hasStringXValues) {
+              // For categorical data, use band scale
+              x = (xScale as any)(xVal) + (xScale as any).bandwidth() / 2;
+            } else {
+              // For numeric data, use linear scale
+              x = xScale(xVal as number);
+            }
+
+            const y = yScale(d[key] as number);
+
+            if (isNaN(x) || isNaN(y)) {
+              console.warn(`Invalid coordinates for point: x=${x}, y=${y}`);
+              return 'translate(0,0)';
+            }
+            return `translate(${x}, ${y})`;
+          })
           .attr('d', getPointPath(seriesPointStyle, 0))
           .attr('fill', currentColors[key])
           .attr('stroke', chartBackgroundColor)
@@ -524,7 +873,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
           .on('mouseover', function (_event, d) {
             if (!showTooltip) return;
-            
+
             // Enhanced tooltip on hover
             d3.select(this)
               .transition()
@@ -533,17 +882,30 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
               .attr('stroke-width', 3);
 
             // Create enhanced tooltip
-            const xValue = typeof d[xAxisKey] === 'number' ? d[xAxisKey].toLocaleString() : d[xAxisKey];
+            const xValue =
+              typeof d[xAxisKey] === 'number' ? d[xAxisKey].toLocaleString() : d[xAxisKey];
             const yValue = typeof d[key] === 'number' ? d[key].toLocaleString() : d[key];
             const seriesName = seriesNames[key] || key;
-            
+
+            const pointX = (() => {
+              const xVal = d[xAxisKey];
+              if (hasStringXValues) {
+                return (xScale as any)(xVal) + (xScale as any).bandwidth() / 2;
+              } else {
+                return xScale(xVal as number);
+              }
+            })();
+            const pointY = yScale(d[key] as number);
+
+            if (isNaN(pointX) || isNaN(pointY)) {
+              console.warn('Cannot show tooltip: invalid coordinates');
+              return;
+            }
+
             const tooltip = g
               .append('g')
               .attr('class', 'tooltip')
-              .attr(
-                'transform',
-                `translate(${xScale(d[xAxisKey] as number)}, ${yScale(d[key] as number) - 25})`
-              );
+              .attr('transform', `translate(${pointX}, ${pointY - 25})`);
 
             // Tooltip background with shadow - make it larger for more content
             tooltip
@@ -631,58 +993,58 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       let dragStartY = 0;
       let dragStartTranslateX = 0;
       let dragStartTranslateY = 0;
-      
+
       // Mouse wheel zoom
-      svg.on('wheel', function(event) {
+      svg.on('wheel', function (event) {
         event.preventDefault();
-        
+
         // Get mouse position relative to the chart
         const rect = svg.node()?.getBoundingClientRect();
         if (!rect) return;
-        
+
         const mouseX = event.clientX - rect.left - responsiveMargin.left;
         const mouseY = event.clientY - rect.top - responsiveMargin.top;
-        
+
         const delta = event.deltaY;
         const scaleFactor = delta > 0 ? 0.9 : 1.1;
         const newZoomLevel = zoomLevel * scaleFactor;
-        
+
         // Limit zoom
         const clampedZoomLevel = Math.max(0.5, Math.min(3, newZoomLevel));
         const actualScaleFactor = clampedZoomLevel / zoomLevel;
-        
+
         // Calculate new translation to zoom at mouse position
         const newTranslateX = translateX + (mouseX - translateX) * (1 - actualScaleFactor);
         const newTranslateY = translateY + (mouseY - translateY) * (1 - actualScaleFactor);
-        
+
         // Update zoom state
         zoomLevel = clampedZoomLevel;
         translateX = newTranslateX;
         translateY = newTranslateY;
-        
+
         // Apply zoom and pan transform
         const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
         g.attr('transform', transform);
       });
-      
+
       // Mouse drag to pan
-      svg.on('mousedown', function(event) {
+      svg.on('mousedown', function (event) {
         if (event.button !== 0) return; // Only left mouse button
-        
+
         isDragging = true;
         dragStartX = event.clientX;
         dragStartY = event.clientY;
         dragStartTranslateX = translateX;
         dragStartTranslateY = translateY;
-        
+
         // Change cursor to grabbing
         svg.style('cursor', 'grabbing');
-        
+
         // Prevent text selection during drag
         event.preventDefault();
       });
-      
-      svg.on('mousemove', function(event) {
+
+      svg.on('mousemove', function (event) {
         if (!isDragging) {
           // Show grab cursor when zoomed in
           if (zoomLevel > 1) {
@@ -692,23 +1054,23 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           }
           return;
         }
-        
+
         const deltaX = event.clientX - dragStartX;
         const deltaY = event.clientY - dragStartY;
-        
+
         // Update translation based on drag distance
         translateX = dragStartTranslateX + deltaX;
         translateY = dragStartTranslateY + deltaY;
-        
+
         // Apply pan transform
         const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
         g.attr('transform', transform);
       });
-      
-      svg.on('mouseup', function() {
+
+      svg.on('mouseup', function () {
         if (isDragging) {
           isDragging = false;
-          
+
           // Reset cursor
           if (zoomLevel > 1) {
             svg.style('cursor', 'grab');
@@ -717,27 +1079,30 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           }
         }
       });
-      
+
       // Handle mouse leave to stop dragging
-      svg.on('mouseleave', function() {
+      svg.on('mouseleave', function () {
         if (isDragging) {
           isDragging = false;
           svg.style('cursor', 'default');
         }
       });
-      
+
       // Double-click to reset zoom
-      svg.on('dblclick', function() {
+      svg.on('dblclick', function () {
         zoomLevel = 1;
         translateX = 0;
         translateY = 0;
-        
+
         svg.style('cursor', 'default');
-        
+
         g.transition()
           .duration(300)
           .ease(d3.easeQuadOut)
-          .attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top}) scale(1)`);
+          .attr(
+            'transform',
+            `translate(${responsiveMargin.left},${responsiveMargin.top}) scale(1)`
+          );
       });
     }
 
@@ -801,7 +1166,10 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   ]);
 
   return (
-    <div ref={containerRef} className={`w-full ${legendPosition === 'top' || legendPosition === 'bottom' ? 'space-y-4' : 'flex gap-4'}`}>
+    <div
+      ref={containerRef}
+      className={`w-full ${legendPosition === 'top' || legendPosition === 'bottom' ? 'space-y-4' : 'flex gap-4'}`}
+    >
       {title && title.trim() !== '' && (
         <h3
           className="font-bold text-gray-900 dark:text-white text-center"
@@ -815,7 +1183,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       {showLegend && legendPosition === 'top' && (
         <div className="w-full">
           <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <h4 
+            <h4
               className="font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center"
               style={{ fontSize: `${legendFontSize}px` }}
             >
@@ -828,26 +1196,28 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         </div>
       )}
 
-      <div className={`${legendPosition === 'left' || legendPosition === 'right' ? 'flex gap-4' : ''}`}>
+      <div
+        className={`${legendPosition === 'left' || legendPosition === 'right' ? 'flex gap-4' : ''}`}
+      >
         {/* Legend Left */}
         {showLegend && legendPosition === 'left' && (
           <div className="w-64 flex-shrink-0">
             <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-              <h4 
+              <h4
                 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center"
                 style={{ fontSize: `${legendFontSize}px` }}
               >
                 {t('legend')}
               </h4>
-              <div className="flex flex-col gap-3">
-                {renderLegendItems()}
-              </div>
+              <div className="flex flex-col gap-3">{renderLegendItems()}</div>
             </div>
           </div>
         )}
 
         {/* Chart Container */}
-        <div className={`relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3 ${legendPosition === 'left' || legendPosition === 'right' ? 'flex-1' : 'w-full'}`}>
+        <div
+          className={`relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3 ${legendPosition === 'left' || legendPosition === 'right' ? 'flex-1' : 'w-full'}`}
+        >
           <svg
             ref={svgRef}
             width={dimensions.width}
@@ -862,15 +1232,13 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         {showLegend && legendPosition === 'right' && (
           <div className="w-64 flex-shrink-0">
             <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-              <h4 
+              <h4
                 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center"
                 style={{ fontSize: `${legendFontSize}px` }}
               >
                 {t('legend')}
               </h4>
-              <div className="flex flex-col gap-3">
-                {renderLegendItems()}
-              </div>
+              <div className="flex flex-col gap-3">{renderLegendItems()}</div>
             </div>
           </div>
         )}
@@ -880,7 +1248,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       {showLegend && legendPosition === 'bottom' && (
         <div className="w-full">
           <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <h4 
+            <h4
               className="font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center"
               style={{ fontSize: `${legendFontSize}px` }}
             >
@@ -903,7 +1271,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         const color =
           colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
           defaultColors[`line${index + 1}`][isDarkMode ? 'dark' : 'light'];
-        
+
         // Use series name if provided, otherwise fallback to key
         const displayName = seriesNames[key] || key;
 
@@ -921,7 +1289,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
             </div>
 
             {/* Label */}
-            <span 
+            <span
               className="font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200"
               style={{ fontSize: `${legendFontSize}px` }}
             >

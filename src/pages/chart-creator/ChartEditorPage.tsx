@@ -1,27 +1,202 @@
-import React from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import LineChartEditor from '@/components/charts/LineChartEditor';
 import BarChartEditor from '@/components/charts/BarChartEditor';
 import AreaChartEditor from '@/components/charts/AreaChartEditor';
 import { salesData } from '@/components/charts/data/data';
-// import { convertArrayToChartData } from '@/utils/dataConverter';
-import { Database, BarChart3, Palette, Settings } from 'lucide-react';
+import { convertArrayToChartData } from '@/utils/dataConverter';
+import { useCharts } from '@/features/charts/useCharts';
+import { Database, BarChart3, Palette, Settings, ArrowLeft, Save, AlertCircle } from 'lucide-react';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import type { Chart } from '@/features/charts/chartTypes';
+import { convertBackendDataToChartData, convertChartDataToArray } from '@/utils/dataConverter';
+import type { ChartDataPoint } from '@/components/charts/D3LineChart';
 
 const ChartEditorPage: React.FC = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { currentChart, loading, error, getChartById, updateChart, clearChartError } = useCharts();
 
   // Get parameters from URL
+  const chartId = searchParams.get('chartId');
   const typeChart = searchParams.get('typeChart') || 'line';
+  const mode = searchParams.get('mode') || 'create'; // 'create' or 'edit'
   const datasetId = searchParams.get('datasetId') || '';
 
-  // Chart configuration based on type
+  // Local state for managing chart data and config
+  const [chartData, setChartData] = useState<ChartDataPoint[]>(
+    () => convertArrayToChartData(salesData) // Convert salesData to ChartDataPoint[]
+  );
+  const [chartConfig, setChartConfig] = useState<any>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Fetch chart data when in edit mode
+  useEffect(() => {
+    if (mode === 'edit' && chartId && !isInitialized) {
+      getChartById(chartId);
+    } else if (mode === 'create') {
+      setIsInitialized(true);
+    }
+  }, [chartId, mode, getChartById, isInitialized]);
+
+  // Update local state when chart data is loaded
+  useEffect(() => {
+    if (currentChart && mode === 'edit' && !isInitialized) {
+      // Load chart configuration
+      if (currentChart.config) {
+        setChartConfig(currentChart.config);
+      }
+
+      // Load dataset data if available (type assertion for extended dataset)
+      const chartWithDataset = currentChart as Chart & {
+        dataset?: {
+          id: string;
+          name: string;
+          description?: string;
+          headers?: Array<{
+            name: string;
+            type: string;
+            index: number;
+            data: any[];
+          }>;
+        };
+      };
+
+      if (chartWithDataset.dataset?.headers) {
+        // Convert dataset headers to chart data format
+        const convertedData = convertDatasetToChartFormat(chartWithDataset.dataset.headers);
+        if (convertedData.length > 0) {
+          setChartData(convertedData);
+        }
+      }
+
+      setIsInitialized(true);
+    }
+  }, [currentChart, mode, isInitialized]);
+
+  // Convert dataset headers to chart data format using the utility function
+  const convertDatasetToChartFormat = (headers: any[]) => {
+    try {
+      if (!headers || headers.length === 0) return [];
+
+      // Validate that headers have the required structure
+      const validHeaders = headers.filter(
+        h => h && typeof h === 'object' && h.name && Array.isArray(h.data) && h.data.length > 0
+      );
+
+      if (validHeaders.length === 0) return [];
+
+      // Use the convertBackendDataToChartData utility function
+      return convertBackendDataToChartData(validHeaders, {
+        headerTransform: (header: string) => header,
+        skipEmptyRows: true,
+        defaultValue: 0,
+        validateTypes: true,
+      });
+    } catch (error) {
+      console.error('Error converting dataset to chart format:', error);
+      return [];
+    }
+  };
+
+  // Handle save/update
+  const handleSave = async (updatedConfig: any) => {
+    if (mode === 'edit' && chartId && currentChart) {
+      try {
+        const updateData = {
+          name: currentChart.name,
+          description: currentChart.description,
+          config: updatedConfig,
+        };
+
+        await updateChart(chartId, updateData);
+        // Show success message or handle success
+      } catch (error) {
+        console.error('Error updating chart:', error);
+        // Handle error
+      }
+    }
+  };
+
+  // Handle back navigation
+  const handleBack = () => {
+    navigate('/workspace/charts');
+  };
+
+  // Show loading state
+  if (loading && !isInitialized) {
+    return (
+      <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="mt-4 text-lg text-muted-foreground">
+            {t('chart_editor_loading', 'Loading chart...')}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error && mode === 'edit') {
+    return (
+      <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            {t('chart_editor_error_title', 'Error Loading Chart')}
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            {error ||
+              t('chart_editor_error_message', 'Failed to load chart data. Please try again.')}
+          </p>
+          <div className="flex space-x-3 justify-center">
+            <Button variant="outline" onClick={handleBack}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {t('common_back', 'Back')}
+            </Button>
+            <Button
+              onClick={() => {
+                clearChartError();
+                if (chartId) getChartById(chartId);
+              }}
+            >
+              {t('common_retry', 'Retry')}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Chart configuration based on type and loaded data
   const getChartConfig = () => {
+    // Use loaded config if available, otherwise use defaults
+    if (chartConfig && mode === 'edit') {
+      return {
+        ...chartConfig,
+        // Ensure required fields are present
+        width: chartConfig.width || 800,
+        height: chartConfig.height || 400,
+        showLegend: chartConfig.showLegend !== undefined ? chartConfig.showLegend : true,
+        showGrid: chartConfig.showGrid !== undefined ? chartConfig.showGrid : true,
+        showPoints: chartConfig.showPoints !== undefined ? chartConfig.showPoints : true,
+        animationDuration: chartConfig.animationDuration || 1000,
+        curve: chartConfig.curve || 'curveMonotoneX',
+        margin: chartConfig.margin || { top: 20, right: 40, bottom: 60, left: 80 },
+      };
+    }
+
+    // Default configuration for create mode or fallback
     const baseConfig = {
-      title: t('chart_editor_title', 'Financial Data Analysis'),
+      title: currentChart?.name || t('chart_editor_title', 'Financial Data Analysis'),
       xAxisLabel: t('chart_editor_xAxisLabel', 'Month'),
       yAxisLabel: t('chart_editor_yAxisLabel', 'Revenue ($)'),
       xAxisKey: 'month',
@@ -53,61 +228,69 @@ const ChartEditorPage: React.FC = () => {
     const config = getChartConfig();
     const formatters = getChartFormatters();
 
+    // Common props for all chart editors - convert ChartDataPoint[] to array format
+    const arrayData = chartData.length > 0 ? convertChartDataToArray(chartData) : [];
+    console.log('arrayData', arrayData);
+    const commonProps = {
+      initialArrayData: arrayData,
+      initialConfig: config,
+      initialFormatters: formatters,
+      title: config.title,
+      description:
+        mode === 'edit' && currentChart
+          ? `${t('chart_editor_editing', 'Editing')}: ${currentChart.name}`
+          : undefined,
+    };
+
     switch (typeChart.toLowerCase()) {
       case 'line':
         return (
           <LineChartEditor
-            initialArrayData={salesData}
-            initialConfig={config}
-            initialFormatters={formatters}
-            title={config.title}
-            description={t(
-              'chart_editor_line_desc',
-              'Interactive line chart editor with customizable settings'
-            )}
+            {...commonProps}
+            description={
+              commonProps.description ||
+              t(
+                'chart_editor_line_desc',
+                'Interactive line chart editor with customizable settings'
+              )
+            }
           />
         );
       case 'bar':
         return (
           <BarChartEditor
-            initialArrayData={salesData}
+            {...commonProps}
             initialConfig={{
               ...config,
               barType: 'grouped' as const,
             }}
-            initialFormatters={formatters}
-            title={config.title}
-            description={t(
-              'chart_editor_bar_desc',
-              'Interactive bar chart editor with customizable settings'
-            )}
+            description={
+              commonProps.description ||
+              t('chart_editor_bar_desc', 'Interactive bar chart editor with customizable settings')
+            }
           />
         );
       case 'area':
-        // const convertedData = convertArrayToChartData(salesData);
         return (
           <AreaChartEditor
-            initialArrayData={salesData}
-            initialConfig={config}
-            initialFormatters={formatters}
-            title={config.title}
-            description={t(
-              'chart_editor_area_desc',
-              'Interactive area chart editor with customizable settings'
-            )}
+            {...commonProps}
+            description={
+              commonProps.description ||
+              t(
+                'chart_editor_area_desc',
+                'Interactive area chart editor with customizable settings'
+              )
+            }
           />
         );
       default:
         return (
           <LineChartEditor
-            initialArrayData={salesData}
-            initialConfig={config}
-            initialFormatters={formatters}
-            title={config.title}
-            description={t(
-              'chart_editor_default_desc',
-              'Interactive chart editor with customizable settings'
-            )}
+            {...commonProps}
+            description={
+              commonProps.description ||
+              t('chart_editor_default_desc', 'Interactive chart editor with customizable settings')
+            }
           />
         );
     }
@@ -166,18 +349,27 @@ const ChartEditorPage: React.FC = () => {
                 {chartInfo.icon}
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {t('chart_editor_title_main', 'Chart Editor')}
-                </h1>
+                <div className="flex items-center space-x-2">
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                    {mode === 'edit' && currentChart
+                      ? currentChart.name
+                      : t('chart_editor_title_main', 'Chart Editor')}
+                  </h1>
+                  {mode === 'edit' && (
+                    <Badge variant="outline" className="text-xs">
+                      {t('chart_editor_mode_edit', 'Editing')}
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                     <BarChart3 className="w-3 h-3" />
                     {chartInfo.name}
                   </Badge>
-                  {datasetId && (
+                  {(datasetId || currentChart?.datasetId) && (
                     <Badge variant="outline" className="flex items-center gap-1 text-xs">
                       <Database className="w-3 h-3" />
-                      {t('dataset_id', 'Dataset')}: {datasetId}
+                      {t('dataset_id', 'Dataset')}: {datasetId || currentChart?.datasetId}
                     </Badge>
                   )}
                 </div>
@@ -185,6 +377,25 @@ const ChartEditorPage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBack}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                {t('common_back', 'Back')}
+              </Button>
+              {mode === 'edit' && (
+                <Button
+                  size="sm"
+                  onClick={() => handleSave(getChartConfig())}
+                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  <Save className="w-4 h-4" />
+                  {t('common_save', 'Save')}
+                </Button>
+              )}
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

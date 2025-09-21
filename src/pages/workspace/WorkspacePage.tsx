@@ -1,23 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Plus,
-  BarChart3,
-  LineChart,
-  AreaChart,
-  Database,
-  Search,
-  Calendar,
-  Eye,
-  Edit3,
-  Share,
-  Edit,
-  Trash2,
-} from 'lucide-react';
+import { Plus, BarChart3, Database, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -29,111 +15,14 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import Routers from '@/router/routers';
 import { useDataset } from '@/features/dataset/useDataset';
+import { useCharts } from '@/features/charts/useCharts';
 import { useToastContext } from '@/components/providers/ToastProvider';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import type { Dataset } from '@/features/dataset/datasetAPI';
-
-const mockCharts = [
-  {
-    id: 1,
-    name: 'Sales Performance Trend',
-    description: 'Monthly sales analysis showing growth patterns across all channels',
-    type: 'line',
-    datasetId: 1,
-    datasetName: 'Monthly Sales Data',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-03-10',
-    category: 'Performance',
-    isPublic: true,
-    views: 245,
-    color: 'from-blue-500 to-cyan-500',
-  },
-  {
-    id: 2,
-    name: 'Revenue by Industry',
-    description: 'Quarterly revenue comparison highlighting top-performing sectors',
-    type: 'bar',
-    datasetId: 2,
-    datasetName: 'Quarterly Revenue by Industry',
-    createdAt: '2024-02-05',
-    updatedAt: '2024-03-08',
-    category: 'Finance',
-    isPublic: false,
-    views: 156,
-    color: 'from-emerald-500 to-teal-500',
-  },
-  {
-    id: 3,
-    name: 'Device Usage Distribution',
-    description: 'Area chart showing cumulative device usage over time periods',
-    type: 'area',
-    datasetId: 4,
-    datasetName: 'Device Usage Trends',
-    createdAt: '2024-02-15',
-    updatedAt: '2024-03-01',
-    category: 'Analytics',
-    isPublic: true,
-    views: 189,
-    color: 'from-orange-500 to-red-500',
-  },
-  {
-    id: 4,
-    name: 'Product Performance Matrix',
-    description: 'Comprehensive view of product sales, profits, and customer metrics',
-    type: 'bar',
-    datasetId: 3,
-    datasetName: 'Product Performance Metrics',
-    createdAt: '2024-03-01',
-    updatedAt: '2024-03-12',
-    category: 'Performance',
-    isPublic: false,
-    views: 98,
-    color: 'from-purple-500 to-pink-500',
-  },
-];
-
-const getChartIcon = (type: string) => {
-  switch (type) {
-    case 'line':
-      return <LineChart className="h-4 w-4" />;
-    case 'bar':
-      return <BarChart3 className="h-4 w-4" />;
-    case 'area':
-      return <AreaChart className="h-4 w-4" />;
-    default:
-      return <BarChart3 className="h-4 w-4" />;
-  }
-};
-
-const getChartTypeLabel = (type: string) => {
-  switch (type) {
-    case 'line':
-      return 'Line Chart';
-    case 'bar':
-      return 'Bar Chart';
-    case 'area':
-      return 'Area Chart';
-    default:
-      return 'Chart';
-  }
-};
-
-const getCategoryColor = (category: string) => {
-  switch (category) {
-    case 'Sales':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-    case 'Finance':
-      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
-    case 'Analytics':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-    case 'Performance':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-  }
-};
+import type { Chart } from '@/features/charts/chartTypes';
+import DatasetTab from './components/DatasetTab';
+import ChartTab from './components/ChartTab';
 
 const WorkspacePage: React.FC = () => {
   const { t } = useTranslation();
@@ -146,15 +35,28 @@ const WorkspacePage: React.FC = () => {
   const { datasets, loading, deleting, error, getDatasets, deleteDataset, clearDatasetError } =
     useDataset();
 
+  // Charts API integration - using real charts feature
+  const {
+    charts,
+    loading: chartsLoading,
+    deleting: chartDeleting,
+    error: chartsError,
+    getCharts,
+    deleteChart,
+    clearChartError,
+  } = useCharts();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [chartTypeFilter, setChartTypeFilter] = useState<string>('all');
   const [datasetTypeFilter, setDatasetTypeFilter] = useState<string>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingChartId, setDeletingChartId] = useState<string | null>(null);
 
-  // Fetch datasets on component mount
+  // Fetch datasets and charts on component mount
   useEffect(() => {
     getDatasets();
-  }, [getDatasets]);
+    getCharts();
+  }, [getDatasets, getCharts]);
 
   // Show error toast when error occurs
   useEffect(() => {
@@ -163,6 +65,14 @@ const WorkspacePage: React.FC = () => {
       clearDatasetError();
     }
   }, [error, showError, t, clearDatasetError]);
+
+  // Show error toast when charts error occurs
+  useEffect(() => {
+    if (chartsError) {
+      showError(t('charts_error', 'Charts Error'), chartsError);
+      clearChartError();
+    }
+  }, [chartsError, showError, t, clearChartError]);
 
   // Determine current tab based on URL
   const getCurrentTab = () => {
@@ -205,14 +115,16 @@ const WorkspacePage: React.FC = () => {
       })
     : [];
 
-  // Filter charts
-  const filteredCharts = mockCharts.filter(chart => {
-    const matchesSearch =
-      chart.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      chart.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = chartTypeFilter === 'all' || chart.type === chartTypeFilter;
-    return matchesSearch && matchesType;
-  });
+  // Filter charts - using real API data
+  const filteredCharts = Array.isArray(charts)
+    ? charts.filter(chart => {
+        const matchesSearch =
+          chart.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (chart.description && chart.description.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesType = chartTypeFilter === 'all' || chart.type === chartTypeFilter;
+        return matchesSearch && matchesType;
+      })
+    : [];
 
   // Format date helper (same as DatasetListPage)
   const formatDate = (dateString: string) => {
@@ -248,13 +160,36 @@ const WorkspacePage: React.FC = () => {
             `Dataset "${dataset.name}" has been deleted successfully`
           )
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as { message?: string };
         showError(
           t('dataset_deleteError', 'Delete Failed'),
-          error.message || t('dataset_deleteErrorMessage', 'Failed to delete dataset')
+          err.message || t('dataset_deleteErrorMessage', 'Failed to delete dataset')
         );
       } finally {
         setDeletingId(null);
+      }
+    });
+  };
+
+  // Handle delete chart
+  const handleDeleteChart = async (chart: Chart) => {
+    setDeletingChartId(chart.id);
+    modalConfirm.openConfirm(async () => {
+      try {
+        await deleteChart(chart.id).unwrap();
+        showSuccess(
+          t('chart_deleteSuccess', 'Chart Deleted'),
+          t('chart_deleteSuccessMessage', `Chart "${chart.name}" has been deleted successfully`)
+        );
+      } catch (error: unknown) {
+        const err = error as { message?: string };
+        showError(
+          t('chart_deleteError', 'Delete Failed'),
+          err.message || t('chart_deleteErrorMessage', 'Failed to delete chart')
+        );
+      } finally {
+        setDeletingChartId(null);
       }
     });
   };
@@ -263,32 +198,21 @@ const WorkspacePage: React.FC = () => {
     navigate(Routers.CREATE_DATASET);
   };
 
-  const handleCreateChart = (datasetId?: number) => {
+  const handleCreateChart = () => {
     // Navigate to chart creation page
-    if (datasetId) {
-      navigate(`${Routers.CHART_GALLERY}?datasetId=${datasetId}`);
-    } else {
-      navigate(Routers.CHART_GALLERY);
-    }
+    navigate(Routers.CHART_GALLERY);
   };
 
-  const handleEditChart = (chartId: number) => {
-    // Navigate to chart editor based on chart type
-    const chart = mockCharts.find(c => c.id === chartId);
+  const handleEditChart = (chartId: string) => {
+    const chart = charts.find(c => c.id === chartId);
     if (chart) {
-      switch (chart.type) {
-        case 'line':
-          navigate(Routers.LINE_CHART_EDITOR_DEMO);
-          break;
-        case 'bar':
-          navigate(Routers.BAR_CHART_EDITOR_DEMO);
-          break;
-        case 'area':
-          navigate(Routers.AREA_CHART_EDITOR_DEMO);
-          break;
-        default:
-          break;
-      }
+      // Navigate to chart editor with chart ID and type as query parameters
+      const params = new URLSearchParams({
+        chartId: chartId,
+        typeChart: chart.type,
+        mode: 'edit',
+      });
+      navigate(`/chart-editor?${params.toString()}`);
     }
   };
 
@@ -403,239 +327,31 @@ const WorkspacePage: React.FC = () => {
 
           {/* Datasets Tab */}
           <TabsContent value="datasets" className="space-y-6">
-            {loading && filteredDatasets.length === 0 ? (
-              <div className="flex justify-center items-center py-16">
-                <LoadingSpinner />
-              </div>
-            ) : filteredDatasets.length === 0 ? (
-              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm dark:bg-gray-800/80">
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-6">
-                    <Database className="h-10 w-10 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-semibold mb-2">
-                    {searchTerm ? 'No datasets found' : 'No datasets yet'}
-                  </h3>
-                  <p className="text-muted-foreground text-center mb-6 max-w-md">
-                    {searchTerm
-                      ? 'Try adjusting your search terms'
-                      : 'Create your first dataset to get started with data visualization'}
-                  </p>
-                  {!searchTerm && (
-                    <Button
-                      onClick={handleCreateDataset}
-                      size="lg"
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                    >
-                      <Plus className="h-5 w-5 mr-2" />
-                      Create Your First Dataset
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredDatasets.map(dataset => (
-                  <Card
-                    key={dataset.id}
-                    className="group border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 hover:scale-[1.02]"
-                  >
-                    <CardHeader className="pb-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                          <Database className="h-6 w-6 text-white" />
-                        </div>
-                        <div className="flex space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/datasets/${dataset.id}`)}
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-50 hover:text-blue-600"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              navigate(Routers.EDIT_DATASET, {
-                                state: { datasetId: dataset.id, from: Routers.WORKSPACE_DATASETS },
-                              })
-                            }
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-50 hover:text-purple-600"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteDataset(dataset)}
-                            disabled={deleting && deletingId === dataset.id}
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <CardTitle className="text-lg leading-tight hover:text-blue-600 transition-colors cursor-pointer line-clamp-2">
-                          {dataset.name}
-                        </CardTitle>
-                        <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem]">
-                          {dataset.description || 'No description available'}
-                        </CardDescription>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
-                          <p className="text-xs text-muted-foreground font-medium">Rows</p>
-                          <p className="font-bold text-blue-600 dark:text-blue-400">
-                            {dataset.rowCount || 0}
-                          </p>
-                        </div>
-                        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800">
-                          <p className="text-xs text-muted-foreground font-medium">Columns</p>
-                          <p className="font-bold text-emerald-600 dark:text-emerald-400">
-                            {dataset.columnCount || 0}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-muted-foreground flex items-center space-x-2 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
-                        <Calendar className="h-3 w-3 text-blue-500" />
-                        <span className="font-medium">Updated {formatDate(dataset.updatedAt)}</span>
-                      </div>
-
-                      <div className="flex space-x-2 pt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCreateChart(parseInt(dataset.id))}
-                          className="flex-1 group-hover:border-blue-500 group-hover:text-blue-600 group-hover:bg-blue-50 transition-all duration-200"
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Create Chart
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+            <DatasetTab
+              datasets={datasets}
+              loading={loading}
+              deleting={deleting}
+              filteredDatasets={filteredDatasets}
+              searchTerm={searchTerm}
+              onCreateDataset={handleCreateDataset}
+              onDeleteDataset={handleDeleteDataset}
+              deletingId={deletingId}
+            />
           </TabsContent>
 
           {/* Charts Tab */}
           <TabsContent value="charts" className="space-y-6">
-            {filteredCharts.length === 0 ? (
-              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm dark:bg-gray-800/80">
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center mb-6">
-                    <BarChart3 className="h-10 w-10 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-semibold mb-2">No charts found</h3>
-                  <p className="text-muted-foreground text-center mb-6 max-w-md">
-                    {searchTerm
-                      ? 'Try adjusting your search terms'
-                      : 'Transform your data into beautiful visualizations'}
-                  </p>
-                  {!searchTerm && (
-                    <Button
-                      onClick={() => handleCreateChart()}
-                      size="lg"
-                      className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-                    >
-                      <Plus className="h-5 w-5 mr-2" />
-                      Create Your First Chart
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredCharts.map(chart => (
-                  <Card
-                    key={chart.id}
-                    className="group border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1"
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div
-                          className={`p-3 rounded-xl bg-gradient-to-br ${chart.color} text-white shadow-lg`}
-                        >
-                          {getChartIcon(chart.type)}
-                        </div>
-                        <div className="flex flex-col space-y-1 items-end">
-                          <Badge variant="outline" className="text-xs font-medium">
-                            {getChartTypeLabel(chart.type)}
-                          </Badge>
-                          <Badge variant="outline" className={getCategoryColor(chart.category)}>
-                            {chart.category}
-                          </Badge>
-                          {chart.isPublic && (
-                            <Badge variant="secondary" className="text-xs">
-                              Public
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <CardTitle className="text-lg leading-tight hover:text-emerald-600 transition-colors cursor-pointer">
-                          {chart.name}
-                        </CardTitle>
-                        <CardDescription className="text-sm line-clamp-2">
-                          {chart.description}
-                        </CardDescription>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-1 text-muted-foreground">
-                          <Database className="h-3 w-3" />
-                          <span className="truncate">{chart.datasetName}</span>
-                        </div>
-                        <div className="flex items-center space-x-1 text-muted-foreground">
-                          <Eye className="h-3 w-3" />
-                          <span>{chart.views}</span>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-muted-foreground flex items-center space-x-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>Updated {new Date(chart.updatedAt).toLocaleDateString()}</span>
-                      </div>
-
-                      <div className="flex space-x-2 pt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditChart(chart.id)}
-                          className="flex-1 group-hover:border-emerald-500 group-hover:text-emerald-600"
-                        >
-                          <Edit3 className="h-3 w-3 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="group-hover:bg-emerald-50 group-hover:text-emerald-600"
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="group-hover:bg-blue-50 group-hover:text-blue-600"
-                        >
-                          <Share className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+            <ChartTab
+              charts={charts}
+              chartsLoading={chartsLoading}
+              chartDeleting={chartDeleting}
+              filteredCharts={filteredCharts}
+              searchTerm={searchTerm}
+              onCreateChart={handleCreateChart}
+              onDeleteChart={handleDeleteChart}
+              onEditChart={handleEditChart}
+              deletingChartId={deletingChartId}
+            />
           </TabsContent>
         </Tabs>
       </div>
