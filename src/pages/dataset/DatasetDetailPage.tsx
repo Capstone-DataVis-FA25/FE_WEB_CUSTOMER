@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SlideInUp } from '@/theme/animation';
 import { ArrowLeft, Edit, Trash2, Download, Database, BarChart3 } from 'lucide-react';
@@ -25,8 +25,16 @@ interface DatasetHeader {
 
 const DatasetDetailPage: React.FC = () => {
   const { id: legacyId, slug } = useParams<{ id?: string; slug?: string }>();
-  const rawParam = slug || legacyId || '';
-  const extractedId = rawParam.split('-').pop() || rawParam;
+  const location = useLocation() as any;
+  const stateDatasetId = location?.state?.datasetId as string | undefined;
+  const rawParam = slug || legacyId || stateDatasetId || "";
+  // Extract UUID (with hyphens) or fallback to legacy id
+  let extractedId = rawParam;
+  const uuidRegex = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/;
+  const match = rawParam.match(uuidRegex);
+  if (match) {
+    extractedId = match[0];
+  }
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { showSuccess, showError } = useToastContext();
@@ -224,21 +232,6 @@ const DatasetDetailPage: React.FC = () => {
             <div className="flex gap-6 items-start">
               {/* Left Sidebar - Dataset Information */}
               <div className="w-80 shrink-0 space-y-6">
-                <SlideInUp delay={0.1}>
-                  <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Database className="w-6 h-6 text-blue-600" />
-                        {currentDataset.name}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="text-gray-600 dark:text-gray-300 text-sm">
-                        {currentDataset.description || t('dataset_noDescription', 'No description')}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </SlideInUp>
 
                 <SlideInUp delay={0.15}>
                   <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
@@ -303,56 +296,10 @@ const DatasetDetailPage: React.FC = () => {
                   </Card>
                 </SlideInUp>
 
-                <SlideInUp delay={0.25}>
-                  <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-semibold text-foreground">
-                        {t('dataset_statistics', 'Dataset Statistics')}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                            {currentDataset.rowCount}
-                          </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {t('dataset_rows', 'Rows')}
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                            {currentDataset.columnCount}
-                          </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {t('dataset_columns', 'Columns')}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </SlideInUp>
-
                 <SlideInUp delay={0.3}>
                   <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                     <CardContent className="pt-6 space-y-3">
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate(Routers.WORKSPACE_DATASETS)}
-                        className="w-full flex items-center gap-2 backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
-                      >
-                        <ArrowLeft className="w-4 h-4" />
-                        {t('dataset_backToList', 'Back to Datasets')}
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        onClick={handleExportDataset}
-                        className="w-full flex items-center gap-2 backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg hover:shadow-xl transition-all duration-200"
-                      >
-                        <Download className="w-4 h-4" />
-                        {t('dataset_export', 'Export')}
-                      </Button>
+               
 
                       <Button
                         variant="outline"
@@ -382,7 +329,7 @@ const DatasetDetailPage: React.FC = () => {
               </div>
 
               {/* Main Content Area with Horizontal Layout */}
-              <div className="flex-1 space-y-6">
+              <div className="max-w-5xl flex-1 space-y-6">
                 <SlideInUp delay={0.35}>
                   <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                     <CardHeader>

@@ -18,7 +18,8 @@ const Routers = {
   // Dataset routes
   CREATE_CHART: '/create-chart',
   DATASETS: '/datasets',
-  DATASET_DETAIL: '/datasets/:slug',
+  // For state-based navigation, use location.state.datasetId (recommended)
+  DATASET_DETAIL: '/datasets/detail', // state-based route, do not use slug param
   CREATE_DATASET: '/datasets/create',
   EDIT_DATASET: '/datasets/edit', // new state-based edit route (datasetId passed via location.state)
   EDIT_DATASET_LEGACY: '/datasets/:slug/edit', // legacy param route for backward compatibility

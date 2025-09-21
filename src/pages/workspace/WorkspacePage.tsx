@@ -136,6 +136,12 @@ const getCategoryColor = (category: string) => {
 };
 
 const WorkspacePage: React.FC = () => {
+  // Helper: navigate to dataset detail using state
+  const handleViewDataset = (dataset: Dataset) => {
+    navigate(Routers.DATASET_DETAIL, {
+      state: { datasetId: dataset.id, from: location.pathname },
+    });
+  };
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -449,7 +455,7 @@ const WorkspacePage: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/datasets/${dataset.id}`)}
+                            onClick={() => handleViewDataset(dataset)}
                             className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-50 hover:text-blue-600"
                           >
                             <Eye className="h-4 w-4" />

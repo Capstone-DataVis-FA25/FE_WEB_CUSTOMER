@@ -30,7 +30,13 @@ const EditDatasetPage: React.FC = () => {
   const location = useLocation() as any
   const stateDatasetId = location?.state?.datasetId as string | undefined
   const rawParam = slug || legacyId || stateDatasetId || ""
-  const extractedId = rawParam.split("-").pop() || rawParam
+  // Extract UUID (with hyphens) or fallback to legacy id
+  let extractedId = rawParam
+  const uuidRegex = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/
+  const match = rawParam.match(uuidRegex)
+  if (match) {
+    extractedId = match[0]
+  }
   const navigate = useNavigate()
   const { showSuccess, showError } = useToastContext()
 
