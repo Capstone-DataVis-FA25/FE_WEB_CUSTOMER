@@ -18,7 +18,8 @@ const Routers = {
   // Dataset routes
   CREATE_CHART: '/create-chart',
   DATASETS: '/datasets',
-  DATASET_DETAIL: '/datasets/:slug',
+  // For state-based navigation, use location.state.datasetId (recommended)
+  DATASET_DETAIL: '/datasets/detail', // state-based route, do not use slug param
   CREATE_DATASET: '/datasets/create',
   EDIT_DATASET: '/datasets/edit', // new state-based edit route (datasetId passed via location.state)
   EDIT_DATASET_LEGACY: '/datasets/:slug/edit', // legacy param route for backward compatibility
@@ -40,11 +41,6 @@ const Routers = {
   BAR_CHART_EDITOR_DEMO: '/demo/bar-chart-editor',
   AREA_CHART_DEMO: '/chart/area-chart',
   AREA_CHART_EDITOR_DEMO: '/demo/area-chart-editor',
-
-  // Chart Editor routes with ID parameter
-  LINE_CHART_EDITOR: '/chart-editor/line/:id',
-  BAR_CHART_EDITOR: '/chart-editor/bar/:id',
-  AREA_CHART_EDITOR: '/chart-editor/area/:id',
 
   //Workspace routes
   WORKSPACE: '/workspace',
