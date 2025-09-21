@@ -66,7 +66,9 @@ const DatasetCard: React.FC<DatasetCardProps> = ({ dataset, onDelete, isDeleting
   const [isHovered, setIsHovered] = useState(false);
 
   const handleView = () => {
-    navigate(`/datasets/${dataset.id}`);
+    navigate(Routers.DATASET_DETAIL, {
+      state: { datasetId: dataset.id, from: Routers.WORKSPACE_DATASETS },
+    });
   };
 
   const handleEdit = () => {
