@@ -312,7 +312,16 @@ function CreateDatasetPageContent() {
         showError(t('dataset_parseError'), errorMessage);
       }
     },
-    [showError, t, viewMode, setOriginalHeaders, setIsJsonFormat]
+    [
+      showError,
+      t,
+      viewMode,
+      setOriginalHeaders,
+      setIsJsonFormat,
+      setOriginalTextContent,
+      setParsedData,
+      setSelectedDelimiter,
+    ]
   );
 
   return (

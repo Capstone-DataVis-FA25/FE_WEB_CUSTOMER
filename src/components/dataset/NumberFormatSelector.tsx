@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Input } from '@/components/ui/input';
+import { useDataset } from '@/contexts/DatasetContext';
 
 interface NumberFormatSelectorProps {
   thousandsSeparator: string;
@@ -14,6 +15,25 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
   onChange,
   disabled = false,
 }) => {
+  const { validationErrors, setValidationError } = useDataset();
+
+  // Update validation errors whenever format changes
+  useEffect(() => {
+    const separatorsEqual = !!(
+      thousandsSeparator &&
+      decimalSeparator &&
+      thousandsSeparator === decimalSeparator
+    );
+    const missingDecimalSeparator = !decimalSeparator || decimalSeparator.trim() === '';
+
+    setValidationError('numberFormat', 'separatorsEqual', separatorsEqual);
+    setValidationError('numberFormat', 'missingDecimalSeparator', missingDecimalSeparator);
+  }, [thousandsSeparator, decimalSeparator, setValidationError]);
+
+  // Get current error states
+  const separatorsAreEqual = validationErrors.numberFormat?.separatorsEqual || false;
+  const isDecimalSeparatorMissing = validationErrors.numberFormat?.missingDecimalSeparator || false;
+  const hasValidationError = separatorsAreEqual || isDecimalSeparatorMissing;
   return (
     <div>
       <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
@@ -34,7 +54,11 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
             placeholder=","
             value={thousandsSeparator}
             onChange={e => onChange('thousandsSeparator', e.target.value.slice(0, 1))}
-            className="w-12 h-8 text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 ml-auto"
+            className={`w-12 h-8 text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ml-auto ${
+              separatorsAreEqual
+                ? 'border-red-500 dark:border-red-400 focus:ring-red-500 focus:border-red-500'
+                : 'border-gray-300 dark:border-gray-600'
+            }`}
             disabled={disabled}
             maxLength={1}
           />
@@ -54,17 +78,49 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
             placeholder="."
             value={decimalSeparator}
             onChange={e => onChange('decimalSeparator', e.target.value.slice(0, 1))}
-            className="w-12 h-8 text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 ml-auto"
+            className={`w-12 h-8 text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ml-auto ${
+              hasValidationError
+                ? 'border-red-500 dark:border-red-400 focus:ring-red-500 focus:border-red-500'
+                : 'border-gray-300 dark:border-gray-600'
+            }`}
             disabled={disabled}
             maxLength={1}
           />
         </div>
 
+        {/* Error Messages */}
+        {hasValidationError && (
+          <div className="space-y-1">
+            {isDecimalSeparatorMissing && (
+              <p className="text-xs text-red-600 dark:text-red-400">
+                • Decimal separator is required
+              </p>
+            )}
+            {separatorsAreEqual && (
+              <p className="text-xs text-red-600 dark:text-red-400">
+                • Separators cannot be the same character
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Preview */}
-        <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs">
-          <span className="text-gray-600 dark:text-gray-400">Preview: </span>
-          <span className="font-mono text-gray-900 dark:text-gray-100">
-            1{thousandsSeparator}234{decimalSeparator}56
+        <div
+          className={`mt-2 p-2 rounded text-xs ${
+            hasValidationError
+              ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+              : 'bg-gray-50 dark:bg-gray-700'
+          }`}
+        >
+          <span
+            className={`${hasValidationError ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}
+          >
+            Preview:{' '}
+          </span>
+          <span
+            className={`font-mono ${hasValidationError ? 'text-red-700 dark:text-red-300' : 'text-gray-900 dark:text-gray-100'}`}
+          >
+            1{thousandsSeparator}234{decimalSeparator || '?'}56
           </span>
         </div>
       </div>

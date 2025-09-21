@@ -6,6 +6,21 @@ interface NumberFormat {
   decimalSeparator: string;
 }
 
+interface ValidationErrors {
+  numberFormat?: {
+    separatorsEqual?: boolean;
+    missingDecimalSeparator?: boolean;
+  };
+  datasetName?: {
+    empty?: boolean;
+    tooLong?: boolean;
+  };
+  data?: {
+    parseError?: boolean;
+    invalidFormat?: boolean;
+  };
+}
+
 interface DatasetState {
   // Data states
   originalTextContent: string;
@@ -21,6 +36,9 @@ interface DatasetState {
   // Form states
   datasetName: string;
   description: string;
+
+  // Error states
+  validationErrors: ValidationErrors;
 }
 
 interface DatasetContextType extends DatasetState {
@@ -38,6 +56,11 @@ interface DatasetContextType extends DatasetState {
   // Form actions
   setDatasetName: (name: string) => void;
   setDescription: (description: string) => void;
+
+  // Error actions
+  setValidationError: (category: keyof ValidationErrors, field: string, value: boolean) => void;
+  clearValidationErrors: (category?: keyof ValidationErrors) => void;
+  hasValidationErrors: () => boolean;
 
   // Utility actions
   resetState: () => void;
@@ -59,6 +82,7 @@ const initialState: DatasetState = {
   transformationColumn: null,
   datasetName: '',
   description: '',
+  validationErrors: {},
 };
 
 // Provider component
@@ -108,6 +132,45 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
     setState(prev => ({ ...prev, description: description }));
   };
 
+  // Error actions
+  const setValidationError = (category: keyof ValidationErrors, field: string, value: boolean) => {
+    setState(prev => ({
+      ...prev,
+      validationErrors: {
+        ...prev.validationErrors,
+        [category]: {
+          ...prev.validationErrors[category],
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  const clearValidationErrors = (category?: keyof ValidationErrors) => {
+    if (category) {
+      setState(prev => ({
+        ...prev,
+        validationErrors: {
+          ...prev.validationErrors,
+          [category]: {},
+        },
+      }));
+    } else {
+      setState(prev => ({
+        ...prev,
+        validationErrors: {},
+      }));
+    }
+  };
+
+  const hasValidationErrors = (): boolean => {
+    const errors = state.validationErrors;
+    return Object.values(errors).some(
+      categoryErrors =>
+        categoryErrors && Object.values(categoryErrors).some(error => error === true)
+    );
+  };
+
   // Utility actions
   const resetState = () => {
     setState(initialState);
@@ -124,6 +187,9 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
     setTransformationColumn,
     setDatasetName,
     setDescription,
+    setValidationError,
+    clearValidationErrors,
+    hasValidationErrors,
     resetState,
   };
 

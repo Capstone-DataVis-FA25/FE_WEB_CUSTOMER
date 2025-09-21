@@ -46,6 +46,7 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
     setTransformationColumn,
     originalTextContent,
     setParsedData,
+    hasValidationErrors,
   } = useDataset();
 
   // Handle delimiter change - reparse the original content with new delimiter
@@ -78,6 +79,8 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
       ...numberFormat,
       [type]: value,
     };
+
+    // Always update the format, validation will be handled visually
     setNumberFormat(newFormat);
   };
 
@@ -125,7 +128,7 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
   };
 
   return (
-  <div className="w-full flex-shrink-0">
+    <div className="w-full flex-shrink-0">
       <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm h-fit">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg text-gray-900 dark:text-white flex items-center gap-2">
@@ -219,7 +222,7 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
           <div className="space-y-3 pt-4">
             <Button
               onClick={onUpload}
-              disabled={isUploading || !datasetName.trim()}
+              disabled={isUploading || !datasetName.trim() || hasValidationErrors()}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isUploading ? (
