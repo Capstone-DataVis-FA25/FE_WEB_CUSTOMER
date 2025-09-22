@@ -650,9 +650,9 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
   // Functions are now used by shared components, no need for no-op effect
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
-      <div className="w-full px-2">
-        <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8 pb-24">
+      <div className="w-full px-2 max-w-full overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-8 gap-6 relative">
           {/* Configuration Panel */}
           <div className="lg:col-span-2 space-y-6">
             {/* Data Editor */}
@@ -879,7 +879,7 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="sticky top-4 z-10"
+              className="relative z-10"
             >
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                 <CardContent className="p-4 sm:p-6">
