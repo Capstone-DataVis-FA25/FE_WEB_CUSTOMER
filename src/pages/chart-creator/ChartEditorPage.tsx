@@ -406,14 +406,14 @@ const ChartEditorPage: React.FC = () => {
   // Render the appropriate chart editor based on type
   const renderChartEditor = () => {
     // Use passed dataset or loaded dataset
-    const currentDataset = dataset || passedDataset;
-    const chartData = currentDataset ? convertDatasetToChartData(currentDataset) : salesData;
+    // const currentDataset = dataset || passedDataset;
+    // const chartData = currentDataset ? convertDatasetToChartData(currentDataset) : salesData;
 
     const config = getChartConfig();
     const formatters = getChartFormatters();
 
     // Common props for all chart editors - convert ChartDataPoint[] to array format
-    const arrayData = chartData.length > 0 ? chartData : [];
+    const arrayData = chartData.length > 0 ? convertChartDataToArray(chartData) : [];
     console.log('arrayData', arrayData);
     const commonProps = {
       initialArrayData: arrayData,
@@ -471,7 +471,7 @@ const ChartEditorPage: React.FC = () => {
         // Default to bar chart if type is not recognized
         return (
           <BarChartEditor
-            initialArrayData={chartData}
+            initialArrayData={convertChartDataToArray(chartData)}
             initialConfig={{
               ...config,
               barType: 'grouped' as const,
