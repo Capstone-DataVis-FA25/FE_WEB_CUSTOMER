@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import LineChartEditor from '@/components/charts/LineChartEditor';
 import BarChartEditor from '@/components/charts/BarChartEditor';
 import AreaChartEditor from '@/components/charts/AreaChartEditor';
@@ -12,11 +14,12 @@ import { useDataset } from '@/features/dataset/useDataset';
 import type { Dataset } from '@/features/dataset/datasetAPI';
 import { convertArrayToChartData } from '@/utils/dataConverter';
 import { useCharts } from '@/features/charts/useCharts';
-import { Database, BarChart3, Palette, Settings, ArrowLeft, Save, AlertCircle } from 'lucide-react';
+import { Database, BarChart3, ArrowLeft, Save, AlertCircle, Calendar, Clock } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { Chart } from '@/features/charts/chartTypes';
-import { convertBackendDataToChartData, convertChartDataToArray } from '@/utils/dataConverter';
+import { convertBackendDataToChartData } from '@/utils/dataConverter';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
+import Utils from '@/utils/Utils';
 
 const ChartEditorPage: React.FC = () => {
   const { t } = useTranslation();
@@ -100,6 +103,12 @@ const ChartEditorPage: React.FC = () => {
   const [chartConfig, setChartConfig] = useState<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Edit mode states
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editableName, setEditableName] = useState('');
+  const [editableDescription, setEditableDescription] = useState('');
+
   // Fetch chart data when in edit mode
   useEffect(() => {
     if (mode === 'edit' && chartId && !isInitialized) {
@@ -116,6 +125,10 @@ const ChartEditorPage: React.FC = () => {
       if (currentChart.config) {
         setChartConfig(currentChart.config);
       }
+
+      // Initialize editable fields
+      setEditableName(currentChart.name || '');
+      setEditableDescription(currentChart.description || '');
 
       // Load dataset data if available (type assertion for extended dataset)
       const chartWithDataset = currentChart as unknown as Chart & {
@@ -169,13 +182,49 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
+  // Handle name edit
+  const handleNameSave = async () => {
+    if (mode === 'edit' && chartId && currentChart && editableName.trim()) {
+      try {
+        const updateData = {
+          name: editableName.trim(),
+          description: currentChart.description,
+          config: currentChart.config,
+        };
+
+        await updateChart(chartId, updateData);
+        setIsEditingName(false);
+      } catch (error) {
+        console.error('Error updating chart name:', error);
+      }
+    }
+  };
+
+  // Handle description edit
+  const handleDescriptionSave = async () => {
+    if (mode === 'edit' && chartId && currentChart) {
+      try {
+        const updateData = {
+          name: currentChart.name,
+          description: editableDescription.trim(),
+          config: currentChart.config,
+        };
+
+        await updateChart(chartId, updateData);
+        setIsEditingDescription(false);
+      } catch (error) {
+        console.error('Error updating chart description:', error);
+      }
+    }
+  };
+
   // Handle save/update
   const handleSave = async (updatedConfig: any) => {
     if (mode === 'edit' && chartId && currentChart) {
       try {
         const updateData = {
-          name: currentChart.name,
-          description: currentChart.description,
+          name: editableName || currentChart.name,
+          description: editableDescription || currentChart.description,
           config: updatedConfig,
         };
 
@@ -527,7 +576,7 @@ const ChartEditorPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex flex-col">
       {/* Header Section */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -545,27 +594,119 @@ const ChartEditorPage: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center space-x-2">
-                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {mode === 'edit' && currentChart
-                      ? currentChart.name
-                      : t('chart_editor_title_main', 'Chart Editor')}
-                  </h1>
-                  {mode === 'edit' && (
-                    <Badge variant="outline" className="text-xs">
-                      {t('chart_editor_mode_edit', 'Editing')}
-                    </Badge>
+                  {mode === 'edit' && currentChart ? (
+                    <div className="flex items-center gap-2">
+                      {isEditingName ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={editableName}
+                            onChange={e => setEditableName(e.target.value)}
+                            className="w-100 text-xl font-bold bg-transparent border-dashed border-gray-300 px-2 py-1"
+                            onBlur={handleNameSave}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                handleNameSave();
+                              } else if (e.key === 'Escape') {
+                                setEditableName(currentChart.name || '');
+                                setIsEditingName(false);
+                              }
+                            }}
+                            autoFocus
+                          />
+                        </div>
+                      ) : (
+                        <h1
+                          className="text-xl font-bold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 transition-colors"
+                          onClick={() => {
+                            setEditableName(currentChart.name || '');
+                            setIsEditingName(true);
+                          }}
+                        >
+                          {currentChart.name}
+                        </h1>
+                      )}
+                    </div>
+                  ) : (
+                    <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                      {t('chart_editor_title_main', 'Chart Editor')}
+                    </h1>
                   )}
-                </div>
-                <div className="flex items-center gap-2 mt-1">
                   <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                     <BarChart3 className="w-3 h-3" />
                     {chartInfo.name}
                   </Badge>
-                  {(datasetId || currentChart?.datasetId) && (
-                    <Badge variant="outline" className="flex items-center gap-1 text-xs">
+                </div>
+                <div className="flex flex-col gap-2 mt-1">
+                  {mode === 'edit' && currentChart && (
+                    <div className="flex items-center gap-1">
                       <Database className="w-3 h-3" />
-                      {t('dataset_id', 'Dataset')}: {datasetId || currentChart?.datasetId}
-                    </Badge>
+                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                        {t('description', 'Description')}:
+                      </span>
+                      {isEditingDescription ? (
+                        <Input
+                          value={editableDescription}
+                          onChange={e => setEditableDescription(e.target.value)}
+                          className="w-200 text-xl font-bold bg-transparent border-dashed border-gray-300 px-2 py-1"
+                          onBlur={handleDescriptionSave}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && e.ctrlKey) {
+                              handleDescriptionSave();
+                            } else if (e.key === 'Escape') {
+                              setEditableDescription(currentChart.description || '');
+                              setIsEditingDescription(false);
+                            }
+                          }}
+                          placeholder="Click to add description..."
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 transition-colors"
+                          onClick={() => {
+                            setEditableDescription(currentChart.description || '');
+                            setIsEditingDescription(true);
+                          }}
+                          style={{ fontWeight: '500', fontSize: '14px' }}
+                        >
+                          {currentChart.description || 'Click to add description...'}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {(datasetId || currentChart?.datasetId) && !(mode === 'edit' && currentChart) && (
+                    <div
+                      className="flex items-center gap-1 text-xs"
+                      style={{ fontWeight: '500', fontSize: '14px' }}
+                    >
+                      <Database className="w-3 h-3" />
+                      {t('description', 'Description')}: {datasetId || currentChart?.description}
+                    </div>
+                  )}
+
+                  {mode === 'edit' && currentChart && (
+                    <div className="flex items-center gap-4">
+                      {currentChart.createdAt && (
+                        <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                          <Calendar className="w-3 h-3 text-gray-700 dark:text-gray-300" />
+                          <span className="font-medium">{t('chart_created', 'Created')}:</span>
+                          <span className="text-gray-700 dark:text-gray-300">
+                            {Utils.getDate(currentChart.createdAt, 18)}
+                          </span>
+                        </div>
+                      )}
+
+                      {currentChart.updatedAt && (
+                        <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                          <Clock className="w-3 h-3 text-gray-700 dark:text-gray-300" />
+                          <span className="font-medium">{t('chart_updated', 'Updated')}:</span>
+                          <span className="text-gray-700 dark:text-gray-300">
+                            {Utils.getDate(currentChart.updatedAt, 18)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -591,20 +732,6 @@ const ChartEditorPage: React.FC = () => {
                   {t('common_save', 'Save')}
                 </Button>
               )}
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-              >
-                <Settings className="w-4 h-4" />
-              </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-              >
-                <Palette className="w-4 h-4" />
-              </motion.div>
             </div>
           </div>
         </div>

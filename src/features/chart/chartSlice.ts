@@ -16,6 +16,8 @@ export interface ChartState {
   creating: boolean;
   updating: boolean;
   deleting: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
   error: string | null;
 }
 
@@ -26,6 +28,8 @@ const initialState: ChartState = {
   creating: false,
   updating: false,
   deleting: false,
+  createdAt: null,
+  updatedAt: null,
   error: null,
 };
 
