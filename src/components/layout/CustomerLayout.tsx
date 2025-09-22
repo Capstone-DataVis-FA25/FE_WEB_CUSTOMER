@@ -39,7 +39,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col min-w-0 bg-gray-50">
       {/* Header */}
       <Header
         isAuthenticated={isAuthenticated}

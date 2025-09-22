@@ -4,18 +4,21 @@ import storage from 'redux-persist/lib/storage';
 import { combineReducers } from '@reduxjs/toolkit';
 import authReducer from '../features/auth/authSlice';
 import datasetReducer from '../features/dataset/datasetSlice';
-import chartReducer from '../features/charts/chartSlice';
+import chartReducer from '../features/chart/chartSlice';
+import type { AuthState } from '../features/auth/authType';
+import type { DatasetState } from '../features/dataset/datasetSlice';
+import type { ChartState } from '../features/chart/chartSlice';
 
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth'], // Chỉ persist auth state, không persist dataset
+  whitelist: ['auth'], // Chỉ persist auth state, không persist dataset or chart
 };
 
 const rootReducer = combineReducers({
   auth: authReducer,
   dataset: datasetReducer,
-  charts: chartReducer,
+  chart: chartReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -32,14 +35,10 @@ export const store = configureStore({
 
 export const persistor = persistStore(store);
 
-export type RootState = ReturnType<typeof rootReducer>;
+export type RootState = {
+  auth: AuthState;
+  dataset: DatasetState;
+  chart: ChartState;
+};
+
 export type AppDispatch = typeof store.dispatch;
-
-// const dispatch = useAppDispatch();
-
-// const result = await dispatch(
-//   signInWithEmailAndPassword({
-//     email: formData.email,
-//     password: formData.password,
-//   })
-// ).unwrap();

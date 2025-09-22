@@ -22,7 +22,7 @@ export interface CreateDatasetRequest {
     name: string;
     type: string;
     index: number;
-    data: any[];
+    data: (string | number | boolean | null)[];
   }[];
 }
 
@@ -33,7 +33,7 @@ export interface UpdateDatasetRequest {
     name: string;
     type: string;
     index: number;
-    data: any[];
+    data: (string | number | boolean | null)[];
   }[];
 }
 
@@ -49,7 +49,9 @@ export const getAllDatasets = async (): Promise<Dataset[]> => {
 
 // Get dataset by ID
 export const getDatasetById = async (id: string): Promise<Dataset> => {
+  console.log('API call: Getting dataset by ID:', id);
   const response = await axiosPrivate.get(API_ENDPOINTS.DATASETS.GET_BY_ID(id));
+  console.log('API response for dataset:', id, response.data);
   // Handle wrapped API response format
   if (response.data && typeof response.data === 'object' && 'data' in response.data) {
     return response.data.data;

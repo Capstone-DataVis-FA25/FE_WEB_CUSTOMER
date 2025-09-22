@@ -26,6 +26,7 @@
   "notfound_contact": "Liên hệ",
   "navigation_home": "Trang Chủ",
   "navigation_profile": "Thông tin cá nhân",
+  "navigation_settings": "Cài đặt",
   "home_title": "Trang Chủ",
   "home_subtitle": "Khám phá các component UI tương tác được xây dựng với React & TypeScript",
   "common_searchPlaceholder": "Tìm kiếm...",
@@ -1350,5 +1351,6 @@
   "chart_editor_preset_pastel": "Màu phấn",
   "common.add": "Thêm",
   "chart_editor_series": "Chuỗi",
-  "chart_editor_seriesManagement": "Quản Lý Chuỗi Dữ Liệu"
+  "chart_editor_seriesManagement": "Quản Lý Chuỗi Dữ Liệu",
+  "chart_editor_save_chart": "Lưu Biểu Đồ"
 }

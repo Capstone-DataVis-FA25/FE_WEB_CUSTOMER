@@ -6,14 +6,14 @@ import {
   createChartThunk,
   updateChartThunk,
   deleteChartThunk,
-} from './chartThunk';
-import { clearError, clearCurrentChart } from './chartSlice';
-import type { CreateChartRequest, UpdateChartRequest } from './chartTypes';
+} from '../chart/chartThunk';
+import { clearError, clearCurrentChart } from '../chart/chartSlice';
+import type { CreateChartRequest, UpdateChartRequest } from '../chart/chartAPI';
 
 export const useCharts = () => {
   const dispatch = useAppDispatch();
   const { charts, currentChart, loading, creating, updating, deleting, error } = useAppSelector(
-    state => state.charts
+    state => state.chart
   );
 
   // Get all charts

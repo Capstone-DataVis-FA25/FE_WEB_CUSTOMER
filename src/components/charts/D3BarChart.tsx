@@ -28,7 +28,7 @@ export interface D3BarChartProps {
   barType?: 'grouped' | 'stacked';
   // Advanced
   gridOpacity?: number;
-  legendPosition?: 'top' | 'bottom';
+  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
   xAxisRotation?: number;
   yAxisRotation?: number;
   showAxisLabels?: boolean;
@@ -39,6 +39,13 @@ export interface D3BarChartProps {
   showTooltip?: boolean;
   barWidth?: number;
   barSpacing?: number;
+  // Additional props for better customization
+  titleFontSize?: number;
+  labelFontSize?: number;
+  legendFontSize?: number;
+  enableZoom?: boolean;
+  enablePan?: boolean;
+  zoomExtent?: number;
 }
 
 const defaultColors: Record<string, { light: string; dark: string }> = {
@@ -83,6 +90,12 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   showTooltip = true,
   barWidth,
   barSpacing = 4,
+  titleFontSize = 16,
+  labelFontSize = 12,
+  legendFontSize = 11,
+  enableZoom = false,
+  enablePan = false,
+  zoomExtent = 8,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -95,6 +108,13 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     if (arrayData && arrayData.length > 0) return convertArrayToChartData(arrayData);
     return data || [];
   }, [arrayData, data]);
+
+  // Update fontSize object with new props
+  const responsiveFontSize = {
+    axis: fontSize.axis,
+    label: labelFontSize,
+    title: titleFontSize,
+  };
 
   // Resize observer
   useEffect(() => {
@@ -270,7 +290,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     xAxisGroup
       .selectAll('text')
       .attr('fill', textColor)
-      .style('font-size', `${fontSize.axis}px`)
+      .style('font-size', `${responsiveFontSize.axis}px`)
       .style('font-weight', '500')
       .attr('transform', `rotate(${xAxisRotation})`)
       .style('text-anchor', xAxisRotation === 0 ? 'middle' : xAxisRotation > 0 ? 'start' : 'end');
@@ -291,7 +311,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     yAxisGroup
       .selectAll('text')
       .attr('fill', textColor)
-      .style('font-size', `${fontSize.axis}px`)
+      .style('font-size', `${responsiveFontSize.axis}px`)
       .style('font-weight', '600')
       .style('font-family', 'system-ui, -apple-system, sans-serif')
       .attr('text-anchor', 'end')
@@ -381,7 +401,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
               .attr('text-anchor', 'middle')
               .attr('y', -12)
               .attr('fill', textColor)
-              .style('font-size', `${fontSize.axis}px`)
+              .style('font-size', `${responsiveFontSize.axis}px`)
               .style('font-weight', '600')
               .style('opacity', 0)
               .text(value as string)
@@ -487,7 +507,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         .attr('y', innerHeight + (currentWidth < 768 ? 40 : 50))
         .attr('text-anchor', 'middle')
         .attr('fill', textColor)
-        .style('font-size', `${fontSize.label}px`)
+        .style('font-size', `${responsiveFontSize.label}px`)
         .style('font-weight', '600')
         .text(xAxisLabel);
     }
@@ -498,9 +518,136 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         .attr('y', currentWidth < 768 ? -55 : -65)
         .attr('text-anchor', 'middle')
         .attr('fill', textColor)
-        .style('font-size', `${fontSize.label}px`)
+        .style('font-size', `${responsiveFontSize.label}px`)
         .style('font-weight', '600')
         .text(yAxisLabel);
+    }
+
+    // Enhanced zoom and pan with mouse interactions
+    if (enableZoom || enablePan) {
+      let zoomLevel = 1;
+      let translateX = 0;
+      let translateY = 0;
+      let isDragging = false;
+      let dragStartX = 0;
+      let dragStartY = 0;
+      let dragStartTranslateX = 0;
+      let dragStartTranslateY = 0;
+
+      // Mouse wheel zoom
+      if (enableZoom) {
+        svg.on('wheel', function (event) {
+          event.preventDefault();
+
+          // Get mouse position relative to the chart
+          const rect = svg.node()?.getBoundingClientRect();
+          if (!rect) return;
+
+          const mouseX = event.clientX - rect.left - responsiveMargin.left;
+          const mouseY = event.clientY - rect.top - responsiveMargin.top;
+
+          const delta = event.deltaY;
+          const scaleFactor = delta > 0 ? 0.9 : 1.1;
+          const newZoomLevel = zoomLevel * scaleFactor;
+
+          // Limit zoom
+          const clampedZoomLevel = Math.max(0.5, Math.min(zoomExtent, newZoomLevel));
+          const actualScaleFactor = clampedZoomLevel / zoomLevel;
+
+          // Calculate new translation to zoom at mouse position
+          const newTranslateX = translateX + (mouseX - translateX) * (1 - actualScaleFactor);
+          const newTranslateY = translateY + (mouseY - translateY) * (1 - actualScaleFactor);
+
+          // Update zoom state
+          zoomLevel = clampedZoomLevel;
+          translateX = newTranslateX;
+          translateY = newTranslateY;
+
+          // Apply zoom and pan transform
+          const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
+          g.attr('transform', transform);
+        });
+      }
+
+      // Mouse drag to pan
+      if (enablePan) {
+        svg.on('mousedown', function (event) {
+          if (event.button !== 0) return; // Only left mouse button
+
+          isDragging = true;
+          dragStartX = event.clientX;
+          dragStartY = event.clientY;
+          dragStartTranslateX = translateX;
+          dragStartTranslateY = translateY;
+
+          // Change cursor to grabbing
+          svg.style('cursor', 'grabbing');
+
+          // Prevent text selection during drag
+          event.preventDefault();
+        });
+
+        svg.on('mousemove', function (event) {
+          if (!isDragging) {
+            // Show grab cursor when zoomed in
+            if (zoomLevel > 1) {
+              svg.style('cursor', 'grab');
+            } else {
+              svg.style('cursor', 'default');
+            }
+            return;
+          }
+
+          const deltaX = event.clientX - dragStartX;
+          const deltaY = event.clientY - dragStartY;
+
+          // Update translation based on drag distance
+          translateX = dragStartTranslateX + deltaX;
+          translateY = dragStartTranslateY + deltaY;
+
+          // Apply pan transform
+          const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
+          g.attr('transform', transform);
+        });
+
+        svg.on('mouseup', function () {
+          if (isDragging) {
+            isDragging = false;
+
+            // Reset cursor
+            if (zoomLevel > 1) {
+              svg.style('cursor', 'grab');
+            } else {
+              svg.style('cursor', 'default');
+            }
+          }
+        });
+
+        // Handle mouse leave to stop dragging
+        svg.on('mouseleave', function () {
+          if (isDragging) {
+            isDragging = false;
+            svg.style('cursor', 'default');
+          }
+        });
+
+        // Double-click to reset zoom
+        svg.on('dblclick', function () {
+          zoomLevel = 1;
+          translateX = 0;
+          translateY = 0;
+
+          svg.style('cursor', 'default');
+
+          g.transition()
+            .duration(300)
+            .ease(d3.easeQuadOut)
+            .attr(
+              'transform',
+              `translate(${responsiveMargin.left},${responsiveMargin.top}) scale(1)`
+            );
+        });
+      }
     }
   }, [
     processedData,
@@ -530,12 +677,23 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     showTooltip,
     barWidth,
     barSpacing,
+    titleFontSize,
+    labelFontSize,
+    legendFontSize,
+    enableZoom,
+    enablePan,
+    zoomExtent,
+    responsiveFontSize.axis,
+    responsiveFontSize.label,
   ]);
 
   const renderLegend = () => (
     <div className="w-full">
       <div className="w-full bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-        <h4 className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center">
+        <h4
+          className="font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center"
+          style={{ fontSize: `${legendFontSize}px` }}
+        >
           {t('legend')}
         </h4>
         <div
@@ -554,16 +712,19 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
               >
                 <div className="flex-shrink-0">
                   <div
-                    className="w-2 h-2 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
+                    className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
                     style={{ backgroundColor: color }}
                   />
                 </div>
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200">
+                <span
+                  className="font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200"
+                  style={{ fontSize: `${legendFontSize}px` }}
+                >
                   {key}
                 </span>
                 <div className="flex-1 flex justify-end">
                   <div
-                    className="w-8 sm:w-12 h-2 sm:h-3 rounded opacity-60 group-hover:opacity-100 transition-opacity duration-200"
+                    className="w-8 sm:w-8 h-2 sm:h-3 rounded opacity-60 group-hover:opacity-100 transition-opacity duration-200"
                     style={{ backgroundColor: color }}
                   />
                 </div>
@@ -576,29 +737,135 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   );
 
   return (
-    <div ref={containerRef} className="w-full space-y-4">
+    <div
+      ref={containerRef}
+      className={`w-full ${legendPosition === 'top' || legendPosition === 'bottom' ? 'space-y-4' : 'flex gap-4'}`}
+    >
       {title && (
         <h3
           className="font-bold text-gray-900 dark:text-white text-center"
-          style={{ fontSize: `${fontSize.title}px` }}
+          style={{ fontSize: `${titleFontSize}px` }}
         >
           {title}
         </h3>
       )}
 
+      {/* Legend Top */}
       {showLegend && legendPosition === 'top' && renderLegend()}
 
-      <div className="relative w-full bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3">
-        <svg
-          ref={svgRef}
-          width={dimensions.width}
-          height={dimensions.height}
-          className="w-full h-auto"
-          viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-          preserveAspectRatio="xMidYMid meet"
-        />
+      <div
+        className={`${legendPosition === 'left' || legendPosition === 'right' ? 'flex gap-4' : ''}`}
+      >
+        {/* Legend Left */}
+        {showLegend && legendPosition === 'left' && (
+          <div className="w-64 flex-shrink-0">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <h4
+                className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center"
+                style={{ fontSize: `${legendFontSize}px` }}
+              >
+                {t('legend')}
+              </h4>
+              <div className="flex flex-col gap-3">
+                {yAxisKeys.map((key, index) => {
+                  const colorKey = colors[key] ? key : `bar${index + 1}`;
+                  const color =
+                    colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
+                    defaultColors[`bar${index + 1}`][isDarkMode ? 'dark' : 'light'];
+                  return (
+                    <div
+                      key={key}
+                      className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
+                    >
+                      <div className="flex-shrink-0">
+                        <div
+                          className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
+                          style={{ backgroundColor: color }}
+                        />
+                      </div>
+                      <span
+                        className="font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200"
+                        style={{ fontSize: `${legendFontSize}px` }}
+                      >
+                        {key}
+                      </span>
+                      <div className="flex-1 flex justify-end">
+                        <div
+                          className="w-8 sm:w-8 h-2 sm:h-3 rounded opacity-60 group-hover:opacity-100 transition-opacity duration-200"
+                          style={{ backgroundColor: color }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Chart Container */}
+        <div
+          className={`relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3 ${legendPosition === 'left' || legendPosition === 'right' ? 'flex-1' : 'w-full'}`}
+        >
+          <svg
+            ref={svgRef}
+            width={dimensions.width}
+            height={dimensions.height}
+            className="w-full h-auto"
+            viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+            preserveAspectRatio="xMidYMid meet"
+          />
+        </div>
+
+        {/* Legend Right */}
+        {showLegend && legendPosition === 'right' && (
+          <div className="w-64 flex-shrink-0">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <h4
+                className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center"
+                style={{ fontSize: `${legendFontSize}px` }}
+              >
+                {t('legend')}
+              </h4>
+              <div className="flex flex-col gap-3">
+                {yAxisKeys.map((key, index) => {
+                  const colorKey = colors[key] ? key : `bar${index + 1}`;
+                  const color =
+                    colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
+                    defaultColors[`bar${index + 1}`][isDarkMode ? 'dark' : 'light'];
+                  return (
+                    <div
+                      key={key}
+                      className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
+                    >
+                      <div className="flex-shrink-0">
+                        <div
+                          className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
+                          style={{ backgroundColor: color }}
+                        />
+                      </div>
+                      <span
+                        className="font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200"
+                        style={{ fontSize: `${legendFontSize}px` }}
+                      >
+                        {key}
+                      </span>
+                      <div className="flex-1 flex justify-end">
+                        <div
+                          className="w-8 sm:w-8 h-2 sm:h-3 rounded opacity-60 group-hover:opacity-100 transition-opacity duration-200"
+                          style={{ backgroundColor: color }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Legend Bottom */}
       {showLegend && legendPosition === 'bottom' && renderLegend()}
     </div>
   );

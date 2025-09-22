@@ -78,7 +78,16 @@ const DatasetCard: React.FC<DatasetCardProps> = ({ dataset, onDelete, isDeleting
   };
 
   const handleCreateChart = () => {
-    navigate(Routers.CHART_GALLERY);
+    // Điều hướng sang trang chart gallery kèm dataset_id
+    if (dataset.id) {
+      navigate(Routers.CHART_GALLERY, {
+        state: {
+          datasetId: dataset.id,
+        },
+      });
+    } else {
+      navigate(Routers.CHART_GALLERY);
+    }
   };
 
   return (

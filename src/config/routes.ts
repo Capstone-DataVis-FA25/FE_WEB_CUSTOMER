@@ -346,16 +346,16 @@ export const protectedRoutes: RouteConfig[] = [
   },
   // Chart routes
   {
-    path: Routers.CREATE_CHART,
-    name: 'create-chart',
-    component: 'CreateChartPage',
+    path: Routers.CHART_GALLERY,
+    name: 'chart-gallery',
+    component: 'ChartGalleryPickerPage',
     layout: 'USER',
     isProtected: true,
     roles: [UserRole.USER],
     permissions: [Permission.VIEW_PROFILE],
     meta: {
-      title: 'Create Chart',
-      description: 'Create beautiful charts from your datasets with step-by-step wizard',
+      title: 'Chart Gallery',
+      description: 'Browse chart templates and create new charts',
     },
   },
   {
@@ -465,7 +465,7 @@ export const protectedRoutes: RouteConfig[] = [
   },
   // Chart Editor routes with ID parameter
   {
-    path: Routers.LINE_CHART_EDITOR,
+    path: Routers.LINE_CHART_EDITOR_DEMO,
     name: 'line-chart-editor',
     component: 'LineChartEditorPage',
     layout: 'USER',
@@ -478,7 +478,7 @@ export const protectedRoutes: RouteConfig[] = [
     },
   },
   {
-    path: Routers.BAR_CHART_EDITOR,
+    path: Routers.BAR_CHART_EDITOR_DEMO,
     name: 'bar-chart-editor',
     component: 'BarChartEditorPage',
     layout: 'USER',
@@ -491,7 +491,7 @@ export const protectedRoutes: RouteConfig[] = [
     },
   },
   {
-    path: Routers.AREA_CHART_EDITOR,
+    path: Routers.AREA_CHART_EDITOR_DEMO,
     name: 'area-chart-editor',
     component: 'AreaChartEditorPage',
     layout: 'USER',

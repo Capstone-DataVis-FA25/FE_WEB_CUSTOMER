@@ -16,7 +16,6 @@ const Routers = {
   CHART_GALLERY: '/chart-gallery',
 
   // Dataset routes
-  CREATE_CHART: '/create-chart',
   DATASETS: '/datasets',
   // For state-based navigation, use location.state.datasetId (recommended)
   DATASET_DETAIL: '/datasets/detail', // state-based route, do not use slug param

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useState } from 'react';
 import type { ReactNode } from 'react';
 
 // Types
@@ -32,8 +32,8 @@ export interface ChartConfiguration {
   xAxisTitle?: string;
   yAxisTitle?: string;
   animation?: boolean;
-  xAxisStart?: "auto" | "zero" | number;
-  yAxisStart?: "auto" | "zero" | number;
+  xAxisStart?: 'auto' | 'zero' | number;
+  yAxisStart?: 'auto' | 'zero' | number;
 }
 
 export interface SeriesConfig {
@@ -50,17 +50,17 @@ interface ChartCreationState {
   // Dataset selection
   selectedDataset: Dataset | null;
   uploadedDataset: Dataset | null;
-  
+
   // Chart type selection
   selectedChartType: ChartType | null;
-  
+
   // Chart configuration
   chartConfiguration: ChartConfiguration;
-  
+
   // Series selection
   selectedSeries: SeriesConfig[];
   xAxisColumn: string;
-  
+
   // UI states
   isCreating: boolean;
   isUploading: boolean;
@@ -72,28 +72,28 @@ interface ChartCreationActions {
   // Dataset actions
   setSelectedDataset: (dataset: Dataset | null) => void;
   setUploadedDataset: (dataset: Dataset | null) => void;
-  
+
   // Chart type actions
   setSelectedChartType: (chartType: ChartType | null) => void;
-  
+
   // Configuration actions
   setChartConfiguration: (config: ChartConfiguration) => void;
   updateChartConfiguration: (updates: Partial<ChartConfiguration>) => void;
-  
+
   // Series actions
   setSelectedSeries: (series: SeriesConfig[]) => void;
   addSeries: (series: SeriesConfig) => void;
   removeSeries: (seriesId: string) => void;
   updateSeries: (seriesId: string, updates: Partial<SeriesConfig>) => void;
-  
+
   // X-Axis actions
   setXAxisColumn: (column: string) => void;
-  
+
   // UI actions
   setIsCreating: (isCreating: boolean) => void;
   setIsUploading: (isUploading: boolean) => void;
   setStep: (step: number) => void;
-  
+
   // Reset actions
   resetChartCreation: () => void;
 }
@@ -102,7 +102,7 @@ interface ChartCreationActions {
 type ChartCreationContextType = ChartCreationState & ChartCreationActions;
 
 // Create context
-const ChartCreationContext = createContext<ChartCreationContextType | undefined>(undefined);
+export const ChartCreationContext = createContext<ChartCreationContextType | undefined>(undefined);
 
 // Initial state
 const initialState: ChartCreationState = {
@@ -121,8 +121,8 @@ const initialState: ChartCreationState = {
     xAxisTitle: '',
     yAxisTitle: '',
     animation: true,
-    xAxisStart: "auto",
-    yAxisStart: "auto",
+    xAxisStart: 'auto',
+    yAxisStart: 'auto',
   },
   selectedSeries: [],
   xAxisColumn: '',
@@ -141,60 +141,68 @@ export function ChartCreationProvider({ children }: ChartCreationProviderProps) 
 
   // Dataset actions
   const setSelectedDataset = (dataset: Dataset | null) => {
+    console.log('Setting selected dataset in context:', dataset);
     setState(prev => ({ ...prev, selectedDataset: dataset }));
   };
 
   const setUploadedDataset = (dataset: Dataset | null) => {
+    console.log('Setting uploaded dataset in context:', dataset);
     setState(prev => ({ ...prev, uploadedDataset: dataset }));
   };
 
   // Chart type actions
   const setSelectedChartType = (chartType: ChartType | null) => {
+    console.log('Setting selected chart type in context:', chartType);
     setState(prev => ({ ...prev, selectedChartType: chartType }));
   };
 
   // Configuration actions
   const setChartConfiguration = (config: ChartConfiguration) => {
+    console.log('Setting chart configuration in context:', config);
     setState(prev => ({ ...prev, chartConfiguration: config }));
   };
 
   const updateChartConfiguration = (updates: Partial<ChartConfiguration>) => {
+    console.log('Updating chart configuration in context:', updates);
     setState(prev => ({
       ...prev,
-      chartConfiguration: { ...prev.chartConfiguration, ...updates }
+      chartConfiguration: { ...prev.chartConfiguration, ...updates },
     }));
   };
 
   // Series actions
   const setSelectedSeries = (series: SeriesConfig[]) => {
+    console.log('Setting selected series in context:', series);
     setState(prev => ({ ...prev, selectedSeries: series }));
   };
 
   const addSeries = (series: SeriesConfig) => {
+    console.log('Adding series to context:', series);
     setState(prev => ({
       ...prev,
-      selectedSeries: [...prev.selectedSeries, series]
+      selectedSeries: [...prev.selectedSeries, series],
     }));
   };
 
   const removeSeries = (seriesId: string) => {
+    console.log('Removing series from context with ID:', seriesId);
     setState(prev => ({
       ...prev,
-      selectedSeries: prev.selectedSeries.filter(s => s.id !== seriesId)
+      selectedSeries: prev.selectedSeries.filter(s => s.id !== seriesId),
     }));
   };
 
   const updateSeries = (seriesId: string, updates: Partial<SeriesConfig>) => {
+    console.log('Updating series in context:', { seriesId, updates });
     setState(prev => ({
       ...prev,
-      selectedSeries: prev.selectedSeries.map(s =>
-        s.id === seriesId ? { ...s, ...updates } : s
-      )
+      selectedSeries: prev.selectedSeries.map(s => (s.id === seriesId ? { ...s, ...updates } : s)),
     }));
   };
 
   // X-Axis actions
   const setXAxisColumn = (column: string) => {
+    console.log('Setting X-Axis column in context:', column);
     setState(prev => ({ ...prev, xAxisColumn: column }));
   };
 
@@ -235,17 +243,6 @@ export function ChartCreationProvider({ children }: ChartCreationProviderProps) 
   };
 
   return (
-    <ChartCreationContext.Provider value={contextValue}>
-      {children}
-    </ChartCreationContext.Provider>
+    <ChartCreationContext.Provider value={contextValue}>{children}</ChartCreationContext.Provider>
   );
-}
-
-// Hook to use the context
-export function useChartCreation() {
-  const context = useContext(ChartCreationContext);
-  if (context === undefined) {
-    throw new Error('useChartCreation must be used within a ChartCreationProvider');
-  }
-  return context;
 }

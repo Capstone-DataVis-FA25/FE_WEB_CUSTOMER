@@ -5,7 +5,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useTranslation } from 'react-i18next';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ChartCard from './ChartCard';
-import type { Chart } from '@/features/charts/chartTypes';
+import type { Chart as BaseChart } from '@/features/chart/chartAPI';
+
+// Extended Chart type for UI with additional optional fields
+type Chart = BaseChart & {
+  category?: string;
+  isPublic?: boolean;
+  views?: number;
+  datasetName?: string;
+};
 
 interface ChartTabProps {
   charts: Chart[];

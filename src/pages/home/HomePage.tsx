@@ -411,7 +411,7 @@ const HomePage: React.FC = () => {
       >
         <div className="container mx-auto px-4  bg-gradient-to-br bg-[var(--gradient-main)]">
           <motion.div
-            variants={repeatableVariants.bounceIn}
+            variants={repeatableVariants.slideRepeatBottom}
             initial="hidden"
             whileInView="visible"
             viewport={viewportConfigs.repeat}
@@ -540,7 +540,7 @@ const HomePage: React.FC = () => {
       >
         <div className="container mx-auto px-4 bg-gradient-to-r ">
           <motion.div
-            variants={repeatableVariants.fadeElastic}
+            variants={repeatableVariants.slideRepeatBottom}
             initial="hidden"
             whileInView="visible"
             viewport={viewportConfigs.repeat}
