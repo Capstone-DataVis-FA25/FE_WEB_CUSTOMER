@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, BarChart3, Database, Search, LineChart, AreaChart } from 'lucide-react';
+import { Plus, BarChart3, Database, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,109 +20,108 @@ import { useToastContext } from '@/components/providers/ToastProvider';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import type { Dataset } from '@/features/dataset/datasetAPI';
+import type { Chart as BaseChart } from '@/features/chart/chartAPI';
 
-const mockCharts = [
-  {
-    id: 1,
-    name: 'Sales Performance Trend',
-    description: 'Monthly sales analysis showing growth patterns across all channels',
-    type: 'line',
-    datasetId: 1,
-    datasetName: 'Monthly Sales Data',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-03-10',
-    category: 'Performance',
-    isPublic: true,
-    views: 245,
-    color: 'from-blue-500 to-cyan-500',
-  },
-  {
-    id: 2,
-    name: 'Revenue by Industry',
-    description: 'Quarterly revenue comparison highlighting top-performing sectors',
-    type: 'bar',
-    datasetId: 2,
-    datasetName: 'Quarterly Revenue by Industry',
-    createdAt: '2024-02-05',
-    updatedAt: '2024-03-08',
-    category: 'Finance',
-    isPublic: false,
-    views: 156,
-    color: 'from-emerald-500 to-teal-500',
-  },
-  {
-    id: 3,
-    name: 'Device Usage Distribution',
-    description: 'Area chart showing cumulative device usage over time periods',
-    type: 'area',
-    datasetId: 4,
-    datasetName: 'Device Usage Trends',
-    createdAt: '2024-02-15',
-    updatedAt: '2024-03-01',
-    category: 'Analytics',
-    isPublic: true,
-    views: 189,
-    color: 'from-orange-500 to-red-500',
-  },
-  {
-    id: 4,
-    name: 'Product Performance Matrix',
-    description: 'Comprehensive view of product sales, profits, and customer metrics',
-    type: 'bar',
-    datasetId: 3,
-    datasetName: 'Product Performance Metrics',
-    createdAt: '2024-03-01',
-    updatedAt: '2024-03-12',
-    category: 'Performance',
-    isPublic: false,
-    views: 98,
-    color: 'from-purple-500 to-pink-500',
-  },
-];
+// const mockCharts = [
+//   {
+//     id: 1,
+//     name: 'Sales Performance Trend',
+//     description: 'Monthly sales analysis showing growth patterns across all channels',
+//     type: 'line',
+//     datasetId: 1,
+//     datasetName: 'Monthly Sales Data',
+//     createdAt: '2024-01-20',
+//     updatedAt: '2024-03-10',
+//     category: 'Performance',
+//     isPublic: true,
+//     views: 245,
+//     color: 'from-blue-500 to-cyan-500',
+//   },
+//   {
+//     id: 2,
+//     name: 'Revenue by Industry',
+//     description: 'Quarterly revenue comparison highlighting top-performing sectors',
+//     type: 'bar',
+//     datasetId: 2,
+//     datasetName: 'Quarterly Revenue by Industry',
+//     createdAt: '2024-02-05',
+//     updatedAt: '2024-03-08',
+//     category: 'Finance',
+//     isPublic: false,
+//     views: 156,
+//     color: 'from-emerald-500 to-teal-500',
+//   },
+//   {
+//     id: 3,
+//     name: 'Device Usage Distribution',
+//     description: 'Area chart showing cumulative device usage over time periods',
+//     type: 'area',
+//     datasetId: 4,
+//     datasetName: 'Device Usage Trends',
+//     createdAt: '2024-02-15',
+//     updatedAt: '2024-03-01',
+//     category: 'Analytics',
+//     isPublic: true,
+//     views: 189,
+//     color: 'from-orange-500 to-red-500',
+//   },
+//   {
+//     id: 4,
+//     name: 'Product Performance Matrix',
+//     description: 'Comprehensive view of product sales, profits, and customer metrics',
+//     type: 'bar',
+//     datasetId: 3,
+//     datasetName: 'Product Performance Metrics',
+//     createdAt: '2024-03-01',
+//     updatedAt: '2024-03-12',
+//     category: 'Performance',
+//     isPublic: false,
+//     views: 98,
+//     color: 'from-purple-500 to-pink-500',
+//   },
+// ];
 
 // Chart icon
-const getChartIcon = (type: string) => {
-  switch (type) {
-    case 'line':
-      return <LineChart className="h-4 w-4" />;
-    case 'bar':
-      return <BarChart3 className="h-4 w-4" />;
-    case 'area':
-      return <AreaChart className="h-4 w-4" />;
-    default:
-      return <BarChart3 className="h-4 w-4" />;
-  }
-};
+// const getChartIcon = (type: string) => {
+//   switch (type) {
+//     case 'line':
+//       return <LineChart className="h-4 w-4" />;
+//     case 'bar':
+//       return <BarChart3 className="h-4 w-4" />;
+//     case 'area':
+//       return <AreaChart className="h-4 w-4" />;
+//     default:
+//       return <BarChart3 className="h-4 w-4" />;
+//   }
+// };
 
 // Thêm chart label ở đây
-const getChartTypeLabel = (type: string) => {
-  switch (type) {
-    case 'line':
-      return 'Line Chart';
-    case 'bar':
-      return 'Bar Chart';
-    case 'area':
-      return 'Area Chart';
-    default:
-      return 'Chart';
-  }
-};
-
-const getCategoryColor = (category: string) => {
-  switch (category) {
-    case 'Sales':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-    case 'Finance':
-      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
-    case 'Analytics':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-    case 'Performance':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-  }
-};
-import type { Chart as BaseChart } from '@/features/chart/chartAPI';
+// const getChartTypeLabel = (type: string) => {
+//   switch (type) {
+//     case 'line':
+//       return 'Line Chart';
+//     case 'bar':
+//       return 'Bar Chart';
+//     case 'area':
+//       return 'Area Chart';
+//     default:
+//       return 'Chart';
+//   }
+// };
+// const getCategoryColor = (category: string) => {
+//   switch (category) {
+//     case 'Sales':
+//       return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+//     case 'Finance':
+//       return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
+//     case 'Analytics':
+//       return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+//     case 'Performance':
+//       return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+//     default:
+//       return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+//   }
+// };
 
 // Extended Chart type for UI with additional optional fields
 type Chart = BaseChart & {
@@ -237,25 +236,25 @@ const WorkspacePage: React.FC = () => {
     : [];
 
   // Format date helper (same as DatasetListPage)
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  // const formatDate = (dateString: string) => {
+  //   const date = new Date(dateString);
+  //   const now = new Date();
+  //   const diffTime = Math.abs(now.getTime() - date.getTime());
+  //   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 1) {
-      return t('dataset_dateToday', 'today');
-    } else if (diffDays === 2) {
-      return t('dataset_dateYesterday', 'a day ago');
-    } else if (diffDays <= 30) {
-      return t('dataset_daysAgo', `${diffDays} days ago`);
-    } else if (diffDays <= 60) {
-      return t('dataset_monthAgo', 'a month ago');
-    } else {
-      const diffMonths = Math.floor(diffDays / 30);
-      return t('dataset_monthsAgo', `${diffMonths} months ago`);
-    }
-  };
+  //   if (diffDays === 1) {
+  //     return t('dataset_dateToday', 'today');
+  //   } else if (diffDays === 2) {
+  //     return t('dataset_dateYesterday', 'a day ago');
+  //   } else if (diffDays <= 30) {
+  //     return t('dataset_daysAgo', `${diffDays} days ago`);
+  //   } else if (diffDays <= 60) {
+  //     return t('dataset_monthAgo', 'a month ago');
+  //   } else {
+  //     const diffMonths = Math.floor(diffDays / 30);
+  //     return t('dataset_monthsAgo', `${diffMonths} months ago`);
+  //   }
+  // };
 
   // Handle delete dataset
   const handleDeleteDataset = async (dataset: Dataset) => {

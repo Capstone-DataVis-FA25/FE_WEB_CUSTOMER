@@ -20,9 +20,9 @@ import {
 import Pagination from '@/components/ui/pagination';
 import { Search, Star, Filter, Grid3X3, TrendingUp, Eye, ArrowRight, Info } from 'lucide-react';
 import { useToastContext } from '@/components/providers/ToastProvider';
-import { useChart } from '@/features/chart/useChart';
 import Routers from '@/router/routers';
 import type { ChartCategory, ChartTemplate } from '@/types/chart-gallery-types';
+import { useCharts } from '@/features/charts';
 
 export default function ChooseTemplateTab() {
   const { t } = useTranslation();
@@ -30,7 +30,7 @@ export default function ChooseTemplateTab() {
   const { showError, showSuccess } = useToastContext();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { createChart } = useChart();
+  const { createChart } = useCharts();
 
   // Extract data from both location state AND query parameters
   const locationState = location.state as {

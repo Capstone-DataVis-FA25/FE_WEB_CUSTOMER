@@ -44,7 +44,7 @@ export const fetchChartById = createAsyncThunk(
 
 // Create chart
 export const createChartThunk = createAsyncThunk(
-  'charts/createChart',
+  'chart/createChart',
   async (data: CreateChartRequest, { rejectWithValue }) => {
     try {
       const response = await chartAPI.createChart(data);

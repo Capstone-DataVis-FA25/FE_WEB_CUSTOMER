@@ -1,14 +1,14 @@
 import { useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  fetchCharts,
-  fetchChartById,
   createChartThunk,
-  updateChartThunk,
   deleteChartThunk,
-} from '../chart/chartThunk';
-import { clearError, clearCurrentChart } from '../chart/chartSlice';
-import type { CreateChartRequest, UpdateChartRequest } from '../chart/chartAPI';
+  fetchChartById,
+  fetchCharts,
+  updateChartThunk,
+} from './chartThunk';
+import type { CreateChartRequest, UpdateChartRequest } from './chartTypes';
+import { clearCurrentChart, clearError } from './chartSlice';
 
 export const useCharts = () => {
   const dispatch = useAppDispatch();
@@ -29,13 +29,9 @@ export const useCharts = () => {
     [dispatch]
   );
 
-  // Create chart
-  const createChart = useCallback(
-    (data: CreateChartRequest) => {
-      return dispatch(createChartThunk(data));
-    },
-    [dispatch]
-  );
+  const createChart = (data: CreateChartRequest) => {
+    return dispatch(createChartThunk(data));
+  };
 
   // Update chart
   const updateChart = useCallback(
