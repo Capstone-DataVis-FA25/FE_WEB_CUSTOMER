@@ -241,6 +241,69 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seriesConfigs]);
 
+  // Effect to sync data when initialArrayData changes
+  useEffect(() => {
+    console.log('BarChart Process initial data', processedInitialData);
+    console.log('BarChart Data tracking before update', data);
+
+    // Only update data state if processedInitialData has actually changed
+    if (
+      processedInitialData.length > 0 &&
+      JSON.stringify(processedInitialData) !== JSON.stringify(data)
+    ) {
+      setData(processedInitialData);
+      setTempData(processedInitialData);
+      console.log(
+        'BarChart Updated data state to match processedInitialData',
+        processedInitialData
+      );
+    }
+  }, [processedInitialData]); // Only run when processedInitialData changes
+
+  // Effect to update config when data structure changes
+  useEffect(() => {
+    console.log('BarChart Config data structure effect running');
+    console.log('BarChart Current data:', data);
+    console.log('BarChart Current config xAxisKey:', config.xAxisKey);
+    console.log('BarChart Current config yAxisKeys:', config.yAxisKeys);
+
+    if (data.length > 0) {
+      const availableKeys = Object.keys(data[0]);
+      console.log('BarChart Available keys from data:', availableKeys);
+
+      // Handle the case where config keys might be arrays
+      const currentXAxisKey = Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey;
+      const currentYAxisKeys = Array.isArray(config.yAxisKeys)
+        ? config.yAxisKeys
+        : [config.yAxisKeys];
+
+      console.log('BarChart Processed current xAxisKey:', currentXAxisKey);
+      console.log('BarChart Processed current yAxisKeys:', currentYAxisKeys);
+
+      const newXAxisKey = availableKeys[0] || 'x';
+      const newYAxisKeys = availableKeys.slice(1).length > 0 ? availableKeys.slice(1) : ['y'];
+
+      console.log('BarChart Calculated new xAxisKey:', newXAxisKey);
+      console.log('BarChart Calculated new yAxisKeys:', newYAxisKeys);
+
+      // Only update if keys have actually changed
+      if (
+        currentXAxisKey !== newXAxisKey ||
+        JSON.stringify(currentYAxisKeys) !== JSON.stringify(newYAxisKeys)
+      ) {
+        console.log('BarChart Updating config due to data structure change');
+        updateConfig({
+          xAxisKey: newXAxisKey,
+          yAxisKeys: newYAxisKeys,
+        });
+      } else {
+        console.log('BarChart Config keys are already correct, no update needed');
+      }
+    } else {
+      console.log('BarChart No data available to determine keys');
+    }
+  }, [data]); // Run when data changes
+
   // Calculate responsive fontSize based on chart dimensions (for future use)
   // const getResponsiveFontSize = () => {
   //   const baseSize = Math.min(config.width, config.height);
