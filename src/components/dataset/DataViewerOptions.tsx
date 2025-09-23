@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Upload, RefreshCw, Settings } from 'lucide-react';
 import DelimiterSelector from './DelimiterSelector';
 import { NumberFormatSelector } from './NumberFormatSelector';
+import { DateFormatSelector } from './DateFormatSelector';
 import DataTransformationSelector from './DataTransformationSelector';
 import { useDataset } from '@/contexts/DatasetContext';
 import { DATASET_NAME_MAX_LENGTH, DATASET_DESCRIPTION_MAX_LENGTH } from '@/utils/Consts';
@@ -38,6 +39,8 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
     setSelectedDelimiter,
     numberFormat,
     setNumberFormat,
+    dateFormat,
+    setDateFormat,
     parsedData,
     originalHeaders,
     setOriginalHeaders,
@@ -82,6 +85,12 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
 
     // Always update the format, validation will be handled visually
     setNumberFormat(newFormat);
+  };
+
+  const handleDateFormatChange = (
+    format: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD' | 'DD-MM-YYYY' | 'MM-DD-YYYY' | 'YYYY-MM-DD'
+  ) => {
+    setDateFormat({ format });
   };
 
   const handleTransformationColumnChange = (column: string) => {
@@ -207,6 +216,13 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
             thousandsSeparator={numberFormat.thousandsSeparator}
             decimalSeparator={numberFormat.decimalSeparator}
             onChange={handleNumberFormatChange}
+            disabled={isUploading}
+          />
+
+          {/* Date Format Settings */}
+          <DateFormatSelector
+            format={dateFormat.format}
+            onChange={handleDateFormatChange}
             disabled={isUploading}
           />
 

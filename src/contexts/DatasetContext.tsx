@@ -1,9 +1,13 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
 // Types
 interface NumberFormat {
   thousandsSeparator: string;
   decimalSeparator: string;
+}
+
+interface DateFormat {
+  format: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD' | 'DD-MM-YYYY' | 'MM-DD-YYYY' | 'YYYY-MM-DD';
 }
 
 interface ValidationErrors {
@@ -31,6 +35,7 @@ interface DatasetState {
   // Configuration states
   selectedDelimiter: string;
   numberFormat: NumberFormat;
+  dateFormat: DateFormat;
   transformationColumn?: string | null;
 
   // Form states
@@ -51,6 +56,7 @@ interface DatasetContextType extends DatasetState {
   // Configuration actions
   setSelectedDelimiter: (delimiter: string) => void;
   setNumberFormat: (format: NumberFormat) => void;
+  setDateFormat: (format: DateFormat) => void;
   setTransformationColumn: (column: string | null) => void;
 
   // Form actions
@@ -78,6 +84,9 @@ const initialState: DatasetState = {
   numberFormat: {
     thousandsSeparator: ',',
     decimalSeparator: '.',
+  },
+  dateFormat: {
+    format: 'DD/MM/YYYY',
   },
   transformationColumn: null,
   datasetName: '',
@@ -119,6 +128,10 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
     setState(prev => ({ ...prev, numberFormat: format }));
   };
 
+  const setDateFormat = (format: DateFormat) => {
+    setState(prev => ({ ...prev, dateFormat: format }));
+  };
+
   const setTransformationColumn = (column: string | null) => {
     setState(prev => ({ ...prev, transformationColumn: column }));
   };
@@ -133,20 +146,23 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
   };
 
   // Error actions
-  const setValidationError = (category: keyof ValidationErrors, field: string, value: boolean) => {
-    setState(prev => ({
-      ...prev,
-      validationErrors: {
-        ...prev.validationErrors,
-        [category]: {
-          ...prev.validationErrors[category],
-          [field]: value,
+  const setValidationError = useCallback(
+    (category: keyof ValidationErrors, field: string, value: boolean) => {
+      setState(prev => ({
+        ...prev,
+        validationErrors: {
+          ...prev.validationErrors,
+          [category]: {
+            ...prev.validationErrors[category],
+            [field]: value,
+          },
         },
-      },
-    }));
-  };
+      }));
+    },
+    []
+  );
 
-  const clearValidationErrors = (category?: keyof ValidationErrors) => {
+  const clearValidationErrors = useCallback((category?: keyof ValidationErrors) => {
     if (category) {
       setState(prev => ({
         ...prev,
@@ -161,15 +177,15 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
         validationErrors: {},
       }));
     }
-  };
+  }, []);
 
-  const hasValidationErrors = (): boolean => {
+  const hasValidationErrors = useCallback((): boolean => {
     const errors = state.validationErrors;
     return Object.values(errors).some(
       categoryErrors =>
         categoryErrors && Object.values(categoryErrors).some(error => error === true)
     );
-  };
+  }, [state.validationErrors]);
 
   // Utility actions
   const resetState = () => {
@@ -184,6 +200,7 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
     setIsJsonFormat,
     setSelectedDelimiter,
     setNumberFormat,
+    setDateFormat,
     setTransformationColumn,
     setDatasetName,
     setDescription,
