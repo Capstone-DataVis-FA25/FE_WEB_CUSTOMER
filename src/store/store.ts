@@ -4,10 +4,9 @@ import storage from 'redux-persist/lib/storage';
 import { combineReducers } from '@reduxjs/toolkit';
 import authReducer from '../features/auth/authSlice';
 import datasetReducer from '../features/dataset/datasetSlice';
-import chartReducer from '../features/chart/chartSlice';
 import type { AuthState } from '../features/auth/authType';
 import type { DatasetState } from '../features/dataset/datasetSlice';
-import type { ChartState } from '../features/chart/chartSlice';
+import { chartReducer, type ChartState } from '@/features/charts';
 
 const persistConfig = {
   key: 'root',

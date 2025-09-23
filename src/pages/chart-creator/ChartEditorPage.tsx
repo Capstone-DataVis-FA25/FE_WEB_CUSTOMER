@@ -15,7 +15,7 @@ import { useCharts } from '@/features/charts/useCharts';
 import { Database, BarChart3, Palette, Settings, ArrowLeft, Save, AlertCircle } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { Chart } from '@/features/charts/chartTypes';
-import { convertBackendDataToChartData, convertChartDataToArray } from '@/utils/dataConverter';
+import { convertBackendDataToChartData } from '@/utils/dataConverter';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
 
 const ChartEditorPage: React.FC = () => {
@@ -97,6 +97,7 @@ const ChartEditorPage: React.FC = () => {
   const [chartData, setChartData] = useState<ChartDataPoint[]>(
     () => convertArrayToChartData(salesData) // Convert salesData to ChartDataPoint[]
   );
+  console.log(chartData);
   const [chartConfig, setChartConfig] = useState<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
