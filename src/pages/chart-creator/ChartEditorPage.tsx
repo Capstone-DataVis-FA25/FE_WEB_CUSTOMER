@@ -100,6 +100,7 @@ const ChartEditorPage: React.FC = () => {
   const [chartData, setChartData] = useState<ChartDataPoint[]>(
     () => convertArrayToChartData(salesData) // Convert salesData to ChartDataPoint[]
   );
+  console.log(chartData);
   const [chartConfig, setChartConfig] = useState<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
