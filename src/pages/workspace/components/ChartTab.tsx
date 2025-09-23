@@ -2,10 +2,18 @@ import React from 'react';
 import { Plus, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ChartCard from './ChartCard';
-import type { Chart } from '@/features/charts/chartTypes';
+import type { Chart as BaseChart } from '@/features/chart/chartAPI';
+
+// Extended Chart type for UI with additional optional fields
+type Chart = BaseChart & {
+  category?: string;
+  isPublic?: boolean;
+  views?: number;
+  datasetName?: string;
+};
 
 interface ChartTabProps {
   charts: Chart[];
@@ -20,7 +28,7 @@ interface ChartTabProps {
 }
 
 const ChartTab: React.FC<ChartTabProps> = ({
-  charts,
+  // charts,
   chartsLoading,
   chartDeleting,
   filteredCharts,
@@ -30,7 +38,7 @@ const ChartTab: React.FC<ChartTabProps> = ({
   onEditChart,
   deletingChartId,
 }) => {
-  const { t } = useTranslation();
+  // const { t } = useTranslation();
 
   if (chartsLoading && filteredCharts.length === 0) {
     return (

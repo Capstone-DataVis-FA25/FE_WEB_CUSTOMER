@@ -241,6 +241,69 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seriesConfigs]);
 
+  // Effect to sync data when initialArrayData changes
+  useEffect(() => {
+    console.log('BarChart Process initial data', processedInitialData);
+    console.log('BarChart Data tracking before update', data);
+
+    // Only update data state if processedInitialData has actually changed
+    if (
+      processedInitialData.length > 0 &&
+      JSON.stringify(processedInitialData) !== JSON.stringify(data)
+    ) {
+      setData(processedInitialData);
+      setTempData(processedInitialData);
+      console.log(
+        'BarChart Updated data state to match processedInitialData',
+        processedInitialData
+      );
+    }
+  }, [processedInitialData]); // Only run when processedInitialData changes
+
+  // Effect to update config when data structure changes
+  useEffect(() => {
+    console.log('BarChart Config data structure effect running');
+    console.log('BarChart Current data:', data);
+    console.log('BarChart Current config xAxisKey:', config.xAxisKey);
+    console.log('BarChart Current config yAxisKeys:', config.yAxisKeys);
+
+    if (data.length > 0) {
+      const availableKeys = Object.keys(data[0]);
+      console.log('BarChart Available keys from data:', availableKeys);
+
+      // Handle the case where config keys might be arrays
+      const currentXAxisKey = Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey;
+      const currentYAxisKeys = Array.isArray(config.yAxisKeys)
+        ? config.yAxisKeys
+        : [config.yAxisKeys];
+
+      console.log('BarChart Processed current xAxisKey:', currentXAxisKey);
+      console.log('BarChart Processed current yAxisKeys:', currentYAxisKeys);
+
+      const newXAxisKey = availableKeys[0] || 'x';
+      const newYAxisKeys = availableKeys.slice(1).length > 0 ? availableKeys.slice(1) : ['y'];
+
+      console.log('BarChart Calculated new xAxisKey:', newXAxisKey);
+      console.log('BarChart Calculated new yAxisKeys:', newYAxisKeys);
+
+      // Only update if keys have actually changed
+      if (
+        currentXAxisKey !== newXAxisKey ||
+        JSON.stringify(currentYAxisKeys) !== JSON.stringify(newYAxisKeys)
+      ) {
+        console.log('BarChart Updating config due to data structure change');
+        updateConfig({
+          xAxisKey: newXAxisKey,
+          yAxisKeys: newYAxisKeys,
+        });
+      } else {
+        console.log('BarChart Config keys are already correct, no update needed');
+      }
+    } else {
+      console.log('BarChart No data available to determine keys');
+    }
+  }, [data]); // Run when data changes
+
   // Calculate responsive fontSize based on chart dimensions (for future use)
   // const getResponsiveFontSize = () => {
   //   const baseSize = Math.min(config.width, config.height);
@@ -698,9 +761,81 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     setColors(newColors);
   };
 
+  // Function to convert editor config to simple chart config format
+  const getSimpleChartConfig = () => {
+    return {
+      config: {
+        width: config.width,
+        height: config.height,
+        margin: config.margin,
+        xAxisKey: config.xAxisKey,
+        yAxisKeys: config.yAxisKeys,
+        title: config.title,
+        xAxisLabel: config.xAxisLabel,
+        yAxisLabel: config.yAxisLabel,
+        showLegend: config.showLegend,
+        showGrid: config.showGrid,
+        animationDuration: config.animationDuration,
+        barType: config.barType,
+        gridOpacity: config.gridOpacity,
+        legendPosition: config.legendPosition,
+        xAxisRotation: config.xAxisRotation,
+        yAxisRotation: config.yAxisRotation,
+        showAxisLabels: config.showAxisLabels,
+        showAxisTicks: config.showAxisTicks,
+        yAxisStart: config.yAxisStart,
+        theme: config.theme,
+        backgroundColor: config.backgroundColor,
+        showTooltip: config.showTooltip,
+        barWidth: config.barWidth,
+        barSpacing: config.barSpacing,
+        titleFontSize: config.titleFontSize,
+        labelFontSize: config.labelFontSize,
+        legendFontSize: config.legendFontSize,
+        enableZoom: config.enableZoom,
+        enablePan: config.enablePan,
+        zoomExtent: config.zoomExtent,
+      },
+    };
+  };
+
+  // Function to save chart to database (example implementation)
+  const saveChartToDatabase = async () => {
+    try {
+      // Get the simplified chart configuration
+      const chartConfig = getSimpleChartConfig();
+
+      // Here you would typically call your API to save the chart
+      // For example:
+      // const response = await createChart({
+      //   name: config.title || 'Untitled Chart',
+      //   type: 'bar',
+      //   config: JSON.stringify(chartConfig),
+      //   datasetId: // your dataset ID
+      // });
+
+      // Return success or handle response
+      return { success: true, config: chartConfig };
+    } catch (error) {
+      console.error('Error saving chart:', error);
+      return { success: false, error };
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
       <div className="w-full px-2">
+        {/* Action Bar - NEW */}
+        <div className="mb-6 flex justify-end">
+          <Button
+            onClick={saveChartToDatabase}
+            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {t('chart_editor_save_chart', 'Save Chart')}
+          </Button>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
           {/* Configuration Panel - SIDEBAR BÊN TRÁI */}
           <div className="lg:col-span-2 space-y-6">
@@ -963,7 +1098,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                     barType={config.barType}
                     // Advanced wiring
                     gridOpacity={config.gridOpacity}
-                    legendPosition={config.legendPosition === 'top' ? 'top' : 'bottom'}
+                    legendPosition={config.legendPosition}
                     xAxisRotation={config.xAxisRotation}
                     yAxisRotation={config.yAxisRotation}
                     showAxisLabels={config.showAxisLabels}
@@ -974,6 +1109,14 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                     showTooltip={config.showTooltip}
                     barWidth={config.barWidth}
                     barSpacing={config.barSpacing}
+                    // Font size settings
+                    titleFontSize={config.titleFontSize}
+                    labelFontSize={config.labelFontSize}
+                    legendFontSize={config.legendFontSize}
+                    // Zoom settings
+                    enableZoom={config.enableZoom}
+                    enablePan={config.enablePan}
+                    zoomExtent={config.zoomExtent}
                   />
                 </CardContent>
               </Card>

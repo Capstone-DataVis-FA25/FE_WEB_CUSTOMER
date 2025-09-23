@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Edit, Trash2, Eye, Calendar, Database } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Eye, Calendar, Database, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -28,6 +28,9 @@ const DatasetListPage: React.FC = () => {
   useEffect(() => {
     getDatasets();
   }, [getDatasets]);
+
+  // DEBUG DATASET
+  console.log(`Dataset ID: ${datasets.length}`);
 
   // Show error toast when error occurs
   useEffect(() => {
@@ -60,14 +63,33 @@ const DatasetListPage: React.FC = () => {
             `Dataset "${dataset.name}" has been deleted successfully`
           )
         );
-      } catch (error: any) {
-        showError(
-          t('dataset_deleteError', 'Delete Failed'),
-          error.message || t('dataset_deleteErrorMessage', 'Failed to delete dataset')
-        );
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : t('dataset_deleteErrorMessage', 'Failed to delete dataset');
+        showError(t('dataset_deleteError', 'Delete Failed'), message);
       } finally {
         setDeletingId(null);
       }
+    });
+  };
+
+  const handleCreateChart = (dataset: Dataset) => {
+    console.log('DatasetListPage - handleCreateChart called with dataset:', dataset);
+    console.log('DatasetListPage - Navigating to:', Routers.CHART_GALLERY);
+    console.log('DatasetListPage - State data:', {
+      datasetId: dataset.id,
+      datasetName: dataset.name,
+      activeTab: 'data',
+    });
+
+    navigate(Routers.CHART_GALLERY, {
+      state: {
+        datasetId: dataset.id,
+        datasetName: dataset.name,
+        activeTab: 'template', // Start with template selection
+      },
     });
   };
 
@@ -221,8 +243,18 @@ const DatasetListPage: React.FC = () => {
                               size="sm"
                               onClick={() => navigate(`/datasets/${buildSlug(dataset)}`)}
                               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+                              title={t('dataset_view', 'View')}
                             >
                               <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleCreateChart(dataset)}
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200"
+                              title={t('dataset_createChart', 'Create Chart')}
+                            >
+                              <BarChart3 className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost"
@@ -233,6 +265,7 @@ const DatasetListPage: React.FC = () => {
                                 })
                               }
                               className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-all duration-200"
+                              title={t('dataset_edit', 'Edit')}
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -242,6 +275,7 @@ const DatasetListPage: React.FC = () => {
                               onClick={() => handleDeleteDataset(dataset)}
                               disabled={deleting && deletingId === dataset.id}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200 disabled:opacity-50"
+                              title={t('dataset_delete', 'Delete')}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>

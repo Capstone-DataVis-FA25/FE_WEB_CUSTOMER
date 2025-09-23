@@ -1363,5 +1363,6 @@
   "chart_editor_preset_cool": "Cool",
   "chart_editor_preset_pastel": "Pastel",
   "common.add": "Add",
-  "chart_editor_seriesManagement": "Series Management"
+  "chart_editor_seriesManagement": "Series Management",
+  "chart_editor_save_chart": "Save Chart"
 }

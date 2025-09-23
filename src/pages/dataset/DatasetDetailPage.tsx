@@ -1,13 +1,12 @@
 'use client';
-
 import type React from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SlideInUp } from '@/theme/animation';
-import { ArrowLeft, Edit, Trash2, Download, Database, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Database, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useDataset } from '@/features/dataset/useDataset';
 import { useToastContext } from '@/components/providers/ToastProvider';
@@ -17,10 +16,10 @@ import { useModalConfirm } from '@/hooks/useModal';
 import Routers from '@/router/routers';
 import CustomExcel from '@/components/excel/CustomExcel';
 
-// Define types for dataset header and cell
+// Type for header with data
 interface DatasetHeader {
   name: string;
-  data?: (string | number | null)[];
+  data?: (string | number)[];
 }
 
 const DatasetDetailPage: React.FC = () => {
@@ -50,6 +49,9 @@ const DatasetDetailPage: React.FC = () => {
     clearDatasetError,
     clearCurrent,
   } = useDataset();
+
+  const [activeTab, setActiveTab] = useState<'data' | 'info'>('data');
+  const [selectedChartType, setSelectedChartType] = useState('bar');
 
   // Fetch dataset on component mount
   useEffect(() => {
@@ -101,40 +103,61 @@ const DatasetDetailPage: React.FC = () => {
   };
 
   // Handle export dataset
-  const handleExportDataset = () => {
-    if (!currentDataset) return;
+  // const handleExportDataset = () => {
+  //   if (!currentDataset) return;
 
-    // Build tableData from headers (same logic as below)
-    const headerNames = currentDataset.headers?.map((h: DatasetHeader) => h.name) || [];
-    const rowCount = currentDataset.rowCount || 0;
-    const rows: string[][] = Array.from({ length: rowCount }, () =>
-      Array(headerNames.length).fill('')
-    );
-    currentDataset.headers?.forEach((h: DatasetHeader, colIdx: number) => {
-      h.data?.forEach((cell: string | number | null, rowIdx: number) => {
-        if (rows[rowIdx]) rows[rowIdx][colIdx] = String(cell ?? '');
-      });
-    });
+  //   // Build tableData from headers (same logic as below)
+  //   const headerNames = currentDataset.headers?.map((h: DatasetHeader) => h.name) || [];
+  //   const rowCount = currentDataset.rowCount || 0;
+  //   const rows: string[][] = Array.from({ length: rowCount }, () =>
+  //     Array(headerNames.length).fill('')
+  //   );
+  //   currentDataset.headers?.forEach((h: DatasetHeader, colIdx: number) => {
+  //     h.data?.forEach((cell: string | number | null, rowIdx: number) => {
+  //       if (rows[rowIdx]) rows[rowIdx][colIdx] = String(cell ?? '');
+  //     });
+  //   });
 
-    const csvContent = [headerNames, ...rows]
-      .map((row: string[]) => row.map((cell: string) => `"${cell.replace(/"/g, '""')}"`).join(','))
-      .join('\n');
+  //   const csvContent = [headerNames, ...rows]
+  //     .map((row: string[]) => row.map((cell: string) => `"${cell.replace(/"/g, '""')}"`).join(','))
+  //     .join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentDataset.name}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  //   const blob = new Blob([csvContent], { type: 'text/csv' });
+  //   const url = URL.createObjectURL(blob);
+  //   const a = document.createElement('a');
+  //   a.href = url;
+  //   a.download = `${currentDataset.name}.csv`;
+  //   document.body.appendChild(a);
+  //   a.click();
+  //   document.body.removeChild(a);
+  //   URL.revokeObjectURL(url);
 
-    showSuccess(
-      t('dataset_exportSuccess', 'Export Successful'),
-      t('dataset_exportSuccessMessage', 'Dataset has been exported successfully')
-    );
-  };
+  //   showSuccess(
+  //     t('dataset_exportSuccess', 'Export Successful'),
+  //     t('dataset_exportSuccessMessage', 'Dataset has been exported successfully')
+  //   );
+  // };
+
+  // Handle create chart
+  // const handleCreateChart = () => {
+  //   if (!currentDataset) return;
+
+  //   console.log('Navigating to chart gallery with dataset:', {
+  //     id: currentDataset.id,
+  //     name: currentDataset.name,
+  //     chartType: selectedChartType,
+  //   });
+
+  //   // Navigate to chart gallery page with dataset ID and selected chart type
+  //   navigate(Routers.CHART_GALLERY, {
+  //     state: {
+  //       datasetId: currentDataset.id,
+  //       datasetName: currentDataset.name,
+  //       chartType: selectedChartType,
+  //       activeTab: 'template', // Start with template selection
+  //     },
+  //   });
+  // };
 
   // Format date
   const formatDate = (dateString: string) => {

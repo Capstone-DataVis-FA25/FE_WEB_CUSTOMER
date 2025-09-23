@@ -1,4 +1,3 @@
-import React from 'react';
 import DataViewer from '@/components/dataset/DataViewer';
 import FileUpload from '@/components/dataset/FileUpload';
 import SampleDataUpload from '@/components/dataset/SampleDataUpload';

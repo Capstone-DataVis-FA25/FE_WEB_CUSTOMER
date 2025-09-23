@@ -13,44 +13,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import type { Chart as BaseChart } from '@/features/chart/chartAPI';
 
-// Local Chart type definition to match API response structure
-type Chart = {
-  id: string;
-  name: string;
-  description?: string;
-  type: 'line' | 'bar' | 'area' | 'pie' | 'scatter';
-  config?: {
-    width?: number;
-    height?: number;
-    margin?: {
-      top?: number;
-      right?: number;
-      bottom?: number;
-      left?: number;
-    };
-    [key: string]: unknown;
-  };
-  createdAt: string;
-  updatedAt: string;
-  datasetId: string;
-  userId: string;
-  dataset?: {
-    id: string;
-    name: string;
-    description?: string;
-  };
+// Extended Chart type for UI with additional optional fields
+type Chart = BaseChart & {
+  category?: string;
   isPublic?: boolean;
   views?: number;
-  category?: string;
-  // Additional fields that might be present
-  configuration?: {
-    title?: string;
-    xAxisLabel?: string;
-    yAxisLabel?: string;
-    colors?: Record<string, string | { light: string; dark: string }>;
-    [key: string]: unknown;
-  };
   datasetName?: string;
 };
 

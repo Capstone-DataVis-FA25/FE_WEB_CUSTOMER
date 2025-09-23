@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,10 +12,7 @@ import UploadMethodNavigation from '@/components/dataset/UploadMethodNavigation'
 import DataViewer from '@/components/dataset/DataViewer';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { SlideInUp } from '@/theme/animation';
-import { 
-  ChevronRight,
-  ArrowLeft
-} from 'lucide-react';
+import { ChevronRight, ArrowLeft } from 'lucide-react';
 import {
   getFileDelimiter,
   detectDelimiter,
@@ -28,6 +25,8 @@ import {
   processFileContent,
   readExcelAsText,
   validateFileSize,
+  type ParsedDataResult,
+  type DataHeader,
 } from '@/utils/dataProcessors';
 import type { Dataset } from '@/contexts/ChartCreationContext';
 
@@ -62,6 +61,13 @@ function DatasetSelectionStepContent({ onNext, onDatasetSelect }: DatasetSelecti
   const [viewMode, setViewMode] = useState<ViewMode>('upload');
   const [previousViewMode, setPreviousViewMode] = useState<ViewMode>('upload');
 
+  // If a dataset is already selected, switch to view mode immediately
+  useEffect(() => {
+    if (selectedDataset && viewMode === 'upload') {
+      setViewMode('view');
+    }
+  }, [selectedDataset, viewMode]);
+
   // Handle switching between modes
   const handleViewModeChange = useCallback(
     (mode: ViewMode) => {
@@ -78,6 +84,7 @@ function DatasetSelectionStepContent({ onNext, onDatasetSelect }: DatasetSelecti
   // Process file content and switch to view mode
   const processAndViewFile = useCallback(
     async (file: File) => {
+      console.log('Processing file:', file.name);
       setIsProcessing(true);
       try {
         // Read the original text content first - handle Excel files differently
@@ -95,28 +102,31 @@ function DatasetSelectionStepContent({ onNext, onDatasetSelect }: DatasetSelecti
 
         // Then process it
         const result = await processFileContent(file, { delimiter: detectedDelimiter });
+        console.log('File processed, result:', result);
         await new Promise(resolve => setTimeout(resolve, 1000));
-        setParsedData(result);
-        setOriginalHeaders(result[0] || []);
-        
+        setParsedData(result.data); // Access the data property
+        setOriginalHeaders(result.headers.map((h: DataHeader) => h.name)); // Extract header names with proper typing
+
         // Create dataset from processed data
         const tempDataset: Dataset = {
           id: 'temp-' + Date.now(),
-          name: file.name.replace(/\.[^/.]+$/, ""),
+          name: file.name.replace(/\.[^/.]+$/, ''),
           description: `Uploaded file: ${file.name}`,
-          data: result || [],
+          data: result.data || [], // Use the data property
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        
+
+        console.log('Setting selected dataset:', tempDataset);
         setSelectedDataset(tempDataset);
         onDatasetSelect?.(tempDataset);
-        
+
         setPreviousViewMode(viewMode);
         setViewMode('view');
-        
+
         showSuccess(t('dataset_file_processed'), t('dataset_file_processed_message'));
       } catch (error) {
+        console.error('Error processing file:', error);
         const errorMessage =
           error instanceof Error ? error.message : t('dataset_fileReadErrorMessage');
         showError(t('dataset_fileReadError'), t(errorMessage));
@@ -124,7 +134,18 @@ function DatasetSelectionStepContent({ onNext, onDatasetSelect }: DatasetSelecti
         setIsProcessing(false);
       }
     },
-    [showError, showSuccess, t, viewMode, setSelectedDelimiter, setOriginalTextContent, setParsedData, setOriginalHeaders, setSelectedDataset, onDatasetSelect]
+    [
+      showError,
+      showSuccess,
+      t,
+      viewMode,
+      setSelectedDelimiter,
+      setOriginalTextContent,
+      setParsedData,
+      setOriginalHeaders,
+      setSelectedDataset,
+      onDatasetSelect,
+    ]
   );
 
   // Handle file selection and validation
@@ -163,6 +184,7 @@ function DatasetSelectionStepContent({ onNext, onDatasetSelect }: DatasetSelecti
   // Handle text processing
   const handleTextProcess = useCallback(
     (content: string) => {
+      console.log('Processing text content');
       setOriginalTextContent(content);
 
       try {
@@ -170,7 +192,7 @@ function DatasetSelectionStepContent({ onNext, onDatasetSelect }: DatasetSelecti
         const isJson = checkIsJsonFormat(content);
         setIsJsonFormat(isJson);
 
-        let result: string[][];
+        let result: ParsedDataResult;
         if (isJson) {
           // Parse JSON directly - no delimiter needed
           result = parseJsonDirectly(content);
@@ -181,28 +203,31 @@ function DatasetSelectionStepContent({ onNext, onDatasetSelect }: DatasetSelecti
           setSelectedDelimiter(detectedDelimiter);
           result = parseTabularContent(content, { delimiter: detectedDelimiter });
         }
-        
-        setParsedData(result);
-        setOriginalHeaders(result[0] || []);
-        
+
+        console.log('Text processed, result:', result);
+        setParsedData(result.data); // Access the data property
+        setOriginalHeaders(result.headers.map((h: DataHeader) => h.name)); // Extract header names with proper typing
+
         // Create dataset from processed data
         const tempDataset: Dataset = {
           id: 'temp-' + Date.now(),
           name: 'Pasted Data',
           description: 'Data pasted from text input',
-          data: result || [],
+          data: result.data || [], // Use the data property
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        
+
+        console.log('Setting selected dataset from text:', tempDataset);
         setSelectedDataset(tempDataset);
         onDatasetSelect?.(tempDataset);
 
         setPreviousViewMode(viewMode);
         setViewMode('view');
-        
+
         showSuccess(t('dataset_text_processed'), t('dataset_text_processed_message'));
       } catch (error) {
+        console.error('Error processing text:', error);
         const errorMessage = error instanceof Error ? error.message : 'dataset_parseErrorMessage';
 
         // Check if it's a translation key with parameters (format: key:param)
@@ -224,13 +249,28 @@ function DatasetSelectionStepContent({ onNext, onDatasetSelect }: DatasetSelecti
         showError(t('dataset_parseError'), errorMessage);
       }
     },
-    [showError, showSuccess, t, viewMode, setOriginalTextContent, setParsedData, setOriginalHeaders, setIsJsonFormat, setSelectedDelimiter, setSelectedDataset, onDatasetSelect]
+    [
+      showError,
+      showSuccess,
+      t,
+      viewMode,
+      setOriginalTextContent,
+      setParsedData,
+      setOriginalHeaders,
+      setIsJsonFormat,
+      setSelectedDelimiter,
+      setSelectedDataset,
+      onDatasetSelect,
+    ]
   );
 
   // Handle sample data selection
-  const handleSampleSelect = useCallback((content: string) => {
-    handleTextProcess(content);
-  }, [handleTextProcess]);
+  const handleSampleSelect = useCallback(
+    (content: string) => {
+      handleTextProcess(content);
+    },
+    [handleTextProcess]
+  );
 
   // Handle file upload (create dataset)
   const handleFileUpload = useCallback(async () => {
@@ -259,7 +299,13 @@ function DatasetSelectionStepContent({ onNext, onDatasetSelect }: DatasetSelecti
     }
 
     setViewMode(previousViewMode);
-  }, [originalTextContent, previousViewMode, resetState, setOriginalTextContent, setSelectedDataset]);
+  }, [
+    originalTextContent,
+    previousViewMode,
+    resetState,
+    setOriginalTextContent,
+    setSelectedDataset,
+  ]);
 
   // Get preview of dataset data
   const getDataPreview = (data: string[][]) => {
@@ -277,10 +323,7 @@ function DatasetSelectionStepContent({ onNext, onDatasetSelect }: DatasetSelecti
         // Data Viewer - Full Width
         <div className="py-8">
           <SlideInUp delay={0.2}>
-            <DataViewer 
-              onUpload={handleFileUpload} 
-              onChangeData={handleChangeData} 
-            />
+            <DataViewer onUpload={handleFileUpload} onChangeData={handleChangeData} />
           </SlideInUp>
           <div className="flex items-center justify-between mt-6">
             <Button
@@ -291,8 +334,8 @@ function DatasetSelectionStepContent({ onNext, onDatasetSelect }: DatasetSelecti
               <ArrowLeft className="w-4 h-4" />
               {t('dataset_back_selection')}
             </Button>
-            <Button 
-              onClick={onNext} 
+            <Button
+              onClick={onNext}
               size="lg"
               className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!selectedDataset}
@@ -310,9 +353,7 @@ function DatasetSelectionStepContent({ onNext, onDatasetSelect }: DatasetSelecti
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
               {t('dataset_select_title')}
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              {t('dataset_select_subtitle')}
-            </p>
+            <p className="text-gray-600 dark:text-gray-400">{t('dataset_select_subtitle')}</p>
           </div>
 
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -359,8 +400,8 @@ function DatasetSelectionStepContent({ onNext, onDatasetSelect }: DatasetSelecti
                         {getDataPreview(selectedDataset.data)}
                       </p>
                     </div>
-                    <Button 
-                      onClick={onNext} 
+                    <Button
+                      onClick={onNext}
                       size="lg"
                       className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
