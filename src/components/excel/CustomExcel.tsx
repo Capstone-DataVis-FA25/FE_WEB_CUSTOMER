@@ -12,7 +12,6 @@ import {
   Copy,
   FileText,
   FileDigit,
-  Sigma,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -27,21 +26,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 // =============== Types & Helpers =================
-export interface Column {
-  name: string;
-  type: 'string' | 'number' | 'decimal' | 'date';
-  width?: number;
-}
+import type { DataHeader } from '@/utils/dataProcessors';
 interface CustomExcelProps {
   initialData?: string[][];
-  initialColumns?: Column[];
-  onDataChange?: (d: string[][], c: Column[]) => void;
+  initialColumns?: DataHeader[];
+  onDataChange?: (d: string[][], c: DataHeader[]) => void;
   className?: string;
   mode?: 'edit' | 'view';
 }
 interface HistoryEntry {
   data: string[][];
-  columns: Column[];
+  columns: DataHeader[];
 }
 // Safer clone (JSON stringify can crash large datasets). For large arrays we shallow copy.
 const deepClone = <T,>(v: T, shallow = false): T => {
@@ -50,17 +45,15 @@ const deepClone = <T,>(v: T, shallow = false): T => {
 };
 const DEFAULT_WIDTH = 180;
 const COLUMN_TYPES = [
-  { label: 'Text', value: 'string', icon: <FileText size={14} /> },
+  { label: 'Text', value: 'text', icon: <FileText size={14} /> },
   { label: 'Number', value: 'number', icon: <FileDigit size={14} /> },
-  { label: 'Decimal', value: 'decimal', icon: <Sigma size={14} /> },
   { label: 'Date', value: 'date', icon: <FileText size={14} /> },
 ];
 
 // Value validators (non-blocking)
-const isValidValue = (type: Column['type'], v: string): boolean => {
+const isValidValue = (type: DataHeader['type'], v: string): boolean => {
   if (v === '' || v == null) return true;
   if (type === 'number') return /^[-+]?\d+$/.test(v.trim());
-  if (type === 'decimal') return /^[-+]?\d*(?:\.\d+)?$/.test(v.trim());
   if (type === 'date') return /^\d{4}-\d{2}-\d{2}$/.test(v.trim());
   return true;
 };
@@ -71,23 +64,15 @@ interface ConvertResult {
   value: string;
   changed: boolean;
 }
-const tryConvert = (type: Column['type'], raw: string): ConvertResult => {
+const tryConvert = (type: DataHeader['type'], raw: string): ConvertResult => {
   const original = raw;
   const v = raw.trim();
   if (v === '') return { ok: true, value: '', changed: false };
-  if (type === 'string') return { ok: true, value: original, changed: false };
+  if (type === 'text') return { ok: true, value: original, changed: false };
   if (type === 'number') {
     const cleaned = v.replace(/,/g, '');
     if (!/^[-+]?\d+$/.test(cleaned)) return { ok: false, value: original, changed: false };
     const normalized = String(parseInt(cleaned, 10));
-    return { ok: true, value: normalized, changed: normalized !== original };
-  }
-  if (type === 'decimal') {
-    const cleaned = v.replace(/,/g, '');
-    if (!/^[-+]?\d*(?:\.\d+)?$/.test(cleaned))
-      return { ok: false, value: original, changed: false };
-    const num = Number.parseFloat(cleaned);
-    const normalized = Number.isFinite(num) ? String(num) : cleaned;
     return { ok: true, value: normalized, changed: normalized !== original };
   }
   if (type === 'date') {
@@ -126,9 +111,9 @@ const tryConvert = (type: Column['type'], raw: string): ConvertResult => {
 };
 
 // =============== Component =================
-const DEFAULT_COLS: Column[] = [
-  { name: 'Column 1', type: 'string', width: 200 },
-  { name: 'Column 2', type: 'string', width: 200 },
+const DEFAULT_COLS: DataHeader[] = [
+  { name: 'Column 1', type: 'text', width: 200, index: 0 },
+  { name: 'Column 2', type: 'text', width: 200, index: 1 },
 ];
 const DEFAULT_ROWS: string[][] = Array.from({ length: 8 }, () =>
   Array(DEFAULT_COLS.length).fill('')
@@ -142,7 +127,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   mode = 'edit',
 }) => {
   // Core state
-  const [columns, setColumns] = useState<Column[]>([]);
+  const [columns, setColumns] = useState<DataHeader[]>([]);
   const [data, setData] = useState<string[][]>([]);
   const [filters, setFilters] = useState<string[]>([]);
   // Track one-time initialization so prop identity changes (triggered by onDataChange upstream) do not reset edited state
@@ -200,7 +185,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   }, [columns, data, history.length, historyEnabled]);
 
   const commit = useCallback(
-    (nextData: string[][], nextCols: Column[], skipHistory = false) => {
+    (nextData: string[][], nextCols: DataHeader[], skipHistory = false) => {
       setData(nextData);
       setColumns(nextCols);
       if (historyEnabled && !skipHistory) {
@@ -212,8 +197,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       if (onDataChange) {
         if (isLarge) {
           // Debounce using requestAnimationFrame + timeout
-          if ((onDataChange as any)._timer) clearTimeout((onDataChange as any)._timer);
-          (onDataChange as any)._timer = setTimeout(() => onDataChange(nextData, nextCols), 150);
+          const fn = onDataChange as unknown as { _timer?: NodeJS.Timeout };
+          if (fn._timer) clearTimeout(fn._timer);
+          fn._timer = setTimeout(() => onDataChange(nextData, nextCols), 150);
         } else {
           onDataChange(nextData, nextCols);
         }
@@ -309,7 +295,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     nc[c].name = val;
     commit(data, nc);
   };
-  const setType = (c: number, val: 'string' | 'number' | 'decimal' | 'date') => {
+  const setType = (c: number, val: 'text' | 'number' | 'date') => {
     if (columns[c].type === val) return;
     setInfoMessage(null);
     // Attempt conversion & validation
@@ -357,9 +343,14 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   };
   const addColumn = () => {
     if (mode === 'view') return;
-    const nc: Column[] = [
+    const nc: DataHeader[] = [
       ...columns,
-      { name: `Column ${columns.length + 1}`, type: 'string' as const, width: DEFAULT_WIDTH },
+      {
+        name: `Column ${columns.length + 1}`,
+        type: 'text' as const,
+        width: DEFAULT_WIDTH,
+        index: columns.length,
+      },
     ];
     const nd = data.map(r => [...r, '']) as string[][];
     commit(nd, nc);
@@ -411,7 +402,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       const aVal = a[columnIndex] || '';
       const bVal = b[columnIndex] || '';
 
-      if (columnType === 'number' || columnType === 'decimal') {
+      if (columnType === 'number') {
         const aNum = Number.parseFloat(aVal) || 0;
         const bNum = Number.parseFloat(bVal) || 0;
         return direction === 'asc' ? aNum - bNum : bNum - aNum;
@@ -529,10 +520,10 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         // (Optional) grow columns if needed
         const colsNeeded = baseCol + Math.max(...rows.map(r => r.length));
         if (colsNeeded > columns.length) {
-          // Add new columns automatically (string type) if paste exceeds width
-          const added: Column[] = [];
+          // Add new columns automatically (text type) if paste exceeds width
+          const added: DataHeader[] = [];
           for (let ci = columns.length; ci < colsNeeded; ci++) {
-            added.push({ name: `Column ${ci + 1}`, type: 'string', width: DEFAULT_WIDTH });
+            added.push({ name: `Column ${ci + 1}`, type: 'text', width: DEFAULT_WIDTH, index: ci });
           }
           if (added.length) {
             const newCols = [...columns, ...added];
@@ -683,7 +674,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
                             {COLUMN_TYPES.map(t => (
                               <DropdownMenuItem
                                 key={t.value}
-                                onClick={() => setType(ci, t.value as any)}
+                                onClick={() => setType(ci, t.value as DataHeader['type'])}
                                 className="gap-2"
                               >
                                 {t.icon} {t.label}

@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import type { DataHeader, ParsedDataResult } from '@/utils/dataProcessors';
 
 // Types
-interface NumberFormat {
+export interface NumberFormat {
   thousandsSeparator: string;
   decimalSeparator: string;
 }
 
-interface DateFormat {
+export interface DateFormat {
   format: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD' | 'DD-MM-YYYY' | 'MM-DD-YYYY' | 'YYYY-MM-DD';
 }
 
@@ -26,13 +27,17 @@ interface ValidationErrors {
 }
 
 interface DatasetState {
-  // Data states
+  // Layer 1: Raw file content
   originalTextContent: string;
-  parsedData: string[][] | null;
-  originalHeaders: string[];
   isJsonFormat: boolean;
 
-  // Configuration states
+  // Layer 2: Parsed original data (immutable reference)
+  originalParsedData: ParsedDataResult | null;
+
+  // Layer 3: Current working data (user modifications)
+  currentParsedData: ParsedDataResult | null;
+
+  // Configuration states (affects Layer 2 regeneration)
   selectedDelimiter: string;
   numberFormat: NumberFormat;
   dateFormat: DateFormat;
@@ -49,8 +54,8 @@ interface DatasetState {
 interface DatasetContextType extends DatasetState {
   // Data actions
   setOriginalTextContent: (content: string) => void;
-  setParsedData: (data: string[][] | null) => void;
-  setOriginalHeaders: (headers: string[]) => void;
+  setOriginalParsedData: (data: ParsedDataResult | null) => void;
+  setCurrentParsedData: (data: ParsedDataResult | null) => void;
   setIsJsonFormat: (isJson: boolean) => void;
 
   // Configuration actions
@@ -77,9 +82,9 @@ const DatasetContext = createContext<DatasetContextType | undefined>(undefined);
 // Initial state
 const initialState: DatasetState = {
   originalTextContent: '',
-  parsedData: null,
-  originalHeaders: [],
   isJsonFormat: false,
+  originalParsedData: null,
+  currentParsedData: null,
   selectedDelimiter: ',',
   numberFormat: {
     thousandsSeparator: ',',
@@ -107,12 +112,12 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
     setState(prev => ({ ...prev, originalTextContent: content }));
   };
 
-  const setParsedData = (data: string[][] | null) => {
-    setState(prev => ({ ...prev, parsedData: data }));
+  const setOriginalParsedData = (data: ParsedDataResult | null) => {
+    setState(prev => ({ ...prev, originalParsedData: data }));
   };
 
-  const setOriginalHeaders = (headers: string[]) => {
-    setState(prev => ({ ...prev, originalHeaders: headers }));
+  const setCurrentParsedData = (data: ParsedDataResult | null) => {
+    setState(prev => ({ ...prev, currentParsedData: data }));
   };
 
   const setIsJsonFormat = (isJson: boolean) => {
@@ -195,8 +200,8 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
   const contextValue: DatasetContextType = {
     ...state,
     setOriginalTextContent,
-    setParsedData,
-    setOriginalHeaders,
+    setOriginalParsedData,
+    setCurrentParsedData,
     setIsJsonFormat,
     setSelectedDelimiter,
     setNumberFormat,

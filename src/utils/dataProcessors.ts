@@ -37,16 +37,15 @@ export interface FileProcessingOptions {
 
 export interface DataHeader {
   name: string;
-  type: string;
+  type: 'text' | 'number' | 'date';
   index: number;
+  width?: number;
 }
 
 export interface ParsedDataResult {
   headers: DataHeader[];
   data: string[][];
 }
-
-
 
 /**
  * Determine the appropriate delimiter for a file
@@ -88,7 +87,6 @@ const handleDuplicateHeaders = (headers: string[]): string[] => {
 
   return processedHeaders;
 };
-
 
 /**
  * Normalize 2D array data to ensure consistent row lengths and handle duplicate headers
@@ -164,8 +162,6 @@ export const detectDelimiter = (
   return bestDelimiter;
 };
 
-
-
 /**
  * Parse tabular data from text content using Papa Parse
  */
@@ -206,16 +202,16 @@ export const parseTabularContent = (
   const headerRow = normalizedData[0] || [];
   const dataRows = normalizedData.slice(1);
 
-  // Create headers array with type detection (defaulting to string for now)
+  // Create headers array with type detection (defaulting to text for now)
   const headers: DataHeader[] = headerRow.map((headerName, index) => ({
     name: headerName || `Column ${index + 1}`,
-    type: 'string', // Default to string for now
-    index: index
+    type: 'text', // Default to text for now
+    index: index,
   }));
 
   return {
     headers,
-    data: dataRows
+    data: dataRows,
   };
 };
 
@@ -247,7 +243,10 @@ export const processFileContent = async (
 /**
  * Validate file size
  */
-export const validateFileSize = (file: File, maxSizeInBytes: number = 50 * 1024 * 1024): boolean => {
+export const validateFileSize = (
+  file: File,
+  maxSizeInBytes: number = 50 * 1024 * 1024
+): boolean => {
   return file.size <= maxSizeInBytes;
 };
 
@@ -267,10 +266,7 @@ export const isValidFileType = (file: File): boolean => {
  * @param transformationColumn - Column name to use as identifier
  * @returns Transformed data in long format
  */
-export const transformWideToLong = (
-  data: string[][],
-  transformationColumn: string
-): string[][] => {
+export const transformWideToLong = (data: string[][], transformationColumn: string): string[][] => {
   if (!data || data.length === 0) return data;
 
   const headers = data[0];
@@ -301,7 +297,6 @@ export const transformWideToLong = (
   return transformed;
 };
 
-
 /**
  * Read text content from Excel files (.xls, .xlsx)
  * @param file - Excel file to read
@@ -311,7 +306,7 @@ export const readExcelAsText = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = e => {
       try {
         const data = e.target?.result;
         if (!data) {
@@ -338,7 +333,11 @@ export const readExcelAsText = async (file: File): Promise<string> => {
 
         resolve(csvText);
       } catch (error) {
-        reject(new Error(`dataset_excelParseFailed:${error instanceof Error ? error.message : 'Unknown error'}`));
+        reject(
+          new Error(
+            `dataset_excelParseFailed:${error instanceof Error ? error.message : 'Unknown error'}`
+          )
+        );
       }
     };
 
@@ -410,9 +409,7 @@ export const parseJsonDirectly = (jsonText: string): ParsedDataResult => {
     });
 
     // Convert to string format for consistency
-    const stringData: string[][] = data.map(row =>
-      row.map(cell => String(cell ?? ''))
-    );
+    const stringData: string[][] = data.map(row => row.map(cell => String(cell ?? '')));
 
     // Normalize the data directly
     const normalizedData = normalizeArrayData(stringData);
@@ -421,28 +418,25 @@ export const parseJsonDirectly = (jsonText: string): ParsedDataResult => {
     const headerRow = normalizedData[0] || [];
     const dataRows = normalizedData.slice(1);
 
-    // Create headers array with type detection (defaulting to string for now)
+    // Create headers array with type detection (defaulting to text for now)
     const headers: DataHeader[] = headerRow.map((headerName, index) => ({
       name: headerName || `Column ${index + 1}`,
-      type: 'string', // Default to string for now
-      index: index
+      type: 'text', // Default to text for now
+      index: index,
     }));
 
     return {
       headers,
-      data: dataRows
+      data: dataRows,
     };
-
   } catch (error) {
     // If it's already a translation key, throw it directly
     if (error instanceof Error && error.message.startsWith('dataset_')) {
       throw error;
     }
     // Otherwise, throw the unknown error key with the error message
-    throw new Error(`dataset_jsonUnknownError:${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `dataset_jsonUnknownError:${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 };
-
-
-
-

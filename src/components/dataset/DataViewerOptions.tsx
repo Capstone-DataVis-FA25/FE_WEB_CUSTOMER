@@ -1,23 +1,19 @@
-import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Upload, RefreshCw, Settings } from 'lucide-react';
+import { useDataset, type NumberFormat } from '@/contexts/DatasetContext';
+import { useAppSelector } from '@/store/hooks';
+import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
+import { parseTabularContent, transformWideToLong } from '@/utils/dataProcessors';
+import { RefreshCw, Settings, Upload } from 'lucide-react';
+import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useToastContext } from '../providers/ToastProvider';
+import DataTransformationSelector from './DataTransformationSelector';
+import { DateFormatSelector } from './DateFormatSelector';
 import DelimiterSelector from './DelimiterSelector';
 import { NumberFormatSelector } from './NumberFormatSelector';
-import { DateFormatSelector } from './DateFormatSelector';
-import DataTransformationSelector from './DataTransformationSelector';
-import { useDataset } from '@/contexts/DatasetContext';
-import { DATASET_NAME_MAX_LENGTH, DATASET_DESCRIPTION_MAX_LENGTH } from '@/utils/Consts';
-import {
-  transformWideToLong,
-  parseJsonDirectly,
-  parseTabularContent,
-} from '@/utils/dataProcessors';
 import './scrollbar.css';
-import { useCallback } from 'react';
-import { useToastContext } from '../providers/ToastProvider';
-import { useAppSelector } from '@/store/hooks';
 
 interface DataViewerOptionsProps {
   onUpload?: () => void;
@@ -26,7 +22,7 @@ interface DataViewerOptionsProps {
 
 function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
   const { t } = useTranslation();
-  const { showError } = useToastContext();
+  const { showError, showSuccess } = useToastContext();
   const { creating: isUploading } = useAppSelector(state => state.dataset);
 
   // Get states from context
@@ -41,20 +37,21 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
     setNumberFormat,
     dateFormat,
     setDateFormat,
-    parsedData,
-    originalHeaders,
-    setOriginalHeaders,
+    originalParsedData,
+    setOriginalParsedData,
+    setCurrentParsedData,
     isJsonFormat,
     transformationColumn,
     setTransformationColumn,
     originalTextContent,
-    setParsedData,
     hasValidationErrors,
   } = useDataset();
 
   // Handle delimiter change - reparse the original content with new delimiter
   const handleDelimiterChange = useCallback(
     (delimiter: string) => {
+      // No-op if user reselects the same delimiter
+      if (delimiter === selectedDelimiter) return;
       if (!originalTextContent) return;
 
       setSelectedDelimiter(delimiter);
@@ -62,75 +59,77 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
       setTransformationColumn(null);
       try {
         const result = parseTabularContent(originalTextContent, { delimiter });
-        // Convert result back to 2D array format for backward compatibility
-        const headers = result.headers.map(h => h.name);
-        const data = [headers, ...result.data];
-        setParsedData(data);
-        setOriginalHeaders(headers);
+        // Update Layer 2: Original parsed data
+        setOriginalParsedData(result);
+        // Update Layer 3: Current working data (starts as copy of original)
+        setCurrentParsedData({ ...result });
       } catch (error) {
         showError('Parse Error', 'Failed to parse with the selected delimiter');
       }
     },
-    [originalTextContent, showError, setOriginalHeaders]
+    [
+      originalTextContent,
+      showError,
+      setOriginalParsedData,
+      setCurrentParsedData,
+      setSelectedDelimiter,
+      setTransformationColumn,
+      selectedDelimiter,
+    ]
   );
 
-  const handleNumberFormatChange = (
-    type: 'thousandsSeparator' | 'decimalSeparator',
-    value: string
-  ) => {
-    const newFormat = {
-      ...numberFormat,
-      [type]: value,
-    };
-
-    // Always update the format, validation will be handled visually
-    setNumberFormat(newFormat);
+  const handleNumberFormatChange = (format: NumberFormat) => {
+    // Replace old state with the new format
+    setNumberFormat(format);
   };
 
-  const handleDateFormatChange = (
-    format: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD' | 'DD-MM-YYYY' | 'MM-DD-YYYY' | 'YYYY-MM-DD'
-  ) => {
-    setDateFormat({ format });
+  const handleDateFormatChange = (format: string) => {
+    // No-op if user reselects the same date format
+    if (format === dateFormat.format) return;
+    setDateFormat({ format: format as any });
   };
 
   const handleTransformationColumnChange = (column: string) => {
+    // No-op if user reselects the same column
+    if (column === (transformationColumn ?? '')) return;
+    // Validate: need at least 2 columns to perform stack transformation
+    if (!originalParsedData || (originalParsedData.headers?.length || 0) <= 1) {
+      showError('Invalid Operation', 'Stack transformation requires at least 2 columns');
+      return;
+    }
     setTransformationColumn(column);
 
-    // Always re-parse from original content to get fresh data
-    if (!originalTextContent) return;
+    if (!originalParsedData) return;
 
     try {
-      // Re-parse from original content to get fresh data
-      let originalData: string[][];
-
-      // Use the stored format flag instead of recalculating
-      if (isJsonFormat) {
-        const result = parseJsonDirectly(originalTextContent);
-        // Convert result back to 2D array format for backward compatibility
-        const headers = result.headers.map(h => h.name);
-        originalData = [headers, ...result.data];
-      } else {
-        const result = parseTabularContent(originalTextContent, {
-          delimiter: selectedDelimiter,
-        });
-        // Convert result back to 2D array format for backward compatibility
-        const headers = result.headers.map(h => h.name);
-        originalData = [headers, ...result.data];
-      }
-
-      // If no column selected, use original data
+      // If no column selected, reset to original parsed data
       if (!column) {
-        setParsedData(originalData);
-        setOriginalHeaders(originalData[0] || []);
+        setCurrentParsedData({ ...originalParsedData });
         return;
       }
 
-      // Transform the original data (not the current parsedData)
-      const transformed = transformWideToLong(originalData, column);
+      // Transform using currentParsedData (user's working data)
+      // Convert to 2D array format for transformation function
+      const headers = originalParsedData.headers.map(h => h.name);
+      const data2D = [headers, ...originalParsedData.data];
 
-      // Update the parsed data with transformed data
-      // Keep original headers - don't change them for transformations
-      setParsedData(transformed);
+      const transformed = transformWideToLong(data2D, column);
+
+      // Update current working data with transformation result
+      // Note: transformed data has different structure, so we need to parse it back
+      if (transformed.length > 0) {
+        const transformedHeaders = transformed[0].map((name, index) => ({
+          name,
+          type: 'text' as const,
+          index,
+        }));
+        const transformedData = transformed.slice(1);
+
+        setCurrentParsedData({
+          headers: transformedHeaders,
+          data: transformedData,
+        });
+      }
     } catch (error) {
       showError('Parse Error', 'Failed to process data transformation');
     }
@@ -228,10 +227,10 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
 
           {/* Data Transformation Selector */}
           <DataTransformationSelector
-            headers={originalHeaders}
+            headers={originalParsedData?.headers.map(h => h.name) || []}
             value={transformationColumn ?? ''}
             onChange={handleTransformationColumnChange}
-            disabled={isUploading || !parsedData}
+            disabled={isUploading || !originalParsedData}
           />
 
           {/* Action Buttons */}

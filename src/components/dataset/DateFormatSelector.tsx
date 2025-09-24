@@ -9,9 +9,7 @@ import {
 
 interface DateFormatSelectorProps {
   format: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD' | 'DD-MM-YYYY' | 'MM-DD-YYYY' | 'YYYY-MM-DD';
-  onChange: (
-    format: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD' | 'DD-MM-YYYY' | 'MM-DD-YYYY' | 'YYYY-MM-DD'
-  ) => void;
+  onChange: (value: string) => void;
   disabled?: boolean;
 }
 
@@ -35,7 +33,13 @@ export const DateFormatSelector: React.FC<DateFormatSelectorProps> = ({
         Date Format
       </label>
       <div className="space-y-2">
-        <Select value={format} onValueChange={onChange} disabled={disabled}>
+        <Select
+          value={format}
+          onValueChange={v => {
+            if (v === format) return; // no-op if same selection
+            onChange(v);
+          }}
+        >
           <SelectTrigger className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
             <SelectValue placeholder="Select date format" />
           </SelectTrigger>
