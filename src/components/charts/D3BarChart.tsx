@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
 import { convertArrayToChartData } from '@/utils/dataConverter';
+import { defaultColorsChart } from '@/utils/Utils';
 
 export interface ChartDataPoint {
   [key: string]: number | string;
@@ -48,17 +49,6 @@ export interface D3BarChartProps {
   zoomExtent?: number;
 }
 
-const defaultColors: Record<string, { light: string; dark: string }> = {
-  bar1: { light: '#3b82f6', dark: '#60a5fa' },
-  bar2: { light: '#f97316', dark: '#fb923c' },
-  bar3: { light: '#6b7280', dark: '#9ca3af' },
-  bar4: { light: '#eab308', dark: '#facc15' },
-  bar5: { light: '#ef4444', dark: '#f87171' },
-  bar6: { light: '#10b981', dark: '#34d399' },
-  bar7: { light: '#8b5cf6', dark: '#a78bfa' },
-  bar8: { light: '#f59e0b', dark: '#fbbf24' },
-};
-
 const D3BarChart: React.FC<D3BarChartProps> = ({
   data,
   arrayData,
@@ -67,7 +57,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   margin = { top: 20, right: 40, bottom: 60, left: 80 },
   xAxisKey,
   yAxisKeys,
-  colors = defaultColors,
+  colors = defaultColorsChart,
   title,
   yAxisLabel,
   xAxisLabel,
@@ -161,7 +151,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       const result: Record<string, string> = {};
       yAxisKeys.forEach((key, index) => {
         const colorKey = colors[key] ? key : `bar${index + 1}`;
-        result[key] = colors[colorKey]?.[mode] || defaultColors[`bar${index + 1}`][mode];
+        result[key] = colors[colorKey]?.[mode] || defaultColorsChart[`color${index + 1}`][mode];
       });
       return result;
     };
@@ -704,7 +694,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
             const colorKey = colors[key] ? key : `bar${index + 1}`;
             const color =
               colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
-              defaultColors[`bar${index + 1}`][isDarkMode ? 'dark' : 'light'];
+              defaultColorsChart[`color${index + 1}`][isDarkMode ? 'dark' : 'light'];
             return (
               <div
                 key={key}
@@ -771,7 +761,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
                   const colorKey = colors[key] ? key : `bar${index + 1}`;
                   const color =
                     colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
-                    defaultColors[`bar${index + 1}`][isDarkMode ? 'dark' : 'light'];
+                    defaultColorsChart[`color${index + 1}`][isDarkMode ? 'dark' : 'light'];
                   return (
                     <div
                       key={key}
@@ -832,7 +822,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
                   const colorKey = colors[key] ? key : `bar${index + 1}`;
                   const color =
                     colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
-                    defaultColors[`bar${index + 1}`][isDarkMode ? 'dark' : 'light'];
+                    defaultColorsChart[`bar${index + 1}`][isDarkMode ? 'dark' : 'light'];
                   return (
                     <div
                       key={key}

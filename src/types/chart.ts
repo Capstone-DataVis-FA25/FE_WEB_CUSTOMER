@@ -82,8 +82,8 @@ export interface BaseChartConfig {
   showLegend: boolean;
   showGrid: boolean;
   animationDuration: number;
-  xAxisStart: 'auto' | 'zero' | number;
-  yAxisStart: 'auto' | 'zero' | number;
+  xAxisStart: 'auto' | 'zero';
+  yAxisStart: 'auto' | 'zero';
 
   // Styling configs
   gridOpacity: number;

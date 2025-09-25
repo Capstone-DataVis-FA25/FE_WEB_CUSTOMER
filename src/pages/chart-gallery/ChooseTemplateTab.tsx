@@ -285,6 +285,7 @@ export default function ChooseTemplateTab() {
       // Create chart with default settings
       const chartData = {
         name: defaultConfig.title,
+        description: `A ${template.name} chart created from template`,
         datasetId: datasetId,
         type: template.type,
 

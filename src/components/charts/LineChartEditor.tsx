@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+
 import D3LineChart from '@/components/charts/D3LineChart';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,10 +14,13 @@ import {
   Save,
   ChevronDown,
   ChevronUp,
-  ArrowUp,
-  ArrowDown,
   TrendingUp,
   Table,
+  Camera,
+  Download,
+  Settings,
+  Upload,
+  RotateCcw,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '@/hooks/useToast';
@@ -36,8 +39,20 @@ import {
   BasicSettingsSection,
   ChartSettingsSection,
   AxisConfigurationSection,
+  SeriesManagement,
 } from '@/components/charts/ChartEditorShared';
-import { getResponsiveFontSize, isColumnAvailableForSeries } from '@/helpers/chart';
+import { getResponsiveFontSize } from '@/helpers/chart';
+import { defaultColorsChart } from '@/utils/Utils';
+
+// Interface for dataset headers
+interface DatasetHeader {
+  id: string;
+  name: string;
+}
+
+interface Dataset {
+  headers: DatasetHeader[];
+}
 
 // Props for LineChart Editor
 export interface LineChartEditorProps {
@@ -49,8 +64,7 @@ export interface LineChartEditorProps {
   onDataChange?: (data: ChartDataPoint[]) => void;
   onColorsChange?: (colors: ColorConfig) => void;
   onFormattersChange?: (formatters: FormatterConfig) => void;
-  title?: string;
-  description?: string;
+  dataset?: Dataset; // Dataset prop with proper typing
 }
 
 const LineChartEditor: React.FC<LineChartEditorProps> = ({
@@ -62,14 +76,49 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   onDataChange,
   onColorsChange,
   onFormattersChange,
+  dataset,
 }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
 
+  console.log('initialArrayData: ', initialArrayData);
+  console.log('dataset prop: ', dataset);
+  console.log('initialConfig', initialConfig);
+
+  // Helper function to decode ids to names using dataset.headers
+  const decodeKeysToNames = useMemo(() => {
+    return (keys: string | string[]): string | string[] => {
+      if (!dataset?.headers) return keys;
+
+      const keysArray = Array.isArray(keys) ? keys : [keys];
+      const decodedNames = keysArray.map(keyId => {
+        const header = dataset.headers.find((h: DatasetHeader) => h.id === keyId);
+        return header ? header.name.toLowerCase() : keyId.toLowerCase(); // Convert to lowercase
+      });
+
+      return Array.isArray(keys) ? decodedNames : decodedNames[0];
+    };
+  }, [dataset]);
+
+  // Helper function to encode names to ids using dataset.headers
+  const encodeNamesToIds = useMemo(() => {
+    return (keys: string | string[]): string | string[] => {
+      if (!dataset?.headers) return keys;
+
+      const keysArray = Array.isArray(keys) ? keys : [keys];
+      const encodedIds = keysArray.map(keyName => {
+        const header = dataset.headers.find(
+          (h: DatasetHeader) => h.name.toLowerCase() === keyName.toLowerCase()
+        );
+        return header ? header.id : keyName; // Fallback to keyName if not found
+      });
+
+      return Array.isArray(keys) ? encodedIds : encodedIds[0];
+    };
+  }, [dataset]);
+
   // Convert arrayData to ChartDataPoint[] if provided - now using internal conversion
   const processedInitialData = useMemo((): ChartDataPoint[] => {
-    console.log('ProcessedInitialData useMemo running with initialArrayData:', initialArrayData);
-
     if (initialArrayData && initialArrayData.length > 0) {
       // Simple conversion function for LineChartEditor
       const convertToChartData = (arrayData: (string | number)[][]) => {
@@ -127,15 +176,34 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
 
   const responsiveDefaults = getResponsiveDefaults();
 
-  // Default configuration
+  // Default configuration with decoded keys
   const defaultConfig: ChartConfig = {
     width: responsiveDefaults.width,
     height: responsiveDefaults.height,
     margin: { top: 20, right: 40, bottom: 60, left: 80 },
-    xAxisKey: processedInitialData.length > 0 ? Object.keys(processedInitialData[0])[0] : 'x',
-    yAxisKeys:
-      processedInitialData.length > 0 ? Object.keys(processedInitialData[0]).slice(1) : ['y'], // Lấy tất cả columns trừ column đầu tiên (xAxisKey)
-    disabledLines: [], // Default to no disabled lines
+    xAxisKey: (() => {
+      // Decode initialConfig.xAxisKey if provided, otherwise use first data column
+      if (initialConfig.xAxisKey) {
+        return decodeKeysToNames(initialConfig.xAxisKey) as string;
+      }
+      return processedInitialData.length > 0
+        ? Object.keys(processedInitialData[0])[0].toLowerCase()
+        : 'x';
+    })(),
+    yAxisKeys: (() => {
+      // Decode initialConfig.yAxisKeys if provided, otherwise use remaining data columns
+      if (initialConfig.yAxisKeys) {
+        return decodeKeysToNames(initialConfig.yAxisKeys) as string[];
+      }
+      return processedInitialData.length > 0
+        ? Object.keys(processedInitialData[0])
+            .slice(1)
+            .map(key => key.toLowerCase())
+        : ['y']; // Lấy tất cả columns trừ column đầu tiên (xAxisKey)
+    })(),
+    disabledLines: initialConfig.disabledLines
+      ? (decodeKeysToNames(initialConfig.disabledLines) as string[])
+      : [], // Default to no disabled lines
     title: t('lineChart_editor_title'),
     xAxisLabel: t('lineChart_editor_xAxisLabel'),
     yAxisLabel: t('lineChart_editor_yAxisLabel'),
@@ -174,31 +242,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
 
     ...initialConfig,
   };
-
-  const defaultColors: ColorConfig = {
-    line1: { light: '#3b82f6', dark: '#60a5fa' }, // Blue
-    line2: { light: '#f97316', dark: '#fb923c' }, // Orange
-    line3: { light: '#10b981', dark: '#34d399' }, // Green
-    line4: { light: '#ef4444', dark: '#f87171' }, // Red
-    line5: { light: '#8b5cf6', dark: '#a78bfa' }, // Purple
-    line6: { light: '#06b6d4', dark: '#67e8f9' }, // Cyan
-    line7: { light: '#84cc16', dark: '#a3e635' }, // Lime
-    line8: { light: '#f59e0b', dark: '#fbbf24' }, // Amber
-    line9: { light: '#ec4899', dark: '#f472b6' }, // Pink
-    line10: { light: '#6366f1', dark: '#818cf8' }, // Indigo
-    line11: { light: '#14b8a6', dark: '#5eead4' }, // Teal
-    line12: { light: '#f43f5e', dark: '#fb7185' }, // Rose
-    line13: { light: '#a855f7', dark: '#c084fc' }, // Violet
-    line14: { light: '#22c55e', dark: '#4ade80' }, // Green-500
-    line15: { light: '#ff6b35', dark: '#ff8566' }, // Red-Orange
-    line16: { light: '#6d28d9', dark: '#8b5cf6' }, // Purple-700
-    line17: { light: '#059669', dark: '#10b981' }, // Emerald-600
-    line18: { light: '#dc2626', dark: '#ef4444' }, // Red-600
-    line19: { light: '#7c3aed', dark: '#a78bfa' }, // Violet-600
-    line20: { light: '#0891b2', dark: '#0ea5e9' }, // Sky-600
-    ...initialColors,
-  };
-
   const defaultFormatters: FormatterConfig = {
     useYFormatter: true,
     useXFormatter: true,
@@ -211,7 +254,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
 
   // State management
   const [config, setConfig] = useState<ChartConfig>(defaultConfig);
-  const [colors, setColors] = useState<ColorConfig>(defaultColors);
+  const [colors, setColors] = useState<ColorConfig>({ ...defaultColorsChart, ...initialColors });
   const [data, setData] = useState<ChartDataPoint[]>(processedInitialData);
   const [formatters, setFormatters] = useState<FormatterConfig>(defaultFormatters);
   const [showDataModal, setShowDataModal] = useState(false);
@@ -225,6 +268,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     displayOptions: true,
     seriesManagement: true,
     dataEditor: true,
+    chartActions: true, // Keep chart actions expanded by default for easy access
   });
 
   // Effect to sync data when initialArrayData changes
@@ -241,69 +285,51 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       setTempData(processedInitialData);
       console.log('Updated data state to match processedInitialData', processedInitialData);
     }
-  }, [processedInitialData]); // Only run when processedInitialData changes
+  }, [processedInitialData, data]); // Only run when processedInitialData or data changes
 
-  // Effect to update config when data structure changes
+  // Effect to update seriesConfigs when dataset headers change
   useEffect(() => {
-    console.log('Config data structure effect running');
-    console.log('Current data:', data);
-    console.log('Current config xAxisKey:', config.xAxisKey);
-    console.log('Current config yAxisKeys:', config.yAxisKeys);
+    console.log('SeriesConfigs dataset effect running');
+    console.log('Dataset headers:', dataset?.headers);
+    console.log('Current yAxisKeys:', config.yAxisKeys);
 
-    if (data.length > 0) {
-      const availableKeys = Object.keys(data[0]);
-      console.log('Available keys from data:', availableKeys);
+    if (dataset?.headers && config.yAxisKeys.length > 0) {
+      console.log('Updating seriesConfigs based on dataset headers');
+      setSeriesConfigs(prevConfigs => {
+        const newConfigs = config.yAxisKeys.map((key, index) => {
+          // Find the header with matching name (case insensitive)
+          const header = dataset.headers.find(
+            (h: DatasetHeader) => h.name.toLowerCase() === key.toLowerCase()
+          );
 
-      // Handle the case where config keys might be arrays
-      const currentXAxisKey = Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey;
-      const currentYAxisKeys = Array.isArray(config.yAxisKeys)
-        ? config.yAxisKeys
-        : [config.yAxisKeys];
+          const colorKeys = Object.keys(defaultColorsChart);
+          const colorIndex = index % colorKeys.length;
+          const selectedColorKey = colorKeys[colorIndex];
+          const selectedColor = defaultColorsChart[selectedColorKey];
 
-      console.log('Processed current xAxisKey:', currentXAxisKey);
-      console.log('Processed current yAxisKeys:', currentYAxisKeys);
+          // Use header.id if found, otherwise fallback to series-index
+          const seriesId = header ? header.id : `series-${index}`;
 
-      const newXAxisKey = availableKeys[0] || 'x';
-      const newYAxisKeys = availableKeys.slice(1).length > 0 ? availableKeys.slice(1) : ['y'];
+          // Try to preserve existing config if it exists
+          const existingConfig = prevConfigs.find(c => c.dataColumn === key);
 
-      console.log('Calculated new xAxisKey:', newXAxisKey);
-      console.log('Calculated new yAxisKeys:', newYAxisKeys);
-
-      // Only update if keys have actually changed
-      if (
-        currentXAxisKey !== newXAxisKey ||
-        JSON.stringify(currentYAxisKeys) !== JSON.stringify(newYAxisKeys)
-      ) {
-        console.log('Updating config due to data structure change');
-        updateConfig({
-          xAxisKey: newXAxisKey,
-          yAxisKeys: newYAxisKeys,
+          return {
+            id: seriesId, // Use dataset header id instead of generated id
+            name: key,
+            dataColumn: key,
+            color: existingConfig?.color || selectedColor.light,
+            visible:
+              existingConfig?.visible !== undefined
+                ? existingConfig.visible
+                : !config.disabledLines.includes(key),
+          };
         });
-      } else {
-        console.log('Config keys are already correct, no update needed');
-      }
-    } else {
-      console.log('No data available to determine keys');
+
+        console.log('Updated seriesConfigs with dataset headers:', newConfigs);
+        return newConfigs;
+      });
     }
-  }, [data]); // Run when data changes
-
-  // Config management dropdown state
-  const [showConfigDropdown, setShowConfigDropdown] = useState(false);
-  const configDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (configDropdownRef.current && !configDropdownRef.current.contains(event.target as Node)) {
-        setShowConfigDropdown(false);
-      }
-    };
-
-    if (showConfigDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showConfigDropdown]);
+  }, [dataset, config.yAxisKeys, config.disabledLines]); // seriesConfigs is not needed in dependencies as it's the state being set
 
   // Toggle section collapse
   const toggleSection = (sectionKey: string) => {
@@ -317,10 +343,10 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   const [seriesConfigs, setSeriesConfigs] = useState<SeriesConfig[]>(() => {
     return config.yAxisKeys.map((key, index) => {
       // Sử dụng màu từ defaultColors theo thứ tự, tránh trùng lặp
-      const colorKeys = Object.keys(defaultColors);
+      const colorKeys = Object.keys(defaultColorsChart);
       const colorIndex = index % colorKeys.length;
       const selectedColorKey = colorKeys[colorIndex];
-      const selectedColor = defaultColors[selectedColorKey];
+      const selectedColor = defaultColorsChart[selectedColorKey];
 
       return {
         id: `series-${index}`,
@@ -446,11 +472,182 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   }, [formatters]);
 
   // Update handlers
-  const updateConfig = (newConfig: Partial<ChartConfig>) => {
-    const updatedConfig = { ...config, ...newConfig };
-    setConfig(updatedConfig);
-    onConfigChange?.(updatedConfig);
-  };
+  const updateConfig = useCallback(
+    (newConfig: Partial<ChartConfig>) => {
+      const updatedConfig = { ...config, ...newConfig };
+      setConfig(updatedConfig);
+
+      // Encode names back to ids before sending to parent ChartEditor
+      const encodedConfigForParent = {
+        ...updatedConfig,
+        xAxisKey: encodeNamesToIds(updatedConfig.xAxisKey) as string,
+        yAxisKeys: encodeNamesToIds(updatedConfig.yAxisKeys) as string[],
+        disabledLines: encodeNamesToIds(updatedConfig.disabledLines || []) as string[],
+      };
+
+      onConfigChange?.(encodedConfigForParent);
+    },
+    [config, onConfigChange, encodeNamesToIds]
+  );
+
+  // Special handler for axis configuration to handle xAxisKey conflicts with yAxisKeys
+  const updateAxisConfig = useCallback(
+    (newConfig: Partial<ChartConfig>) => {
+      let updatedConfig = { ...config, ...newConfig };
+
+      // If xAxisKey is being changed, remove it from yAxisKeys if it exists there
+      if (newConfig.xAxisKey && updatedConfig.yAxisKeys.includes(newConfig.xAxisKey)) {
+        console.log(
+          `🔄 AXIS CONFLICT DETECTED: Removing ${newConfig.xAxisKey} from yAxisKeys because it was selected as xAxisKey`
+        );
+        console.log('Before cleanup - yAxisKeys:', updatedConfig.yAxisKeys);
+        console.log(
+          'Before cleanup - seriesConfigs:',
+          seriesConfigs.map(s => ({ id: s.id, dataColumn: s.dataColumn }))
+        );
+
+        // Show notification to user
+        showSuccess(
+          t(
+            'chart_editor_axis_conflict_resolved',
+            `Column "${newConfig.xAxisKey}" was removed from Y-axis because it's now the X-axis`
+          )
+        );
+
+        updatedConfig = {
+          ...updatedConfig,
+          yAxisKeys: updatedConfig.yAxisKeys.filter(key => key !== newConfig.xAxisKey),
+        };
+
+        // Also remove from seriesConfigs
+        setSeriesConfigs(prev => {
+          const newConfigs = prev.filter(series => series.dataColumn !== newConfig.xAxisKey);
+          console.log('After cleanup - yAxisKeys:', updatedConfig.yAxisKeys);
+          console.log(
+            'After cleanup - seriesConfigs:',
+            newConfigs.map(s => ({ id: s.id, dataColumn: s.dataColumn }))
+          );
+          return newConfigs;
+        });
+
+        // Remove from colors config
+        setColors(prev => {
+          const newColors = { ...prev };
+          if (newConfig.xAxisKey && newColors[newConfig.xAxisKey]) {
+            delete newColors[newConfig.xAxisKey];
+          }
+          return newColors;
+        });
+      }
+
+      setConfig(updatedConfig);
+
+      // Encode names back to ids before sending to parent ChartEditor
+      const encodedConfigForParent = {
+        ...updatedConfig,
+        xAxisKey: encodeNamesToIds(updatedConfig.xAxisKey) as string,
+        yAxisKeys: encodeNamesToIds(updatedConfig.yAxisKeys) as string[],
+        disabledLines: encodeNamesToIds(updatedConfig.disabledLines || []) as string[],
+      };
+
+      onConfigChange?.(encodedConfigForParent);
+    },
+    [config, onConfigChange, encodeNamesToIds, showSuccess, t, seriesConfigs]
+  );
+
+  // Effect to update config when data structure changes - using ref to prevent infinite loop
+  const configKeysRef = useRef<{ xAxisKey: string; yAxisKeys: string[] }>({
+    xAxisKey: '',
+    yAxisKeys: [],
+  });
+
+  useEffect(() => {
+    console.log('Config data structure effect running');
+    console.log('Current data:', data);
+    console.log('Current config xAxisKey:', config.xAxisKey);
+    console.log('Current config yAxisKeys:', config.yAxisKeys);
+    console.log('Dataset headers:', dataset?.headers);
+
+    if (data.length > 0 && dataset?.headers) {
+      // Use dataset headers instead of just data keys
+      const availableHeaders = dataset.headers;
+      console.log('Available headers from dataset:', availableHeaders);
+
+      // Handle the case where config keys might be arrays
+      const currentXAxisKey = Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey;
+      const currentYAxisKeys = Array.isArray(config.yAxisKeys)
+        ? config.yAxisKeys
+        : [config.yAxisKeys];
+
+      console.log('Processed current xAxisKey:', currentXAxisKey);
+      console.log('Processed current yAxisKeys:', currentYAxisKeys);
+
+      // Use header names for keys (assuming headers have 'name' property)
+      const newXAxisKey =
+        availableHeaders.length > 0 ? availableHeaders[0].name.toLowerCase() : 'x';
+      const newYAxisKeys =
+        availableHeaders.length > 1
+          ? availableHeaders.slice(1).map((header: DatasetHeader) => header.name.toLowerCase())
+          : ['y'];
+
+      console.log('Calculated new xAxisKey:', newXAxisKey);
+      console.log('Calculated new yAxisKeys:', newYAxisKeys);
+
+      // Only update if keys have actually changed and different from last update
+      const keysChanged =
+        currentXAxisKey !== newXAxisKey ||
+        JSON.stringify(currentYAxisKeys) !== JSON.stringify(newYAxisKeys);
+
+      const differentFromRef =
+        configKeysRef.current.xAxisKey !== newXAxisKey ||
+        JSON.stringify(configKeysRef.current.yAxisKeys) !== JSON.stringify(newYAxisKeys);
+
+      if (keysChanged && differentFromRef) {
+        console.log('Updating config due to data structure change: ', newYAxisKeys);
+        configKeysRef.current = { xAxisKey: newXAxisKey, yAxisKeys: newYAxisKeys };
+        updateConfig({
+          xAxisKey: newXAxisKey,
+          yAxisKeys: newYAxisKeys,
+        });
+      } else {
+        console.log('Config keys are already correct, no update needed');
+      }
+    } else if (data.length > 0) {
+      // Fallback to original logic if no dataset headers
+      const availableKeys = Object.keys(data[0]);
+      console.log('No dataset headers, using data keys:', availableKeys);
+
+      const currentXAxisKey = Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey;
+      const currentYAxisKeys = Array.isArray(config.yAxisKeys)
+        ? config.yAxisKeys
+        : [config.yAxisKeys];
+
+      const newXAxisKey = availableKeys[0]?.toLowerCase() || 'x';
+      const newYAxisKeys =
+        availableKeys.slice(1).length > 0
+          ? availableKeys.slice(1).map(key => key.toLowerCase())
+          : ['y'];
+
+      const keysChanged =
+        currentXAxisKey !== newXAxisKey ||
+        JSON.stringify(currentYAxisKeys) !== JSON.stringify(newYAxisKeys);
+
+      const differentFromRef =
+        configKeysRef.current.xAxisKey !== newXAxisKey ||
+        JSON.stringify(configKeysRef.current.yAxisKeys) !== JSON.stringify(newYAxisKeys);
+
+      if (keysChanged && differentFromRef) {
+        console.log('Updating config due to data structure change (fallback): ', newYAxisKeys);
+        configKeysRef.current = { xAxisKey: newXAxisKey, yAxisKeys: newYAxisKeys };
+        updateConfig({
+          xAxisKey: newXAxisKey,
+          yAxisKeys: newYAxisKeys,
+        });
+      }
+    } else {
+      console.log('No data available to determine keys');
+    }
+  }, [data, dataset, config.xAxisKey, config.yAxisKeys, updateConfig]); // Include all dependencies but use ref to prevent infinite loop
 
   const updateColors = (newColors: ColorConfig) => {
     setColors(newColors);
@@ -473,12 +670,38 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     return Object.keys(data[0] || {}).filter(
       key =>
         key !== config.xAxisKey && // Không được là xAxisKey
-        !seriesConfigs.some(s => s.dataColumn === key)
+        !seriesConfigs.some(s => s.dataColumn === key) // Không được sử dụng bởi series khác
     );
+  };
+
+  // Helper function to get available columns for editing existing series
+  const getAvailableColumnsForSeries = (seriesId: string) => {
+    const availableForSeries = Object.keys(data[0] || {}).filter(
+      key =>
+        key !== config.xAxisKey && // Không được là xAxisKey
+        !seriesConfigs.some(s => s.id !== seriesId && s.dataColumn === key) // Không được sử dụng bởi series khác (trừ series hiện tại)
+    );
+    console.log(`Available columns for series ${seriesId}:`, availableForSeries);
+    console.log(
+      'All series configs:',
+      seriesConfigs.map(s => ({ id: s.id, dataColumn: s.dataColumn }))
+    );
+    return availableForSeries;
   };
 
   // Series management functions
   const updateSeriesConfig = (seriesId: string, updates: Partial<SeriesConfig>) => {
+    // Validate that dataColumn is not the same as xAxisKey
+    if (updates.dataColumn && updates.dataColumn === config.xAxisKey) {
+      showError(
+        t(
+          'chart_editor_axis_conflict_error',
+          `Cannot use "${updates.dataColumn}" as Y-axis because it's already the X-axis`
+        )
+      );
+      return; // Exit early to prevent the update
+    }
+
     setSeriesConfigs(prev => {
       const oldSeries = prev.find(s => s.id === seriesId);
       const updatedSeries = prev.map(series => {
@@ -547,11 +770,11 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       const usedColors = seriesConfigs.map(s => s.color);
 
       // Tìm màu từ defaultColors chưa được sử dụng
-      const colorKeys = Object.keys(defaultColors);
-      let selectedColor = defaultColors[colorKeys[0]]; // Fallback color
+      const colorKeys = Object.keys(defaultColorsChart);
+      let selectedColor = defaultColorsChart[colorKeys[0]]; // Fallback color
 
       for (const colorKey of colorKeys) {
-        const color = defaultColors[colorKey];
+        const color = defaultColorsChart[colorKey];
         if (!usedColors.includes(color.light)) {
           selectedColor = color;
           break;
@@ -636,57 +859,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     }
   };
 
-  // Series reordering functions
-  const moveSeriesUp = (seriesId: string) => {
-    setSeriesConfigs(prev => {
-      const currentIndex = prev.findIndex(s => s.id === seriesId);
-      if (currentIndex > 0) {
-        const updatedSeries = [...prev];
-        [updatedSeries[currentIndex - 1], updatedSeries[currentIndex]] = [
-          updatedSeries[currentIndex],
-          updatedSeries[currentIndex - 1],
-        ];
-
-        // Update config with new order
-        const allDataColumns = updatedSeries.map(s => s.dataColumn);
-        const newDisabledLines = updatedSeries.filter(s => !s.visible).map(s => s.dataColumn);
-
-        updateConfig({
-          yAxisKeys: allDataColumns,
-          disabledLines: newDisabledLines,
-        });
-
-        return updatedSeries;
-      }
-      return prev;
-    });
-  };
-
-  const moveSeriesDown = (seriesId: string) => {
-    setSeriesConfigs(prev => {
-      const currentIndex = prev.findIndex(s => s.id === seriesId);
-      if (currentIndex < prev.length - 1) {
-        const updatedSeries = [...prev];
-        [updatedSeries[currentIndex], updatedSeries[currentIndex + 1]] = [
-          updatedSeries[currentIndex + 1],
-          updatedSeries[currentIndex],
-        ];
-
-        // Update config with new order
-        const allDataColumns = updatedSeries.map(s => s.dataColumn);
-        const newDisabledLines = updatedSeries.filter(s => !s.visible).map(s => s.dataColumn);
-
-        updateConfig({
-          yAxisKeys: allDataColumns,
-          disabledLines: newDisabledLines,
-        });
-
-        return updatedSeries;
-      }
-      return prev;
-    });
-  };
-
   // Modal functions
   const openDataModal = () => {
     setTempData([...data]);
@@ -750,26 +922,68 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     }
   };
 
+  // Apply color preset
+  const applyColorPreset = (preset: 'default' | 'warm' | 'cool' | 'pastel') => {
+    const colorPresets = {
+      default: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'],
+      warm: ['#dc2626', '#ea580c', '#d97706', '#ca8a04', '#65a30d', '#16a34a'],
+      cool: ['#0ea5e9', '#0891b2', '#059669', '#7c3aed', '#c026d3', '#db2777'],
+      pastel: ['#93c5fd', '#fca5a5', '#86efac', '#fde047', '#c4b5fd', '#67e8f9'],
+    };
+
+    const colors = colorPresets[preset];
+    const newColors: ColorConfig = {};
+
+    // Update colors for yAxisKeys
+    config.yAxisKeys.forEach((key, index) => {
+      const baseColor = colors[index % colors.length];
+      newColors[key] = {
+        light: baseColor,
+        dark: baseColor,
+      };
+    });
+
+    updateColors(newColors);
+
+    // Update series configs to reflect the new colors
+    setSeriesConfigs(prev =>
+      prev.map((series, index) => ({
+        ...series,
+        color: colors[index % colors.length],
+      }))
+    );
+  };
+
   // Export configuration to JSON (config only, no data)
   const exportConfigToJSON = () => {
     try {
+      console.log('🔄 EXPORTING CONFIG:');
+      console.log('Original config (names):', {
+        xAxisKey: config.xAxisKey,
+        yAxisKeys: config.yAxisKeys,
+      });
+
+      // Encode config keys back to ids for export
+      const encodedConfig = {
+        ...config,
+        xAxisKey: encodeNamesToIds(config.xAxisKey) as string,
+        yAxisKeys: encodeNamesToIds(config.yAxisKeys) as string[],
+        disabledLines: encodeNamesToIds(config.disabledLines) as string[],
+      };
+
+      console.log('Encoded config (ids):', {
+        xAxisKey: encodedConfig.xAxisKey,
+        yAxisKeys: encodedConfig.yAxisKeys,
+      });
+
       const exportData = {
-        version: '1.0',
-        timestamp: new Date().toISOString(),
-        config,
-        colors,
+        config: encodedConfig, // Use encoded config with ids
         formatters,
         seriesConfigs: seriesConfigs.map(series => ({
           ...series,
-          // Don't export the id since it will be regenerated on import
-          id: undefined,
+          // Encode dataColumn to id for export
+          dataColumn: encodeNamesToIds(series.dataColumn) as string,
         })),
-        // Include metadata for reference
-        metadata: {
-          chartType: 'line-chart',
-          exportedFrom: 'LineChartEditor',
-          note: 'Configuration file - data not included',
-        },
       };
 
       const jsonString = JSON.stringify(exportData, null, 2);
@@ -802,15 +1016,15 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       };
 
       updateConfig(resetConfig);
-      updateColors(defaultColors);
+      updateColors(defaultColorsChart);
       updateFormatters(defaultFormatters);
 
       // Reset series configs
       const resetSeriesConfigs = resetConfig.yAxisKeys.map((key, index) => {
-        const colorKeys = Object.keys(defaultColors);
+        const colorKeys = Object.keys(defaultColorsChart);
         const colorIndex = index % colorKeys.length;
         const selectedColorKey = colorKeys[colorIndex];
-        const selectedColor = defaultColors[selectedColorKey];
+        const selectedColor = defaultColorsChart[selectedColorKey];
 
         return {
           id: `series-${Date.now()}-${index}`,
@@ -844,23 +1058,50 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
           const text = await file.text();
           const importData = JSON.parse(text);
 
+          console.log('🔄 IMPORTING CONFIG:');
+          console.log('Imported data (ids):', {
+            xAxisKey: importData.config?.xAxisKey,
+            yAxisKeys: importData.config?.yAxisKeys,
+          });
+
           // Validate the imported data structure
-          if (!importData.config || !importData.colors || !importData.formatters) {
+          if (!importData.config || !importData.formatters) {
             throw new Error('Invalid configuration file structure');
           }
 
+          // Decode config keys from ids back to names for current dataset
+          const decodedConfig = {
+            ...importData.config,
+            xAxisKey: decodeKeysToNames(importData.config.xAxisKey) as string,
+            yAxisKeys: decodeKeysToNames(importData.config.yAxisKeys) as string[],
+            disabledLines: decodeKeysToNames(importData.config.disabledLines || []) as string[],
+          };
+
+          console.log('Decoded config (names):', {
+            xAxisKey: decodedConfig.xAxisKey,
+            yAxisKeys: decodedConfig.yAxisKeys,
+          });
+
           // Apply imported configuration
-          updateConfig(importData.config);
-          updateColors(importData.colors);
+          updateConfig(decodedConfig);
           updateFormatters(importData.formatters);
 
           // Handle series configurations
           if (importData.seriesConfigs && Array.isArray(importData.seriesConfigs)) {
             const newSeriesConfigs = importData.seriesConfigs.map(
-              (series: SeriesConfig, index: number) => ({
-                ...series,
-                id: `series-${Date.now()}-${index}`, // Generate new IDs
-              })
+              (series: SeriesConfig, index: number) => {
+                // Find the header for this series dataColumn to get the correct id
+                const decodedDataColumn = decodeKeysToNames(series.dataColumn) as string;
+                const header = dataset?.headers?.find(
+                  (h: DatasetHeader) => h.name.toLowerCase() === decodedDataColumn.toLowerCase()
+                );
+
+                return {
+                  ...series,
+                  id: header ? header.id : `series-${Date.now()}-${index}`, // Use dataset header id
+                  dataColumn: decodedDataColumn, // Use decoded name for current dataset
+                };
+              }
             );
             setSeriesConfigs(newSeriesConfigs);
           }
@@ -878,6 +1119,188 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     }
   };
 
+  // Helper function to create better SVG data URL
+  const createSVGDataURL = (svgElement: SVGElement): string => {
+    const svgClone = svgElement.cloneNode(true) as SVGElement;
+
+    // Ensure SVG has proper dimensions and namespace
+    const width = svgElement.clientWidth || 800;
+    const height = svgElement.clientHeight || 600;
+
+    svgClone.setAttribute('width', width.toString());
+    svgClone.setAttribute('height', height.toString());
+    svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+
+    // Get all styles and ensure they're embedded
+    const stylesheets = Array.from(document.styleSheets);
+    let styles = '';
+
+    stylesheets.forEach(stylesheet => {
+      try {
+        const rules = Array.from(stylesheet.cssRules);
+        rules.forEach(rule => {
+          if (rule.cssText.includes('svg') || rule.cssText.includes('.chart')) {
+            styles += rule.cssText + '\n';
+          }
+        });
+      } catch {
+        // Cross-origin stylesheets might cause errors
+      }
+    });
+
+    if (styles) {
+      const styleElement = document.createElement('style');
+      styleElement.textContent = styles;
+      svgClone.insertBefore(styleElement, svgClone.firstChild);
+    }
+
+    const svgString = new XMLSerializer().serializeToString(svgClone);
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+  };
+
+  // Export chart as image
+  const exportChartAsImage = async (format: 'png' | 'jpeg' | 'svg' = 'png') => {
+    try {
+      // Find the SVG element within the chart container
+      const chartContainer = document.querySelector('.chart-container');
+      const svgElement = chartContainer?.querySelector('svg') || document.querySelector('svg');
+
+      if (!svgElement) {
+        showError('Không tìm thấy biểu đồ để xuất');
+        return;
+      }
+
+      // Get chart title for filename
+      const chartTitle = config.title || 'line-chart';
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `${chartTitle.replace(/[^a-zA-Z0-9]/g, '-')}-${timestamp}`;
+
+      if (format === 'svg') {
+        // Export as SVG - preserve vector format
+        const svgData = new XMLSerializer().serializeToString(svgElement);
+
+        // Clean up the SVG and add proper styling
+        const cleanSvgData = svgData.replace(/(\w+)?:?xlink=/g, 'xmlns:xlink=');
+
+        const svgBlob = new Blob([cleanSvgData], { type: 'image/svg+xml;charset=utf-8' });
+        const svgUrl = URL.createObjectURL(svgBlob);
+
+        const a = document.createElement('a');
+        a.href = svgUrl;
+        a.download = `${filename}.svg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(svgUrl);
+
+        showSuccess(`Đã xuất biểu đồ thành file SVG`);
+      } else {
+        // Export as raster image (PNG/JPEG)
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+
+          if (!ctx) {
+            showError('Không thể tạo canvas để xuất ảnh');
+            return;
+          }
+
+          // Clone SVG and ensure it has proper dimensions
+          const svgClone = svgElement.cloneNode(true) as SVGElement;
+
+          // Get actual dimensions
+          const svgWidth = svgElement.clientWidth || 800;
+          const svgHeight = svgElement.clientHeight || 600;
+          const scaleFactor = 2; // For better quality
+
+          // Set canvas size
+          canvas.width = svgWidth * scaleFactor;
+          canvas.height = svgHeight * scaleFactor;
+          ctx.scale(scaleFactor, scaleFactor);
+
+          // Set explicit dimensions on cloned SVG
+          svgClone.setAttribute('width', svgWidth.toString());
+          svgClone.setAttribute('height', svgHeight.toString());
+          svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+          // Set background color for JPEG
+          if (format === 'jpeg') {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, svgWidth, svgHeight);
+          }
+
+          // Convert SVG to data URL using helper function
+          const svgDataUrl = createSVGDataURL(svgElement);
+
+          const img = new Image();
+          img.crossOrigin = 'anonymous'; // Enable CORS
+
+          img.onload = () => {
+            try {
+              ctx.drawImage(img, 0, 0, svgWidth, svgHeight);
+
+              // Convert canvas to blob and download
+              canvas.toBlob(
+                blob => {
+                  if (blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${filename}.${format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showSuccess(`Đã xuất biểu đồ thành file ${format.toUpperCase()}`);
+                  } else {
+                    showError('Không thể tạo file ảnh');
+                  }
+                },
+                `image/${format}`,
+                format === 'jpeg' ? 0.9 : 1.0
+              );
+            } catch (drawError) {
+              console.error('Canvas draw error:', drawError);
+              showError('Lỗi khi vẽ biểu đồ lên canvas: ' + drawError);
+            }
+          };
+
+          img.onerror = error => {
+            console.error('Image load error:', error);
+            // Fallback: Provide user instructions
+            const instructions =
+              format === 'png'
+                ? 'Để xuất PNG, vui lòng:\n1. Nhấn F12 → Console → gõ: document.querySelector(".chart-container").style.backgroundColor = "white"\n2. Nhấn chuột phải vào biểu đồ → "Save image as..." → chọn PNG'
+                : 'Để xuất JPEG, vui lòng:\n1. Nhấn F12 → Console → gõ: document.querySelector(".chart-container").style.backgroundColor = "white"\n2. Nhấn chuột phải vào biểu đồ → "Save image as..." → chọn JPEG';
+
+            showError(
+              `Xuất ${format.toUpperCase()} tự động thất bại.\n${instructions}\nHoặc xuất SVG rồi chuyển đổi bằng công cụ khác.`
+            );
+          };
+
+          // Set timeout for image loading
+          setTimeout(() => {
+            if (!img.complete) {
+              showError('Timeout khi tải biểu đồ. Vui lòng thử lại hoặc xuất SVG.');
+            }
+          }, 5000);
+
+          img.src = svgDataUrl;
+        } catch (canvasError) {
+          console.error('Canvas export error:', canvasError);
+          showError(
+            `Lỗi khi xuất ${format.toUpperCase()}: ${canvasError}. Vui lòng thử xuất SVG thay thế.`
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Export image error:', error);
+      showError('Lỗi khi xuất ảnh: ' + (error as Error).message);
+    }
+  };
+
+  console.log('Rendering LineChartEditor with config:', config);
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
       <div className="w-full px-2">
@@ -888,7 +1311,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
+              transition={{ duration: 0.6, delay: 0.15 }}
             >
               <DataEditorSection
                 data={data}
@@ -904,7 +1327,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+              transition={{ duration: 0.6, delay: 0.15 }}
             >
               <BasicSettingsSection
                 config={{
@@ -917,12 +1340,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 onToggleCollapse={() => toggleSection('basicSettings')}
                 onUpdateConfig={updates => updateConfig(updates)}
                 onApplySizePreset={applySizePreset}
-                onExportConfig={exportConfigToJSON}
-                onImportConfig={importConfigFromJSON}
-                onResetToDefault={resetToDefaultConfig}
-                showConfigDropdown={showConfigDropdown}
-                onToggleConfigDropdown={() => setShowConfigDropdown(!showConfigDropdown)}
-                configDropdownRef={configDropdownRef}
               />
             </motion.div>
 
@@ -986,7 +1403,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 formatters={formatters}
                 isCollapsed={collapsedSections.axisConfiguration}
                 onToggleCollapse={() => toggleSection('axisConfiguration')}
-                onUpdateConfig={updateConfig}
+                onUpdateConfig={updateAxisConfig}
                 onUpdateFormatters={updateFormatters}
               />
             </motion.div>
@@ -995,358 +1412,218 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.35 }}
+              transition={{ duration: 0.6, delay: 0.15 }}
             >
               <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
                 <CardHeader
-                  className="flex flex-row items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
+                  className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
                   onClick={() => toggleSection('seriesManagement')}
                 >
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    {t('lineChart_editor_seriesManagement')} ({seriesConfigs.length})
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    {!collapsedSections.seriesManagement && (
-                      <Button
-                        onClick={e => {
-                          e.stopPropagation();
-                          addSeries();
-                        }}
-                        size="sm"
-                        variant="outline"
-                        className="bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={getAvailableColumns().length === 0}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        {t('lineChart_editor_addSeries')}
-                      </Button>
-                    )}
-                    {collapsedSections.seriesManagement ? (
+                  <div className="flex items-center justify-between w-full">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      {t('chart_editor_seriesManagement')}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      {!collapsedSections.seriesManagement && (
+                        <Button
+                          onClick={e => {
+                            e.stopPropagation();
+                            addSeries();
+                          }}
+                          size="sm"
+                          variant="outline"
+                          className="bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={getAvailableColumns().length === 0}
+                        >
+                          <Plus className="h-4 w-4 mr-1" /> {t('common.add', 'Thêm')}
+                        </Button>
+                      )}
+                      {collapsedSections.seriesManagement ? (
+                        <ChevronDown className="h-5 w-5 text-gray-500" />
+                      ) : (
+                        <ChevronUp className="h-5 w-5 text-gray-500" />
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                {!collapsedSections.seriesManagement && (
+                  <CardContent className="space-y-4">
+                    {/* Series Management using shared component */}
+                    <SeriesManagement
+                      series={seriesConfigs}
+                      onUpdateSeries={updateSeriesConfig}
+                      onAddSeries={addSeries}
+                      onRemoveSeries={removeSeries}
+                      onMoveSeriesUp={(seriesId: string) => {
+                        const index = seriesConfigs.findIndex(s => s.id === seriesId);
+                        if (index > 0) {
+                          const newSeries = [...seriesConfigs];
+                          [newSeries[index], newSeries[index - 1]] = [
+                            newSeries[index - 1],
+                            newSeries[index],
+                          ];
+                          setSeriesConfigs(newSeries);
+                        }
+                      }}
+                      onMoveSeriesDown={(seriesId: string) => {
+                        const index = seriesConfigs.findIndex(s => s.id === seriesId);
+                        if (index < seriesConfigs.length - 1) {
+                          const newSeries = [...seriesConfigs];
+                          [newSeries[index], newSeries[index + 1]] = [
+                            newSeries[index + 1],
+                            newSeries[index],
+                          ];
+                          setSeriesConfigs(newSeries);
+                        }
+                      }}
+                      availableColumns={getAvailableColumns()}
+                      getAvailableColumnsForSeries={getAvailableColumnsForSeries}
+                    />
+
+                    {/* Color Preset Buttons */}
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                        {t('chart_editor_color_presets', 'Bảng màu có sẵn')}
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          onClick={() => applyColorPreset('default')}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          {t('chart_editor_preset_default', 'Mặc định')}
+                        </Button>
+                        <Button
+                          onClick={() => applyColorPreset('warm')}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          {t('chart_editor_preset_warm', 'Ấm áp')}
+                        </Button>
+                        <Button
+                          onClick={() => applyColorPreset('cool')}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          {t('chart_editor_preset_cool', 'Mát mẻ')}
+                        </Button>
+                        <Button
+                          onClick={() => applyColorPreset('pastel')}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          {t('chart_editor_preset_pastel', 'Pastel')}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            </motion.div>
+
+            {/* Chart Actions Section - Combined Config Management and Export */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.12 }}
+            >
+              <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
+                <CardHeader
+                  className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg"
+                  onClick={() => toggleSection('chartActions')}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Settings className="h-5 w-5" />
+                      {t('chart_editor_chart_actions', 'Import / Export & More')}
+                    </h3>
+                    {collapsedSections.chartActions ? (
                       <ChevronDown className="h-5 w-5 text-gray-500" />
                     ) : (
                       <ChevronUp className="h-5 w-5 text-gray-500" />
                     )}
                   </div>
                 </CardHeader>
-                {!collapsedSections.seriesManagement && (
+                {!collapsedSections.chartActions && (
                   <CardContent className="space-y-4">
-                    {seriesConfigs.map((series, index) => (
-                      <div key={series.id} className="relative group">
-                        {/* Series Card */}
-                        <div
-                          className={`p-6 border-2 rounded-lg transition-all duration-200 ${
-                            series.visible
-                              ? 'border-blue-200 bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-800 dark:border-blue-600'
-                              : 'border-gray-200 bg-gray-50 dark:bg-gray-700/50 dark:border-gray-600 opacity-60'
-                          }`}
+                    {/* Export Image Section */}
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <Camera className="h-4 w-4" />
+                        {t('chart_editor_export_image', 'Export Image')}
+                      </Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button
+                          onClick={() => exportChartAsImage('png')}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1 text-xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
                         >
-                          {/* Series Header */}
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-r from-orange-400 to-orange-600 text-white text-sm font-bold rounded-full shadow-sm">
-                                {index + 1}
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2">
-                                  <Checkbox
-                                    checked={series.visible}
-                                    onCheckedChange={checked =>
-                                      updateSeriesConfig(series.id, { visible: !!checked })
-                                    }
-                                    className="w-4 h-4"
-                                  />
-                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {t('lineChart_editor_seriesVisible')}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            {seriesConfigs.length > 1 && (
-                              <div className="flex items-center gap-1">
-                                {/* Move Up Button */}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => moveSeriesUp(series.id)}
-                                  disabled={index === 0}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-30"
-                                  title="Move Up"
-                                >
-                                  <ArrowUp className="h-4 w-4" />
-                                </Button>
-
-                                {/* Move Down Button */}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => moveSeriesDown(series.id)}
-                                  disabled={index === seriesConfigs.length - 1}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-30"
-                                  title="Move Down"
-                                >
-                                  <ArrowDown className="h-4 w-4" />
-                                </Button>
-
-                                {/* Delete Button */}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => removeSeries(series.id)}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                  title="Delete Series"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Series Configuration Grid */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                                {t('lineChart_editor_seriesName')}
-                              </Label>
-                              <Input
-                                value={series.name}
-                                onChange={e =>
-                                  updateSeriesConfig(series.id, { name: e.target.value })
-                                }
-                                className="h-9 text-sm bg-white dark:bg-gray-800"
-                                placeholder={t('lineChart_editor_seriesNamePlaceholder')}
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                                {t('lineChart_editor_dataColumn')}
-                              </Label>
-                              <select
-                                value={series.dataColumn}
-                                onChange={e =>
-                                  updateSeriesConfig(series.id, { dataColumn: e.target.value })
-                                }
-                                className="w-full h-9 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              >
-                                {Object.keys(data[0] || {})
-                                  .filter(key =>
-                                    isColumnAvailableForSeries(
-                                      seriesConfigs,
-                                      config,
-                                      key,
-                                      series.id
-                                    )
-                                  )
-                                  .map(column => (
-                                    <option key={column} value={column}>
-                                      {column}
-                                    </option>
-                                  ))}
-                              </select>
-                            </div>
-                          </div>
-
-                          {/* Color Configuration */}
-                          <div className="space-y-3">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              {t('lineChart_editor_colorConfiguration')}
-                            </Label>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {/* Light Theme Color */}
-                              <div className="space-y-2">
-                                <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  {t('lineChart_editor_lightTheme')}
-                                </Label>
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="color"
-                                    value={colors[series.dataColumn]?.light || series.color}
-                                    onChange={e => {
-                                      updateColors({
-                                        ...colors,
-                                        [series.dataColumn]: {
-                                          ...colors[series.dataColumn],
-                                          light: e.target.value,
-                                        },
-                                      });
-                                      updateSeriesConfig(series.id, { color: e.target.value });
-                                    }}
-                                    className="w-12 h-9 p-1 border rounded cursor-pointer"
-                                  />
-                                  <Input
-                                    value={colors[series.dataColumn]?.light || series.color}
-                                    onChange={e => {
-                                      updateColors({
-                                        ...colors,
-                                        [series.dataColumn]: {
-                                          ...colors[series.dataColumn],
-                                          light: e.target.value,
-                                        },
-                                      });
-                                      updateSeriesConfig(series.id, { color: e.target.value });
-                                    }}
-                                    className="flex-1 h-9 text-sm bg-white dark:bg-gray-800"
-                                    placeholder="#000000"
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Dark Theme Color */}
-                              <div className="space-y-2">
-                                <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  {t('lineChart_editor_darkTheme')}
-                                </Label>
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="color"
-                                    value={colors[series.dataColumn]?.dark || series.color}
-                                    onChange={e => {
-                                      updateColors({
-                                        ...colors,
-                                        [series.dataColumn]: {
-                                          ...colors[series.dataColumn],
-                                          dark: e.target.value,
-                                        },
-                                      });
-                                    }}
-                                    className="w-12 h-9 p-1 border rounded cursor-pointer"
-                                  />
-                                  <Input
-                                    value={colors[series.dataColumn]?.dark || series.color}
-                                    onChange={e => {
-                                      updateColors({
-                                        ...colors,
-                                        [series.dataColumn]: {
-                                          ...colors[series.dataColumn],
-                                          dark: e.target.value,
-                                        },
-                                      });
-                                    }}
-                                    className="flex-1 h-9 text-sm bg-white dark:bg-gray-800"
-                                    placeholder="#000000"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Individual Series Styling */}
-                          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
-                              {t('lineChart_editor_individualSeriesStyling')}
-                            </Label>
-
-                            <div className="grid grid-cols-2 gap-3 mb-3">
-                              {/* Line Width */}
-                              <div>
-                                <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  {t('lineChart_editor_lineWidth')}
-                                </Label>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  max="10"
-                                  value={series.lineWidth || config.lineWidth}
-                                  onChange={e => {
-                                    const value = parseInt(e.target.value);
-                                    updateSeriesConfig(series.id, {
-                                      lineWidth: value || undefined,
-                                    });
-                                  }}
-                                  className="h-8 text-sm"
-                                />
-                              </div>
-
-                              {/* Point Radius */}
-                              <div>
-                                <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  {t('lineChart_editor_pointSize')}
-                                </Label>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  max="15"
-                                  value={series.pointRadius || config.pointRadius}
-                                  onChange={e => {
-                                    const value = parseInt(e.target.value);
-                                    updateSeriesConfig(series.id, {
-                                      pointRadius: value || undefined,
-                                    });
-                                  }}
-                                  className="h-8 text-sm"
-                                />
-                              </div>
-
-                              {/* Line Style */}
-                              <div>
-                                <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  {t('lineChart_editor_lineStyle')}
-                                </Label>
-                                <select
-                                  value={series.lineStyle || 'solid'}
-                                  onChange={e =>
-                                    updateSeriesConfig(series.id, {
-                                      lineStyle: e.target.value as 'solid' | 'dashed' | 'dotted',
-                                    })
-                                  }
-                                  className="w-full h-8 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2"
-                                >
-                                  <option value="solid">{t('lineChart_editor_solid')}</option>
-                                  <option value="dashed">{t('lineChart_editor_dashed')}</option>
-                                  <option value="dotted">{t('lineChart_editor_dotted')}</option>
-                                </select>
-                              </div>
-
-                              {/* Point Style */}
-                              <div>
-                                <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  {t('lineChart_editor_pointStyle')}
-                                </Label>
-                                <select
-                                  value={series.pointStyle || 'circle'}
-                                  onChange={e =>
-                                    updateSeriesConfig(series.id, {
-                                      pointStyle: e.target.value as
-                                        | 'circle'
-                                        | 'square'
-                                        | 'triangle'
-                                        | 'diamond',
-                                    })
-                                  }
-                                  className="w-full h-8 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2"
-                                >
-                                  <option value="circle">{t('lineChart_editor_circle')}</option>
-                                  <option value="square">{t('lineChart_editor_square')}</option>
-                                  <option value="triangle">{t('lineChart_editor_triangle')}</option>
-                                  <option value="diamond">{t('lineChart_editor_diamond')}</option>
-                                </select>
-                              </div>
-
-                              {/* Opacity */}
-                              <div>
-                                <Label className="text-xs text-gray-600 dark:text-gray-400">
-                                  {t('lineChart_editor_opacityPercent')}
-                                </Label>
-                                <Input
-                                  type="number"
-                                  min="10"
-                                  max="100"
-                                  value={Math.round((series.opacity || 1) * 100)}
-                                  onChange={e =>
-                                    updateSeriesConfig(series.id, {
-                                      opacity: parseInt(e.target.value) / 100 || 1,
-                                    })
-                                  }
-                                  className="h-8 text-sm"
-                                  placeholder="100"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                          <Download className="h-3 w-3" />
+                          PNG
+                        </Button>
+                        <Button
+                          onClick={() => exportChartAsImage('jpeg')}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1 text-xs bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border-green-200 dark:border-green-800"
+                        >
+                          <Download className="h-3 w-3" />
+                          JPEG
+                        </Button>
+                        <Button
+                          onClick={() => exportChartAsImage('svg')}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1 text-xs bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 border-purple-200 dark:border-purple-800"
+                        >
+                          <Download className="h-3 w-3" />
+                          SVG
+                        </Button>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Config Management Section */}
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        {t('chart_editor_config_management', 'Config Management')}
+                      </Label>
+                      <div className="grid grid-cols-1 gap-2">
+                        <Button
+                          onClick={exportConfigToJSON}
+                          variant="outline"
+                          size="sm"
+                          className="w-full flex items-center gap-2 text-xs justify-start bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 border-orange-200 dark:border-orange-400"
+                        >
+                          <Download className="h-3 w-3" />
+                          {t('chart_editor_export_config', 'Export Config JSON')}
+                        </Button>
+                        <Button
+                          onClick={importConfigFromJSON}
+                          variant="outline"
+                          size="sm"
+                          className="w-full flex items-center gap-2 text-xs justify-start bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
+                        >
+                          <Upload className="h-3 w-3" />
+                          {t('chart_editor_import_config', 'Import Config JSON')}
+                        </Button>
+                        <Button
+                          onClick={resetToDefaultConfig}
+                          variant="outline"
+                          size="sm"
+                          className="w-full flex items-center gap-2 text-xs justify-start text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 border-red-200 dark:border-red-800"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          {t('chart_editor_reset_config', 'Reset to Default')}
+                        </Button>
+                      </div>
+                    </div>
                   </CardContent>
                 )}
               </Card>
@@ -1458,6 +1735,8 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     showAxisTicks={config.showAxisTicks}
                     // New interaction props
                     enableZoom={config.enableZoom}
+                    enablePan={config.enablePan}
+                    zoomExtent={config.zoomExtent}
                     showTooltip={config.showTooltip}
                     // New visual props
                     theme={config.theme}
@@ -1465,6 +1744,13 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     titleFontSize={config.titleFontSize}
                     labelFontSize={config.labelFontSize}
                     legendFontSize={config.legendFontSize}
+                    // Formatter type props for axis labels
+                    yFormatterType={
+                      formatters.useYFormatter ? formatters.yFormatterType : undefined
+                    }
+                    xFormatterType={
+                      formatters.useXFormatter ? formatters.xFormatterType : undefined
+                    }
                   />
                 </CardContent>
               </Card>
