@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/select';
 
 interface DateFormatSelectorProps {
-  format: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD' | 'DD-MM-YYYY' | 'MM-DD-YYYY' | 'YYYY-MM-DD';
+  format: string;
   onChange: (value: string) => void;
   disabled?: boolean;
 }
@@ -19,12 +19,23 @@ export const DateFormatSelector: React.FC<DateFormatSelectorProps> = ({
   disabled = false,
 }) => {
   const dateFormats = [
+    // Common ISO and slashed/dashed
+    { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD', example: '2023-12-31' },
     { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY', example: '31/12/2023' },
     { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY', example: '12/31/2023' },
     { value: 'YYYY/MM/DD', label: 'YYYY/MM/DD', example: '2023/12/31' },
     { value: 'DD-MM-YYYY', label: 'DD-MM-YYYY', example: '31-12-2023' },
     { value: 'MM-DD-YYYY', label: 'MM-DD-YYYY', example: '12-31-2023' },
-    { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD', example: '2023-12-31' },
+
+    // Additional presets from the list
+    { value: 'YYYY-MM', label: 'YYYY-MM', example: '2023-12' },
+    { value: 'YY-MM', label: 'YY-MM', example: '23-12' },
+    { value: 'MM/YY', label: 'MM/YY', example: '12/23' },
+    { value: 'MM/YYYY', label: 'MM/YYYY', example: '12/2023' },
+    { value: 'DD Month YYYY', label: 'DD Month YYYY', example: '31 December 2023' },
+    { value: 'YYYY', label: 'YYYY', example: '2023' },
+    { value: 'YYYY-MM-DD HH:mm:ss', label: 'YYYY-MM-DD HH:mm:ss', example: '2023-12-31 23:59:59' },
+    { value: 'YYYY-MM-DDTHH:mm:ss', label: 'YYYY-MM-DDTHH:mm:ss', example: '2023-12-31T23:59:59' },
   ] as const;
 
   return (
@@ -36,11 +47,15 @@ export const DateFormatSelector: React.FC<DateFormatSelectorProps> = ({
         <Select
           value={format}
           onValueChange={v => {
+            if (disabled) return;
             if (v === format) return; // no-op if same selection
             onChange(v);
           }}
         >
-          <SelectTrigger className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
+          <SelectTrigger
+            disabled={disabled}
+            className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+          >
             <SelectValue placeholder="Select date format" />
           </SelectTrigger>
           <SelectContent>

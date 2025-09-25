@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { useDataset, type NumberFormat } from '@/contexts/DatasetContext';
 import {
@@ -26,6 +26,11 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
 }) => {
   const { validationErrors, setValidationError } = useDataset();
   const { creating: isUploading } = useAppSelector(state => state.dataset);
+  const [isCustom, setIsCustom] = useState(false);
+  const [customNumberFormat, setCustomNumberFormat] = useState<NumberFormat>({
+    thousandsSeparator: '',
+    decimalSeparator: '',
+  });
   const numberFormats = [
     {
       key: 'US (1,234.56)',
@@ -58,26 +63,32 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
 
   // Update validation errors whenever format changes
   useEffect(() => {
-    const separatorsEqual = !!(
-      thousandsSeparator &&
-      decimalSeparator &&
-      thousandsSeparator === decimalSeparator
-    );
-    const missingDecimalSeparator = !decimalSeparator || decimalSeparator.trim() === '';
+    const separatorsEqual =
+      isCustom &&
+      !!(
+        customNumberFormat.thousandsSeparator &&
+        customNumberFormat.decimalSeparator &&
+        customNumberFormat.thousandsSeparator === customNumberFormat.decimalSeparator
+      );
+    const missingDecimalSeparator =
+      isCustom &&
+      (!customNumberFormat.decimalSeparator || customNumberFormat.decimalSeparator.trim() === '');
 
     setValidationError('numberFormat', 'separatorsEqual', separatorsEqual);
     setValidationError('numberFormat', 'missingDecimalSeparator', missingDecimalSeparator);
-  }, [thousandsSeparator, decimalSeparator, setValidationError]);
+  }, [customNumberFormat, setValidationError, isCustom]);
 
   // Get current error states
   const separatorsAreEqual = validationErrors.numberFormat?.separatorsEqual || false;
   const isDecimalSeparatorMissing = validationErrors.numberFormat?.missingDecimalSeparator || false;
   const hasValidationError = separatorsAreEqual || isDecimalSeparatorMissing;
-  const selectedNumberFormat = numberFormats.find(
-    numberFormat =>
-      numberFormat.value.decimalSeparator === decimalSeparator &&
-      numberFormat.value.thousandsSeparator === thousandsSeparator
-  )?.key;
+  const selectedNumberFormat = isCustom
+    ? 'Custom'
+    : numberFormats.find(
+        numberFormat =>
+          numberFormat.value.decimalSeparator === decimalSeparator &&
+          numberFormat.value.thousandsSeparator === thousandsSeparator
+      )?.key;
 
   // Placeholder: apply number/date formats to current data (wire actual logic later)
   const proceedParsingByNumberFormat = useCallback(
@@ -95,11 +106,28 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
         <Select
           value={selectedNumberFormat}
           onValueChange={v => {
-            const data = JSON.parse(v) as { thousandsSeparator: string; decimalSeparator: string };
-            //Only case for custom is when both separators are empty
-            if (data.thousandsSeparator != '' && data.decimalSeparator != '') {
+            const data = JSON.parse(v) as {
+              thousandsSeparator: string;
+              decimalSeparator: string;
+            };
+
+            const isEmpty = data.thousandsSeparator === '' && data.decimalSeparator === '';
+            const isSame =
+              data.thousandsSeparator === thousandsSeparator &&
+              data.decimalSeparator === decimalSeparator;
+
+            // Skip if nothing changes
+            if ((isCustom && isEmpty) || (!isCustom && isSame)) {
+              return;
+            }
+
+            if (isEmpty) {
+              setIsCustom(true);
+            } else {
+              setIsCustom(false);
               proceedParsingByNumberFormat(data.thousandsSeparator, data.decimalSeparator);
             }
+
             onChange(data);
           }}
         >
@@ -120,7 +148,7 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
           </SelectContent>
         </Select>
 
-        {selectedNumberFormat === 'Custom' && (
+        {isCustom && (
           <>
             {/* Thousands Separator */}
             <div className="flex items-center gap-3">
@@ -134,9 +162,12 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
                 id="thousands-separator"
                 type="text"
                 placeholder=","
-                value={thousandsSeparator}
+                value={customNumberFormat.thousandsSeparator}
                 onChange={e =>
-                  onChange({ thousandsSeparator: e.target.value.slice(0, 1), decimalSeparator })
+                  setCustomNumberFormat({
+                    thousandsSeparator: e.target.value.slice(0, 1),
+                    decimalSeparator: customNumberFormat.decimalSeparator,
+                  })
                 }
                 className={`w-12 h-8 text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ml-auto ${
                   separatorsAreEqual
@@ -160,9 +191,12 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
                 id="decimal-separator"
                 type="text"
                 placeholder="."
-                value={decimalSeparator}
+                value={customNumberFormat.decimalSeparator}
                 onChange={e =>
-                  onChange({ thousandsSeparator, decimalSeparator: e.target.value.slice(0, 1) })
+                  setCustomNumberFormat({
+                    thousandsSeparator: customNumberFormat.thousandsSeparator,
+                    decimalSeparator: e.target.value.slice(0, 1),
+                  })
                 }
                 className={`w-12 h-8 text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ml-auto ${
                   hasValidationError
@@ -194,7 +228,17 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
             <div>
               <Button
                 type="button"
-                onClick={() => proceedParsingByNumberFormat(thousandsSeparator, decimalSeparator)}
+                onClick={() => {
+                  onChange(customNumberFormat);
+                  if (isCustom) {
+                    proceedParsingByNumberFormat(
+                      customNumberFormat.thousandsSeparator,
+                      customNumberFormat.decimalSeparator
+                    );
+                  } else {
+                    proceedParsingByNumberFormat(thousandsSeparator, decimalSeparator);
+                  }
+                }}
                 variant="outline"
                 className="w-full"
                 disabled={hasValidationError || isUploading}
