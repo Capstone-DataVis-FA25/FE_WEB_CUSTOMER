@@ -1294,6 +1294,7 @@
   "chart_editor_show_legend": "Hiển thị chú giải",
   "chart_editor_show_grid": "Hiển thị lưới",
   "chart_editor_show_points": "Hiển thị điểm",
+  "chart_editor_show_point_values": "Hiển thị giá trị điểm",
   "chart_editor_styling": "Kiểu dáng",
   "chart_editor_line_width": "Độ rộng đường",
   "chart_editor_point_radius": "Bán kính điểm",

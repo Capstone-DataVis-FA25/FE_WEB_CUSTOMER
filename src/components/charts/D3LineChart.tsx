@@ -148,6 +148,7 @@ export interface D3LineChartProps {
   titleFontSize?: number;
   labelFontSize?: number;
   legendFontSize?: number;
+  showPointValues?: boolean; // Show values on data points
 }
 
 const D3LineChart: React.FC<D3LineChartProps> = ({
@@ -203,6 +204,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   titleFontSize = 16,
   labelFontSize = 12,
   legendFontSize = 11,
+  showPointValues = false, // Default to not showing values on points
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -251,7 +253,11 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
   const hideCurrentTooltip = () => {
     if (currentTooltipRef.current) {
-      currentTooltipRef.current.transition().duration(3000).style('opacity', 0).remove();
+      currentTooltipRef.current
+        .transition()
+        .duration(200) // Fast fade out transition
+        .style('opacity', 0)
+        .remove();
       currentTooltipRef.current = null;
     }
   };
@@ -479,33 +485,58 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     const hasXAxisLabel = xAxisLabel && showAxisLabels;
     const hasYAxisLabel = yAxisLabel && showAxisLabels;
 
+    console.log('🔍 MARGIN DEBUG:', {
+      originalMargin: margin,
+      hasXAxisLabel,
+      hasYAxisLabel,
+      currentWidth,
+      legendPosition,
+    });
+
     const responsiveMargin = {
-      top: currentWidth < 640 ? margin.top * 0.8 : margin.top,
-      right: currentWidth < 640 ? margin.right * 0.7 : margin.right,
+      top: currentWidth < 640 ? Math.max(margin.top * 0.8, 15) : margin.top,
+      right: currentWidth < 640 ? Math.max(margin.right * 0.7, 20) : margin.right,
       bottom:
         legendPosition === 'bottom'
           ? currentWidth < 640
-            ? margin.bottom * 2.5
-            : margin.bottom * 2.0
+            ? Math.max(margin.bottom * 2.5, 120) // Ensure minimum space for legend
+            : Math.max(margin.bottom * 2.0, 100)
           : hasXAxisLabel
             ? currentWidth < 640
-              ? margin.bottom + 30 // Extra space for X-axis label on mobile
-              : margin.bottom + 35 // Extra space for X-axis label on desktop
+              ? Math.max(margin.bottom + 30, 50) // Ensure minimum 50px for X-axis label on mobile
+              : Math.max(margin.bottom + 35, 55) // Ensure minimum 55px for X-axis label on desktop
             : currentWidth < 640
-              ? margin.bottom * 0.8
-              : margin.bottom,
+              ? Math.max(margin.bottom * 0.8, 25) // Minimum 25px on mobile
+              : Math.max(margin.bottom, 30), // Minimum 30px for X-axis ticks
       left: hasYAxisLabel
         ? currentWidth < 640
-          ? margin.left * 0.7 + 20 // Extra space for Y-axis label on mobile
-          : margin.left + 25 // Extra space for Y-axis label on desktop
+          ? Math.max(margin.left * 0.7 + 20, 60) // Ensure minimum 60px for Y-axis label on mobile
+          : Math.max(margin.left + 25, 70) // Ensure minimum 70px for Y-axis label on desktop
         : currentWidth < 640
-          ? margin.left * 0.7
-          : margin.left,
+          ? Math.max(margin.left * 0.7, 40) // Minimum 40px on mobile for Y-axis ticks
+          : Math.max(margin.left, 50), // Minimum 50px for Y-axis ticks
     };
 
-    // Set dimensions
-    const innerWidth = currentWidth - responsiveMargin.left - responsiveMargin.right;
-    const innerHeight = currentHeight - responsiveMargin.top - responsiveMargin.bottom;
+    console.log('✅ FINAL RESPONSIVE MARGIN:', responsiveMargin);
+
+    // Set dimensions with validation
+    const innerWidth = Math.max(currentWidth - responsiveMargin.left - responsiveMargin.right, 100);
+    const innerHeight = Math.max(
+      currentHeight - responsiveMargin.top - responsiveMargin.bottom,
+      100
+    );
+
+    console.log('📐 CHART DIMENSIONS:', {
+      containerSize: { width: currentWidth, height: currentHeight },
+      margins: responsiveMargin,
+      innerSize: { width: innerWidth, height: innerHeight },
+    });
+
+    // Validate dimensions
+    if (innerWidth < 50 || innerHeight < 50) {
+      console.warn('⚠️  Chart dimensions too small, skipping render');
+      return;
+    }
 
     // Add background
     svg
@@ -640,7 +671,6 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
     if (hasStringXValues) {
       // For categorical data, use all unique values as ticks
-      const uniqueXValues = [...new Set(xValues)] as string[];
       xAxis = d3
         .axisBottom(xScale)
         .tickSizeInner(showAxisTicks ? 6 : 0)
@@ -1004,10 +1034,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
               .duration(200)
               .style('opacity', 1);
 
-            // Start 5-second auto-hide timer
-            tooltipTimeoutRef.current = setTimeout(() => {
-              hideCurrentTooltip();
-            }, 5000);
+            // Tooltip will stay visible while hovering, no auto-hide timeout
           })
           .on('mouseleave', function () {
             d3.select(this)
@@ -1016,16 +1043,55 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
               .attr('d', getPointPath(seriesPointStyle, seriesPointRadius))
               .attr('stroke-width', 2);
 
-            // Start timeout to hide tooltip after mouseleave
-            tooltipTimeoutRef.current = setTimeout(() => {
-              hideCurrentTooltip();
-            }, 5000);
+            // Hide tooltip immediately when not hovering
+            clearTooltipTimeout();
+            hideCurrentTooltip();
           })
           .transition()
           .delay(animationDuration + index * 100)
           .duration(300)
           .ease(d3.easeBackOut)
           .attr('d', getPointPath(seriesPointStyle, seriesPointRadius));
+
+        // Add point values if showPointValues is enabled
+        if (showPointValues) {
+          g.selectAll(`.point-value-${index}`)
+            .data(validPoints)
+            .enter()
+            .append('text')
+            .attr('class', `point-value-${index}`)
+            .attr('x', d => {
+              const xVal = d[xAxisKey];
+              if (hasStringXValues) {
+                return (xScale as any)(xVal) + (xScale as any).bandwidth() / 2;
+              } else {
+                return xScale(xVal as number);
+              }
+            })
+            .attr('y', d => {
+              return yScale(d[key] as number) - seriesPointRadius - 8; // Position above the point
+            })
+            .attr('text-anchor', 'middle')
+            .attr('fill', textColor)
+            .style('font-size', `${Math.max(responsiveFontSize.axis - 2, 9)}px`)
+            .style('font-weight', '600')
+            .style('opacity', 0)
+            .style(
+              'text-shadow',
+              isDarkMode ? '1px 1px 2px rgba(0,0,0,0.8)' : '1px 1px 2px rgba(255,255,255,0.8)'
+            )
+            .text(d => {
+              const yValue = d[key] as number;
+              if (yAxisFormatter) {
+                return yAxisFormatter(yValue);
+              }
+              return typeof yValue === 'number' ? yValue.toLocaleString() : String(yValue);
+            })
+            .transition()
+            .delay(animationDuration + index * 100 + 300) // Show after points are drawn
+            .duration(300)
+            .style('opacity', 0.8);
+        }
       }
     });
 
@@ -1129,12 +1195,15 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           }
         });
 
-        // Handle mouse leave to stop dragging
+        // Handle mouse leave to stop dragging and hide tooltips
         svg.on('mouseleave', function () {
           if (isDragging) {
             isDragging = false;
             svg.style('cursor', 'default');
           }
+          // Also hide any tooltips when leaving the chart area
+          clearTooltipTimeout();
+          hideCurrentTooltip();
         });
       }
 
@@ -1156,6 +1225,14 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
             );
         });
       }
+    }
+
+    // Global mouseleave handler for tooltip management (even when zoom/pan disabled)
+    if (!enableZoom && !enablePan && showTooltip) {
+      svg.on('mouseleave', function () {
+        clearTooltipTimeout();
+        hideCurrentTooltip();
+      });
     }
 
     // Add axis labels with responsive font sizes
@@ -1558,6 +1635,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     legendFontSize,
     yFormatterType,
     xFormatterType,
+    showPointValues,
   ]);
 
   console.log('arrayData: ', arrayData);

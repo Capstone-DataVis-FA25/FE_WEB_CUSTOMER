@@ -113,6 +113,7 @@ export interface BaseChartConfig {
 export interface LineChartConfig extends BaseChartConfig {
   disabledLines: string[];
   showPoints: boolean;
+  showPointValues: boolean; // Show values on data points
   curve: keyof typeof curveOptions;
   lineWidth: number;
   pointRadius: number;
@@ -122,6 +123,7 @@ export interface LineChartConfig extends BaseChartConfig {
 export interface AreaChartConfig extends BaseChartConfig {
   disabledLines: string[];
   showPoints: boolean;
+  showPointValues: boolean; // Show values on data points
   showStroke: boolean;
   curve: keyof typeof curveOptions;
   lineWidth: number;

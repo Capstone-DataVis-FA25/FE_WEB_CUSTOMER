@@ -210,6 +210,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     showLegend: true,
     showGrid: true,
     showPoints: true,
+    showPointValues: true,
     animationDuration: 1000,
     curve: 'curveMonotoneX',
     xAxisStart: 'auto', // Default to auto
@@ -1369,6 +1370,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                   titleFontSize: config.titleFontSize,
                   labelFontSize: config.labelFontSize,
                   legendFontSize: config.legendFontSize,
+                  showPointValues: config.showPointValues,
                 }}
                 curveType={config.curve}
                 curveOptions={curveOptions}
@@ -1716,6 +1718,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     showLegend={config.showLegend}
                     showGrid={config.showGrid}
                     showPoints={config.showPoints}
+                    showPointValues={config.showPointValues}
                     animationDuration={config.animationDuration}
                     curve={curveOptions[config.curve]}
                     yAxisFormatter={getYAxisFormatter}

@@ -931,6 +931,7 @@ interface ChartSettingsConfig {
   titleFontSize: number;
   labelFontSize: number;
   legendFontSize: number;
+  showPointValues?: boolean; // Show values on data points (line chart specific)
 }
 
 interface ChartSettingsProps {
@@ -1143,19 +1144,40 @@ export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
 
             {/* Line Chart Specific: Show Points */}
             {chartType === 'line' && (
-              <div className="flex items-center space-x-2 mb-1">
-                <Checkbox
-                  id="showPoints"
-                  checked={showPoints}
-                  onCheckedChange={checked => onUpdateChartSpecific({ showPoints: !!checked })}
-                />
-                <Label
-                  htmlFor="showPoints"
-                  className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                >
-                  {t('chart_editor_show_points')}
-                </Label>
-              </div>
+              <>
+                <div className="flex items-center space-x-2 mb-1">
+                  <Checkbox
+                    id="showPoints"
+                    checked={showPoints}
+                    onCheckedChange={checked => onUpdateChartSpecific({ showPoints: !!checked })}
+                  />
+                  <Label
+                    htmlFor="showPoints"
+                    className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                  >
+                    {t('chart_editor_show_points')}
+                  </Label>
+                </div>
+
+                {/* Show Point Values - only show if points are enabled */}
+                {showPoints && (
+                  <div className="flex items-center space-x-2 mb-1">
+                    <Checkbox
+                      id="showPointValues"
+                      checked={config.showPointValues}
+                      onCheckedChange={checked =>
+                        onUpdateChartSpecific({ showPointValues: !!checked })
+                      }
+                    />
+                    <Label
+                      htmlFor="showPointValues"
+                      className="text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      {t('chart_editor_show_point_values')}
+                    </Label>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Styling Configuration */}

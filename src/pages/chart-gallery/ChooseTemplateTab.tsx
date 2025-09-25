@@ -82,8 +82,8 @@ export default function ChooseTemplateTab() {
       // Display settings
       showLegend: true,
       showGrid: true,
-      showPoints: false,
-      showValues: false,
+      showPoints: true,
+      showPointValues: true,
       showTooltip: true,
       enableZoom: false,
       enablePan: false,
@@ -144,6 +144,7 @@ export default function ChooseTemplateTab() {
           ...baseConfig,
           lineType: 'basic' as const,
           showPoints: true,
+          showPointValues: false,
           curveType: 'curveMonotoneX' as const,
           strokeWidth: 2,
         };
@@ -160,6 +161,7 @@ export default function ChooseTemplateTab() {
           ...baseConfig,
           areaType: 'basic' as const,
           showPoints: false,
+          showPointValues: false,
           curveType: 'curveMonotoneX' as const,
           fillOpacity: 0.6,
           strokeWidth: 2,
@@ -193,6 +195,7 @@ export default function ChooseTemplateTab() {
           ...baseConfig,
           scatterType: 'basic' as const,
           showPoints: true,
+          showPointValues: false,
           showGrid: true,
           enableZoom: true,
           enablePan: true,
@@ -203,6 +206,7 @@ export default function ChooseTemplateTab() {
           ...baseConfig,
           bubbleType: 'basic' as const,
           showPoints: true,
+          showPointValues: false,
           showGrid: true,
           enableZoom: true,
           enablePan: true,
@@ -222,6 +226,7 @@ export default function ChooseTemplateTab() {
           fillOpacity: 0.2,
           strokeWidth: 2,
           showPoints: true,
+          showPointValues: false,
         };
       case 'treemap':
         return {
