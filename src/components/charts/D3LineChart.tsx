@@ -352,11 +352,18 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         const newWidth = Math.min(containerWidth - 16, width); // 16px for minimal padding
         let newHeight = newWidth * aspectRatio;
 
+        // Add extra height for axis labels
+        const hasXAxisLabel = xAxisLabel && showAxisLabels;
+
+        if (hasXAxisLabel) {
+          newHeight += containerWidth < 640 ? 35 : 40; // Extra space for X-axis label
+        }
+
         // Adjust chart size when legend is bottom to make room for legend
         if (showLegend && legendPosition === 'bottom') {
           // Reduce chart height to make room for legend and add extra space
-          newHeight = newHeight * 0.8; // Reduce chart to 70% to make room
-          const legendExtraHeight = 150; // Extra space for bottom legend (increased to accommodate X-axis label)
+          newHeight = newHeight * 0.8; // Reduce chart to 80% to make room
+          const legendExtraHeight = 150; // Extra space for bottom legend
           newHeight += legendExtraHeight;
         }
 
@@ -372,7 +379,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     }
 
     return () => resizeObserver.disconnect();
-  }, [width, height, showLegend, legendPosition]);
+  }, [width, height, showLegend, legendPosition, showAxisLabels, xAxisLabel]);
 
   // Monitor theme changes
   useEffect(() => {
@@ -468,7 +475,10 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
     const svg = d3.select(svgRef.current);
 
-    // Responsive margin adjustments - optimized spacing
+    // Responsive margin adjustments - optimized spacing with label support
+    const hasXAxisLabel = xAxisLabel && showAxisLabels;
+    const hasYAxisLabel = yAxisLabel && showAxisLabels;
+
     const responsiveMargin = {
       top: currentWidth < 640 ? margin.top * 0.8 : margin.top,
       right: currentWidth < 640 ? margin.right * 0.7 : margin.right,
@@ -477,10 +487,20 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           ? currentWidth < 640
             ? margin.bottom * 2.5
             : margin.bottom * 2.0
-          : currentWidth < 640
-            ? margin.bottom * 0.8
-            : margin.bottom,
-      left: currentWidth < 640 ? margin.left * 0.7 : margin.left, // Reduced left spacing on mobile
+          : hasXAxisLabel
+            ? currentWidth < 640
+              ? margin.bottom + 30 // Extra space for X-axis label on mobile
+              : margin.bottom + 35 // Extra space for X-axis label on desktop
+            : currentWidth < 640
+              ? margin.bottom * 0.8
+              : margin.bottom,
+      left: hasYAxisLabel
+        ? currentWidth < 640
+          ? margin.left * 0.7 + 20 // Extra space for Y-axis label on mobile
+          : margin.left + 25 // Extra space for Y-axis label on desktop
+        : currentWidth < 640
+          ? margin.left * 0.7
+          : margin.left,
     };
 
     // Set dimensions
@@ -1560,6 +1580,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           height={dimensions.height}
           className="w-full h-auto chart-svg"
           viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+          style={{ display: 'block' }} // Ensure proper block display
           preserveAspectRatio="xMidYMid meet"
         />
       </div>
