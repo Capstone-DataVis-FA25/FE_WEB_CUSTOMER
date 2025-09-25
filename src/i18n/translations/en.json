@@ -1305,6 +1305,7 @@
   "chart_editor_show_legend": "Show Legend",
   "chart_editor_show_grid": "Show Grid",
   "chart_editor_show_points": "Show Points",
+  "chart_editor_show_point_values": "Show Point Values",
   "chart_editor_styling": "Styling",
   "chart_editor_line_width": "Line Width",
   "chart_editor_point_radius": "Point Radius",

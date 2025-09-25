@@ -211,7 +211,7 @@ function CreateDatasetPageContent() {
         if (created && created.id) {
           const slug = buildSlug({ id: created.id, name: created.name });
           window.setTimeout(() => {
-            window.location.href = `/datasets/${slug}`; // using href to fully reset state/context
+            window.location.href = `/workspace/datasets`; // using href to fully reset state/context
           }, 300);
         }
 

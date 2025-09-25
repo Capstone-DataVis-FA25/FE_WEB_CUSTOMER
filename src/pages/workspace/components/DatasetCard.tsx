@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import Routers from '@/router/routers';
 
 import type { Dataset } from '@/features/dataset/datasetAPI';
+import Utils from '@/utils/Utils';
 
 interface DatasetCardProps {
   dataset: Dataset;
@@ -173,9 +174,14 @@ const DatasetCard: React.FC<DatasetCardProps> = ({ dataset, onDelete, isDeleting
           </div>
         </div>
 
-        <div className="text-xs text-muted-foreground flex items-center space-x-2 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
-          <Calendar className="h-3 w-3 text-blue-500" />
-          <span className="font-medium">Updated {formatDate(dataset.updatedAt)}</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+            <Calendar className="h-3 w-3 text-blue-500" />
+            <span className="font-medium">{t('chart_updated', 'Updated')}:</span>
+            <span className="text-gray-700 dark:text-gray-300">
+              {Utils.getDate(dataset.updatedAt, 18)}
+            </span>
+          </div>
         </div>
 
         <div className="flex space-x-2 pt-2">

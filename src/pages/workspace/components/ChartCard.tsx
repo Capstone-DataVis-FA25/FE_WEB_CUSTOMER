@@ -9,11 +9,14 @@ import {
   Edit3,
   Share,
   Trash2,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Chart as BaseChart } from '@/features/chart/chartAPI';
+import Utils from '@/utils/Utils';
+import { useTranslation } from 'react-i18next';
 
 // Extended Chart type for UI with additional optional fields
 type Chart = BaseChart & {
@@ -126,6 +129,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
     if (onView) {
       onView(chart);
     }
+    onEdit(chart.id);
   };
 
   const handleShare = () => {
@@ -133,6 +137,8 @@ const ChartCard: React.FC<ChartCardProps> = ({
       onShare(chart);
     }
   };
+
+  const { t } = useTranslation();
 
   return (
     <Card
@@ -153,10 +159,8 @@ const ChartCard: React.FC<ChartCardProps> = ({
             {getChartIcon(chart.type)}
           </div>
           <div className="flex flex-col space-y-1 items-end">
-            <Badge
-              variant="outline"
-              className="text-xs font-medium border-gray-200 dark:border-gray-700"
-            >
+            <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+              <BarChart3 className="w-3 h-3" />
               {getChartTypeLabel(chart.type)}
             </Badge>
             {chart.category && (
@@ -176,7 +180,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
           <CardTitle className="text-lg leading-tight hover:text-emerald-600 transition-colors cursor-pointer group-hover:text-emerald-600">
             {chart.name}
           </CardTitle>
-          <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem]">
+          <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem] text-gray-700 dark:text-gray-300">
             {chart.description || 'No description available'}
           </CardDescription>
         </div>
@@ -186,19 +190,21 @@ const ChartCard: React.FC<ChartCardProps> = ({
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center space-x-1 text-muted-foreground">
             <Database className="h-3 w-3" />
-            <span className="truncate">
+            <span className="font-medium">{t('chart_dataset', 'Dataset:')}:</span>
+            <span className="text-gray-700 dark:text-gray-300">
               {chart.dataset?.name || chart.datasetName || `Dataset ${chart.datasetId}`}
             </span>
           </div>
-          <div className="flex items-center space-x-1 text-muted-foreground">
-            <Eye className="h-3 w-3" />
-            <span>{chart.views || 0}</span>
-          </div>
         </div>
 
-        <div className="text-xs text-muted-foreground flex items-center space-x-1 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
-          <Calendar className="h-3 w-3 text-blue-500" />
-          <span className="font-medium">Updated {formatDate(chart.updatedAt)}</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+            <Clock className="w-3 h-3 text-gray-700 dark:text-gray-300" />
+            <span className="font-medium">{t('chart_updated', 'Updated')}:</span>
+            <span className="text-gray-700 dark:text-gray-300">
+              {Utils.getDate(chart.updatedAt, 18)}
+            </span>
+          </div>
         </div>
 
         {/* Action buttons */}
@@ -209,8 +215,8 @@ const ChartCard: React.FC<ChartCardProps> = ({
             onClick={() => onEdit(chart.id)}
             className="flex-1 group-hover:border-emerald-500 group-hover:text-emerald-600 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-900/20 transition-all duration-200"
           >
-            <Edit3 className="h-3 w-3 mr-1" />
-            Edit
+            <Eye className="h-3 w-3" />
+            View Chart
           </Button>
           <Button
             variant="ghost"
@@ -219,10 +225,10 @@ const ChartCard: React.FC<ChartCardProps> = ({
             className={`px-2 transition-all duration-200 ${
               isHovered
                 ? 'opacity-100 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                : 'opacity-0 group-hover:opacity-100'
+                : 'opacity-100 group-hover:opacity-100'
             }`}
           >
-            <Eye className="h-3 w-3" />
+            <Edit3 className="h-3 w-3 mr-1" />{' '}
           </Button>
           <Button
             variant="ghost"
@@ -231,7 +237,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
             className={`px-2 transition-all duration-200 ${
               isHovered
                 ? 'opacity-100 bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400'
-                : 'opacity-0 group-hover:opacity-100'
+                : 'opacity-100 group-hover:opacity-100'
             }`}
           >
             <Share className="h-3 w-3" />
@@ -244,7 +250,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
             className={`px-2 transition-all duration-200 disabled:opacity-50 ${
               isHovered
                 ? 'opacity-100 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-                : 'opacity-0 group-hover:opacity-100'
+                : 'opacity-100 group-hover:opacity-100'
             }`}
           >
             <Trash2 className="h-3 w-3" />

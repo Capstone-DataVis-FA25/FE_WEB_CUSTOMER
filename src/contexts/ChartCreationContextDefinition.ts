@@ -50,6 +50,8 @@ export interface ChartConfiguration {
   yAxisLabel: string;
   showLegend: boolean;
   showGrid: boolean;
+  showPoints: boolean;
+  showPointValues: boolean;
   colors: string[];
   width: number;
   height: number;

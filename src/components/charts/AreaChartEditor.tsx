@@ -38,8 +38,6 @@ export interface AreaChartEditorProps {
   onDataChange?: (data: ChartDataPoint[]) => void;
   onColorsChange?: (colors: ColorConfig) => void;
   onFormattersChange?: (formatters: FormatterConfig) => void;
-  title?: string;
-  description?: string;
 }
 
 const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
@@ -682,12 +680,6 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
                 onToggleCollapse={() => toggleSection('basicSettings')}
                 onUpdateConfig={updateConfig}
                 onApplySizePreset={applySizePreset}
-                onExportConfig={exportConfigToJSON}
-                onImportConfig={importConfigFromJSON}
-                onResetToDefault={resetToDefaultConfig}
-                showConfigDropdown={showConfigDropdown}
-                onToggleConfigDropdown={() => setShowConfigDropdown(!showConfigDropdown)}
-                configDropdownRef={configDropdownRef}
               />
             </motion.div>
 

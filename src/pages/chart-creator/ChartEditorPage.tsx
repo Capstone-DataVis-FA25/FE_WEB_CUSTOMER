@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import LineChartEditor from '@/components/charts/LineChartEditor';
 import BarChartEditor from '@/components/charts/BarChartEditor';
 import AreaChartEditor from '@/components/charts/AreaChartEditor';
@@ -12,11 +13,23 @@ import { useDataset } from '@/features/dataset/useDataset';
 import type { Dataset } from '@/features/dataset/datasetAPI';
 import { convertArrayToChartData, convertChartDataToArray } from '@/utils/dataConverter';
 import { useCharts } from '@/features/charts/useCharts';
-import { Database, BarChart3, Palette, Settings, ArrowLeft, Save, AlertCircle } from 'lucide-react';
+import {
+  Database,
+  BarChart3,
+  ArrowLeft,
+  Save,
+  AlertCircle,
+  Calendar,
+  Clock,
+  RotateCcw,
+} from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { Chart } from '@/features/charts/chartTypes';
-import { convertBackendDataToChartData } from '@/utils/dataConverter';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
+import { useToast } from '@/hooks/useToast';
+import { ModalConfirm } from '@/components/ui/modal-confirm';
+import { useModalConfirm } from '@/hooks/useModal';
+import Utils from '@/utils/Utils';
 
 const ChartEditorPage: React.FC = () => {
   const { t } = useTranslation();
@@ -24,8 +37,10 @@ const ChartEditorPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { getDatasetById } = useDataset();
-  const [_, setLoading] = useState(false);
-  const [dataset, setDataset] = useState<Dataset | null>(null);
+  const { showSuccess, showError } = useToast();
+  const modalConfirm = useModalConfirm();
+  const [, setLoading] = useState(false);
+  const [dataset, setDataset] = useState<Dataset | undefined>(undefined);
 
   // Get parameters from location state (priority) or URL parameters (fallback)
   const locationState = location.state as {
@@ -53,9 +68,6 @@ const ChartEditorPage: React.FC = () => {
     typeChart,
     passedDataset,
   });
-  console.log('ChartEditorPage - Full location object:', location);
-  console.log('ChartEditorPage - locationState:', locationState);
-  console.log('ChartEditorPage - URL searchParams:', Object.fromEntries(searchParams));
 
   // Load dataset if not passed directly and we have a datasetId
   useEffect(() => {
@@ -98,22 +110,79 @@ const ChartEditorPage: React.FC = () => {
     () => convertArrayToChartData(salesData) // Convert salesData to ChartDataPoint[]
   );
   console.log(chartData);
-  const [chartConfig, setChartConfig] = useState<any>(null);
+  const [chartConfig, setChartConfig] = useState<Record<string, unknown> | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Fetch chart data when in edit mode
+  // Edit mode states
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editableName, setEditableName] = useState('');
+  const [editableDescription, setEditableDescription] = useState('');
+
+  // Original values for change tracking
+  const [originalName, setOriginalName] = useState('');
+  const [originalDescription, setOriginalDescription] = useState('');
+  const [originalConfig, setOriginalConfig] = useState<Record<string, unknown> | null>(null);
+
+  // Check if there are any changes
+  const hasChanges = useMemo(() => {
+    // Only check for changes if we're in edit mode and have initialized the original values
+    if (mode !== 'edit' || !isInitialized) {
+      return false;
+    }
+
+    const nameChanged = editableName !== originalName;
+    const descriptionChanged = editableDescription !== originalDescription;
+
+    // Handle config comparison more carefully
+    const configChanged = (() => {
+      // If both are null or undefined, no change
+      if (!chartConfig && !originalConfig) return false;
+      // If one is null and other isn't, there's a change
+      if (!chartConfig || !originalConfig) return true;
+      // Compare JSON strings
+      return JSON.stringify(chartConfig) !== JSON.stringify(originalConfig);
+    })();
+
+    return nameChanged || descriptionChanged || configChanged;
+  }, [
+    editableName,
+    originalName,
+    editableDescription,
+    originalDescription,
+    chartConfig,
+    originalConfig,
+    mode,
+    isInitialized,
+  ]);
+
+  // Fetch chart data when chartId is available (for both edit and view modes)
   useEffect(() => {
-    if (mode === 'edit' && chartId && !isInitialized) {
+    if (chartId && !isInitialized) {
       getChartById(chartId);
     } else if (mode === 'create') {
+      // Initialize original values for create mode (empty values)
+      setOriginalName('');
+      setOriginalDescription('');
+      setOriginalConfig(null);
       setIsInitialized(true);
     }
   }, [chartId, mode, getChartById, isInitialized]);
 
   // Update local state when chart data is loaded
   useEffect(() => {
-    if (currentChart && mode === 'edit' && !isInitialized) {
-      // Load chart configuration
+    if (currentChart && !isInitialized) {
+      // Initialize editable fields first
+      setEditableName(currentChart.name || '');
+      setEditableDescription(currentChart.description || '');
+
+      // Set original values for change tracking (before setting current values)
+      setOriginalName(currentChart.name || '');
+      setOriginalDescription(currentChart.description || '');
+      setOriginalConfig(currentChart.config || null);
+
+      // Load chart configuration after setting originals
+      console.log('Current chart config:', currentChart.config);
       if (currentChart.config) {
         setChartConfig(currentChart.config);
       }
@@ -128,7 +197,7 @@ const ChartEditorPage: React.FC = () => {
             name: string;
             type: string;
             index: number;
-            data: any[];
+            data: (string | number)[];
           }>;
         };
       };
@@ -143,10 +212,12 @@ const ChartEditorPage: React.FC = () => {
 
       setIsInitialized(true);
     }
-  }, [currentChart, mode, isInitialized]);
+  }, [currentChart, isInitialized]);
 
   // Convert dataset headers to chart data format using the utility function
-  const convertDatasetToChartFormat = (headers: any[]) => {
+  const convertDatasetToChartFormat = (
+    headers: Array<{ name: string; type: string; index: number; data: (string | number)[] }>
+  ) => {
     try {
       if (!headers || headers.length === 0) return [];
 
@@ -157,35 +228,93 @@ const ChartEditorPage: React.FC = () => {
 
       if (validHeaders.length === 0) return [];
 
-      // Use the convertBackendDataToChartData utility function
-      return convertBackendDataToChartData(validHeaders, {
-        headerTransform: (header: string) => header,
-        skipEmptyRows: true,
-        defaultValue: 0,
-        validateTypes: true,
-      });
+      // Create array format and use convertArrayToChartData instead
+      const headerNames = validHeaders.map(h => h.name);
+      const rowCount = Math.max(...validHeaders.map(h => h.data.length));
+      const rows: (string | number)[][] = [];
+
+      for (let i = 0; i < rowCount; i++) {
+        const row = validHeaders.map(h => h.data[i] ?? 0);
+        rows.push(row);
+      }
+
+      const arrayFormat = [headerNames, ...rows];
+      return convertArrayToChartData(arrayFormat as (string | number)[][]);
     } catch (error) {
       console.error('Error converting dataset to chart format:', error);
       return [];
     }
   };
 
-  // Handle save/update
-  const handleSave = async (updatedConfig: any) => {
-    if (mode === 'edit' && chartId && currentChart) {
-      try {
-        const updateData = {
-          name: currentChart.name,
-          description: currentChart.description,
-          config: updatedConfig,
-        };
+  // Handle name edit - just update state, don't save immediately
+  const handleNameSave = () => {
+    // Just exit editing mode, changes will be saved when user clicks Save button
+    setIsEditingName(false);
+  };
 
-        await updateChart(chartId, updateData);
-        // Show success message or handle success
-      } catch (error) {
-        console.error('Error updating chart:', error);
-        // Handle error
-      }
+  // Handle description edit - just update state, don't save immediately
+  const handleDescriptionSave = () => {
+    // Just exit editing mode, changes will be saved when user clicks Save button
+    setIsEditingDescription(false);
+  };
+
+  // Handle save/update with confirmation - saves all changes at once
+  const handleSave = async (updatedConfig: Record<string, unknown>) => {
+    if (mode === 'edit' && chartId && currentChart) {
+      modalConfirm.openConfirm(async () => {
+        try {
+          const updateData = {
+            name: editableName.trim() || currentChart.name,
+            description: editableDescription.trim() || currentChart.description,
+            configuration: updatedConfig,
+          };
+
+          await updateChart(chartId, updateData);
+
+          // Update original values after successful save
+          setOriginalName(editableName.trim() || currentChart.name || '');
+          setOriginalDescription(editableDescription.trim() || currentChart.description || '');
+          setOriginalConfig(updatedConfig);
+
+          showSuccess(t('chart_updated', 'Chart updated successfully'));
+        } catch (error) {
+          console.error('Error updating chart:', error);
+          showError(t('chart_update_error', 'Failed to update chart'));
+          throw error; // Re-throw to let modal handle loading state
+        }
+      });
+    }
+  };
+
+  // Handle config changes from chart editors
+  const handleConfigChange = useCallback(
+    (newConfig: unknown) => {
+      console.log('Config change received:', newConfig);
+      console.log('Current mode:', mode);
+      console.log('Previous config:', chartConfig);
+      setChartConfig(newConfig as Record<string, unknown>);
+    },
+    [mode, chartConfig]
+  );
+
+  // Handle reset to original values
+  const handleReset = () => {
+    if (hasChanges) {
+      modalConfirm.openConfirm(async () => {
+        try {
+          // Reset all values to original
+          setEditableName(originalName);
+          setEditableDescription(originalDescription);
+          if (originalConfig) {
+            setChartConfig(originalConfig);
+          }
+
+          showSuccess(t('chart_reset', 'Chart reset to original values'));
+        } catch (error) {
+          console.error('Error resetting chart:', error);
+          showError(t('chart_reset_error', 'Failed to reset chart'));
+        }
+      });
     }
   };
 
@@ -194,7 +323,7 @@ const ChartEditorPage: React.FC = () => {
     navigate('/workspace/charts');
   };
 
-  // Show loading state
+  // Show loading state - wait for chart data to load and config to be initialized
   if (loading && !isInitialized) {
     return (
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
@@ -208,8 +337,22 @@ const ChartEditorPage: React.FC = () => {
     );
   }
 
+  // Show loading state when we have chartId but config is not ready yet
+  if (chartId && !chartConfig && !loading) {
+    return (
+      <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="mt-4 text-lg text-muted-foreground">
+            {t('chart_editor_loading_config', 'Loading chart configuration...')}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Show error state
-  if (error && mode === 'edit') {
+  if (error && chartId) {
     return (
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
@@ -244,29 +387,51 @@ const ChartEditorPage: React.FC = () => {
 
   // Chart configuration based on type and loaded data
   const getChartConfig = () => {
-    // Use loaded config if available, otherwise use defaults
-    if (chartConfig && mode === 'edit') {
+    // Use loaded config if available, regardless of mode
+    console.log('getChartConfig - current chartConfig state:', chartConfig);
+    if (chartConfig) {
+      const validCurves = [
+        'curveMonotoneX',
+        'curveLinear',
+        'curveMonotoneY',
+        'curveBasis',
+        'curveCardinal',
+        'curveCatmullRom',
+        'curveStep',
+        'curveStepBefore',
+        'curveStepAfter',
+      ] as const;
+      const curve =
+        typeof chartConfig.curve === 'string' &&
+        validCurves.includes(chartConfig.curve as (typeof validCurves)[number])
+          ? (chartConfig.curve as (typeof validCurves)[number])
+          : ('curveMonotoneX' as const);
+
+      const margin =
+        chartConfig.margin &&
+        typeof chartConfig.margin === 'object' &&
+        'top' in chartConfig.margin &&
+        'right' in chartConfig.margin &&
+        'bottom' in chartConfig.margin &&
+        'left' in chartConfig.margin
+          ? (chartConfig.margin as { top: number; right: number; bottom: number; left: number })
+          : { top: 20, right: 40, bottom: 60, left: 80 };
+
       return {
         ...chartConfig,
-        // Ensure required fields are present
-        width: chartConfig.width || 800,
-        height: chartConfig.height || 400,
-        showLegend: chartConfig.showLegend !== undefined ? chartConfig.showLegend : true,
-        showGrid: chartConfig.showGrid !== undefined ? chartConfig.showGrid : true,
-        showPoints: chartConfig.showPoints !== undefined ? chartConfig.showPoints : true,
-        animationDuration: chartConfig.animationDuration || 1000,
-        curve: chartConfig.curve || 'curveMonotoneX',
-        margin: chartConfig.margin || { top: 20, right: 40, bottom: 60, left: 80 },
+        // Ensure required fields are present with correct types
+        width: typeof chartConfig.width === 'number' ? chartConfig.width : 800,
+        height: typeof chartConfig.height === 'number' ? chartConfig.height : 400,
+        showLegend: typeof chartConfig.showLegend === 'boolean' ? chartConfig.showLegend : true,
+        showGrid: typeof chartConfig.showGrid === 'boolean' ? chartConfig.showGrid : true,
+        showPoints: typeof chartConfig.showPoints === 'boolean' ? chartConfig.showPoints : true,
+        animationDuration:
+          typeof chartConfig.animationDuration === 'number' ? chartConfig.animationDuration : 1000,
+        curve,
+        margin,
       };
     }
-
-    // Default configuration for create mode or fallback
-    const baseConfig = {
-      title: currentChart?.name || t('chart_editor_title', 'Financial Data Analysis'),
-      xAxisLabel: t('chart_editor_xAxisLabel', 'Month'),
-      yAxisLabel: t('chart_editor_yAxisLabel', 'Revenue ($)'),
-      xAxisKey: 'month',
-      yAxisKeys: ['ecommerce', 'retail', 'wholesale'],
+    return {
       width: 800,
       height: 400,
       showLegend: true,
@@ -276,94 +441,6 @@ const ChartEditorPage: React.FC = () => {
       curve: 'curveMonotoneX' as const,
       margin: { top: 20, right: 40, bottom: 60, left: 80 },
     };
-
-    // Add chart-type specific configurations based on typeChart
-    switch (typeChart) {
-      case 'line':
-        return {
-          ...baseConfig,
-          lineType: 'basic',
-          curveType: 'curveMonotoneX',
-          strokeWidth: 2,
-          showPoints: true,
-        };
-      case 'bar':
-      case 'column':
-        return {
-          ...baseConfig,
-          barType: 'grouped',
-          barWidth: 0.8,
-          barGap: 0.2,
-          showValues: true,
-          showPoints: false, // bars don't show points
-        };
-      case 'area':
-        return {
-          ...baseConfig,
-          areaType: 'basic',
-          fillOpacity: 0.6,
-          curveType: 'curveMonotoneX',
-          strokeWidth: 2,
-          showPoints: false,
-        };
-      case 'pie':
-        return {
-          ...baseConfig,
-          pieType: 'basic',
-          innerRadius: 0,
-          showLabels: true,
-          showPercentages: true,
-          showPoints: false, // pie charts don't show points
-          showGrid: false, // pie charts don't have grid
-        };
-      case 'donut':
-        return {
-          ...baseConfig,
-          donutType: 'basic',
-          innerRadius: 50,
-          showLabels: true,
-          showPercentages: true,
-          showPoints: false,
-          showGrid: false,
-        };
-      case 'scatter':
-        return {
-          ...baseConfig,
-          scatterType: 'basic',
-          showPoints: true,
-          strokeWidth: 0,
-          enableZoom: true,
-          enablePan: true,
-        };
-      case 'bubble':
-        return {
-          ...baseConfig,
-          bubbleType: 'basic',
-          showPoints: true,
-          strokeWidth: 0,
-          enableZoom: true,
-          enablePan: true,
-        };
-      case 'heatmap':
-        return {
-          ...baseConfig,
-          heatmapType: 'grid',
-          colorScheme: 'blues',
-          showGrid: false,
-          showPoints: false,
-        };
-      case 'radar':
-        return {
-          ...baseConfig,
-          radarType: 'polygon',
-          fillOpacity: 0.2,
-          strokeWidth: 2,
-          showPoints: true,
-          showGrid: false,
-        };
-      default:
-        return baseConfig;
-    }
   };
 
   const getChartFormatters = () => ({
@@ -375,72 +452,26 @@ const ChartEditorPage: React.FC = () => {
     customXFormatter: '',
   });
 
-  // Convert dataset to chart data format (string | number)[][]
-  const convertDatasetToChartData = (dataset: Dataset): (string | number)[][] => {
-    if (!dataset.headers || dataset.headers.length === 0) {
-      return salesData; // Fallback to sample data
-    }
-
-    // Create header row
-    const headerRow = dataset.headers.map(h => h.name);
-
-    // Create data rows
-    const dataRows: (string | number)[][] = [];
-
-    // Create data rows
-    for (let i = 0; i < dataset.rowCount; i++) {
-      const row: (string | number)[] = [];
-      dataset.headers.forEach(header => {
-        const cellValue = header.data?.[i] ?? '';
-        row.push(cellValue);
-      });
-      dataRows.push(row);
-    }
-
-    // Combine header and data rows
-    const chartData = [headerRow, ...dataRows];
-
-    console.log('Converted chart data:', chartData);
-    return chartData;
-  };
-
   // Render the appropriate chart editor based on type
   const renderChartEditor = () => {
-    // Use passed dataset or loaded dataset
-    // const currentDataset = dataset || passedDataset;
-    // const chartData = currentDataset ? convertDatasetToChartData(currentDataset) : salesData;
-
     const config = getChartConfig();
+    console.log('renderChartEditor - using config:', config);
     const formatters = getChartFormatters();
 
     // Common props for all chart editors - convert ChartDataPoint[] to array format
     const arrayData = chartData.length > 0 ? convertChartDataToArray(chartData) : [];
-    console.log('arrayData', arrayData);
+    console.log('Array data for chart editor:', arrayData);
+    console.log('Chart config for editor:', config);
     const commonProps = {
       initialArrayData: arrayData,
       initialConfig: config,
       initialFormatters: formatters,
-      title: config.title,
-      description:
-        mode === 'edit' && currentChart
-          ? `${t('chart_editor_editing', 'Editing')}: ${currentChart.name}`
-          : undefined,
+      onConfigChange: mode === 'edit' ? handleConfigChange : () => {}, // Disable config changes when not in edit mode
     };
 
     switch (typeChart.toLowerCase()) {
       case 'line':
-        return (
-          <LineChartEditor
-            {...commonProps}
-            description={
-              commonProps.description ||
-              t(
-                'chart_editor_line_desc',
-                'Interactive line chart editor with customizable settings'
-              )
-            }
-          />
-        );
+        return <LineChartEditor {...commonProps} dataset={dataset} />;
       case 'bar':
         return (
           <BarChartEditor
@@ -449,25 +480,10 @@ const ChartEditorPage: React.FC = () => {
               ...config,
               barType: 'grouped' as const,
             }}
-            description={
-              commonProps.description ||
-              t('chart_editor_bar_desc', 'Interactive bar chart editor with customizable settings')
-            }
           />
         );
       case 'area':
-        return (
-          <AreaChartEditor
-            {...commonProps}
-            description={
-              commonProps.description ||
-              t(
-                'chart_editor_area_desc',
-                'Interactive area chart editor with customizable settings'
-              )
-            }
-          />
-        );
+        return <AreaChartEditor {...commonProps} />;
       default:
         // Default to bar chart if type is not recognized
         return (
@@ -478,11 +494,6 @@ const ChartEditorPage: React.FC = () => {
               barType: 'grouped' as const,
             }}
             initialFormatters={formatters}
-            title={config.title}
-            description={t(
-              'chart_editor_bar_desc',
-              'Interactive bar chart editor with customizable settings'
-            )}
           />
         );
     }
@@ -528,7 +539,7 @@ const ChartEditorPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex flex-col">
       {/* Header Section */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -546,27 +557,123 @@ const ChartEditorPage: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center space-x-2">
-                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {mode === 'edit' && currentChart
-                      ? currentChart.name
-                      : t('chart_editor_title_main', 'Chart Editor')}
-                  </h1>
-                  {mode === 'edit' && (
-                    <Badge variant="outline" className="text-xs">
-                      {t('chart_editor_mode_edit', 'Editing')}
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2">
+                    {currentChart ? (
+                      <>
+                        {isEditingName && mode === 'edit' ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={editableName}
+                              onChange={e => setEditableName(e.target.value)}
+                              className="w-100 text-xl font-bold bg-transparent border-dashed border-gray-300 px-2 py-1"
+                              onBlur={handleNameSave}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  handleNameSave();
+                                } else if (e.key === 'Escape') {
+                                  setEditableName(editableName); // Keep current value
+                                  setIsEditingName(false);
+                                }
+                              }}
+                              autoFocus
+                            />
+                          </div>
+                        ) : (
+                          <h1
+                            className={`text-xl font-bold text-gray-900 dark:text-white ${
+                              mode === 'edit'
+                                ? 'cursor-pointer hover:text-blue-600 transition-colors'
+                                : 'cursor-default'
+                            }`}
+                            onClick={() => {
+                              if (mode === 'edit') {
+                                setIsEditingName(true);
+                              }
+                            }}
+                          >
+                            {editableName || currentChart.name}
+                          </h1>
+                        )}
+                      </>
+                    ) : (
+                      <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                        {t('chart_editor_title_main', 'Chart Editor')}
+                      </h1>
+                    )}
+                  </div>
                   <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                     <BarChart3 className="w-3 h-3" />
                     {chartInfo.name}
                   </Badge>
-                  {(datasetId || currentChart?.datasetId) && (
-                    <Badge variant="outline" className="flex items-center gap-1 text-xs">
+                </div>
+                <div className="flex flex-col gap-2 mt-1">
+                  {currentChart && (
+                    <div className="flex items-center gap-1">
                       <Database className="w-3 h-3" />
-                      {t('dataset_id', 'Dataset')}: {datasetId || currentChart?.datasetId}
-                    </Badge>
+                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                        {t('description', 'Description')}:
+                      </span>
+                      {isEditingDescription && mode === 'edit' ? (
+                        <Input
+                          value={editableDescription}
+                          onChange={e => setEditableDescription(e.target.value)}
+                          className="w-200 text-xl font-bold bg-transparent border-dashed border-gray-300 px-2 py-1"
+                          onBlur={handleDescriptionSave}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && e.ctrlKey) {
+                              handleDescriptionSave();
+                            } else if (e.key === 'Escape') {
+                              setEditableDescription(editableDescription); // Keep current value
+                              setIsEditingDescription(false);
+                            }
+                          }}
+                          placeholder="Click to add description..."
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className={`text-xs text-gray-700 dark:text-gray-300 ${
+                            mode === 'edit'
+                              ? 'cursor-pointer hover:text-blue-600 transition-colors'
+                              : 'cursor-default'
+                          }`}
+                          onClick={() => {
+                            if (mode === 'edit') {
+                              setIsEditingDescription(true);
+                            }
+                          }}
+                          style={{ fontWeight: '500', fontSize: '14px' }}
+                        >
+                          {editableDescription ||
+                            currentChart.description ||
+                            'Click to add description...'}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {currentChart && (
+                    <div className="flex items-center gap-4">
+                      {currentChart.createdAt && (
+                        <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                          <Calendar className="w-3 h-3 text-gray-700 dark:text-gray-300" />
+                          <span className="font-medium">{t('chart_created', 'Created')}:</span>
+                          <span className="text-gray-700 dark:text-gray-300">
+                            {Utils.getDate(currentChart.createdAt, 18)}
+                          </span>
+                        </div>
+                      )}
+
+                      {currentChart.updatedAt && (
+                        <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                          <Clock className="w-3 h-3 text-gray-700 dark:text-gray-300" />
+                          <span className="font-medium">{t('chart_updated', 'Updated')}:</span>
+                          <span className="text-gray-700 dark:text-gray-300">
+                            {Utils.getDate(currentChart.updatedAt, 18)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -583,29 +690,28 @@ const ChartEditorPage: React.FC = () => {
                 {t('common_back', 'Back')}
               </Button>
               {mode === 'edit' && (
-                <Button
-                  size="sm"
-                  onClick={() => handleSave(getChartConfig())}
-                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                >
-                  <Save className="w-4 h-4" />
-                  {t('common_save', 'Save')}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleReset}
+                    disabled={!hasChanges}
+                    className="flex items-center gap-2"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    {t('common_reset', 'Reset')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleSave(getChartConfig())}
+                    disabled={!hasChanges}
+                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Save className="w-4 h-4" />
+                    {t('common_save', 'Save')}
+                  </Button>
+                </div>
               )}
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-              >
-                <Settings className="w-4 h-4" />
-              </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-              >
-                <Palette className="w-4 h-4" />
-              </motion.div>
             </div>
           </div>
         </div>
@@ -624,6 +730,22 @@ const ChartEditorPage: React.FC = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ModalConfirm
+        isOpen={modalConfirm.isOpen}
+        onClose={modalConfirm.close}
+        onConfirm={modalConfirm.confirm}
+        loading={modalConfirm.isLoading}
+        type="warning"
+        title={t('chart_save_confirm_title', 'Save Changes')}
+        message={t(
+          'chart_save_confirm_message',
+          'Are you sure you want to save these changes? This will update your chart configuration.'
+        )}
+        confirmText={t('common_save', 'Save')}
+        cancelText={t('common_cancel', 'Cancel')}
+      />
     </div>
   );
 };
