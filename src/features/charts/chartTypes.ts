@@ -187,10 +187,10 @@ export interface ChartConfig {
   shadowEffect?: boolean;
 
   // Axis range & scale settings
-  xAxisMin?: number;
-  xAxisMax?: number;
-  yAxisMin?: number;
-  yAxisMax?: number;
+  xAxisMin?: number | null;
+  xAxisMax?: number | null;
+  yAxisMin?: number | null;
+  yAxisMax?: number | null;
   xAxisTickInterval?: number;
   yAxisTickInterval?: number;
   xAxisScale?: 'linear' | 'log' | 'time' | 'category';
@@ -209,7 +209,18 @@ export interface CreateChartRequest {
   name: string;
   description?: string;
   type: ChartType;
-  config: ChartConfig; // Chart configuration object (not JSON string)
+  config: {
+    config: ChartConfig; // Chart configuration object
+    formatters: {
+      useYFormatter: boolean;
+      useXFormatter: boolean;
+      yFormatterType: string;
+      xFormatterType: string;
+      customYFormatter: string;
+      customXFormatter: string;
+    };
+    seriesConfigs: any[];
+  };
   datasetId: string;
 }
 
