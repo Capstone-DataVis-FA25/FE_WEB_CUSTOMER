@@ -1,12 +1,12 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useDataset, type NumberFormat } from '@/contexts/DatasetContext';
+import { useDataset, type DateFormat, type NumberFormat } from '@/contexts/DatasetContext';
 import { useAppSelector } from '@/store/hooks';
 import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
 import { parseTabularContent, transformWideToLong } from '@/utils/dataProcessors';
 import { RefreshCw, Settings, Upload } from 'lucide-react';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToastContext } from '../providers/ToastProvider';
 import DataTransformationSelector from './DataTransformationSelector';
@@ -29,6 +29,8 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
   const {
     datasetName,
     setDatasetName,
+    validationErrors,
+    setValidationError,
     description,
     setDescription,
     selectedDelimiter,
@@ -46,6 +48,12 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
     originalTextContent,
     hasValidationErrors,
   } = useDataset();
+
+  // Initialize dataset name error on mount and when name changes (centralized)
+  useEffect(() => {
+    const isEmpty = !datasetName.trim();
+    setValidationError('datasetName', 'empty', isEmpty);
+  }, [datasetName, setValidationError]);
 
   // Handle delimiter change - reparse the original content with new delimiter
   const handleDelimiterChange = useCallback(
@@ -83,10 +91,10 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
     setNumberFormat(format);
   };
 
-  const handleDateFormatChange = (format: string) => {
+  const handleDateFormatChange = (format: DateFormat) => {
     // No-op if user reselects the same date format
-    if (format === dateFormat.format) return;
-    setDateFormat({ format: format as any });
+    if (format === dateFormat) return;
+    setDateFormat(format);
   };
 
   const handleTransformationColumnChange = (column: string) => {
@@ -164,8 +172,8 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
               disabled={isUploading}
             />
             <div className="flex justify-between items-center mt-1">
-              {!datasetName.trim() && (
-                <p className="text-sm text-gray-600 dark:text-gray-300">
+              {validationErrors.datasetName?.empty && (
+                <p className="text-sm text-red-600 dark:text-red-400">
                   Please enter a name before creating the dataset
                 </p>
               )}
@@ -220,24 +228,24 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
 
           {/* Date Format Settings */}
           <DateFormatSelector
-            format={dateFormat.format}
+            format={dateFormat}
             onChange={handleDateFormatChange}
             disabled={isUploading}
           />
 
           {/* Data Transformation Selector */}
-          <DataTransformationSelector
+          {/* <DataTransformationSelector
             headers={originalParsedData?.headers.map(h => h.name) || []}
             value={transformationColumn ?? ''}
             onChange={handleTransformationColumnChange}
             disabled={isUploading || !originalParsedData}
-          />
+          /> */}
 
           {/* Action Buttons */}
           <div className="space-y-3 pt-4">
             <Button
               onClick={onUpload}
-              disabled={isUploading || !datasetName.trim() || hasValidationErrors()}
+              disabled={isUploading || hasValidationErrors()}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isUploading ? (

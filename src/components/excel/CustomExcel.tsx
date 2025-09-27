@@ -2,6 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useDataset, type DateFormat, type NumberFormat } from '@/contexts/DatasetContext';
 import { Button } from '@/components/ui/button';
 import * as XLSX from 'xlsx';
 import saveAs from 'file-saver';
@@ -59,56 +60,6 @@ const isValidValue = (type: DataHeader['type'], v: string): boolean => {
 };
 
 // Normalization / conversion when changing type
-interface ConvertResult {
-  ok: boolean;
-  value: string;
-  changed: boolean;
-}
-const tryConvert = (type: DataHeader['type'], raw: string): ConvertResult => {
-  const original = raw;
-  const v = raw.trim();
-  if (v === '') return { ok: true, value: '', changed: false };
-  if (type === 'text') return { ok: true, value: original, changed: false };
-  if (type === 'number') {
-    const cleaned = v.replace(/,/g, '');
-    if (!/^[-+]?\d+$/.test(cleaned)) return { ok: false, value: original, changed: false };
-    const normalized = String(parseInt(cleaned, 10));
-    return { ok: true, value: normalized, changed: normalized !== original };
-  }
-  if (type === 'date') {
-    const str = v.replace(/\//g, '-');
-    // Direct ISO
-    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return { ok: true, value: str, changed: str !== original };
-    // Try D-M-YYYY or M-D-YYYY (1/2 digits)
-    if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(str)) {
-      const [a, b, y] = str.split('-');
-      const day = parseInt(a, 10);
-      const month = parseInt(b, 10);
-      // Heuristic: if first > 12 treat first as day else assume D-M (European). (Could be ambiguous; keep simple)
-      if (day <= 12 && parseInt(b, 10) > 12) {
-        // swap to keep day <=31; but if second >12 then second is day. leave as parsed
-      }
-      // Validate
-      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-        const iso = `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        if (/^\d{4}-\d{2}-\d{2}$/.test(iso))
-          return { ok: true, value: iso, changed: iso !== original };
-      }
-    }
-    // Try YYYY/M/D or YYYY-M-D
-    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(str)) {
-      const [y, m, d] = str.split('-');
-      const month = parseInt(m, 10);
-      const day = parseInt(d, 10);
-      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-        const iso = `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        return { ok: true, value: iso, changed: iso !== original };
-      }
-    }
-    return { ok: false, value: original, changed: false };
-  }
-  return { ok: true, value: original, changed: false };
-};
 
 // =============== Component =================
 const DEFAULT_COLS: DataHeader[] = [
@@ -145,8 +96,16 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   const [historyIndex, setHistoryIndex] = useState(-1);
   // New states for validation UX
   const [touchedCells, setTouchedCells] = useState<Set<string>>(new Set());
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const {
+    setExcelErrors,
+    validationErrors,
+    tryConvert,
+    tryConvertColumn,
+    validateDuplicateColumns,
+  } = useDataset();
+  // Temporary edits per cell; applied on blur/enter only
+  const [tempEdits, setTempEdits] = useState<Record<string, string>>({});
 
   // Large dataset heuristics
   const LARGE_ROW_THRESHOLD = 2000;
@@ -183,6 +142,13 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       setHistoryIndex(0);
     }
   }, [columns, data, history.length, historyEnabled]);
+
+  // Validate duplicate columns whenever columns change
+  useEffect(() => {
+    if (columns.length > 0) {
+      validateDuplicateColumns(columns);
+    }
+  }, [columns, validateDuplicateColumns]);
 
   const commit = useCallback(
     (nextData: string[][], nextCols: DataHeader[], skipHistory = false) => {
@@ -275,64 +241,65 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   }, [undo, redo, mode]);
 
   // Generic mutation helpers
-  const setCell = (r: number, c: number, val: string) => {
-    // For date normalization only (do not block typing)
-    const col = columns[c];
-    if (col?.type === 'date') {
-      val = val.replace(/\//g, '-');
-    }
-    // Only update local state; defer history commit to blur/Enter to avoid duplicate / rapid history states
-    setData(prev => {
-      const nd = [...prev];
-      const row = [...nd[r]];
-      row[c] = val;
-      nd[r] = row;
-      return nd;
-    });
-  };
+  // setCell no longer used with temp editing; keep minimal helper if needed in future
   const setHeader = (c: number, val: string) => {
     const nc = deepClone(columns, true).map((col, i) => (i === c ? { ...col, name: val } : col));
     nc[c].name = val;
     commit(data, nc);
   };
+
   const setType = (c: number, val: 'text' | 'number' | 'date') => {
     if (columns[c].type === val) return;
     setInfoMessage(null);
-    // Attempt conversion & validation
-    const invalidRows: number[] = [];
-    const changedRows: number[] = [];
-    const nextData = deepClone(data, true).map(r => [...r]);
-    for (let ri = 0; ri < nextData.length; ri++) {
-      const current = nextData[ri][c] ?? '';
-      const conv = tryConvert(val, current);
-      if (!conv.ok) {
-        invalidRows.push(ri + 1);
-        if (invalidRows.length >= 10) break;
-      } else if (conv.changed) {
-        nextData[ri][c] = conv.value;
-        changedRows.push(ri + 1);
-      } else if (conv.ok && conv.value !== current) {
-        // value different but not flagged changed? keep semantics
-        nextData[ri][c] = conv.value;
-        if (!changedRows.includes(ri + 1)) changedRows.push(ri + 1);
-      }
-    }
-    if (invalidRows.length) {
-      setErrorMessage(
-        `Không thể đổi kiểu cột: ${invalidRows.length} dòng không hợp lệ (ví dụ dòng: ${invalidRows.slice(0, 5).join(', ')}). Hãy sửa dữ liệu trước.`
-      );
-      return;
-    }
-    const nc = columns.map((col, i) => (i === c ? { ...col, type: val } : col));
-    commit(nextData, nc);
-    setErrorMessage(null);
-    if (changedRows.length) {
-      setInfoMessage(
-        `Đã chuẩn hoá ${changedRows.length} giá trị cho cột "${columns[c].name}" (ví dụ dòng: ${changedRows.slice(0, 5).join(', ')})`
-      );
-    }
-    // When type changes we re-validate touched cells for this column
+
+    const { nextData, nextColumns } = tryConvertColumn(c, val);
+
+    commit(nextData, nextColumns);
+
     setTouchedCells(prev => new Set([...prev]));
+  };
+
+  // Apply a pending edit for a single cell (trim and commit), then validate
+  const applyCellEdit = (r: number, c: number) => {
+    const key = `${r}-${c}`;
+    const pending = Object.prototype.hasOwnProperty.call(tempEdits, key)
+      ? tempEdits[key]
+      : (data[r][c] ?? '');
+    const finalVal = (pending ?? '').trim();
+
+    // Commit trimmed value to data only (no normalization)
+    const nextData = [...data];
+    const rowCopy = [...nextData[r]];
+    rowCopy[c] = finalVal;
+    nextData[r] = rowCopy;
+    commit(nextData, columns);
+
+    // Validate against current column type and update parseErrors map
+    const colType = columns[c]?.type ?? 'text';
+    const conv = tryConvert(colType, c, r, finalVal);
+    const existing = validationErrors.excelErrors?.parseErrors || {};
+    const next: Record<number, number[]> = { ...existing };
+    const r1 = r + 1;
+    if (conv.ok) {
+      if (next[r1]?.includes(c)) {
+        const remaining = (next[r1] || []).filter(idx => idx !== c);
+        if (remaining.length) next[r1] = remaining;
+        else delete next[r1];
+      }
+    } else {
+      const cols = next[r1] ? [...next[r1]] : [];
+      if (!cols.includes(c)) cols.push(c);
+      next[r1] = cols;
+    }
+    setExcelErrors({ parseErrors: next });
+
+    // Clear temp edit for this cell after applying
+    setTempEdits(prev => {
+      if (!Object.prototype.hasOwnProperty.call(prev, key)) return prev;
+      const nextMap = { ...prev } as Record<string, string>;
+      delete nextMap[key];
+      return nextMap;
+    });
   };
 
   // Add/remove
@@ -402,12 +369,33 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       const aVal = a[columnIndex] || '';
       const bVal = b[columnIndex] || '';
 
+      // Handle empty values - put them at the end
+      if (!aVal && !bVal) return 0;
+      if (!aVal) return direction === 'asc' ? 1 : -1;
+      if (!bVal) return direction === 'asc' ? -1 : 1;
+
       if (columnType === 'number') {
         const aNum = Number.parseFloat(aVal) || 0;
         const bNum = Number.parseFloat(bVal) || 0;
         return direction === 'asc' ? aNum - bNum : bNum - aNum;
+      } else if (columnType === 'date') {
+        // Parse dates and compare
+        const aDate = new Date(aVal);
+        const bDate = new Date(bVal);
+
+        // Handle invalid dates - put them at the end
+        if (isNaN(aDate.getTime()) && isNaN(bDate.getTime())) return 0;
+        if (isNaN(aDate.getTime())) return direction === 'asc' ? 1 : -1;
+        if (isNaN(bDate.getTime())) return direction === 'asc' ? -1 : 1;
+
+        return direction === 'asc'
+          ? aDate.getTime() - bDate.getTime()
+          : bDate.getTime() - aDate.getTime();
       } else {
-        return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        // Text sorting (case-insensitive)
+        return direction === 'asc'
+          ? aVal.toLowerCase().localeCompare(bVal.toLowerCase())
+          : bVal.toLowerCase().localeCompare(aVal.toLowerCase());
       }
     });
 
@@ -432,6 +420,11 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         )
       );
   }, [data, filters]);
+
+  // Map of parse error cells from centralized validation state
+  const parseErrorsMap = useMemo(() => {
+    return validationErrors.excelErrors?.parseErrors || {};
+  }, [validationErrors.excelErrors]);
 
   // Virtualization calculations
   useEffect(() => {
@@ -653,89 +646,95 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
                 <th className="sticky left-0 z-40 bg-gray-100 dark:bg-gray-700 border-r border-b border-gray-300 dark:border-gray-600 w-12 text-center font-semibold">
                   #
                 </th>
-                {columns.map((col, ci) => (
-                  <th
-                    key={ci}
-                    className={`relative group border-b border-r border-gray-300 dark:border-gray-600 p-2 align-top font-semibold text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 ${
-                      selectedColumn === ci ? 'bg-blue-100 dark:bg-blue-900/50' : ''
-                    }`}
-                    style={{ width: col.width || DEFAULT_WIDTH, minWidth: 150 }}
-                    onClick={() => setSelectedColumn(selectedColumn === ci ? null : ci)}
-                  >
-                    <div className="flex items-center gap-1">
-                      {mode === 'edit' && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="icon" variant="ghost" className="w-6 h-6 flex-shrink-0">
-                              {COLUMN_TYPES.find(t => t.value === col.type)?.icon}
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            {COLUMN_TYPES.map(t => (
-                              <DropdownMenuItem
-                                key={t.value}
-                                onClick={() => setType(ci, t.value as DataHeader['type'])}
-                                className="gap-2"
-                              >
-                                {t.icon} {t.label}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                      <input
-                        value={col.name}
-                        readOnly={mode === 'view'}
-                        onChange={e => setHeader(ci, e.target.value)}
-                        className={`flex-grow bg-transparent font-bold text-sm px-2 py-1 rounded-md min-w-0 ${mode === 'edit' ? 'focus:outline-none focus:ring-1 focus:ring-blue-500 hover:bg-gray-50 dark:hover:bg-gray-600' : 'cursor-default'}`}
-                        style={{ maxWidth: '140px' }}
-                      />
-                      {mode === 'edit' && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={e => {
-                            e.stopPropagation();
-                            handleSort(ci);
-                          }}
-                          className="w-6 h-6 flex-shrink-0"
-                          title="Sort column"
-                        >
-                          {sortConfig?.column === ci ? (
-                            sortConfig.direction === 'asc' ? (
-                              <ArrowUp size={12} />
+                {columns.map((col, ci) => {
+                  const isDuplicate =
+                    validationErrors.duplicateColumns?.duplicateColumnIndices.includes(ci) || false;
+                  return (
+                    <th
+                      key={ci}
+                      className={`relative group border-b border-r p-2 align-top font-semibold text-gray-700 dark:text-gray-200 cursor-pointer ${
+                        isDuplicate
+                          ? 'bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-600 hover:bg-red-200 dark:hover:bg-red-800/50'
+                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      } ${selectedColumn === ci ? 'bg-blue-100 dark:bg-blue-900/50' : ''}`}
+                      style={{ width: col.width || DEFAULT_WIDTH, minWidth: 150 }}
+                      onClick={() => setSelectedColumn(selectedColumn === ci ? null : ci)}
+                    >
+                      <div className="flex items-center gap-1">
+                        {mode === 'edit' && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="icon" variant="ghost" className="w-6 h-6 flex-shrink-0">
+                                {COLUMN_TYPES.find(t => t.value === col.type)?.icon}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              {COLUMN_TYPES.map(t => (
+                                <DropdownMenuItem
+                                  key={t.value}
+                                  onClick={() => setType(ci, t.value as DataHeader['type'])}
+                                  className="gap-2"
+                                >
+                                  {t.icon} {t.label}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                        <input
+                          value={col.name}
+                          readOnly={mode === 'view'}
+                          onChange={e => setHeader(ci, e.target.value)}
+                          className={`flex-grow bg-transparent font-bold text-sm px-2 py-1 rounded-md min-w-0 ${mode === 'edit' ? 'focus:outline-none focus:ring-1 focus:ring-blue-500 hover:bg-gray-50 dark:hover:bg-gray-600' : 'cursor-default'}`}
+                          style={{ maxWidth: '140px' }}
+                        />
+                        {mode === 'edit' && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleSort(ci);
+                            }}
+                            className="w-6 h-6 flex-shrink-0 ml-auto"
+                            title="Sort column"
+                          >
+                            {sortConfig?.column === ci ? (
+                              sortConfig.direction === 'asc' ? (
+                                <ArrowUp size={12} />
+                              ) : (
+                                <ArrowDown size={12} />
+                              )
                             ) : (
-                              <ArrowDown size={12} />
-                            )
-                          ) : (
-                            <ArrowUpDown size={12} />
-                          )}
-                        </Button>
+                              <ArrowUpDown size={12} />
+                            )}
+                          </Button>
+                        )}
+                        {selectedColumn === ci && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={e => {
+                              e.stopPropagation();
+                              setSelectedColumn(null);
+                            }}
+                            className="w-6 h-6 flex-shrink-0"
+                          >
+                            <X size={12} className="text-blue-500" />
+                          </Button>
+                        )}
+                      </div>
+                      {mode === 'edit' && (
+                        <input
+                          value={filters[ci] || ''}
+                          onChange={e => changeFilter(ci, e.target.value)}
+                          placeholder="Filter..."
+                          className="w-full text-xs border rounded px-2 py-1 mt-1 bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        />
                       )}
-                      {selectedColumn === ci && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={e => {
-                            e.stopPropagation();
-                            setSelectedColumn(null);
-                          }}
-                          className="w-6 h-6 flex-shrink-0"
-                        >
-                          <X size={12} className="text-blue-500" />
-                        </Button>
-                      )}
-                    </div>
-                    {mode === 'edit' && (
-                      <input
-                        value={filters[ci] || ''}
-                        onChange={e => changeFilter(ci, e.target.value)}
-                        placeholder="Filter..."
-                        className="w-full text-xs border rounded px-2 py-1 mt-1 bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                      />
-                    )}
-                  </th>
-                ))}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -776,12 +775,20 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
                     >
                       <input
                         data-cell={`${i}-${ci}`}
-                        value={row[ci] || ''}
+                        value={
+                          Object.prototype.hasOwnProperty.call(tempEdits, `${i}-${ci}`)
+                            ? tempEdits[`${i}-${ci}`]
+                            : row[ci] || ''
+                        }
                         readOnly={mode === 'view'}
-                        onChange={e => setCell(i, ci, e.target.value)}
+                        onChange={e => {
+                          const key = `${i}-${ci}`;
+                          const val = e.target.value;
+                          setTempEdits(prev => ({ ...prev, [key]: val }));
+                        }}
                         onBlur={() => {
                           setTouchedCells(s => new Set(s).add(`${i}-${ci}`));
-                          commit(data, columns);
+                          applyCellEdit(i, ci);
                         }}
                         onKeyDown={e => {
                           if (e.key === 'Enter') {
@@ -791,10 +798,15 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
                         }}
                         type="text"
                         placeholder={col.type === 'date' ? 'YYYY-MM-DD' : ''}
-                        className={`w-full h-full p-2 bg-transparent border-none text-sm ${mode === 'edit' ? 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-blue-50 dark:focus:bg-blue-900/40' : 'cursor-default'} ${touchedCells.has(`${i}-${ci}`) && !isValidValue(col.type, row[ci] || '') ? 'bg-red-50 dark:bg-red-900/30 ring-1 ring-red-400' : ''}`}
+                        className={`w-full h-full p-2 bg-transparent border-none text-sm ${mode === 'edit' ? 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-blue-50 dark:focus:bg-blue-900/40' : 'cursor-default'} ${
+                          // Highlight strictly based on centralized parse errors
+                          (parseErrorsMap[i + 1]?.includes(ci) ?? false)
+                            ? 'bg-red-50 dark:bg-red-900/30 ring-1 ring-red-400'
+                            : ''
+                        }`}
                         title={
-                          touchedCells.has(`${i}-${ci}`) && !isValidValue(col.type, row[ci] || '')
-                            ? 'Giá trị không hợp lệ cho kiểu ' + col.type
+                          (parseErrorsMap[i + 1]?.includes(ci) ?? false)
+                            ? 'Ô này có lỗi phân tích cú pháp'
                             : ''
                         }
                       />
@@ -822,17 +834,42 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
 
       {mode === 'edit' && (
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-1">
-          {errorMessage && (
-            <div className="text-red-600 dark:text-red-400 flex items-start gap-2">
-              <span>{errorMessage}</span>
-              <button
-                onClick={() => setErrorMessage(null)}
-                className="ml-auto text-red-500 hover:text-red-700 dark:hover:text-red-300"
-              >
-                ×
-              </button>
-            </div>
-          )}
+          {(() => {
+            // Duplicate column errors
+            const duplicateColumns = validationErrors.duplicateColumns;
+            if (duplicateColumns && duplicateColumns.duplicateNames.length > 0) {
+              const duplicateNames = duplicateColumns.duplicateNames.join(', ');
+              return (
+                <div className="text-red-600 dark:text-red-400 flex items-start gap-2">
+                  <span>
+                    Lỗi: Các cột có tên trùng lặp: {duplicateNames}. Vui lòng đổi tên để tránh xung
+                    đột.
+                  </span>
+                </div>
+              );
+            }
+            return null;
+          })()}
+          {(() => {
+            const parseMap = validationErrors.excelErrors?.parseErrors || {};
+            const rows = Object.keys(parseMap)
+              .map(n => Number(n))
+              .filter(n => !Number.isNaN(n))
+              .sort((a, b) => a - b);
+            if (rows.length === 0) return null;
+            const firstRow = rows[0];
+            const firstColIdx = (parseMap[firstRow] || [])[0] ?? 0;
+            const colName = columns[firstColIdx]?.name ?? '';
+            const remaining = Math.max(0, rows.length - 1);
+            const base = `Opps, vui lòng kiểm tra hàng ${firstRow} tại cột "${colName}"`;
+            const msg =
+              remaining > 0 ? `${base}. Còn ${remaining} hàng khác gặp vấn đề.` : `${base}.`;
+            return (
+              <div className="text-red-600 dark:text-red-400 flex items-start gap-2">
+                <span>{msg}</span>
+              </div>
+            );
+          })()}
           {infoMessage && (
             <div className="text-blue-600 dark:text-blue-400 flex items-start gap-2">
               <span>{infoMessage}</span>

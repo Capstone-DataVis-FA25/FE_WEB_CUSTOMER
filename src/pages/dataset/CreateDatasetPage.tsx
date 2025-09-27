@@ -47,6 +47,9 @@ function CreateDatasetPageContent() {
     resetState,
     datasetName,
     description,
+    parsedValues,
+    numberFormat,
+    dateFormat,
   } = useDataset();
 
   // Local state management (non-shareable states)
@@ -183,13 +186,25 @@ function CreateDatasetPageContent() {
         // Use the current working data (includes user modifications)
         for (let columnIndex = 0; columnIndex < currentParsedData.headers.length; columnIndex++) {
           const header = currentParsedData.headers[columnIndex];
-          const columnData = currentParsedData.data.map(row => row[columnIndex] || ''); // Extract column data
+
+          // Use parsed values if available for this column, otherwise use original data
+          let columnData: (string | number | boolean | null)[];
+
+          if (parsedValues[columnIndex] && Array.isArray(parsedValues[columnIndex])) {
+            // Use parsed values from the map, converting undefined to null for API compatibility
+            columnData = parsedValues[columnIndex].map(value =>
+              value === undefined ? null : value
+            );
+          } else {
+            // Fallback to original data
+            columnData = currentParsedData.data.map(row => row[columnIndex] || null);
+          }
 
           headers.push({
             name: header.name,
             type: header.type, // Use the actual column type from user's working data
             index: columnIndex,
-            data: columnData, // This will be the actual column data for the API
+            data: columnData, // This will be the parsed values or original data
           });
         }
       }
@@ -199,7 +214,13 @@ function CreateDatasetPageContent() {
         name: datasetName.trim(),
         headers: headers,
         ...(description && { description: description.trim() }),
+        thousandsSeparator: numberFormat.thousandsSeparator,
+        decimalSeparator: numberFormat.decimalSeparator,
+        dateFormat: dateFormat,
       };
+
+      // Console log the exact request data being sent
+      console.log('🚀 Upload Request Data:', requestData);
 
       // Use Redux thunk instead of direct axios call
       const result = await dispatch(createDatasetThunk(requestData));
@@ -237,6 +258,7 @@ function CreateDatasetPageContent() {
     }
   }, [
     currentParsedData,
+    parsedValues,
     showWarning,
     showSuccess,
     showError,
@@ -244,6 +266,7 @@ function CreateDatasetPageContent() {
     description,
     dispatch,
     t,
+    setCurrentParsedData,
   ]);
 
   // Handle change data (go back to previous upload method and reset shared state)

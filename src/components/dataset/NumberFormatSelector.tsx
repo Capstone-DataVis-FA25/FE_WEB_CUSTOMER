@@ -24,7 +24,7 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
   onChange,
   disabled = false,
 }) => {
-  const { validationErrors, setValidationError } = useDataset();
+  const { validationErrors, setValidationError, revalidateColumnsOfType } = useDataset();
   const { creating: isUploading } = useAppSelector(state => state.dataset);
   const [isCustom, setIsCustom] = useState(false);
   const [customNumberFormat, setCustomNumberFormat] = useState<NumberFormat>({
@@ -90,13 +90,6 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
           numberFormat.value.thousandsSeparator === thousandsSeparator
       )?.key;
 
-  // Placeholder: apply number/date formats to current data (wire actual logic later)
-  const proceedParsingByNumberFormat = useCallback(
-    (thousandsSeparator: string, decimalSeparator: string) => {
-      console.log('Proceed parsing by format', { thousandsSeparator, decimalSeparator });
-    },
-    []
-  );
   return (
     <div>
       <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
@@ -125,9 +118,11 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
               setIsCustom(true);
             } else {
               setIsCustom(false);
-              proceedParsingByNumberFormat(data.thousandsSeparator, data.decimalSeparator);
+              revalidateColumnsOfType('number', {
+                thousandsSeparator: data.thousandsSeparator,
+                decimalSeparator: data.decimalSeparator,
+              });
             }
-
             onChange(data);
           }}
         >
@@ -229,15 +224,22 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
               <Button
                 type="button"
                 onClick={() => {
-                  onChange(customNumberFormat);
-                  if (isCustom) {
-                    proceedParsingByNumberFormat(
-                      customNumberFormat.thousandsSeparator,
-                      customNumberFormat.decimalSeparator
-                    );
-                  } else {
-                    proceedParsingByNumberFormat(thousandsSeparator, decimalSeparator);
+                  // Use either custom or current props as the "new" format
+                  const newFormat = isCustom
+                    ? customNumberFormat
+                    : { thousandsSeparator, decimalSeparator };
+
+                  // Skip if no changes
+                  if (
+                    newFormat.thousandsSeparator === thousandsSeparator &&
+                    newFormat.decimalSeparator === decimalSeparator
+                  ) {
+                    return; // no-op
                   }
+
+                  // Apply change
+                  onChange(newFormat);
+                  revalidateColumnsOfType('number', newFormat);
                 }}
                 variant="outline"
                 className="w-full"

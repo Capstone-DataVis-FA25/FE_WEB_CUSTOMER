@@ -6,10 +6,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useDataset } from '@/contexts/DatasetContext';
+import type { DateFormat } from '@/contexts/DatasetContext';
 
 interface DateFormatSelectorProps {
   format: string;
-  onChange: (value: string) => void;
+  onChange: (value: DateFormat) => void;
   disabled?: boolean;
 }
 
@@ -18,6 +20,7 @@ export const DateFormatSelector: React.FC<DateFormatSelectorProps> = ({
   onChange,
   disabled = false,
 }) => {
+  const { revalidateColumnsOfType } = useDataset();
   const dateFormats = [
     // Common ISO and slashed/dashed
     { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD', example: '2023-12-31' },
@@ -26,8 +29,6 @@ export const DateFormatSelector: React.FC<DateFormatSelectorProps> = ({
     { value: 'YYYY/MM/DD', label: 'YYYY/MM/DD', example: '2023/12/31' },
     { value: 'DD-MM-YYYY', label: 'DD-MM-YYYY', example: '31-12-2023' },
     { value: 'MM-DD-YYYY', label: 'MM-DD-YYYY', example: '12-31-2023' },
-
-    // Additional presets from the list
     { value: 'YYYY-MM', label: 'YYYY-MM', example: '2023-12' },
     { value: 'YY-MM', label: 'YY-MM', example: '23-12' },
     { value: 'MM/YY', label: 'MM/YY', example: '12/23' },
@@ -49,7 +50,8 @@ export const DateFormatSelector: React.FC<DateFormatSelectorProps> = ({
           onValueChange={v => {
             if (disabled) return;
             if (v === format) return; // no-op if same selection
-            onChange(v);
+            revalidateColumnsOfType('date', v as DateFormat);
+            onChange(v as DateFormat);
           }}
         >
           <SelectTrigger
