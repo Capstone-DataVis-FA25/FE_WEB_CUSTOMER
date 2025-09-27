@@ -62,202 +62,150 @@ export default function ChooseTemplateTab() {
   const [showTemplateModal, setShowTemplateModal] = useState(false); // Function to get default chart configuration based on template
   const getDefaultChartConfig = (template: ChartTemplate) => {
     const baseConfig = {
-      title: `${template.name} - ${datasetName || 'Chart'}`,
+      config: {
+        title: `${template.name} - ${datasetName || 'Chart'}`,
+        width: 800,
+        height: 400,
+        margin: {
+          top: 20,
+          left: 80,
+          right: 40,
+          bottom: 60,
+        },
 
-      // Size settings
-      width: 800,
-      height: 400,
+        // Axis configuration
+        xAxisKey: '',
+        yAxisKeys: [],
+        yAxisLabels: [],
+        disabledLines: [],
+        xAxisLabel: '',
+        yAxisLabel: '',
 
-      // Margins
-      margin: {
-        top: 20,
-        right: 40,
-        bottom: 60,
-        left: 80,
+        // Animation settings
+        animationDuration: 1000,
+
+        // Display settings
+        showLegend: true,
+        showGrid: true,
+        showPoints: true,
+        showPointValues: true,
+        showValues: false,
+        showTooltip: true,
+        enableZoom: false,
+        enablePan: false,
+        showAxisLabels: true,
+        showAxisTicks: true,
+
+        // Chart-type specific settings
+        lineType: 'basic' as const,
+        curveType: 'curveMonotoneX' as const,
+        curve: 'curveMonotoneX',
+        strokeWidth: 2,
+        lineWidth: 2,
+        pointRadius: 4,
+
+        // Axis formatting
+        xAxisRotation: 0,
+        yAxisRotation: 0,
+        xAxisFormatterType: 'auto' as const,
+        yAxisFormatterType: 'number' as const,
+
+        // Colors & Theme
+        theme: 'dark',
+        backgroundColor: '#18181b',
+        gridColor: '#e0e0e0',
+        gridOpacity: 0.3,
+        textColor: '#f3f4f6',
+        colorPalette: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#f97316'],
+
+        // Text & Font settings
+        titleFontSize: 18,
+        titleFontFamily: 'Arial, sans-serif',
+        axisLabelFontSize: 12,
+        labelFontSize: 12,
+        axisLabelFontFamily: 'Arial, sans-serif',
+        legendFontSize: 12,
+        legendFontFamily: 'Arial, sans-serif',
+
+        // Legend positioning
+        legendPosition: 'bottom' as const,
+        legendAlignment: 'center' as const,
+        legendSize: 150,
+
+        // Border & Visual effects
+        borderWidth: 0,
+        borderColor: '#23232a',
+        shadowEffect: false,
+
+        // Axis range & scale settings
+        xAxisMin: null,
+        xAxisMax: null,
+        yAxisMin: null,
+        yAxisMax: null,
+        xAxisStart: 'auto',
+        yAxisStart: 'auto',
+        xAxisTickInterval: undefined,
+        yAxisTickInterval: undefined,
+        xAxisScale: 'linear' as const,
+        yAxisScale: 'linear' as const,
+
+        // Padding & Spacing
+        titlePadding: 20,
+        legendPadding: 15,
+        axisPadding: 10,
+
+        // Zoom & pan
+        zoomLevel: 1,
+        zoomExtent: 8,
       },
-
-      // Animation
-      animationDuration: 1000,
-
-      // Display settings
-      showLegend: true,
-      showGrid: true,
-      showPoints: false,
-      showValues: false,
-      showTooltip: true,
-      enableZoom: false,
-      enablePan: false,
-
-      // Axis formatting
-      xAxisRotation: 0,
-      yAxisRotation: 0,
-      xAxisFormatterType: 'auto' as const,
-      yAxisFormatterType: 'number' as const,
-
-      // Colors
-      backgroundColor: '#ffffff',
-      gridColor: '#e0e0e0',
-      textColor: '#333333',
-      colorPalette: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#f97316'],
-
-      // Text & Font settings
-      titleFontSize: 18,
-      titleFontFamily: 'Arial, sans-serif',
-      axisLabelFontSize: 12,
-      axisLabelFontFamily: 'Arial, sans-serif',
-      legendFontSize: 12,
-      legendFontFamily: 'Arial, sans-serif',
-
-      // Legend positioning
-      legendPosition: 'right' as const,
-      legendAlignment: 'center' as const,
-      legendSize: 150,
-
-      // Border & Visual effects
-      borderWidth: 0,
-      borderColor: '#cccccc',
-      shadowEffect: false,
-
-      // Axis range & scale settings
-      xAxisMin: undefined,
-      xAxisMax: undefined,
-      yAxisMin: undefined,
-      yAxisMax: undefined,
-      xAxisTickInterval: undefined,
-      yAxisTickInterval: undefined,
-      xAxisScale: 'linear' as const,
-      yAxisScale: 'linear' as const,
-
-      // Padding & Spacing
-      titlePadding: 20,
-      legendPadding: 15,
-      axisPadding: 10,
-
-      // Zoom & pan
-      zoomLevel: 1,
+      formatters: {
+        useYFormatter: true,
+        useXFormatter: true,
+        yFormatterType: 'number',
+        xFormatterType: 'number',
+        customYFormatter: '',
+        customXFormatter: '',
+      },
+      seriesConfigs: [],
     };
 
-    // Type-specific configurations
+    // Type-specific configurations - merge into config object
     switch (template.type) {
       case 'line':
         return {
           ...baseConfig,
-          lineType: 'basic' as const,
-          showPoints: true,
-          curveType: 'curveMonotoneX' as const,
-          strokeWidth: 2,
+          config: {
+            ...baseConfig.config,
+            lineType: 'basic' as const,
+            showPoints: true,
+            showPointValues: false,
+            curveType: 'curveMonotoneX' as const,
+            strokeWidth: 2,
+          },
         };
       case 'bar':
         return {
           ...baseConfig,
-          barType: 'grouped' as const,
-          barWidth: 0.8,
-          barGap: 0.2,
-          showValues: true,
+          config: {
+            ...baseConfig.config,
+            barType: 'grouped' as const,
+            barWidth: 0.8,
+            barGap: 0.2,
+            showValues: true,
+          },
         };
       case 'area':
         return {
           ...baseConfig,
-          areaType: 'basic' as const,
-          showPoints: false,
-          curveType: 'curveMonotoneX' as const,
-          fillOpacity: 0.6,
-          strokeWidth: 2,
-        };
-      case 'pie':
-        return {
-          ...baseConfig,
-          pieType: 'basic' as const,
-          showLabels: true,
-          showPercentages: true,
-          innerRadius: 0,
-        };
-      case 'donut':
-        return {
-          ...baseConfig,
-          donutType: 'basic' as const,
-          showLabels: true,
-          showPercentages: true,
-          innerRadius: 50,
-        };
-      case 'column':
-        return {
-          ...baseConfig,
-          barType: 'grouped' as const,
-          barWidth: 0.8,
-          barGap: 0.2,
-          showValues: true,
-        };
-      case 'scatter':
-        return {
-          ...baseConfig,
-          scatterType: 'basic' as const,
-          showPoints: true,
-          showGrid: true,
-          enableZoom: true,
-          enablePan: true,
-          strokeWidth: 0,
-        };
-      case 'bubble':
-        return {
-          ...baseConfig,
-          bubbleType: 'basic' as const,
-          showPoints: true,
-          showGrid: true,
-          enableZoom: true,
-          enablePan: true,
-          strokeWidth: 0,
-        };
-      case 'heatmap':
-        return {
-          ...baseConfig,
-          heatmapType: 'grid' as const,
-          colorScheme: 'blues' as const,
-          showGrid: false,
-        };
-      case 'radar':
-        return {
-          ...baseConfig,
-          radarType: 'polygon' as const,
-          fillOpacity: 0.2,
-          strokeWidth: 2,
-          showPoints: true,
-        };
-      case 'treemap':
-        return {
-          ...baseConfig,
-          treemapType: 'squarified' as const,
-          tiling: 'squarify' as const,
-          showLabels: true,
-        };
-      case 'sankey':
-        return {
-          ...baseConfig,
-          sankeyType: 'horizontal' as const,
-          nodeWidth: 20,
-          nodePadding: 10,
-        };
-      case 'gauge':
-        return {
-          ...baseConfig,
-          gaugeType: 'arc' as const,
-          minValue: 0,
-          maxValue: 100,
-          showThreshold: true,
-        };
-      case 'funnel':
-        return {
-          ...baseConfig,
-          funnelType: 'pyramid' as const,
-          showPercentages: true,
-          showLabels: true,
-        };
-      case 'waterfall':
-        return {
-          ...baseConfig,
-          waterfallType: 'standard' as const,
-          showConnectors: true,
-          showTotals: true,
+          config: {
+            ...baseConfig.config,
+            areaType: 'basic' as const,
+            showPoints: false,
+            showPointValues: false,
+            curveType: 'curveMonotoneX' as const,
+            fillOpacity: 0.6,
+            strokeWidth: 2,
+          },
         };
       default:
         return baseConfig;
@@ -282,15 +230,13 @@ export default function ChooseTemplateTab() {
       // Get default configuration for this template
       const defaultConfig = getDefaultChartConfig(template);
 
-      // Create chart with default settings
+      // Create chart with default settings - only include ChartConfig properties
       const chartData = {
-        name: defaultConfig.title,
+        name: defaultConfig.config.title,
+        description: `A ${template.name} chart created from template`,
         datasetId: datasetId,
         type: template.type,
-
-        // Auto-detection will be handled by backend
-        // We just provide the template type and let backend determine x/y axes
-        config: defaultConfig, // Send as object, not JSON string
+        config: defaultConfig,
       };
 
       console.log('ChooseTemplateTab - Creating chart with data:', chartData);

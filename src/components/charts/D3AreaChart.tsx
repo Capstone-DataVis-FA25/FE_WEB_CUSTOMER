@@ -2,17 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
 import type { ColorConfig } from '../../types/chart';
+import { defaultColorsChart } from '@/utils/Utils';
 
-const defaultAreaColors: ColorConfig = {
-  area1: { light: '#3b82f6', dark: '#60a5fa' },
-  area2: { light: '#f97316', dark: '#fb923c' },
-  area3: { light: '#6b7280', dark: '#9ca3af' },
-  area4: { light: '#eab308', dark: '#facc15' },
-  area5: { light: '#ef4444', dark: '#f87171' },
-  area6: { light: '#10b981', dark: '#34d399' },
-  area7: { light: '#8b5cf6', dark: '#a78bfa' },
-  area8: { light: '#f59e0b', dark: '#fbbf24' },
-};
 export interface ChartDataPoint {
   [key: string]: number | string;
 }
@@ -50,7 +41,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
   xAxisKey,
   yAxisKeys,
   disabledLines = [], // Default to no disabled areas
-  colors = defaultAreaColors,
+  colors = defaultColorsChart,
   title,
   yAxisLabel,
   xAxisLabel,
@@ -133,7 +124,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       const enabledAreas = yAxisKeys.filter(key => !disabledLines.includes(key));
       enabledAreas.forEach((key, index) => {
         const colorKey = colors[key] ? key : `area${index + 1}`;
-        result[key] = colors[colorKey]?.[theme] || defaultAreaColors[`area${index + 1}`][theme];
+        result[key] = colors[colorKey]?.[theme] || defaultColorsChart[`color${index + 1}`][theme];
       });
       return result;
     };
@@ -269,11 +260,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       const maxValue = d3.max(allYValues) || 0;
       const minValue = Math.min(0, d3.min(allYValues) || 0);
 
-      yScale = d3
-        .scaleLinear()
-        .domain([minValue, maxValue])
-        .nice()
-        .range([innerHeight, 0]);
+      yScale = d3.scaleLinear().domain([minValue, maxValue]).nice().range([innerHeight, 0]);
 
       // Create overlapping areas for enabled areas only
       enabledAreas.forEach((key, index) => {
@@ -587,7 +574,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
                 const colorKey = colors[key] ? key : `area${index + 1}`;
                 const color =
                   colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
-                  defaultAreaColors[`area${index + 1}`][isDarkMode ? 'dark' : 'light'];
+                  defaultColorsChart[`color${index + 1}`][isDarkMode ? 'dark' : 'light'];
 
                 return (
                   <div

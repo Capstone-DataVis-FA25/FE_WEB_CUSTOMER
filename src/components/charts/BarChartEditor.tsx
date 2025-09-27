@@ -34,8 +34,6 @@ export interface BarChartEditorProps {
   onDataChange?: (data: ChartDataPoint[]) => void;
   onColorsChange?: (colors: ColorConfig) => void;
   onFormattersChange?: (formatters: FormatterConfig) => void;
-  title?: string;
-  description?: string;
 }
 
 const BarChartEditor: React.FC<BarChartEditorProps> = ({
@@ -872,12 +870,6 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                 onToggleCollapse={() => toggleSection('basicSettings')}
                 onUpdateConfig={updates => updateConfig(updates)}
                 onApplySizePreset={applySizePreset}
-                onExportConfig={exportConfigToJSON}
-                onImportConfig={importConfigFromJSON}
-                onResetToDefault={resetToDefaultConfig}
-                showConfigDropdown={showConfigDropdown}
-                onToggleConfigDropdown={() => setShowConfigDropdown(!showConfigDropdown)}
-                configDropdownRef={configDropdownRef}
               />
             </motion.div>
 
