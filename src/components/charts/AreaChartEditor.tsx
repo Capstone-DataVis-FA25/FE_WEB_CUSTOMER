@@ -1,7 +1,21 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Save, Table, X, Minus, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  Plus,
+  Save,
+  Table,
+  X,
+  Minus,
+  TrendingUp,
+  ChevronDown,
+  ChevronUp,
+  Settings,
+  Download,
+  Upload,
+  RotateCcw,
+  Camera,
+} from 'lucide-react';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -104,6 +118,7 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
     titleFontSize: 16,
     labelFontSize: 12,
     legendFontSize: 11,
+    showPointValues: false, // Fix: Add explicit default value
     ...initialConfig,
   };
 
@@ -144,6 +159,7 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
     axisConfiguration: true,
     seriesManagement: true,
     dataEditor: true,
+    importExport: true, // Add missing section
   });
 
   // Config management dropdown state
@@ -518,6 +534,8 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
   // Export configuration to JSON (config only, no data)
   const exportConfigToJSON = () => {
     try {
+      console.log('🔄 EXPORTING CONFIG:');
+
       const exportData = {
         version: '1.0',
         timestamp: new Date().toISOString(),
@@ -607,34 +625,34 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
 
         try {
           const text = await file.text();
-          const importedData = JSON.parse(text);
+          const importData = JSON.parse(text);
 
-          // Basic validation
-          if (
-            !importedData.config ||
-            !importedData.colors ||
-            !importedData.formatters ||
-            !importedData.seriesConfigs
-          ) {
-            throw new Error('Invalid config file structure');
+          console.log('🔄 IMPORTING CONFIG:');
+
+          // Validate the imported data structure
+          if (!importData.config || !importData.colors || !importData.formatters) {
+            throw new Error('Invalid configuration file structure');
           }
 
-          updateConfig(importedData.config);
-          updateColors(importedData.colors);
-          updateFormatters(importedData.formatters);
+          // Apply imported configuration
+          updateConfig(importData.config);
+          updateColors(importData.colors);
+          updateFormatters(importData.formatters);
 
-          // Regenerate series configs with new IDs
-          const importedSeries = importedData.seriesConfigs.map(
-            (series: Partial<SeriesConfig>, index: number) => ({
-              ...series,
-              id: `series-${Date.now()}-${index}`,
-            })
-          );
-          setSeriesConfigs(importedSeries);
+          // Handle series configurations
+          if (importData.seriesConfigs && Array.isArray(importData.seriesConfigs)) {
+            const newSeriesConfigs = importData.seriesConfigs.map(
+              (series: SeriesConfig, index: number) => ({
+                ...series,
+                id: `series-${Date.now()}-${index}`, // Regenerate IDs
+              })
+            );
+            setSeriesConfigs(newSeriesConfigs);
+          }
 
           showSuccess(t('areaChart_editor_configImported'));
         } catch (parseError) {
-          console.error('Import parse error:', parseError);
+          console.error('Parse error:', parseError);
           showError(t('areaChart_editor_invalidConfigFile'));
         }
       };
@@ -642,6 +660,187 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
     } catch (error) {
       console.error('Import error:', error);
       showError(t('areaChart_editor_invalidConfigFile'));
+    }
+  };
+
+  // Helper function to create better SVG data URL
+  const createSVGDataURL = (svgElement: SVGElement): string => {
+    const svgClone = svgElement.cloneNode(true) as SVGElement;
+
+    // Ensure SVG has proper dimensions and namespace
+    const width = svgElement.clientWidth || 800;
+    const height = svgElement.clientHeight || 600;
+
+    svgClone.setAttribute('width', width.toString());
+    svgClone.setAttribute('height', height.toString());
+    svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+
+    // Get all styles and ensure they're embedded
+    const stylesheets = Array.from(document.styleSheets);
+    let styles = '';
+
+    stylesheets.forEach(stylesheet => {
+      try {
+        const rules = Array.from(stylesheet.cssRules);
+        rules.forEach(rule => {
+          if (rule.cssText.includes('svg') || rule.cssText.includes('.chart')) {
+            styles += rule.cssText + '\n';
+          }
+        });
+      } catch {
+        // Cross-origin stylesheets might cause errors
+      }
+    });
+
+    if (styles) {
+      const styleElement = document.createElement('style');
+      styleElement.textContent = styles;
+      svgClone.insertBefore(styleElement, svgClone.firstChild);
+    }
+
+    const svgString = new XMLSerializer().serializeToString(svgClone);
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+  };
+
+  // Export chart as image
+  const exportChartAsImage = async (format: 'png' | 'jpeg' | 'svg' = 'png') => {
+    try {
+      // Find the SVG element within the chart container
+      const chartContainer = document.querySelector('.chart-container');
+      const svgElement = chartContainer?.querySelector('svg') || document.querySelector('svg');
+
+      if (!svgElement) {
+        showError('Không tìm thấy biểu đồ để xuất');
+        return;
+      }
+
+      // Get chart title for filename
+      const chartTitle = config.title || 'area-chart';
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `${chartTitle.replace(/[^a-zA-Z0-9]/g, '-')}-${timestamp}`;
+
+      if (format === 'svg') {
+        // Export as SVG - preserve vector format
+        const svgData = new XMLSerializer().serializeToString(svgElement);
+
+        // Clean up the SVG and add proper styling
+        const cleanSvgData = svgData.replace(/(\w+)?:?xlink=/g, 'xmlns:xlink=');
+
+        const svgBlob = new Blob([cleanSvgData], { type: 'image/svg+xml;charset=utf-8' });
+        const svgUrl = URL.createObjectURL(svgBlob);
+
+        const a = document.createElement('a');
+        a.href = svgUrl;
+        a.download = `${filename}.svg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(svgUrl);
+
+        showSuccess(`Đã xuất biểu đồ thành file SVG`);
+      } else {
+        // Export as raster image (PNG/JPEG)
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+
+          if (!ctx) {
+            showError('Không thể tạo canvas để xuất ảnh');
+            return;
+          }
+
+          // Clone SVG and ensure it has proper dimensions
+          const svgClone = svgElement.cloneNode(true) as SVGElement;
+
+          // Get actual dimensions
+          const svgWidth = svgElement.clientWidth || 800;
+          const svgHeight = svgElement.clientHeight || 600;
+          const scaleFactor = 2; // For better quality
+
+          // Set canvas size
+          canvas.width = svgWidth * scaleFactor;
+          canvas.height = svgHeight * scaleFactor;
+          ctx.scale(scaleFactor, scaleFactor);
+
+          // Set explicit dimensions on cloned SVG
+          svgClone.setAttribute('width', svgWidth.toString());
+          svgClone.setAttribute('height', svgHeight.toString());
+          svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+          // Set background color for JPEG
+          if (format === 'jpeg') {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, svgWidth, svgHeight);
+          }
+
+          // Convert SVG to data URL using helper function
+          const svgDataUrl = createSVGDataURL(svgElement);
+
+          const img = new Image();
+          img.crossOrigin = 'anonymous'; // Enable CORS
+
+          img.onload = () => {
+            try {
+              ctx.drawImage(img, 0, 0, svgWidth, svgHeight);
+
+              // Convert canvas to blob and download
+              canvas.toBlob(
+                blob => {
+                  if (blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${filename}.${format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showSuccess(`Đã xuất biểu đồ thành file ${format.toUpperCase()}`);
+                  } else {
+                    showError('Không thể tạo file ảnh');
+                  }
+                },
+                `image/${format}`,
+                format === 'jpeg' ? 0.9 : 1.0
+              );
+            } catch (drawError) {
+              console.error('Canvas draw error:', drawError);
+              showError('Lỗi khi vẽ biểu đồ lên canvas: ' + drawError);
+            }
+          };
+
+          img.onerror = error => {
+            console.error('Image load error:', error);
+            // Fallback: Provide user instructions
+            const instructions =
+              format === 'png'
+                ? 'Để xuất PNG, vui lòng:\n1. Nhấn F12 → Console → gõ: document.querySelector(".chart-container").style.backgroundColor = "white"\n2. Nhấn chuột phải vào biểu đồ → "Save image as..." → chọn PNG'
+                : 'Để xuất JPEG, vui lòng:\n1. Nhấn F12 → Console → gõ: document.querySelector(".chart-container").style.backgroundColor = "white"\n2. Nhấn chuột phải vào biểu đồ → "Save image as..." → chọn JPEG';
+
+            showError(
+              `Xuất ${format.toUpperCase()} tự động thất bại.\n${instructions}\nHoặc xuất SVG rồi chuyển đổi bằng công cụ khác.`
+            );
+          };
+
+          // Set timeout for image loading
+          setTimeout(() => {
+            if (!img.complete) {
+              showError('Timeout khi tải biểu đồ. Vui lòng thử lại hoặc xuất SVG.');
+            }
+          }, 5000);
+
+          img.src = svgDataUrl;
+        } catch (canvasError) {
+          console.error('Canvas export error:', canvasError);
+          showError(
+            `Lỗi khi xuất ${format.toUpperCase()}: ${canvasError}. Vui lòng thử xuất SVG thay thế.`
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Export image error:', error);
+      showError('Lỗi khi xuất ảnh: ' + (error as Error).message);
     }
   };
 
@@ -855,6 +1054,109 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
                           className="text-xs"
                         >
                           {t('chart_editor_preset_pastel', 'Pastel')}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            </motion.div>
+
+            {/* Import/Export Section */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
+                <CardHeader
+                  className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
+                  onClick={() => toggleSection('importExport')}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Settings className="h-5 w-5" />
+                      {t('chart_editor_chart_actions', 'Import / Export & More')}
+                    </h3>
+                    {collapsedSections.importExport ? (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    )}
+                  </div>
+                </CardHeader>
+                {!collapsedSections.importExport && (
+                  <CardContent className="space-y-4">
+                    {/* Export Image Section */}
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <Camera className="h-4 w-4" />
+                        {t('chart_editor_export_image', 'Export Image')}
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button
+                          onClick={() => exportChartAsImage('png')}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1 text-xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
+                        >
+                          <Download className="h-3 w-3" />
+                          PNG
+                        </Button>
+                        <Button
+                          onClick={() => exportChartAsImage('jpeg')}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1 text-xs bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border-green-200 dark:border-green-800"
+                        >
+                          <Download className="h-3 w-3" />
+                          JPEG
+                        </Button>
+                        <Button
+                          onClick={() => exportChartAsImage('svg')}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1 text-xs bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 border-purple-200 dark:border-purple-800"
+                        >
+                          <Download className="h-3 w-3" />
+                          SVG
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Config Management Section */}
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        {t('chart_editor_config_management', 'Config Management')}
+                      </label>
+                      <div className="grid grid-cols-1 gap-2">
+                        <Button
+                          onClick={exportConfigToJSON}
+                          variant="outline"
+                          size="sm"
+                          className="w-full flex items-center gap-2 text-xs justify-start bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 border-orange-200 dark:border-orange-400"
+                        >
+                          <Download className="h-3 w-3" />
+                          {t('chart_editor_export_config', 'Export Config JSON')}
+                        </Button>
+                        <Button
+                          onClick={importConfigFromJSON}
+                          variant="outline"
+                          size="sm"
+                          className="w-full flex items-center gap-2 text-xs justify-start bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
+                        >
+                          <Upload className="h-3 w-3" />
+                          {t('chart_editor_import_config', 'Import Config JSON')}
+                        </Button>
+                        <Button
+                          onClick={resetToDefaultConfig}
+                          variant="outline"
+                          size="sm"
+                          className="w-full flex items-center gap-2 text-xs justify-start text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 border-red-200 dark:border-red-800"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          {t('chart_editor_reset_config', 'Reset to Default')}
                         </Button>
                       </div>
                     </div>

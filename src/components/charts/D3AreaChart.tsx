@@ -31,6 +31,32 @@ export interface D3AreaChartProps {
   fontSize?: { axis: number; label: number; title: number };
   opacity?: number; // Control area opacity
   stackedMode?: boolean; // Whether to stack areas or overlay them
+
+  // New styling props matching line and bar charts
+  lineWidth?: number;
+  pointRadius?: number;
+  gridOpacity?: number;
+  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
+
+  // New axis props
+  xAxisRotation?: number;
+  yAxisRotation?: number;
+  showAxisLabels?: boolean;
+  showAxisTicks?: boolean;
+
+  // New interaction props
+  enableZoom?: boolean;
+  enablePan?: boolean;
+  zoomExtent?: number;
+  showTooltip?: boolean;
+
+  // New visual props
+  theme?: 'light' | 'dark' | 'auto';
+  backgroundColor?: string;
+  titleFontSize?: number;
+  labelFontSize?: number;
+  legendFontSize?: number;
+  showPointValues?: boolean;
 }
 
 const D3AreaChart: React.FC<D3AreaChartProps> = ({
@@ -56,6 +82,32 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
   fontSize = { axis: 12, label: 14, title: 16 },
   opacity = 0.7,
   stackedMode = false,
+
+  // New styling props with defaults
+  lineWidth = 2,
+  pointRadius = 4,
+  gridOpacity = 0.3,
+  legendPosition = 'bottom',
+
+  // New axis props with defaults
+  xAxisRotation = 0,
+  yAxisRotation = 0,
+  showAxisLabels = true,
+  showAxisTicks = true,
+
+  // New interaction props with defaults
+  enableZoom = false,
+  enablePan = false,
+  zoomExtent = 8,
+  showTooltip = true,
+
+  // New visual props with defaults
+  theme = 'auto',
+  backgroundColor = 'transparent',
+  titleFontSize = 16,
+  labelFontSize = 12,
+  legendFontSize = 11,
+  showPointValues = false,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -97,19 +149,25 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
   // Monitor theme changes
   useEffect(() => {
     const updateTheme = () => {
-      setIsDarkMode(document.documentElement.classList.contains('dark'));
+      if (theme === 'auto') {
+        setIsDarkMode(document.documentElement.classList.contains('dark'));
+      } else {
+        setIsDarkMode(theme === 'dark');
+      }
     };
 
     updateTheme();
 
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-
-    return () => observer.disconnect();
-  }, []);
+    // Listen for theme changes only if theme is auto
+    if (theme === 'auto') {
+      const observer = new MutationObserver(updateTheme);
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class'],
+      });
+      return () => observer.disconnect();
+    }
+  }, [theme]);
 
   useEffect(() => {
     if (!svgRef.current || !data.length) return;
@@ -135,7 +193,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     const axisColor = isDarkMode ? '#9ca3af' : '#374151';
     const gridColor = isDarkMode ? '#4b5563' : '#9ca3af';
     const textColor = isDarkMode ? '#f3f4f6' : '#1f2937';
-    const backgroundColor = isDarkMode ? '#111827' : '#ffffff';
+    const chartBackgroundColor =
+      backgroundColor !== 'transparent' ? backgroundColor : isDarkMode ? '#111827' : '#ffffff';
 
     // Clear previous chart
     d3.select(svgRef.current).selectAll('*').remove();
@@ -159,7 +218,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       .append('rect')
       .attr('width', currentWidth)
       .attr('height', currentHeight)
-      .attr('fill', backgroundColor)
+      .attr('fill', chartBackgroundColor)
       .attr('rx', 8);
 
     // Add subtle Y-axis background area
@@ -337,7 +396,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             .attr('cy', d => yScale(d[key] as number))
             .attr('r', 0)
             .attr('fill', currentColors[key])
-            .attr('stroke', backgroundColor)
+            .attr('stroke', chartBackgroundColor)
             .attr('stroke-width', 2)
             .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
             .on('mouseover', function (_event, d) {
@@ -415,7 +474,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         .attr('stroke', gridColor)
         .attr('stroke-width', 1)
         .attr('stroke-dasharray', '3,3')
-        .attr('opacity', isDarkMode ? 0.5 : 0.7);
+        .attr('opacity', gridOpacity);
 
       // Vertical grid lines
       g.selectAll('.grid-line-vertical')
@@ -430,29 +489,37 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         .attr('stroke', gridColor)
         .attr('stroke-width', 1)
         .attr('stroke-dasharray', '3,3')
-        .attr('opacity', isDarkMode ? 0.3 : 0.5);
+        .attr('opacity', gridOpacity * 0.7);
     }
 
     // X Axis
-    const xAxis = d3.axisBottom(xScale).tickFormat(d => {
-      const value = d.valueOf();
-      if (xAxisFormatter) {
-        return xAxisFormatter(value);
-      }
-      return d3.format('d')(value);
-    });
+    const xAxis = d3
+      .axisBottom(xScale)
+      .tickFormat(d => {
+        const value = d.valueOf();
+        if (xAxisFormatter) {
+          return xAxisFormatter(value);
+        }
+        return d3.format('d')(value);
+      })
+      .tickSizeInner(showAxisTicks ? 6 : 0)
+      .tickSizeOuter(showAxisTicks ? 6 : 0);
 
-    g.append('g')
-      .attr('transform', `translate(0,${innerHeight})`)
-      .call(xAxis)
+    const xAxisGroup = g.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis);
+
+    xAxisGroup
       .selectAll('text')
       .attr('fill', textColor)
       .style('font-size', `${fontSize.axis}px`)
-      .style('font-weight', '500');
+      .style('font-weight', '500')
+      .attr('transform', `rotate(${xAxisRotation})`)
+      .style('text-anchor', xAxisRotation === 0 ? 'middle' : xAxisRotation > 0 ? 'start' : 'end');
 
-    g.select('.domain').attr('stroke', axisColor).attr('stroke-width', 2);
+    xAxisGroup.select('.domain').attr('stroke', axisColor).attr('stroke-width', 2);
 
-    g.selectAll('.tick line').attr('stroke', axisColor);
+    if (showAxisTicks) {
+      xAxisGroup.selectAll('.tick line').attr('stroke', axisColor);
+    }
 
     // Y Axis
     const yAxis = d3
@@ -464,7 +531,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         }
         return value.toLocaleString();
       })
-      .tickSize(-5)
+      .tickSizeInner(showAxisTicks ? -5 : 0)
+      .tickSizeOuter(showAxisTicks ? 6 : 0)
       .tickPadding(8);
 
     const yAxisGroup = g.append('g').call(yAxis);
@@ -476,7 +544,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       .style('font-weight', '600')
       .style('font-family', 'system-ui, -apple-system, sans-serif')
       .attr('text-anchor', 'end')
-      .attr('x', -10);
+      .attr('x', -10)
+      .attr('transform', `rotate(${yAxisRotation})`);
 
     yAxisGroup
       .select('.domain')
@@ -484,14 +553,16 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       .attr('stroke-width', 2)
       .attr('opacity', 0.8);
 
-    yAxisGroup
-      .selectAll('.tick line')
-      .attr('stroke', axisColor)
-      .attr('stroke-width', 1)
-      .attr('opacity', 0.6);
+    if (showAxisTicks) {
+      yAxisGroup
+        .selectAll('.tick line')
+        .attr('stroke', axisColor)
+        .attr('stroke-width', 1)
+        .attr('opacity', 0.6);
+    }
 
     // Add axis labels
-    if (xAxisLabel) {
+    if (xAxisLabel && showAxisLabels) {
       g.append('text')
         .attr('x', innerWidth / 2)
         .attr('y', innerHeight + (currentWidth < 768 ? 40 : 50))
@@ -502,7 +573,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         .text(xAxisLabel);
     }
 
-    if (yAxisLabel) {
+    if (yAxisLabel && showAxisLabels) {
       g.append('text')
         .attr('transform', `rotate(-90)`)
         .attr('x', -innerHeight / 2)
@@ -512,6 +583,135 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         .style('font-size', `${fontSize.label}px`)
         .style('font-weight', '600')
         .text(yAxisLabel);
+    }
+
+    // Enhanced zoom and pan with mouse interactions (similar to BarChart)
+    if (enableZoom || enablePan) {
+      let zoomLevel = 1;
+      let translateX = 0;
+      let translateY = 0;
+      let isDragging = false;
+      let dragStartX = 0;
+      let dragStartY = 0;
+      let dragStartTranslateX = 0;
+      let dragStartTranslateY = 0;
+
+      // Mouse wheel zoom - only if enableZoom is true
+      if (enableZoom) {
+        svg.on('wheel', function (event) {
+          event.preventDefault();
+
+          // Get mouse position relative to the chart
+          const rect = svg.node()?.getBoundingClientRect();
+          if (!rect) return;
+
+          const mouseX = event.clientX - rect.left - responsiveMargin.left;
+          const mouseY = event.clientY - rect.top - responsiveMargin.top;
+
+          const delta = event.deltaY;
+          const scaleFactor = delta > 0 ? 0.9 : 1.1;
+          const newZoomLevel = zoomLevel * scaleFactor;
+
+          // Limit zoom
+          const clampedZoomLevel = Math.max(0.5, Math.min(zoomExtent, newZoomLevel));
+          const actualScaleFactor = clampedZoomLevel / zoomLevel;
+
+          // Calculate new translation to zoom at mouse position
+          const newTranslateX = translateX + (mouseX - translateX) * (1 - actualScaleFactor);
+          const newTranslateY = translateY + (mouseY - translateY) * (1 - actualScaleFactor);
+
+          // Update zoom state
+          zoomLevel = clampedZoomLevel;
+          translateX = newTranslateX;
+          translateY = newTranslateY;
+
+          // Apply zoom and pan transform
+          const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
+          g.attr('transform', transform);
+        });
+      }
+
+      // Mouse drag to pan - only if enablePan is true
+      if (enablePan) {
+        svg.on('mousedown', function (event) {
+          if (event.button !== 0) return; // Only left mouse button
+
+          isDragging = true;
+          dragStartX = event.clientX;
+          dragStartY = event.clientY;
+          dragStartTranslateX = translateX;
+          dragStartTranslateY = translateY;
+
+          // Change cursor to grabbing
+          svg.style('cursor', 'grabbing');
+
+          // Prevent text selection during drag
+          event.preventDefault();
+        });
+
+        svg.on('mousemove', function (event) {
+          if (!isDragging) {
+            // Show grab cursor when pan is enabled
+            if (enablePan) {
+              svg.style('cursor', 'grab');
+            } else {
+              svg.style('cursor', 'default');
+            }
+            return;
+          }
+
+          const deltaX = event.clientX - dragStartX;
+          const deltaY = event.clientY - dragStartY;
+
+          // Update translation based on drag distance
+          translateX = dragStartTranslateX + deltaX;
+          translateY = dragStartTranslateY + deltaY;
+
+          // Apply pan transform
+          const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
+          g.attr('transform', transform);
+        });
+
+        svg.on('mouseup', function () {
+          if (isDragging) {
+            isDragging = false;
+
+            // Reset cursor
+            if (enablePan) {
+              svg.style('cursor', 'grab');
+            } else {
+              svg.style('cursor', 'default');
+            }
+          }
+        });
+
+        // Handle mouse leave to stop dragging
+        svg.on('mouseleave', function () {
+          if (isDragging) {
+            isDragging = false;
+            svg.style('cursor', 'default');
+          }
+        });
+      }
+
+      // Double-click to reset zoom and pan
+      if (enableZoom || enablePan) {
+        svg.on('dblclick', function () {
+          zoomLevel = 1;
+          translateX = 0;
+          translateY = 0;
+
+          svg.style('cursor', 'default');
+
+          g.transition()
+            .duration(300)
+            .ease(d3.easeQuadOut)
+            .attr(
+              'transform',
+              `translate(${responsiveMargin.left},${responsiveMargin.top}) scale(1)`
+            );
+        });
+      }
     }
   }, [
     data,
@@ -536,6 +736,24 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     fontSize,
     opacity,
     stackedMode,
+    lineWidth,
+    pointRadius,
+    gridOpacity,
+    legendPosition,
+    xAxisRotation,
+    yAxisRotation,
+    showAxisLabels,
+    showAxisTicks,
+    enableZoom,
+    enablePan,
+    zoomExtent,
+    showTooltip,
+    theme,
+    backgroundColor,
+    titleFontSize,
+    labelFontSize,
+    legendFontSize,
+    showPointValues,
   ]);
 
   return (
@@ -550,12 +768,12 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       )}
 
       {/* Chart Container */}
-      <div className="relative w-full bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3">
+      <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3">
         <svg
           ref={svgRef}
           width={dimensions.width}
           height={dimensions.height}
-          className="w-full h-auto"
+          className="w-full h-auto chart-svg"
           viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
           preserveAspectRatio="xMidYMid meet"
         />
