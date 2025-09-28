@@ -30,18 +30,26 @@ const DataTransformationSelector: React.FC<DataTransformationSelectorProps> = ({
           <label className="text-xs font-medium text-gray-700 dark:text-gray-300 w-32 flex-shrink-0">
             Stack on
           </label>
-          <div className="ml-auto w-full max-w-xs">
-            <Select value={value} onValueChange={onChange}>
-              <SelectTrigger disabled={disabled}>
-                <SelectValue placeholder="Select column" />
+          <div className="ml-auto w-full max-w-xs min-w-0">
+            <Select
+              value={value}
+              onValueChange={v => {
+                if (v === value) return; // no-op if same selection
+                onChange?.(v);
+              }}
+            >
+              <SelectTrigger disabled={disabled} className="truncate">
+                <SelectValue placeholder="Select column" className="truncate" />
               </SelectTrigger>
               <SelectContent>
                 {/* Show reset option only after a column is chosen */}
                 {value ? <SelectItem value="">Do not stack</SelectItem> : null}
                 {headers && headers.length > 0 ? (
                   headers.map((h, idx) => (
-                    <SelectItem key={`${h}-${idx}`} value={h}>
-                      {h || `Column ${idx + 1}`}
+                    <SelectItem key={`${h}-${idx}`} value={h} className="truncate">
+                      <span className="truncate" title={h || `Column ${idx + 1}`}>
+                        {h || `Column ${idx + 1}`}
+                      </span>
                     </SelectItem>
                   ))
                 ) : (
