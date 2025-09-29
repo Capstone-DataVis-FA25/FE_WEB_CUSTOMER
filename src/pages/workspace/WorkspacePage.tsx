@@ -20,8 +20,7 @@ import { useToastContext } from '@/components/providers/ToastProvider';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import type { Dataset } from '@/features/dataset/datasetAPI';
-import type { Chart as BaseChart } from '@/features/chart/chartAPI';
-
+import type { Chart as BaseChart } from '@/features/charts/chartTypes';
 // const mockCharts = [
 //   {
 //     id: 1,

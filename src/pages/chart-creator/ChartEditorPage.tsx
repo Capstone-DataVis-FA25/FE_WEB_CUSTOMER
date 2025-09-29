@@ -5,9 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import LineChartEditor from '@/components/charts/LineChartEditor';
-import BarChartEditor from '@/components/charts/BarChartEditor';
-import AreaChartEditor from '@/components/charts/AreaChartEditor';
+import UnifiedChartEditor, { type ChartType } from '@/components/charts/UnifiedChartEditor';
+import ChartTypeSwitcher from '@/components/charts/ChartTypeSwitcher';
 import { salesData } from '@/components/charts/data/data';
 import { useDataset } from '@/features/dataset/useDataset';
 import type { Dataset } from '@/features/dataset/datasetAPI';
@@ -54,18 +53,18 @@ const ChartEditorPage: React.FC = () => {
   // Priority: location state > URL parameters > defaults
   const datasetId = locationState?.datasetId || searchParams.get('datasetId') || '';
   const datasetName = locationState?.datasetName || '';
-  const typeChart = (
+  const initialChartType = (
     locationState?.chartType ||
     locationState?.typeChart ||
     searchParams.get('typeChart') ||
     'bar'
-  ).toLowerCase();
+  ).toLowerCase() as ChartType;
   const passedDataset = locationState?.dataset;
 
   console.log('ChartEditorPage received parameters:', {
     datasetId,
     datasetName,
-    typeChart,
+    initialChartType,
     passedDataset,
   });
 
@@ -101,17 +100,21 @@ const ChartEditorPage: React.FC = () => {
 
   // Get parameters from URL
   const chartId = searchParams.get('chartId');
-  // const typeChart = searchParams.get('typeChart') || 'line';
   const mode = searchParams.get('mode') || 'create'; // 'create' or 'edit'
-  // const datasetId = searchParams.get('datasetId') || '';
 
   // Local state for managing chart data and config
   const [chartData, setChartData] = useState<ChartDataPoint[]>(
     () => convertArrayToChartData(salesData) // Convert salesData to ChartDataPoint[]
   );
+  const [currentChartType, setCurrentChartType] = useState<ChartType>(initialChartType);
   console.log(chartData);
   const [chartConfig, setChartConfig] = useState<Record<string, unknown> | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Update current chart type when initialChartType changes
+  useEffect(() => {
+    setCurrentChartType(initialChartType);
+  }, [initialChartType]);
 
   // Edit mode states
   const [isEditingName, setIsEditingName] = useState(false);
@@ -452,55 +455,19 @@ const ChartEditorPage: React.FC = () => {
     customXFormatter: '',
   });
 
-  // Render the appropriate chart editor based on type
-  const renderChartEditor = () => {
-    const config = getChartConfig();
-    console.log('renderChartEditor - using config:', config);
-    const formatters = getChartFormatters();
-
-    // Common props for all chart editors - convert ChartDataPoint[] to array format
-    const arrayData = chartData.length > 0 ? convertChartDataToArray(chartData) : [];
-    console.log('Array data for chart editor:', arrayData);
-    console.log('Chart config for editor:', config);
-    const commonProps = {
-      initialArrayData: arrayData,
-      initialConfig: config,
-      initialFormatters: formatters,
-      onConfigChange: mode === 'edit' ? handleConfigChange : () => {}, // Disable config changes when not in edit mode
-    };
-
-    switch (typeChart.toLowerCase()) {
-      case 'line':
-        return <LineChartEditor {...commonProps} dataset={dataset} />;
-      case 'bar':
-        return (
-          <BarChartEditor
-            {...commonProps}
-            initialConfig={{
-              ...config,
-              barType: 'grouped' as const,
-            }}
-          />
-        );
-      case 'area':
-        return <AreaChartEditor {...commonProps} />;
-      default:
-        // Default to bar chart if type is not recognized
-        return (
-          <BarChartEditor
-            initialArrayData={convertChartDataToArray(chartData)}
-            initialConfig={{
-              ...config,
-              barType: 'grouped' as const,
-            }}
-            initialFormatters={formatters}
-          />
-        );
-    }
+  // Handle chart type change
+  const handleChartTypeChange = (type: string) => {
+    const newType = type as ChartType;
+    console.log('Chart type changed to:', newType);
+    setCurrentChartType(newType);
+    // Update URL parameters to reflect the new chart type
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set('typeChart', newType);
+    navigate(`?${newSearchParams.toString()}`, { replace: true });
   };
 
-  const getChartTypeInfo = (type: string) => {
-    switch (type.toLowerCase()) {
+  const getChartTypeInfo = (type: ChartType) => {
+    switch (type) {
       case 'line':
         return {
           name: t('chart_type_line', 'Line Chart'),
@@ -532,7 +499,7 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
-  const chartInfo = getChartTypeInfo(typeChart);
+  const chartInfo = getChartTypeInfo(currentChartType);
 
   if (loading) {
     return <LoadingSpinner />;
@@ -601,10 +568,20 @@ const ChartEditorPage: React.FC = () => {
                       </h1>
                     )}
                   </div>
-                  <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                    <BarChart3 className="w-3 h-3" />
-                    {chartInfo.name}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                      <BarChart3 className="w-3 h-3" />
+                      {chartInfo.name}
+                    </Badge>
+                    {mode === 'edit' && (
+                      <ChartTypeSwitcher
+                        currentType={currentChartType}
+                        onTypeChange={handleChartTypeChange}
+                        variant="select"
+                        className="w-40"
+                      />
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2 mt-1">
                   {currentChart && (
@@ -719,16 +696,24 @@ const ChartEditorPage: React.FC = () => {
 
       {/* Main Content - Full Width Chart Area */}
       <div className="flex-1 bg-gray-900">
-        <div className="flex-1 p-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="h-full"
-          >
-            {renderChartEditor()}
-          </motion.div>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="h-full"
+        >
+          <UnifiedChartEditor
+            initialArrayData={chartData.length > 0 ? convertChartDataToArray(chartData) : []}
+            initialChartType={currentChartType}
+            initialConfig={getChartConfig()}
+            initialFormatters={getChartFormatters()}
+            onConfigChange={mode === 'edit' ? handleConfigChange : () => {}}
+            onDataChange={setChartData}
+            onChartTypeChange={(type: string) => handleChartTypeChange(type)}
+            dataset={dataset}
+            allowChartTypeChange={mode === 'edit'}
+          />
+        </motion.div>
       </div>
 
       {/* Confirmation Modal */}

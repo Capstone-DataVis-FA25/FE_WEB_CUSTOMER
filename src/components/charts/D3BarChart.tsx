@@ -740,119 +740,17 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         </h3>
       )}
 
-      {/* Legend Top */}
-      {showLegend && legendPosition === 'top' && renderLegend()}
-
-      <div
-        className={`${legendPosition === 'left' || legendPosition === 'right' ? 'flex gap-4' : ''}`}
-      >
-        {/* Legend Left */}
-        {showLegend && legendPosition === 'left' && (
-          <div className="w-64 flex-shrink-0">
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-              <h4
-                className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center"
-                style={{ fontSize: `${legendFontSize}px` }}
-              >
-                {t('legend')}
-              </h4>
-              <div className="flex flex-col gap-3">
-                {yAxisKeys.map((key, index) => {
-                  const colorKey = colors[key] ? key : `bar${index + 1}`;
-                  const color =
-                    colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
-                    defaultColorsChart[`color${index + 1}`][isDarkMode ? 'dark' : 'light'];
-                  return (
-                    <div
-                      key={key}
-                      className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
-                    >
-                      <div className="flex-shrink-0">
-                        <div
-                          className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
-                          style={{ backgroundColor: color }}
-                        />
-                      </div>
-                      <span
-                        className="font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200"
-                        style={{ fontSize: `${legendFontSize}px` }}
-                      >
-                        {key}
-                      </span>
-                      <div className="flex-1 flex justify-end">
-                        <div
-                          className="w-8 sm:w-8 h-2 sm:h-3 rounded opacity-60 group-hover:opacity-100 transition-opacity duration-200"
-                          style={{ backgroundColor: color }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Chart Container */}
-        <div
-          className={`relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3 ${legendPosition === 'left' || legendPosition === 'right' ? 'flex-1' : 'w-full'}`}
-        >
-          <svg
-            ref={svgRef}
-            width={dimensions.width}
-            height={dimensions.height}
-            className="w-full h-auto"
-            viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-            preserveAspectRatio="xMidYMid meet"
-          />
-        </div>
-
-        {/* Legend Right */}
-        {showLegend && legendPosition === 'right' && (
-          <div className="w-64 flex-shrink-0">
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-              <h4
-                className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center"
-                style={{ fontSize: `${legendFontSize}px` }}
-              >
-                {t('legend')}
-              </h4>
-              <div className="flex flex-col gap-3">
-                {yAxisKeys.map((key, index) => {
-                  const colorKey = colors[key] ? key : `bar${index + 1}`;
-                  const color =
-                    colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
-                    defaultColorsChart[`bar${index + 1}`][isDarkMode ? 'dark' : 'light'];
-                  return (
-                    <div
-                      key={key}
-                      className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
-                    >
-                      <div className="flex-shrink-0">
-                        <div
-                          className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
-                          style={{ backgroundColor: color }}
-                        />
-                      </div>
-                      <span
-                        className="font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200"
-                        style={{ fontSize: `${legendFontSize}px` }}
-                      >
-                        {key}
-                      </span>
-                      <div className="flex-1 flex justify-end">
-                        <div
-                          className="w-8 sm:w-8 h-2 sm:h-3 rounded opacity-60 group-hover:opacity-100 transition-opacity duration-200"
-                          style={{ backgroundColor: color }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
+      {/* Chart Container with integrated legend */}
+      <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3">
+        <svg
+          ref={svgRef}
+          width={dimensions.width}
+          height={dimensions.height}
+          className="w-full h-auto chart-svg"
+          viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+          style={{ display: 'block' }}
+          preserveAspectRatio="xMidYMid meet"
+        />
       </div>
 
       {/* Legend Bottom */}

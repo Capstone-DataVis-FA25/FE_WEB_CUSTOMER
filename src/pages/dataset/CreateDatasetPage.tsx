@@ -39,14 +39,17 @@ function CreateDatasetPageContent() {
   const {
     originalTextContent,
     setOriginalTextContent,
-    parsedData,
-    setParsedData,
-    setOriginalHeaders,
+    currentParsedData,
+    setOriginalParsedData,
+    setCurrentParsedData,
     setIsJsonFormat,
     setSelectedDelimiter,
     resetState,
     datasetName,
     description,
+    parsedValues,
+    numberFormat,
+    dateFormat,
   } = useDataset();
 
   // Local state management (non-shareable states)
@@ -60,12 +63,12 @@ function CreateDatasetPageContent() {
     (mode: ViewMode) => {
       if (mode !== 'view') {
         setOriginalTextContent('');
-        setParsedData(null);
+        setCurrentParsedData(null);
         setSelectedFile(null);
       }
       setViewMode(mode);
     },
-    [setOriginalTextContent]
+    [setOriginalTextContent, setCurrentParsedData]
   );
 
   // Process file content and switch to view mode
@@ -90,14 +93,10 @@ function CreateDatasetPageContent() {
         const result = await processFileContent(file, { delimiter: detectedDelimiter });
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Convert result back to 2D array format for backward compatibility
-        const headers = result.headers.map(h => h.name);
-        const data = [headers, ...result.data];
-
-        setParsedData(data);
-        setOriginalHeaders(headers);
+        // Set up 3-layer data structure
+        setOriginalParsedData(result); // Layer 2: Original parsed data
+        setCurrentParsedData({ ...result }); // Layer 3: Current working copy
         console.log('Processed result:', result);
-        console.log('Backward compatible format:', data);
         setPreviousViewMode(viewMode);
         setViewMode('view');
       } catch (error) {
@@ -108,7 +107,15 @@ function CreateDatasetPageContent() {
         setIsProcessing(false);
       }
     },
-    [showError, t, viewMode, setSelectedDelimiter]
+    [
+      showError,
+      t,
+      viewMode,
+      setSelectedDelimiter,
+      setOriginalParsedData,
+      setCurrentParsedData,
+      setOriginalTextContent,
+    ]
   );
 
   // Handle file selection and validation
@@ -139,13 +146,13 @@ function CreateDatasetPageContent() {
   // Handle file removal
   const handleFileRemove = useCallback(() => {
     setSelectedFile(null);
-    setParsedData(null);
+    setCurrentParsedData(null);
     setViewMode('upload');
-  }, []);
+  }, [setCurrentParsedData]);
 
   // Handle file upload (create dataset)
   const handleFileUpload = useCallback(async () => {
-    if (!parsedData) {
+    if (!currentParsedData) {
       showWarning('No Data Available', 'Please select a file or enter text data first');
       return;
     }
@@ -172,23 +179,32 @@ function CreateDatasetPageContent() {
     }
 
     try {
-      // Transform parsedData from 2D array to headers format for the new API
+      // Transform currentParsedData to headers format for the new API
       const headers = [];
 
-      if (parsedData && parsedData.length > 0) {
-        const headerRow = parsedData[0]; // First row contains column names
-        const dataRows = parsedData.slice(1); // Remaining rows contain data
+      if (currentParsedData && currentParsedData.headers.length > 0) {
+        // Use the current working data (includes user modifications)
+        for (let columnIndex = 0; columnIndex < currentParsedData.headers.length; columnIndex++) {
+          const header = currentParsedData.headers[columnIndex];
 
-        // Create headers array in the new format
-        for (let columnIndex = 0; columnIndex < headerRow.length; columnIndex++) {
-          const columnName = headerRow[columnIndex] || `Column ${columnIndex + 1}`;
-          const columnData = dataRows.map(row => row[columnIndex] || ''); // Extract column data
+          // Use parsed values if available for this column, otherwise use original data
+          let columnData: (string | number | boolean | null)[];
+
+          if (parsedValues[columnIndex] && Array.isArray(parsedValues[columnIndex])) {
+            // Use parsed values from the map, converting undefined to null for API compatibility
+            columnData = parsedValues[columnIndex].map(value =>
+              value === undefined ? null : value
+            );
+          } else {
+            // Fallback to original data
+            columnData = currentParsedData.data.map(row => row[columnIndex] || null);
+          }
 
           headers.push({
-            name: columnName,
-            type: 'string', // For now, all columns are strings as requested
+            name: header.name,
+            type: header.type, // Use the actual column type from user's working data
             index: columnIndex,
-            data: columnData, // This will be the actual column data for the API
+            data: columnData, // This will be the parsed values or original data
           });
         }
       }
@@ -198,7 +214,13 @@ function CreateDatasetPageContent() {
         name: datasetName.trim(),
         headers: headers,
         ...(description && { description: description.trim() }),
+        thousandsSeparator: numberFormat.thousandsSeparator,
+        decimalSeparator: numberFormat.decimalSeparator,
+        dateFormat: dateFormat,
       };
+
+      // Console log the exact request data being sent
+      console.log('🚀 Upload Request Data:', requestData);
 
       // Use Redux thunk instead of direct axios call
       const result = await dispatch(createDatasetThunk(requestData));
@@ -217,7 +239,7 @@ function CreateDatasetPageContent() {
 
         // Reset state after successful upload
         setSelectedFile(null);
-        setParsedData(null);
+        setCurrentParsedData(null);
         setViewMode('upload');
       } else {
         // Handle thunk rejection
@@ -234,7 +256,18 @@ function CreateDatasetPageContent() {
     } catch (error: any) {
       showError(t('dataset_uploadFailed'), error.message || t('dataset_uploadFailedMessage'));
     }
-  }, [parsedData, showWarning, showSuccess, showError, datasetName, description, dispatch, t]);
+  }, [
+    currentParsedData,
+    parsedValues,
+    showWarning,
+    showSuccess,
+    showError,
+    datasetName,
+    description,
+    dispatch,
+    t,
+    setCurrentParsedData,
+  ]);
 
   // Handle change data (go back to previous upload method and reset shared state)
   const handleChangeData = useCallback(() => {
@@ -267,24 +300,18 @@ function CreateDatasetPageContent() {
           const result = parseJsonDirectly(content);
           setSelectedDelimiter(','); // Set a default delimiter for display purposes
 
-          // Convert result back to 2D array format for backward compatibility
-          const headers = result.headers.map(h => h.name);
-          const data = [headers, ...result.data];
-
-          setParsedData(data);
-          setOriginalHeaders(headers);
+          // Set up 3-layer data structure
+          setOriginalParsedData(result); // Layer 2: Original parsed data
+          setCurrentParsedData({ ...result }); // Layer 3: Current working copy
         } else {
           // Parse as regular CSV/text data
           const detectedDelimiter = detectDelimiter(content);
           setSelectedDelimiter(detectedDelimiter);
           const result = parseTabularContent(content, { delimiter: detectedDelimiter });
 
-          // Convert result back to 2D array format for backward compatibility
-          const headers = result.headers.map(h => h.name);
-          const data = [headers, ...result.data];
-
-          setParsedData(data);
-          setOriginalHeaders(headers);
+          // Set up 3-layer data structure
+          setOriginalParsedData(result); // Layer 2: Original parsed data
+          setCurrentParsedData({ ...result }); // Layer 3: Current working copy
         }
 
         setPreviousViewMode(viewMode);
@@ -311,7 +338,16 @@ function CreateDatasetPageContent() {
         showError(t('dataset_parseError'), errorMessage);
       }
     },
-    [showError, t, viewMode, setOriginalHeaders, setIsJsonFormat]
+    [
+      showError,
+      t,
+      viewMode,
+      setIsJsonFormat,
+      setOriginalTextContent,
+      setOriginalParsedData,
+      setCurrentParsedData,
+      setSelectedDelimiter,
+    ]
   );
 
   return (

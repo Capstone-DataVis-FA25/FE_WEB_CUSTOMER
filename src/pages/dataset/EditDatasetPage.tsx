@@ -153,7 +153,7 @@ const EditDatasetPage: React.FC = () => {
           const bodyRows = formData.data.slice(1);
           updateData.headers = headerRow.map((name, idx) => ({
             name: name || `Column ${idx + 1}`,
-            type: 'string',
+            type: 'text',
             index: idx,
             data: bodyRows.map(r => r[idx] ?? ''),
           }));
@@ -553,7 +553,7 @@ const EditDatasetPage: React.FC = () => {
                               initialData={bodyRows}
                               initialColumns={headerRow.map(name => ({
                                 name,
-                                type: 'string' as const,
+                                type: 'text' as const,
                               }))}
                               onDataChange={(rows, cols) => {
                                 const newHeader = cols.map(c => c.name);

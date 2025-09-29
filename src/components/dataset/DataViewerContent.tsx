@@ -1,22 +1,27 @@
 import CustomExcel from '../excel/CustomExcel';
-// Local column type (mirrors the spreadsheet component's definition)
-type Column = { name: string; type: 'string' | 'number' | 'decimal' };
+import type { DataHeader, ParsedDataResult } from '@/utils/dataProcessors';
 import { useDataset } from '@/contexts/DatasetContext';
 
 function DataViewerContent() {
-  const { parsedData, setParsedData, setOriginalHeaders } = useDataset();
+  const { currentParsedData, setCurrentParsedData, transformationColumn, setOriginalParsedData } =
+    useDataset();
 
-  const handleDataChange = (data: string[][], columns: Column[]) => {
-    const newHeaders = columns.map(c => c.name);
-    const newData = [newHeaders, ...data];
-    setParsedData(newData);
-    setOriginalHeaders(newHeaders);
+  const handleDataChange = (data: string[][], columns: DataHeader[]) => {
+    // Update the current working data with user modifications
+    const updatedData: ParsedDataResult = {
+      headers: columns,
+      data: data,
+    };
+    setCurrentParsedData(updatedData);
+
+    // If no transformation is active, also update originalParsedData to keep them in sync
+    if (!transformationColumn) {
+      setOriginalParsedData(updatedData);
+    }
   };
 
-  const initialData = parsedData ? parsedData.slice(1) : [];
-  const initialColumns = parsedData
-    ? parsedData[0].map(name => ({ name, type: 'string' as const }))
-    : [];
+  const initialData = currentParsedData ? currentParsedData.data : [];
+  const initialColumns = currentParsedData ? currentParsedData.headers : [];
 
   return (
     <CustomExcel

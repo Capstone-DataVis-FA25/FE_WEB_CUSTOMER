@@ -204,11 +204,11 @@ const DatasetDetailPage: React.FC = () => {
 
   // Build structured columns + rows for CustomExcel (first row is headers in edit page; here we send body & columns separately)
   let bodyRows: string[][] = [];
-  let columnDefs: { name: string; type: 'string' }[] = [];
+  let columnDefs: { name: string; type: 'text' }[] = [];
   let headerRow: string[] = [];
   if (currentDataset.headers && currentDataset.headers.length) {
     headerRow = currentDataset.headers.map((h: DatasetHeader) => h.name);
-    columnDefs = headerRow.map(name => ({ name, type: 'string' as const }));
+    columnDefs = headerRow.map(name => ({ name, type: 'text' as const }));
     const rowCount = currentDataset.rowCount;
     const rows: string[][] = Array.from({ length: rowCount }, () =>
       Array(headerRow.length).fill('')
