@@ -78,8 +78,8 @@ export default function ChooseTemplateTab() {
         yAxisKeys: [],
         yAxisLabels: [],
         disabledLines: [],
-        xAxisLabel: '',
-        yAxisLabel: '',
+        xAxisLabel: 'xAxisLabel',
+        yAxisLabel: 'yAxisLabel',
 
         // Animation settings
         animationDuration: 1000,
@@ -229,22 +229,26 @@ export default function ChooseTemplateTab() {
 
       // Get default configuration for this template
       const defaultConfig = getDefaultChartConfig(template);
+      // Only allow chart types supported by CreateChartRequest
+      if (!['line', 'bar', 'area'].includes(template.type)) {
+        showError(
+          t('chart_create_error', 'Error'),
+          t('chart_create_unsupported_type', 'This chart type is not supported for creation.')
+        );
+        setIsCreatingChart(false);
+        return;
+      }
 
       // Create chart with default settings - only include ChartConfig properties
       const chartData = {
         name: defaultConfig.config.title,
         description: `A ${template.name} chart created from template`,
         datasetId: datasetId,
-        type: template.type,
+        type: template.type as 'line' | 'bar' | 'area',
         config: defaultConfig,
       };
-
-      console.log('ChooseTemplateTab - Creating chart with data:', chartData);
-
       const result = await createChart(chartData).unwrap();
-
       console.log('ChooseTemplateTab - Chart created successfully:', result);
-
       showSuccess(
         t('chart_create_success', 'Chart Created'),
         t('chart_create_success_message', 'Chart has been created successfully')
@@ -254,9 +258,8 @@ export default function ChooseTemplateTab() {
       navigate(`${Routers.CHART_EDITOR}?chartId=${result.id}&datasetId=${datasetId}`, {
         state: {
           chartId: result.id,
-          chartType: template.type,
           datasetId: datasetId,
-          datasetName: datasetName,
+          type: result.type,
           chart: result,
         },
       });
@@ -281,8 +284,8 @@ export default function ChooseTemplateTab() {
       'All',
       'line',
       'bar',
-      'pie',
       'area',
+      'pie',
       'donut',
       'column',
       'scatter',
@@ -340,20 +343,20 @@ export default function ChooseTemplateTab() {
                 configuration: { type: 'bar' },
               },
               {
-                id: 'pie-basic',
-                name: t('chart_gallery_pie_basic'),
-                description: t('chart_gallery_pie_basic_desc'),
-                type: 'pie',
-                category: 'basic',
-                configuration: { type: 'pie' },
-              },
-              {
                 id: 'area-basic',
                 name: t('chart_gallery_area_basic'),
                 description: t('chart_gallery_area_basic_desc'),
                 type: 'area',
                 category: 'basic',
                 configuration: { type: 'area' },
+              },
+              {
+                id: 'pie-basic',
+                name: t('chart_gallery_pie_basic'),
+                description: t('chart_gallery_pie_basic_desc'),
+                type: 'pie',
+                category: 'basic',
+                configuration: { type: 'pie' },
               },
               {
                 id: 'donut-basic',

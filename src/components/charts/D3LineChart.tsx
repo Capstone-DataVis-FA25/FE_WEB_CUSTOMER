@@ -485,14 +485,6 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     const hasXAxisLabel = xAxisLabel && showAxisLabels;
     const hasYAxisLabel = yAxisLabel && showAxisLabels;
 
-    console.log('🔍 MARGIN DEBUG:', {
-      originalMargin: margin,
-      hasXAxisLabel,
-      hasYAxisLabel,
-      currentWidth,
-      legendPosition,
-    });
-
     const responsiveMargin = {
       top: currentWidth < 640 ? Math.max(margin.top * 0.8, 15) : margin.top,
       right: currentWidth < 640 ? Math.max(margin.right * 0.7, 20) : margin.right,
@@ -517,20 +509,12 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           : Math.max(margin.left, 50), // Minimum 50px for Y-axis ticks
     };
 
-    console.log('✅ FINAL RESPONSIVE MARGIN:', responsiveMargin);
-
     // Set dimensions with validation
     const innerWidth = Math.max(currentWidth - responsiveMargin.left - responsiveMargin.right, 100);
     const innerHeight = Math.max(
       currentHeight - responsiveMargin.top - responsiveMargin.bottom,
       100
     );
-
-    console.log('📐 CHART DIMENSIONS:', {
-      containerSize: { width: currentWidth, height: currentHeight },
-      margins: responsiveMargin,
-      innerSize: { width: innerWidth, height: innerHeight },
-    });
 
     // Validate dimensions
     if (innerWidth < 50 || innerHeight < 50) {
@@ -1638,7 +1622,6 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     showPointValues,
   ]);
 
-  console.log('arrayData: ', arrayData);
   return (
     <div ref={containerRef} className="w-full">
       {title && title.trim() !== '' && (

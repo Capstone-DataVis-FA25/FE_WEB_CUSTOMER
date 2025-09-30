@@ -66,8 +66,6 @@ export const ModalConfirmForm: React.FC<ModalConfirmFormProps & { userEmail?: st
   const { t } = useTranslation();
   if (!isOpen) return null;
   const currentStyle = typeStyles[type];
-  console.log('userEmail from props:', userEmail);
-  console.log('inputValue:', inputValue);
   const isEmailMatch = userEmail
     ? inputValue.trim() !== '' && inputValue.trim().toLowerCase() === userEmail.trim().toLowerCase()
     : false;
@@ -100,7 +98,9 @@ export const ModalConfirmForm: React.FC<ModalConfirmFormProps & { userEmail?: st
           </button>
         </div>
         <div className="p-6 text-center">
-          <div className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full ${currentStyle.iconBg} mb-4`}>
+          <div
+            className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full ${currentStyle.iconBg} mb-4`}
+          >
             <span className="text-2xl" role="img" aria-label={type}>
               {currentStyle.icon}
             </span>

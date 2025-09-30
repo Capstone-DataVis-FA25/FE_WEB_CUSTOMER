@@ -81,10 +81,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
 
-  console.log('initialArrayData: ', initialArrayData);
-  console.log('dataset prop: ', dataset);
-  console.log('initialConfig', initialConfig);
-
   // Helper function to decode ids to names using dataset.headers
   const decodeKeysToNames = useMemo(() => {
     return (keys: string | string[]): string | string[] => {
@@ -131,14 +127,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
           const dataPoint: ChartDataPoint = {};
           headers.forEach((header, index) => {
             const value = row[index];
-            console.log(`Processing row ${rowIndex}, column ${index} (${header}):`, value);
 
             // Handle undefined/null/N/A values
             if (value === undefined || value === null || value === 'N/A' || value === '') {
-              console.warn(
-                `Invalid value at row ${rowIndex + 1}, column ${index} (${header}):`,
-                value
-              );
               // For the first column (usually city/category), use a placeholder; for numeric columns, use 0
               dataPoint[header] = index === 0 ? `Unknown_${rowIndex + 1}` : 0;
               return;
@@ -146,19 +137,15 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
 
             if (typeof value === 'string') {
               const numValue = parseFloat(value);
-              console.log(`  -> Attempting to parse '${value}' as number:`, numValue);
 
               if (!isNaN(numValue)) {
                 // Keep as number, don't convert to string with toFixed
                 dataPoint[header] = numValue;
-                console.log(`  -> Converted to number: ${numValue}`);
               } else {
                 dataPoint[header] = value; // Keep as string if not numeric
-                console.log(`  -> Kept as string: ${value}`);
               }
             } else {
               dataPoint[header] = value;
-              console.log(`  -> Used as-is: ${value}`);
             }
           });
           return dataPoint;
@@ -166,11 +153,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       };
 
       const dataAfter = convertToChartData(initialArrayData);
-      console.log('Converted data:', dataAfter);
       return dataAfter;
     }
 
-    console.log('No initial array data, returning empty array');
     return [];
   }, [initialArrayData]);
 
@@ -274,9 +259,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
 
   // Effect to sync data when initialArrayData changes
   useEffect(() => {
-    console.log('Process initial data', processedInitialData);
-    console.log('Data tracking before update', data);
-
     // Only update data state if processedInitialData has actually changed
     if (
       processedInitialData.length > 0 &&
@@ -284,18 +266,12 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     ) {
       setData(processedInitialData);
       setTempData(processedInitialData);
-      console.log('Updated data state to match processedInitialData', processedInitialData);
     }
   }, [processedInitialData, data]); // Only run when processedInitialData or data changes
 
   // Effect to update seriesConfigs when dataset headers change
   useEffect(() => {
-    console.log('SeriesConfigs dataset effect running');
-    console.log('Dataset headers:', dataset?.headers);
-    console.log('Current yAxisKeys:', config.yAxisKeys);
-
     if (dataset?.headers && config.yAxisKeys.length > 0) {
-      console.log('Updating seriesConfigs based on dataset headers');
       setSeriesConfigs(prevConfigs => {
         const newConfigs = config.yAxisKeys.map((key, index) => {
           // Find the header with matching name (case insensitive)
@@ -326,7 +302,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
           };
         });
 
-        console.log('Updated seriesConfigs with dataset headers:', newConfigs);
         return newConfigs;
       });
     }
@@ -497,24 +472,8 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       let updatedConfig = { ...config, ...newConfig };
 
       // If xAxisKey is being changed, remove it from yAxisKeys if it exists there
-      if (newConfig.xAxisKey && updatedConfig.yAxisKeys.includes(newConfig.xAxisKey)) {
-        console.log(
-          `🔄 AXIS CONFLICT DETECTED: Removing ${newConfig.xAxisKey} from yAxisKeys because it was selected as xAxisKey`
-        );
-        console.log('Before cleanup - yAxisKeys:', updatedConfig.yAxisKeys);
-        console.log(
-          'Before cleanup - seriesConfigs:',
-          seriesConfigs.map(s => ({ id: s.id, dataColumn: s.dataColumn }))
-        );
-
-        // Show notification to user
-        showSuccess(
-          t(
-            'chart_editor_axis_conflict_resolved',
-            `Column "${newConfig.xAxisKey}" was removed from Y-axis because it's now the X-axis`
-          )
-        );
-
+      if (newConfig.xAxisKey) {
+        // Clean up: Remove the new X-axis key from Y-axis keys if it was previously there
         updatedConfig = {
           ...updatedConfig,
           yAxisKeys: updatedConfig.yAxisKeys.filter(key => key !== newConfig.xAxisKey),
@@ -523,11 +482,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         // Also remove from seriesConfigs
         setSeriesConfigs(prev => {
           const newConfigs = prev.filter(series => series.dataColumn !== newConfig.xAxisKey);
-          console.log('After cleanup - yAxisKeys:', updatedConfig.yAxisKeys);
-          console.log(
-            'After cleanup - seriesConfigs:',
-            newConfigs.map(s => ({ id: s.id, dataColumn: s.dataColumn }))
-          );
           return newConfigs;
         });
 
@@ -563,25 +517,15 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   });
 
   useEffect(() => {
-    console.log('Config data structure effect running');
-    console.log('Current data:', data);
-    console.log('Current config xAxisKey:', config.xAxisKey);
-    console.log('Current config yAxisKeys:', config.yAxisKeys);
-    console.log('Dataset headers:', dataset?.headers);
-
     if (data.length > 0 && dataset?.headers) {
       // Use dataset headers instead of just data keys
       const availableHeaders = dataset.headers;
-      console.log('Available headers from dataset:', availableHeaders);
 
       // Handle the case where config keys might be arrays
       const currentXAxisKey = Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey;
       const currentYAxisKeys = Array.isArray(config.yAxisKeys)
         ? config.yAxisKeys
         : [config.yAxisKeys];
-
-      console.log('Processed current xAxisKey:', currentXAxisKey);
-      console.log('Processed current yAxisKeys:', currentYAxisKeys);
 
       // Use header names for keys (assuming headers have 'name' property)
       const newXAxisKey =
@@ -590,9 +534,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         availableHeaders.length > 1
           ? availableHeaders.slice(1).map((header: DatasetHeader) => header.name.toLowerCase())
           : ['y'];
-
-      console.log('Calculated new xAxisKey:', newXAxisKey);
-      console.log('Calculated new yAxisKeys:', newYAxisKeys);
 
       // Only update if keys have actually changed and different from last update
       const keysChanged =
@@ -604,19 +545,15 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         JSON.stringify(configKeysRef.current.yAxisKeys) !== JSON.stringify(newYAxisKeys);
 
       if (keysChanged && differentFromRef) {
-        console.log('Updating config due to data structure change: ', newYAxisKeys);
         configKeysRef.current = { xAxisKey: newXAxisKey, yAxisKeys: newYAxisKeys };
         updateConfig({
           xAxisKey: newXAxisKey,
           yAxisKeys: newYAxisKeys,
         });
-      } else {
-        console.log('Config keys are already correct, no update needed');
       }
     } else if (data.length > 0) {
       // Fallback to original logic if no dataset headers
       const availableKeys = Object.keys(data[0]);
-      console.log('No dataset headers, using data keys:', availableKeys);
 
       const currentXAxisKey = Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey;
       const currentYAxisKeys = Array.isArray(config.yAxisKeys)
@@ -638,15 +575,12 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         JSON.stringify(configKeysRef.current.yAxisKeys) !== JSON.stringify(newYAxisKeys);
 
       if (keysChanged && differentFromRef) {
-        console.log('Updating config due to data structure change (fallback): ', newYAxisKeys);
         configKeysRef.current = { xAxisKey: newXAxisKey, yAxisKeys: newYAxisKeys };
         updateConfig({
           xAxisKey: newXAxisKey,
           yAxisKeys: newYAxisKeys,
         });
       }
-    } else {
-      console.log('No data available to determine keys');
     }
   }, [data, dataset, config.xAxisKey, config.yAxisKeys, updateConfig]); // Include all dependencies but use ref to prevent infinite loop
 
@@ -681,11 +615,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       key =>
         key !== config.xAxisKey && // Không được là xAxisKey
         !seriesConfigs.some(s => s.id !== seriesId && s.dataColumn === key) // Không được sử dụng bởi series khác (trừ series hiện tại)
-    );
-    console.log(`Available columns for series ${seriesId}:`, availableForSeries);
-    console.log(
-      'All series configs:',
-      seriesConfigs.map(s => ({ id: s.id, dataColumn: s.dataColumn }))
     );
     return availableForSeries;
   };
@@ -958,12 +887,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   // Export configuration to JSON (config only, no data)
   const exportConfigToJSON = () => {
     try {
-      console.log('🔄 EXPORTING CONFIG:');
-      console.log('Original config (names):', {
-        xAxisKey: config.xAxisKey,
-        yAxisKeys: config.yAxisKeys,
-      });
-
       // Encode config keys back to ids for export
       const encodedConfig = {
         ...config,
@@ -971,11 +894,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         yAxisKeys: encodeNamesToIds(config.yAxisKeys) as string[],
         disabledLines: encodeNamesToIds(config.disabledLines) as string[],
       };
-
-      console.log('Encoded config (ids):', {
-        xAxisKey: encodedConfig.xAxisKey,
-        yAxisKeys: encodedConfig.yAxisKeys,
-      });
 
       const exportData = {
         config: encodedConfig, // Use encoded config with ids
@@ -1058,13 +976,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         try {
           const text = await file.text();
           const importData = JSON.parse(text);
-
-          console.log('🔄 IMPORTING CONFIG:');
-          console.log('Imported data (ids):', {
-            xAxisKey: importData.config?.xAxisKey,
-            yAxisKeys: importData.config?.yAxisKeys,
-          });
-
           // Validate the imported data structure
           if (!importData.config || !importData.formatters) {
             throw new Error('Invalid configuration file structure');
@@ -1077,11 +988,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
             yAxisKeys: decodeKeysToNames(importData.config.yAxisKeys) as string[],
             disabledLines: decodeKeysToNames(importData.config.disabledLines || []) as string[],
           };
-
-          console.log('Decoded config (names):', {
-            xAxisKey: decodedConfig.xAxisKey,
-            yAxisKeys: decodedConfig.yAxisKeys,
-          });
 
           // Apply imported configuration
           updateConfig(decodedConfig);
@@ -1301,7 +1207,6 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     }
   };
 
-  console.log('Rendering LineChartEditor with config:', config);
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
       <div className="w-full px-2">
@@ -1975,8 +1880,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     </table>
                   </div>
                 </div>
-
-                {/* Footer Info */}
+                a{/* Footer Info */}
                 <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
                   <div className="flex items-center gap-4">
                     <span>{t('lineChart_editor_totalRows', { count: tempData.length })}</span>

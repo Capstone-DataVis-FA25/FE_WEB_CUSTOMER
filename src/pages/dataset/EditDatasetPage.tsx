@@ -153,7 +153,7 @@ const EditDatasetPage: React.FC = () => {
           const bodyRows = formData.data.slice(1);
           updateData.headers = headerRow.map((name, idx) => ({
             name: name || `Column ${idx + 1}`,
-            type: 'string',
+            type: 'text',
             index: idx,
             data: bodyRows.map(r => r[idx] ?? ''),
           }));
@@ -551,9 +551,11 @@ const EditDatasetPage: React.FC = () => {
                           <div className="overflow-auto h-full">
                             <CustomExcel
                               initialData={bodyRows}
-                              initialColumns={headerRow.map(name => ({
+                              // Đã sửa ở đây theo đúng TYPE - hungpt
+                              initialColumns={headerRow.map((name, idx) => ({
                                 name,
-                                type: 'string' as const,
+                                type: 'text' as const,
+                                index: idx,
                               }))}
                               onDataChange={(rows, cols) => {
                                 const newHeader = cols.map(c => c.name);

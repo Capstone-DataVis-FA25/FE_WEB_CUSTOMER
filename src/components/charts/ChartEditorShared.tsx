@@ -559,7 +559,6 @@ export const DataEditorSection: React.FC<DataEditorSectionProps> = ({
   onOpenModal,
 }) => {
   const { t } = useTranslation();
-  console.log('Data at data editor section:', data);
   return (
     <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
       <CardHeader
@@ -627,7 +626,6 @@ export const DataEditorSection: React.FC<DataEditorSectionProps> = ({
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
                   {data.slice(0, 5).map((point, index) => {
-                    console.log('Point: ', point);
                     return (
                       <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
@@ -942,7 +940,7 @@ interface ChartSettingsProps {
   onUpdateChartSpecific: (updates: Record<string, unknown>) => void;
 
   // Chart type specific props
-  chartType: 'line' | 'bar' | 'area';
+  chartType: 'line' | 'bar' | 'area' | 'scatter' | 'pie' | 'trend' | 'map' | 'table';
 
   // Line chart specific
   curveType?: string;
