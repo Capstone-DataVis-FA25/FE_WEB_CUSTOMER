@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 // import { useTranslation } from 'react-i18next';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ChartCard from './ChartCard';
-import type { Chart as BaseChart } from '@/features/chart/chartAPI';
+import type { Chart as BaseChart } from '@/features/charts/chartTypes';
 
 // Extended Chart type for UI with additional optional fields
 type Chart = BaseChart & {
@@ -19,9 +19,11 @@ interface ChartTabProps {
   charts: Chart[];
   chartsLoading: boolean;
   chartDeleting: boolean;
+  datasetSelectingModal: boolean;
   filteredCharts: Chart[];
   searchTerm: string;
   onCreateChart: () => void;
+  onHandleOpenModalSelectedDataset: () => void;
   onDeleteChart: (chart: Chart) => void;
   onEditChart: (chartId: string) => void;
   deletingChartId: string | null;
@@ -31,9 +33,11 @@ const ChartTab: React.FC<ChartTabProps> = ({
   // charts,
   chartsLoading,
   chartDeleting,
+  datasetSelectingModal,
   filteredCharts,
   searchTerm,
   onCreateChart,
+  onHandleOpenModalSelectedDataset,
   onDeleteChart,
   onEditChart,
   deletingChartId,
@@ -63,7 +67,7 @@ const ChartTab: React.FC<ChartTabProps> = ({
           </p>
           {!searchTerm && (
             <Button
-              onClick={onCreateChart}
+              onClick={onHandleOpenModalSelectedDataset}
               size="lg"
               className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
             >
@@ -79,6 +83,7 @@ const ChartTab: React.FC<ChartTabProps> = ({
   return (
     <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {filteredCharts.map(chart => (
+        // Giao diện của 1 chart hiển thị
         <ChartCard
           key={chart.id}
           chart={chart}

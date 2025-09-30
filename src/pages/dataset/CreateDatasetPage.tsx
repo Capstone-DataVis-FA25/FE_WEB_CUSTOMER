@@ -209,7 +209,7 @@ function CreateDatasetPageContent() {
         // Navigate to detail page with pretty slug
         const created = result.payload as any; // dataset object
         if (created && created.id) {
-          const slug = buildSlug({ id: created.id, name: created.name });
+          // const slug = buildSlug({ id: created.id, name: created.name });
           window.setTimeout(() => {
             window.location.href = `/workspace/datasets`; // using href to fully reset state/context
           }, 300);

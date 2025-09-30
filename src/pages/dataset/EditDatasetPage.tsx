@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import { ArrowLeft, Save, FileSpreadsheet, Loader2, Edit, RotateCcw } from 'lucide-react';
+import { Save, Loader2, Edit, RotateCcw } from 'lucide-react';
 import { useDataset } from '@/features/dataset/useDataset';
 import { useToastContext } from '@/components/providers/ToastProvider';
 
