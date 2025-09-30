@@ -1,14 +1,8 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 
 // D3 Chart Components
 import D3LineChart from '@/components/charts/D3LineChart';
@@ -26,7 +20,6 @@ import {
   Download,
   Settings,
   Upload,
-  RotateCcw,
   BarChart3,
   LineChart,
   AreaChart,
@@ -45,6 +38,7 @@ import {
   type SeriesConfig,
   type FormatterConfig,
   type BaseChartConfig,
+  type StructuredChartConfig,
 } from '@/types/chart';
 import {
   DataEditorSection,
@@ -54,9 +48,7 @@ import {
   SeriesManagement,
 } from '@/components/charts/ChartEditorShared';
 import { defaultColorsChart } from '@/utils/Utils';
-
-// Chart type definitions
-export type ChartType = 'line' | 'bar' | 'area';
+import type { ChartType } from '@/features/charts';
 
 // Union type for all chart configs
 export type UnifiedChartConfig = LineChartConfig | BarChartConfig | AreaChartConfig;
@@ -75,11 +67,9 @@ interface Dataset {
 export interface UnifiedChartEditorProps {
   initialArrayData?: (string | number)[][];
   initialChartType?: ChartType;
-  initialConfig?: Partial<UnifiedChartConfig>;
-  initialColors?: ColorConfig;
-  initialFormatters?: Partial<FormatterConfig>;
-  onConfigChange?: (config: UnifiedChartConfig) => void;
-  onDataChange?: (data: ChartDataPoint[]) => void;
+  initialStructuredConfig?: StructuredChartConfig;
+  onConfigChange?: (config: Record<string, unknown>) => void;
+  // onDataChange?: (data: ChartDataPoint[]) => void; // removed unused prop
   onColorsChange?: (colors: ColorConfig) => void;
   onFormattersChange?: (formatters: FormatterConfig) => void;
   onChartTypeChange?: (chartType: ChartType) => void;
@@ -90,11 +80,9 @@ export interface UnifiedChartEditorProps {
 const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
   initialArrayData,
   initialChartType = 'line',
-  initialConfig = {},
-  initialColors = {},
-  initialFormatters = {},
+  initialStructuredConfig,
   onConfigChange,
-  onDataChange,
+  // onDataChange, // removed unused prop
   onColorsChange,
   onFormattersChange,
   onChartTypeChange,
@@ -103,19 +91,11 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
 }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
-
-  console.log('🎆 UnifiedChartEditor rendered with:', {
-    initialChartType,
-    allowChartTypeChange,
-    hasData: !!initialArrayData,
-    dataLength: initialArrayData?.length,
-  });
-
   // State management
   const [chartType, setChartType] = useState<ChartType>(initialChartType);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [chartConfig, setChartConfig] = useState<UnifiedChartConfig | null>(null);
-  const [colors, setColors] = useState<ColorConfig>({ ...defaultColorsChart, ...initialColors });
+  const [colors, setColors] = useState<ColorConfig>({ ...defaultColorsChart });
   const [formatters, setFormatters] = useState<FormatterConfig>({
     useYFormatter: true,
     useXFormatter: true,
@@ -123,17 +103,21 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
     xFormatterType: 'number',
     customYFormatter: '',
     customXFormatter: '',
-    ...initialFormatters,
   });
+
+  // Track initialStructuredConfig to prevent re-importing
+  const initialConfigRef = useRef<StructuredChartConfig | null>(null);
+  const hasUserEditedConfig = useRef(false);
 
   // Series management state
   const [seriesConfigs, setSeriesConfigs] = useState<SeriesConfig[]>([]);
 
+  console.log('seriesConfigs: ', seriesConfigs);
   // UI state
   const [expandedSections, setExpandedSections] = useState({
-    dataEditor: true,
-    basicSettings: true,
-    chartSettings: true,
+    dataEditor: false,
+    basicSettings: false,
+    chartSettings: false,
     axisConfiguration: false,
     seriesManagement: false,
     chartActions: false,
@@ -179,7 +163,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
         if (!arrayData || arrayData.length === 0) return [];
 
         if (arrayData.length < 2) {
-          console.warn('Array data must have at least 2 rows (headers + data)');
           return [];
         }
 
@@ -187,7 +170,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
         const dataRows = arrayData.slice(1);
 
         if (headers.length === 0) {
-          console.warn('No headers found in first row');
           return [];
         }
 
@@ -231,180 +213,402 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
   const responsiveDefaults = getResponsiveDefaults();
 
   // Create default config based on chart type following the JSON configuration sample structure
-  const createDefaultConfig = (type: ChartType, config?: any): UnifiedChartConfig => {
-    // Base configuration structure following line-chart-config-2025-09-27.json
-    const baseConfig: BaseChartConfig = {
-      width: responsiveDefaults.width,
-      height: responsiveDefaults.height,
-      margin: { top: 20, right: 40, bottom: 60, left: 80 },
-      xAxisKey: (() => {
-        // Decode config.xAxisKey if provided, otherwise use first data column
-        if (config?.xAxisKey) {
-          return decodeKeysToNames(config.xAxisKey) as string;
-        }
-        return processedInitialData.length > 0
-          ? Object.keys(processedInitialData[0])[0].toLowerCase()
-          : 'x';
-      })(),
-      yAxisKeys: (() => {
-        // Decode config.yAxisKeys if provided, otherwise use remaining data columns
-        if (config?.yAxisKeys) {
-          return decodeKeysToNames(config.yAxisKeys) as string[];
-        }
-        return processedInitialData.length > 0
-          ? Object.keys(processedInitialData[0])
-              .slice(1)
-              .map(key => key.toLowerCase())
-          : ['y']; // Take all columns except the first one (xAxisKey)
-      })(),
-      title:
-        config?.title ||
-        t(`${type}Chart_editor_title`) ||
-        `${type.charAt(0).toUpperCase() + type.slice(1)} Chart`,
-      xAxisLabel: config?.xAxisLabel || t(`${type}Chart_editor_xAxisLabel`) || 'X Axis',
-      yAxisLabel: config?.yAxisLabel || t(`${type}Chart_editor_yAxisLabel`) || 'Y Axis',
-      showLegend: config?.showLegend ?? true,
-      showGrid: config?.showGrid ?? true,
-      animationDuration: config?.animationDuration ?? 1000,
-      xAxisStart: config?.xAxisStart ?? 'auto',
-      yAxisStart: config?.yAxisStart ?? 'auto',
-      gridOpacity: config?.gridOpacity ?? 0.3,
-      legendPosition: config?.legendPosition ?? 'bottom',
-      xAxisRotation: config?.xAxisRotation ?? 0,
-      yAxisRotation: config?.yAxisRotation ?? 0,
-      showAxisLabels: config?.showAxisLabels ?? true,
-      showAxisTicks: config?.showAxisTicks ?? true,
-      enableZoom: config?.enableZoom ?? false,
-      enablePan: config?.enablePan ?? false,
-      zoomExtent: config?.zoomExtent ?? 10,
-      showTooltip: config?.showTooltip ?? true,
-      theme: config?.theme ?? 'auto',
-      backgroundColor: config?.backgroundColor ?? 'transparent',
-      titleFontSize: config?.titleFontSize ?? 16,
-      labelFontSize: config?.labelFontSize ?? 12,
-      legendFontSize: config?.legendFontSize ?? 12,
-    };
-
-    // Chart-specific configurations following the common config pattern
-    switch (type) {
-      case 'line': {
-        return {
-          ...baseConfig,
-          disabledLines: config?.disabledLines
-            ? (decodeKeysToNames(config.disabledLines) as string[])
-            : [],
-          showPoints: config?.showPoints ?? true,
-          showPointValues: config?.showPointValues ?? false,
-          curve: config?.curve ?? 'curveMonotoneX',
-          lineWidth: config?.lineWidth ?? 2,
-          pointRadius: config?.pointRadius ?? 3,
-          ...config,
-        } as LineChartConfig;
-      }
-
-      case 'bar': {
-        return {
-          ...baseConfig,
-          disabledBars: config?.disabledBars
-            ? (decodeKeysToNames(config.disabledBars) as string[])
-            : [],
-          barType: config?.barType ?? 'grouped',
-          barWidth: config?.barWidth ?? 0,
-          barSpacing: config?.barSpacing ?? 4,
-          ...config,
-        } as BarChartConfig;
-      }
-
-      case 'area': {
-        return {
-          ...baseConfig,
-          disabledLines: config?.disabledLines
-            ? (decodeKeysToNames(config.disabledLines) as string[])
-            : [],
-          showPoints: config?.showPoints ?? false,
-          showPointValues: config?.showPointValues ?? false,
-          showStroke: config?.showStroke ?? true,
-          curve: config?.curve ?? 'curveMonotoneX',
-          lineWidth: config?.lineWidth ?? 2,
-          pointRadius: config?.pointRadius ?? 3,
-          opacity: config?.opacity ?? 0.7,
-          stackedMode: config?.stackedMode ?? true,
-          ...config,
-        } as AreaChartConfig;
-      }
-
-      default: {
-        return {
-          ...baseConfig,
-          disabledLines: [],
-          showPoints: true,
-          showPointValues: false,
-          curve: 'curveMonotoneX',
-          lineWidth: 2,
-          pointRadius: 3,
-          ...config,
-        } as LineChartConfig;
-      }
-    }
-  };
-
-  // Initialize chart data and config
-  useEffect(() => {
-    console.log('UnifiedChartEditor: Initialize effect running');
-    console.log('ProcessedInitialData:', processedInitialData);
-    console.log('Dataset headers:', dataset?.headers);
-    console.log('InitialConfig:', initialConfig);
-
-    setChartData(processedInitialData);
-    const defaultConfig = createDefaultConfig(chartType, initialConfig);
-    const mergedConfig = { ...defaultConfig, ...initialConfig };
-    setChartConfig(mergedConfig);
-
-    // Initialize series configs based on yAxisKeys with proper dataset header IDs
-    const yKeys = mergedConfig.yAxisKeys || [];
-    const newSeriesConfigs = yKeys.map((key, index) => {
-      const colorKeys = Object.keys(defaultColorsChart);
-      const colorIndex = index % colorKeys.length;
-      const selectedColorKey = colorKeys[colorIndex];
-      const selectedColor = defaultColorsChart[selectedColorKey];
-
-      // Find dataset header for this series using decoded key name
-      const header = dataset?.headers?.find(
-        (h: DatasetHeader) => h.name.toLowerCase() === key.toLowerCase()
-      );
-
-      return {
-        id: header ? header.id : `series-${index}`, // Use dataset header ID when available
-        name: key,
-        dataColumn: key,
-        color: selectedColor?.light || '#3b82f6',
-        visible:
-          !(mergedConfig as any).disabledLines?.includes(key) &&
-          !(mergedConfig as any).disabledBars?.includes(key),
+  const createDefaultConfig = useCallback(
+    (type: ChartType, config?: any): UnifiedChartConfig => {
+      // Base configuration structure following line-chart-config-2025-09-27.json
+      const baseConfig: BaseChartConfig = {
+        width: responsiveDefaults.width,
+        height: responsiveDefaults.height,
+        margin: { top: 20, right: 40, bottom: 60, left: 80 },
+        xAxisKey: (() => {
+          // Decode config.xAxisKey if provided, otherwise use first data column
+          if (config?.xAxisKey) {
+            return decodeKeysToNames(config.xAxisKey) as string;
+          }
+          return processedInitialData.length > 0
+            ? Object.keys(processedInitialData[0])[0].toLowerCase()
+            : 'x';
+        })(),
+        yAxisKeys: (() => {
+          // Decode config.yAxisKeys if provided, otherwise use remaining data columns
+          if (config?.yAxisKeys) {
+            return decodeKeysToNames(config.yAxisKeys) as string[];
+          }
+          return processedInitialData.length > 0
+            ? Object.keys(processedInitialData[0])
+                .slice(1)
+                .map(key => key.toLowerCase())
+            : ['y']; // Take all columns except the first one (xAxisKey)
+        })(),
+        title:
+          config?.title ||
+          t(`${type}Chart_editor_title`) ||
+          `${type.charAt(0).toUpperCase() + type.slice(1)} Chart`,
+        xAxisLabel: config?.xAxisLabel || t(`${type}Chart_editor_xAxisLabel`) || 'X Axis',
+        yAxisLabel: config?.yAxisLabel || t(`${type}Chart_editor_yAxisLabel`) || 'Y Axis',
+        showLegend: config?.showLegend ?? true,
+        showGrid: config?.showGrid ?? true,
+        animationDuration: config?.animationDuration ?? 1000,
+        xAxisStart: config?.xAxisStart ?? 'auto',
+        yAxisStart: config?.yAxisStart ?? 'auto',
+        gridOpacity: config?.gridOpacity ?? 0.3,
+        legendPosition: config?.legendPosition ?? 'bottom',
+        xAxisRotation: config?.xAxisRotation ?? 0,
+        yAxisRotation: config?.yAxisRotation ?? 0,
+        showAxisLabels: config?.showAxisLabels ?? true,
+        showAxisTicks: config?.showAxisTicks ?? true,
+        enableZoom: config?.enableZoom ?? false,
+        enablePan: config?.enablePan ?? false,
+        zoomExtent: config?.zoomExtent ?? 10,
+        showTooltip: config?.showTooltip ?? true,
+        theme: config?.theme ?? 'auto',
+        backgroundColor: config?.backgroundColor ?? 'transparent',
+        titleFontSize: config?.titleFontSize ?? 16,
+        labelFontSize: config?.labelFontSize ?? 12,
+        legendFontSize: config?.legendFontSize ?? 12,
       };
-    });
-    setSeriesConfigs(newSeriesConfigs);
 
-    console.log('Generated seriesConfigs:', newSeriesConfigs);
-  }, [processedInitialData, chartType, initialConfig, dataset]);
+      // Chart-specific configurations following the common config pattern
+      switch (type) {
+        case 'line': {
+          return {
+            ...baseConfig,
+            disabledLines: config?.disabledLines
+              ? (decodeKeysToNames(config.disabledLines) as string[])
+              : [],
+            showPoints: config?.showPoints ?? true,
+            showPointValues: config?.showPointValues ?? false,
+            curve: config?.curve ?? 'curveMonotoneX',
+            lineWidth: config?.lineWidth ?? 2,
+            pointRadius: config?.pointRadius ?? 3,
+            ...config,
+          } as LineChartConfig;
+        }
+
+        case 'bar': {
+          return {
+            ...baseConfig,
+            disabledBars: config?.disabledBars
+              ? (decodeKeysToNames(config.disabledBars) as string[])
+              : [],
+            barType: config?.barType ?? 'grouped',
+            barWidth: config?.barWidth ?? 0,
+            barSpacing: config?.barSpacing ?? 4,
+            ...config,
+          } as BarChartConfig;
+        }
+
+        case 'area': {
+          return {
+            ...baseConfig,
+            disabledLines: config?.disabledLines
+              ? (decodeKeysToNames(config.disabledLines) as string[])
+              : [],
+            showPoints: config?.showPoints ?? false,
+            showPointValues: config?.showPointValues ?? false,
+            showStroke: config?.showStroke ?? true,
+            curve: config?.curve ?? 'curveMonotoneX',
+            lineWidth: config?.lineWidth ?? 2,
+            pointRadius: config?.pointRadius ?? 3,
+            opacity: config?.opacity ?? 0.7,
+            stackedMode: config?.stackedMode ?? true,
+            ...config,
+          } as AreaChartConfig;
+        }
+
+        default: {
+          return {
+            ...baseConfig,
+            disabledLines: [],
+            showPoints: true,
+            showPointValues: false,
+            curve: 'curveMonotoneX',
+            lineWidth: 2,
+            pointRadius: 3,
+            ...config,
+          } as LineChartConfig;
+        }
+      }
+    },
+    [decodeKeysToNames, processedInitialData, responsiveDefaults, t]
+  );
+
+  // Import config from initialConfig (similar to importConfigFromJSON but for internal use)
+  const importFromInitialConfig = useCallback(
+    (importData: StructuredChartConfig | null) => {
+      try {
+        if (!importData) {
+          return;
+        }
+
+        // Handle structured config format {config: {...}, formatters: {...}, seriesConfigs: [...], chartType: "..."}
+        const configToImport = importData.config;
+        const formattersToImport = importData.formatters || {};
+        const seriesConfigsToImport = importData.seriesConfigs || [];
+        const chartTypeToImport = importData.chartType;
+
+        // Handle chart type if included
+        const targetChartType = chartTypeToImport || chartType;
+        if (chartTypeToImport && chartTypeToImport !== chartType) {
+          setChartType(chartTypeToImport);
+        }
+
+        // Decode config keys from ids back to names for current dataset
+        const decodedConfig = {
+          ...configToImport,
+          xAxisKey: decodeKeysToNames(configToImport?.xAxisKey as string) as string,
+          yAxisKeys: decodeKeysToNames(configToImport?.yAxisKeys as string[]) as string[],
+          // Decode chart-specific disabled properties
+          ...(targetChartType === 'line' || targetChartType === 'area'
+            ? {
+                disabledLines: decodeKeysToNames(
+                  ((configToImport as Record<string, unknown>)?.disabledLines as string[]) || []
+                ) as string[],
+              }
+            : {}),
+          ...(targetChartType === 'bar'
+            ? {
+                disabledBars: decodeKeysToNames(
+                  ((configToImport as Record<string, unknown>)?.disabledBars as string[]) || []
+                ) as string[],
+              }
+            : {}),
+        };
+
+        // Create a proper UnifiedChartConfig by merging with defaults
+        const defaultConfig = createDefaultConfig(targetChartType);
+        const finalConfig = { ...defaultConfig, ...decodedConfig };
+
+        // Set chart config
+        setChartConfig(finalConfig);
+
+        // Handle formatters
+        const defaultFormatters = {
+          useYFormatter: true,
+          useXFormatter: true,
+          yFormatterType: 'number' as const,
+          xFormatterType: 'number' as const,
+          customYFormatter: '',
+          customXFormatter: '',
+        };
+        const mergedFormatters = {
+          ...defaultFormatters,
+          ...formatters,
+          ...formattersToImport,
+        };
+        setFormatters(mergedFormatters);
+
+        // Handle series configurations
+        if (
+          seriesConfigsToImport &&
+          Array.isArray(seriesConfigsToImport) &&
+          seriesConfigsToImport.length > 0
+        ) {
+          // Decode series dataColumn from ids back to names
+          const decodedSeriesConfigs = seriesConfigsToImport.map(series => ({
+            ...series,
+            dataColumn: decodeKeysToNames(series.dataColumn) as string,
+          }));
+          setSeriesConfigs(decodedSeriesConfigs);
+
+          // Update colors from series configurations
+          const newColors = { ...colors };
+          decodedSeriesConfigs.forEach(series => {
+            if (series.color) {
+              newColors[series.dataColumn] = {
+                light: series.color,
+                dark: series.color, // Use same color for dark mode for now
+              };
+            }
+          });
+          setColors(newColors);
+        }
+      } catch (error) {
+        // Fallback to default config if import fails
+        const defaultConfig = createDefaultConfig(chartType);
+        setChartConfig(defaultConfig);
+      }
+    },
+    [chartType, decodeKeysToNames, formatters, createDefaultConfig, colors]
+  );
+
+  // Initialize chart data and config (only once when component mounts)
+  useEffect(() => {
+    setChartData(processedInitialData);
+
+    // Only create default config if no chartConfig exists and no initialStructuredConfig
+    if (!chartConfig && !initialStructuredConfig) {
+      const defaultConfig = createDefaultConfig(chartType);
+      setChartConfig(defaultConfig);
+    }
+  }, [
+    processedInitialData,
+    chartConfig,
+    chartType,
+    createDefaultConfig,
+    initialStructuredConfig,
+    dataset?.headers,
+  ]); // Dependencies để tránh stale closure
 
   // Track chart type changes
   useEffect(() => {
-    console.log('🔄 Chart type changed to:', chartType);
+    // Chart type changed
   }, [chartType]);
+
+  // Auto-generate series when needed (fallback only)
+  useEffect(() => {
+    // Only auto-generate if we have data, a config with yAxisKeys, but no series yet
+    // AND we haven't tried to restore series from config yet
+    if (
+      chartData.length > 0 &&
+      chartConfig &&
+      chartConfig.yAxisKeys &&
+      chartConfig.yAxisKeys.length > 0 &&
+      seriesConfigs.length === 0
+    ) {
+      const colorKeys = Object.keys(defaultColorsChart);
+
+      const autoGeneratedSeries = chartConfig.yAxisKeys.map((yKey: string, index: number) => {
+        const colorKey = colorKeys[index % colorKeys.length];
+        const color = defaultColorsChart[colorKey]?.light || '#3B82F6';
+
+        return {
+          id: `series-fallback-${Date.now()}-${index}`,
+          name: yKey,
+          dataColumn: yKey,
+          color: color,
+          visible: true,
+        };
+      });
+
+      setSeriesConfigs(autoGeneratedSeries);
+
+      // Also update colors
+      const newColors = { ...colors };
+      autoGeneratedSeries.forEach(series => {
+        newColors[series.dataColumn] = {
+          light: series.color,
+          dark: series.color,
+        };
+      });
+      setColors(newColors);
+    }
+  }, [chartData, chartConfig, seriesConfigs.length, colors]); // Only trigger when these change
 
   // Sync external chart type changes
   useEffect(() => {
     if (initialChartType !== chartType) {
-      console.log('🔄 External chart type change detected:', initialChartType, '!=', chartType);
       setChartType(initialChartType);
     }
-  }, [initialChartType]);
+  }, [initialChartType, chartType]);
+
+  // Sync initialStructuredConfig changes (when ChartEditorPage sends new config)
+  useEffect(() => {
+    if (initialStructuredConfig) {
+      // Check if initialStructuredConfig changed
+      const configChanged =
+        JSON.stringify(initialStructuredConfig) !== JSON.stringify(initialConfigRef.current);
+
+      if (configChanged) {
+        // Reset user edit flag when receiving new config (for reset functionality)
+        hasUserEditedConfig.current = false;
+        initialConfigRef.current = initialStructuredConfig;
+        importFromInitialConfig(initialStructuredConfig);
+      }
+    }
+  }, [initialStructuredConfig, importFromInitialConfig]);
 
   // Ensure chartConfig is always available
   const safeChartConfig = useMemo(() => {
     return chartConfig || createDefaultConfig(chartType);
-  }, [chartConfig, chartType]);
+  }, [chartConfig, chartType, createDefaultConfig]);
+
+  // Auto-sync colors from series configs when they change
+  useEffect(() => {
+    if (seriesConfigs.length > 0) {
+      const currentColors = colors; // Get current colors
+      const needsSync = seriesConfigs.some(
+        series => currentColors[series.dataColumn]?.light !== series.color
+      );
+
+      if (needsSync) {
+        const newColors = { ...currentColors };
+        seriesConfigs.forEach((series: SeriesConfig) => {
+          newColors[series.dataColumn] = {
+            light: series.color,
+            dark: series.color,
+          };
+        });
+        setColors(newColors);
+      }
+    }
+  }, [seriesConfigs, colors]); // Include colors but it's OK since we check needsSync first
+
+  // Synchronize seriesConfigs with yAxisKeys - add missing, remove extra
+  useEffect(() => {
+    if (chartConfig && chartConfig.yAxisKeys && chartConfig.yAxisKeys.length > 0) {
+      setSeriesConfigs(prev => {
+        const currentYAxisKeys = chartConfig.yAxisKeys;
+        const existingSeries = prev.filter(series => currentYAxisKeys.includes(series.dataColumn));
+
+        // Find missing keys that need new series
+        const missingKeys = currentYAxisKeys.filter(
+          key => !existingSeries.some(series => series.dataColumn === key)
+        );
+
+        // Create new series for missing keys
+        const colorKeys = Object.keys(defaultColorsChart);
+        const newSeries = missingKeys.map((yKey: string, index: number) => {
+          const colorIndex = (existingSeries.length + index) % colorKeys.length;
+          const colorKey = colorKeys[colorIndex];
+          const color = defaultColorsChart[colorKey]?.light || '#3B82F6';
+
+          return {
+            id: `series-${Date.now()}-${index}`,
+            name: yKey,
+            dataColumn: yKey,
+            color: color,
+            visible: true,
+          };
+        });
+
+        // Combine existing and new series, maintaining order of yAxisKeys
+        const syncedSeries = currentYAxisKeys.map(key => {
+          const existing = existingSeries.find(series => series.dataColumn === key);
+          if (existing) {
+            return existing;
+          }
+          return newSeries.find(series => series.dataColumn === key)!;
+        });
+
+        // Only update if there's actually a change
+        if (JSON.stringify(prev.map(s => s.dataColumn)) !== JSON.stringify(currentYAxisKeys)) {
+          // Update colors for new series
+          const newColors = { ...colors };
+          newSeries.forEach(series => {
+            newColors[series.dataColumn] = {
+              light: series.color,
+              dark: series.color,
+            };
+          });
+
+          // Remove colors for removed series
+          prev.forEach(series => {
+            if (!currentYAxisKeys.includes(series.dataColumn)) {
+              delete newColors[series.dataColumn];
+            }
+          });
+
+          setColors(newColors);
+          onColorsChange?.(newColors);
+
+          return syncedSeries;
+        }
+
+        return prev;
+      });
+    }
+  }, [chartConfig?.yAxisKeys, colors, onColorsChange]);
 
   // Helper functions to safely access chart-specific properties
   const getChartSpecificProps = useMemo(() => {
@@ -463,16 +667,14 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
   // Handle config changes - following LineChartEditor pattern (lines 475-493)
   const updateConfig = useCallback(
     (newConfig: Partial<UnifiedChartConfig>) => {
-      if (!chartConfig) return;
+      // Mark that user has edited config
+      hasUserEditedConfig.current = true;
 
-      const updatedConfig = { ...chartConfig, ...newConfig };
+      // Always use safeChartConfig as the base to ensure we have a valid config
+      const currentConfig = chartConfig || createDefaultConfig(chartType);
+      const updatedConfig = { ...currentConfig, ...newConfig };
+
       setChartConfig(updatedConfig);
-
-      console.log('🔄 CONFIG UPDATE:');
-      console.log('Internal config (names):', {
-        xAxisKey: updatedConfig.xAxisKey,
-        yAxisKeys: updatedConfig.yAxisKeys,
-      });
 
       // Encode names back to ids before sending to parent ChartEditor
       const encodedConfigForParent = {
@@ -494,27 +696,81 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
           : {}),
       };
 
-      console.log('Encoded config (ids):', {
-        xAxisKey: encodedConfigForParent.xAxisKey,
-        yAxisKeys: encodedConfigForParent.yAxisKeys,
+      // Auto-generate series if seriesConfigs is empty but yAxisKeys exist
+      let workingSeriesConfigs = seriesConfigs;
+      if (
+        seriesConfigs.length === 0 &&
+        updatedConfig.yAxisKeys &&
+        updatedConfig.yAxisKeys.length > 0
+      ) {
+        const colorKeys = Object.keys(defaultColorsChart);
+
+        workingSeriesConfigs = updatedConfig.yAxisKeys.map((yKey: string, index: number) => {
+          const colorKey = colorKeys[index % colorKeys.length];
+          const color = defaultColorsChart[colorKey]?.light || '#3B82F6';
+
+          return {
+            id: `series-${Date.now()}-${index}`,
+            name: yKey,
+            dataColumn: yKey,
+            color: color,
+            visible: true,
+          };
+        });
+
+        // Update local seriesConfigs state for future use
+        setSeriesConfigs(workingSeriesConfigs);
+      }
+
+      // Safely encode seriesConfigs with validation
+      const encodedSeriesConfigs = workingSeriesConfigs.map(series => {
+        // Validate series before encoding
+        if (!series.dataColumn) {
+          return {
+            ...series,
+            dataColumn: series.dataColumn || `unknown-${Date.now()}`,
+          };
+        }
+
+        const encodedDataColumn = encodeNamesToIds(series.dataColumn) as string;
+        return {
+          ...series,
+          dataColumn: encodedDataColumn,
+        };
       });
 
-      onConfigChange?.(encodedConfigForParent);
+      // Return the complete structure expected by ChartEditorPage
+      const completeConfigStructure = {
+        config: encodedConfigForParent,
+        chartType: chartType,
+        formatters: formatters,
+        seriesConfigs: encodedSeriesConfigs,
+      };
+
+      onConfigChange?.(completeConfigStructure);
     },
-    [chartConfig, onConfigChange, encodeNamesToIds, chartType]
+    [
+      chartConfig,
+      onConfigChange,
+      encodeNamesToIds,
+      chartType,
+      createDefaultConfig,
+      formatters,
+      seriesConfigs,
+      setSeriesConfigs,
+    ]
   );
 
   // Alias for consistency with other chart editors
-  const handleConfigChange = updateConfig;
-
-  // Handle data, color, and formatter changes
-  const updateData = useCallback(
-    (newData: ChartDataPoint[]) => {
-      setChartData(newData);
-      onDataChange?.(newData);
+  const handleConfigChange = useCallback(
+    (newConfig: Partial<UnifiedChartConfig>) => {
+      updateConfig(newConfig);
     },
-    [onDataChange]
+    [updateConfig]
   );
+
+  // Handle color and formatter changes
+  // updateData function removed as it was unused
 
   const updateColors = useCallback(
     (newColors: ColorConfig) => {
@@ -534,7 +790,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
   );
 
   // Alias for consistency
-  const handleDataChange = updateData;
+  // const handleDataChange = updateData; // removed unused variable
   const handleColorChange = updateColors;
   const handleFormatterChange = updateFormatters;
 
@@ -549,12 +805,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
   // Export configuration to JSON (config only, no data)
   const exportConfigToJSON = () => {
     try {
-      console.log('🔄 EXPORTING CONFIG:');
-      console.log('Original config (names):', {
-        xAxisKey: chartConfig?.xAxisKey,
-        yAxisKeys: chartConfig?.yAxisKeys,
-      });
-
       if (!chartConfig) {
         showError('No configuration to export');
         return;
@@ -577,11 +827,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
             }
           : {}),
       };
-
-      console.log('Encoded config (ids):', {
-        xAxisKey: encodedConfig.xAxisKey,
-        yAxisKeys: encodedConfig.yAxisKeys,
-      });
 
       const exportData = {
         config: encodedConfig, // Use encoded config with ids
@@ -608,7 +853,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
 
       showSuccess(t('chart_editor_configExported', 'Configuration exported'));
     } catch (error) {
-      console.error('Export error:', error);
       showError(t('chart_editor_invalidConfigFile', 'Export failed'));
     }
   };
@@ -626,12 +870,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
         try {
           const text = await file.text();
           const importData = JSON.parse(text);
-
-          console.log('🔄 IMPORTING CONFIG:');
-          console.log('Imported data (ids):', {
-            xAxisKey: importData.config?.xAxisKey,
-            yAxisKeys: importData.config?.yAxisKeys,
-          });
 
           // Validate the imported data structure
           if (!importData.config || !importData.formatters) {
@@ -663,11 +901,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
               : {}),
           };
 
-          console.log('Decoded config (names):', {
-            xAxisKey: decodedConfig.xAxisKey,
-            yAxisKeys: decodedConfig.yAxisKeys,
-          });
-
           // Apply imported configuration
           updateConfig(decodedConfig);
           updateFormatters(importData.formatters);
@@ -689,64 +922,27 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                 };
               }
             );
+
+            // Sync colors from imported series to colors object
+            const newColors = { ...colors };
+            newSeriesConfigs.forEach((series: SeriesConfig) => {
+              newColors[series.dataColumn] = {
+                light: series.color,
+                dark: series.color,
+              };
+            });
+            updateColors(newColors);
             setSeriesConfigs(newSeriesConfigs);
           }
 
           showSuccess(t('chart_editor_configImported', 'Configuration imported'));
         } catch (parseError) {
-          console.error('Parse error:', parseError);
           showError(t('chart_editor_invalidConfigFile', 'Invalid configuration file'));
         }
       };
       input.click();
     } catch (error) {
-      console.error('Import error:', error);
       showError(t('chart_editor_invalidConfigFile', 'Import failed'));
-    }
-  };
-
-  // Reset configuration to default
-  const resetToDefaultConfig = () => {
-    try {
-      // Reset to default configuration
-      const resetConfig = createDefaultConfig(chartType, {
-        xAxisKey: Object.keys(chartData[0] || {})[0] || 'x',
-        yAxisKeys: Object.keys(chartData[0] || {}).slice(1) || ['y'],
-      });
-
-      setChartConfig(resetConfig);
-      updateColors(defaultColorsChart);
-      updateFormatters({
-        useYFormatter: true,
-        useXFormatter: true,
-        yFormatterType: 'number',
-        xFormatterType: 'number',
-        customYFormatter: '',
-        customXFormatter: '',
-      });
-
-      // Reset series configs
-      const resetSeriesConfigs = resetConfig.yAxisKeys.map((key, index) => {
-        const colorKeys = Object.keys(defaultColorsChart);
-        const colorIndex = index % colorKeys.length;
-        const selectedColorKey = colorKeys[colorIndex];
-        const selectedColor = defaultColorsChart[selectedColorKey];
-
-        return {
-          id: `series-${Date.now()}-${index}`,
-          name: key,
-          dataColumn: key,
-          color: selectedColor.light,
-          visible: true,
-        };
-      });
-
-      setSeriesConfigs(resetSeriesConfigs);
-
-      showSuccess(t('chart_editor_resetToDefault', 'Reset to default'));
-    } catch (error) {
-      console.error('Reset error:', error);
-      showError(t('chart_editor_invalidConfigFile', 'Reset failed'));
     }
   };
 
@@ -892,13 +1088,11 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                 format === 'jpeg' ? 0.9 : 1.0
               );
             } catch (drawError) {
-              console.error('Canvas draw error:', drawError);
               showError('Error drawing chart on canvas: ' + drawError);
             }
           };
 
           img.onerror = error => {
-            console.error('Image load error:', error);
             showError(`${format.toUpperCase()} export failed. Please try SVG export instead.`);
           };
 
@@ -911,15 +1105,13 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
 
           img.src = svgDataUrl;
         } catch (canvasError) {
-          console.error('Canvas export error:', canvasError);
           showError(
-            `Error exporting ${format.toUpperCase()}: ${canvasError}. Please try SVG export instead.`
+            `Error exporting as ${format.toUpperCase()}: ${canvasError}. Please try SVG export instead.`
           );
         }
       }
     } catch (error) {
-      console.error('Export image error:', error);
-      showError('Error exporting image: ' + (error as Error).message);
+      showError('Error exporting chart: ' + (error as Error).message);
     }
   };
 
@@ -933,7 +1125,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
   const updateSeriesConfig = (seriesId: string, updates: Partial<SeriesConfig>) => {
     // Validate that dataColumn is not the same as xAxisKey
     if (updates.dataColumn && updates.dataColumn === safeChartConfig.xAxisKey) {
-      console.warn(`Cannot use "${updates.dataColumn}" as Y-axis because it's already the X-axis`);
       return; // Exit early to prevent the update
     }
 
@@ -1001,64 +1192,74 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
   };
 
   const addSeries = () => {
-    const availableColumns = getAvailableColumns();
-    if (availableColumns.length === 0) return;
-
-    // Get list of used colors
-    const usedColors = seriesConfigs.map(s => s.color);
-    const colorKeys = Object.keys(defaultColorsChart);
-    let selectedColor = defaultColorsChart[colorKeys[0]];
-
-    // Find an unused color from defaultColors
-    for (const colorKey of colorKeys) {
-      const color = defaultColorsChart[colorKey];
-      if (!usedColors.includes(color.light)) {
-        selectedColor = color;
-        break;
-      }
-    }
-
-    // If all colors in defaultColors are used, generate a random color
-    if (usedColors.includes(selectedColor.light)) {
-      const generateRandomColor = () => {
-        const letters = '0123456789ABCDEF';
-        let color = '#';
-        for (let i = 0; i < 6; i++) {
-          color += letters[Math.floor(Math.random() * 16)];
-        }
-        return color;
-      };
-
-      let randomColor = generateRandomColor();
-      // Ensure random color is not already used
-      while (usedColors.includes(randomColor)) {
-        randomColor = generateRandomColor();
-      }
-
-      selectedColor = {
-        light: randomColor,
-        dark: randomColor,
-      };
-    }
-
-    const newSeries: SeriesConfig = {
-      id: `series-${Date.now()}`,
-      name: availableColumns[0],
-      dataColumn: availableColumns[0],
-      color: selectedColor.light,
-      visible: true,
-    };
-
-    // Add color mapping for new series
-    updateColors({
-      ...colors,
-      [newSeries.dataColumn]: {
-        light: selectedColor.light,
-        dark: selectedColor.dark,
-      },
-    });
-
     setSeriesConfigs(prev => {
+      // Get available columns based on current state
+      const currentAvailableColumns = Object.keys(chartData[0] || {}).filter(
+        key => key !== safeChartConfig.xAxisKey && !prev.some(s => s.dataColumn === key)
+      );
+
+      if (currentAvailableColumns.length === 0) {
+        return prev;
+      }
+
+      // Get list of used colors from current series
+      const usedColors = prev.map(s => s.color);
+      const colorKeys = Object.keys(defaultColorsChart);
+      let selectedColor = defaultColorsChart[colorKeys[0]];
+
+      // Find an unused color from defaultColors
+      for (const colorKey of colorKeys) {
+        const color = defaultColorsChart[colorKey];
+        if (!usedColors.includes(color.light)) {
+          selectedColor = color;
+          break;
+        }
+      }
+
+      // If all colors in defaultColors are used, generate a random color
+      if (usedColors.includes(selectedColor.light)) {
+        const generateRandomColor = () => {
+          const letters = '0123456789ABCDEF';
+          let color = '#';
+          for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+          }
+          return color;
+        };
+
+        let randomColor = generateRandomColor();
+        // Ensure random color is not already used
+        while (usedColors.includes(randomColor)) {
+          randomColor = generateRandomColor();
+        }
+
+        selectedColor = {
+          light: randomColor,
+          dark: randomColor,
+        };
+      }
+
+      const newSeries: SeriesConfig = {
+        id: `series-${Date.now()}`,
+        name: currentAvailableColumns[0],
+        dataColumn: currentAvailableColumns[0],
+        color: selectedColor.light,
+        visible: true,
+      };
+
+      // Update colors synchronously
+      const newColors = {
+        ...colors,
+        [newSeries.dataColumn]: {
+          light: selectedColor.light,
+          dark: selectedColor.dark,
+        },
+      };
+
+      setColors(newColors);
+      onColorsChange?.(newColors);
+
+      // Create updated series array
       const updatedSeries = [...prev, newSeries];
       const allDataColumns = updatedSeries.map(s => s.dataColumn);
       const disabledColumns = updatedSeries.filter(s => !s.visible).map(s => s.dataColumn);
@@ -1074,45 +1275,57 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
       }
 
       updateConfig(configUpdates);
+
       return updatedSeries;
     });
   };
 
   const removeSeries = (seriesId: string) => {
-    const seriesToRemove = seriesConfigs.find(s => s.id === seriesId);
-    if (seriesToRemove && seriesConfigs.length > 1) {
-      // Clean up color mapping
+    // Mark that user has manually edited series to prevent auto-regeneration
+    hasUserEditedConfig.current = true;
+
+    setSeriesConfigs(prev => {
+      // Find the series to remove from the current state (prev)
+      const seriesToRemove = prev.find(s => s.id === seriesId);
+
+      if (!seriesToRemove || prev.length <= 1) {
+        return prev; // Don't remove if it's the last series or not found
+      }
+
+      // Filter out the series to remove
+      const updatedSeries = prev.filter(s => s.id !== seriesId);
+
+      // Clean up color mapping using the series we found
       const newColors = { ...colors };
       delete newColors[seriesToRemove.dataColumn];
-      updateColors(newColors);
 
-      setSeriesConfigs(prev => {
-        const updatedSeries = prev.filter(s => s.id !== seriesId);
-        const allDataColumns = updatedSeries.map(s => s.dataColumn);
-        const disabledColumns = updatedSeries.filter(s => !s.visible).map(s => s.dataColumn);
+      // Update colors synchronously
+      setColors(newColors);
+      onColorsChange?.(newColors);
 
-        const configUpdates: any = {
-          yAxisKeys: allDataColumns,
-        };
+      // Prepare config updates
+      const allDataColumns = updatedSeries.map(s => s.dataColumn);
+      const disabledColumns = updatedSeries.filter(s => !s.visible).map(s => s.dataColumn);
 
-        if (chartType === 'line' || chartType === 'area') {
-          configUpdates.disabledLines = disabledColumns;
-        } else if (chartType === 'bar') {
-          configUpdates.disabledBars = disabledColumns;
-        }
+      const configUpdates: any = {
+        yAxisKeys: allDataColumns,
+      };
 
-        updateConfig(configUpdates);
-        return updatedSeries;
-      });
-    }
+      if (chartType === 'line' || chartType === 'area') {
+        configUpdates.disabledLines = disabledColumns;
+      } else if (chartType === 'bar') {
+        configUpdates.disabledBars = disabledColumns;
+      }
+
+      // Update config with the new series data
+      updateConfig(configUpdates);
+
+      return updatedSeries;
+    });
   };
 
   // Render the appropriate D3 chart component
   const renderChart = () => {
-    console.log('🎯 renderChart called with chartType:', chartType);
-    console.log('🎯 chartData length:', chartData.length);
-    console.log('🎯 safeChartConfig exists:', !!safeChartConfig);
-
     if (!safeChartConfig || chartData.length === 0) {
       return (
         <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -1250,11 +1463,8 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
       },
     };
 
-    console.log('🎯 Switching chart type to:', chartType);
-
     switch (chartType) {
       case 'line': {
-        console.log('🎯 Rendering D3LineChart');
         const lineConfig = safeChartConfig as LineChartConfig;
         return (
           <D3LineChart
@@ -1290,7 +1500,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
       }
 
       case 'bar': {
-        console.log('🎯 Rendering D3BarChart');
         const barConfig = safeChartConfig as BarChartConfig;
         return (
           <D3BarChart
@@ -1323,7 +1532,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
       }
 
       case 'area': {
-        console.log('🎯 Rendering D3AreaChart');
         const areaConfig = safeChartConfig as AreaChartConfig;
         // Create minimal props for D3AreaChart to avoid TypeScript errors
         const areaProps = {
@@ -1375,365 +1583,361 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
     }
   };
 
-  // Chart type options
-  const chartTypeOptions = [
-    { value: 'line', label: t('chart_type_line', 'Line Chart'), icon: LineChart },
-    { value: 'bar', label: t('chart_type_bar', 'Bar Chart'), icon: BarChart3 },
-    { value: 'area', label: t('chart_type_area', 'Area Chart'), icon: AreaChart },
-  ];
+  // Chart type options - memoized for performance
+  const chartTypeOptions = useMemo(
+    () => [
+      { value: 'line', label: t('chart_type_line', 'Line Chart'), icon: LineChart },
+      { value: 'bar', label: t('chart_type_bar', 'Bar Chart'), icon: BarChart3 },
+      { value: 'area', label: t('chart_type_area', 'Area Chart'), icon: AreaChart },
+    ],
+    [t]
+  );
 
   return (
-    <div className="flex h-full bg-gray-50 dark:bg-gray-900">
-      {/* Left Sidebar - Chart Settings */}
-      <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
-        <div className="p-4 space-y-4">
-          {/* Chart Type Selector */}
-          {allowChartTypeChange && (
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-            >
-              <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-                <CardHeader className="pb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Settings className="h-5 w-5" />
-                    {t('chart_editor_chartType', 'Chart Type')}
-                  </h3>
-                </CardHeader>
-                <CardContent>
-                  <Select
-                    value={chartType}
-                    onValueChange={(value: string) => {
-                      const newChartType = value as ChartType;
-                      console.log('🎯 Chart type changed from', chartType, 'to', newChartType);
-                      setChartType(newChartType);
-                      // Create new config for the new chart type while preserving data mappings
-                      const newConfig = createDefaultConfig(newChartType, {
-                        ...chartConfig,
-                        xAxisKey: chartConfig?.xAxisKey,
-                        yAxisKeys: chartConfig?.yAxisKeys,
-                        title: chartConfig?.title,
-                      });
-                      console.log('🎯 Setting new config:', newConfig);
-                      setChartConfig(newConfig);
-                      onChartTypeChange?.(newChartType);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {chartTypeOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <div className="flex items-center gap-2">
-                            {React.createElement(option.icon, { className: 'w-4 h-4' })}
-                            {option.label}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
+      <div className="w-full px-2">
+        <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
+          {/* Left Sidebar - Chart Settings */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="space-y-4">
+              {/* Chart Type Selector */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="relative z-50"
+              >
+                <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-visible">
+                  <CardHeader className="pb-3">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Settings className="h-5 w-5" />
+                      {t('chart_editor_chartType', 'Chart Type')}
+                    </h3>
+                  </CardHeader>
+                  <CardContent className="relative overflow-visible">
+                    <div className="relative z-50">
+                      <Select
+                        value={chartType}
+                        onValueChange={(value: string) => {
+                          const newChartType = value as ChartType;
+                          setChartType(newChartType);
+                          // Create new config for the new chart type while preserving data mappings
+                          const newConfig = createDefaultConfig(newChartType, {
+                            ...chartConfig,
+                            xAxisKey: chartConfig?.xAxisKey,
+                            yAxisKeys: chartConfig?.yAxisKeys,
+                            title: chartConfig?.title,
+                          });
+                          setChartConfig(newConfig);
+                          onChartTypeChange?.(newChartType);
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <div className="flex items-center gap-2 min-h-[20px]">
+                            {(() => {
+                              const selectedOption = chartTypeOptions.find(
+                                opt => opt.value === chartType
+                              );
+
+                              if (chartType && selectedOption) {
+                                return (
+                                  <>
+                                    {React.createElement(selectedOption.icon, {
+                                      className: 'w-4 h-4 flex-shrink-0',
+                                    })}
+                                    <span className="truncate">{selectedOption.label}</span>
+                                  </>
+                                );
+                              }
+                              return (
+                                <span className="text-gray-500">
+                                  {t('chart_editor_select_type', 'Select chart type...')}
+                                </span>
+                              );
+                            })()}
                           </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {chartTypeOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              <div className="flex items-center gap-2">
+                                {React.createElement(option.icon, { className: 'w-4 h-4' })}
+                                {option.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+              {/* Data Editor Section */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.15 }}
+              >
+                <DataEditorSection
+                  isCollapsed={!expandedSections.dataEditor}
+                  onToggleCollapse={() => toggleSection('dataEditor')}
+                  data={chartData}
+                  xAxisKey={safeChartConfig.xAxisKey}
+                  yAxisKeys={safeChartConfig.yAxisKeys}
+                  onOpenModal={() => {}}
+                />
+              </motion.div>
+
+              {/* Basic Settings Section */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.15 }}
+              >
+                <BasicSettingsSection
+                  isCollapsed={!expandedSections.basicSettings}
+                  onToggleCollapse={() => toggleSection('basicSettings')}
+                  config={safeChartConfig}
+                  onUpdateConfig={handleConfigChange}
+                  onApplySizePreset={presetName => {
+                    const preset = sizePresets[presetName];
+                    if (chartConfig && preset) {
+                      handleConfigChange({
+                        width: preset.width,
+                        height: preset.height,
+                      });
+                    }
+                  }}
+                />
+              </motion.div>
+
+              {/* Chart Settings Section */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.15 }}
+              >
+                <ChartSettingsSection
+                  isCollapsed={!expandedSections.chartSettings}
+                  onToggleCollapse={() => toggleSection('chartSettings')}
+                  config={safeChartConfig}
+                  onUpdateConfig={handleConfigChange}
+                  onUpdateChartSpecific={handleConfigChange}
+                  chartType={chartType ?? 'line'}
+                  curveType={chartSpecificProps.curve}
+                  curveOptions={curveOptions}
+                  showPoints={chartSpecificProps.showPoints}
+                  lineWidth={chartSpecificProps.lineWidth}
+                  pointRadius={chartSpecificProps.pointRadius}
+                  barType={chartSpecificProps.barType}
+                />
+              </motion.div>
+
+              {/* Axis Configuration Section */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.15 }}
+              >
+                <AxisConfigurationSection
+                  isCollapsed={!expandedSections.axisConfiguration}
+                  onToggleCollapse={() => toggleSection('axisConfiguration')}
+                  config={safeChartConfig}
+                  data={chartData}
+                  formatters={formatters}
+                  onUpdateConfig={handleConfigChange}
+                  onUpdateFormatters={handleFormatterChange}
+                />
+              </motion.div>
+
+              {/* Series Management Section */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.15 }}
+              >
+                <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
+                  <CardHeader
+                    className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
+                    onClick={() => toggleSection('seriesManagement')}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5" />
+                        {t('chart_editor_seriesManagement')}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        {expandedSections.seriesManagement && (
+                          <Button
+                            onClick={e => {
+                              e.stopPropagation();
+                              addSeries();
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={getAvailableColumns().length === 0}
+                          >
+                            <Plus className="h-4 w-4 mr-1" /> {t('common.add', 'Add')}
+                          </Button>
+                        )}
+                        {!expandedSections.seriesManagement ? (
+                          <ChevronUp className="h-5 w-5 text-gray-500" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5 text-gray-500" />
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  {expandedSections.seriesManagement && (
+                    <CardContent className="space-y-4">
+                      <SeriesManagement
+                        series={seriesConfigs}
+                        onUpdateSeries={updateSeriesConfig}
+                        onAddSeries={addSeries}
+                        onRemoveSeries={removeSeries}
+                        onMoveSeriesUp={(seriesId: string) => {
+                          const index = seriesConfigs.findIndex(s => s.id === seriesId);
+                          if (index > 0) {
+                            const newSeries = [...seriesConfigs];
+                            [newSeries[index], newSeries[index - 1]] = [
+                              newSeries[index - 1],
+                              newSeries[index],
+                            ];
+                            setSeriesConfigs(newSeries);
+                          }
+                        }}
+                        onMoveSeriesDown={(seriesId: string) => {
+                          const index = seriesConfigs.findIndex(s => s.id === seriesId);
+                          if (index < seriesConfigs.length - 1) {
+                            const newSeries = [...seriesConfigs];
+                            [newSeries[index], newSeries[index + 1]] = [
+                              newSeries[index + 1],
+                              newSeries[index],
+                            ];
+                            setSeriesConfigs(newSeries);
+                          }
+                        }}
+                        availableColumns={getAvailableColumns()}
+                      />
+                    </CardContent>
+                  )}
+                </Card>
+              </motion.div>
+
+              {/* Chart Actions Section - Import/Export */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.12 }}
+              >
+                <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
+                  <CardHeader
+                    className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg"
+                    onClick={() => toggleSection('chartActions')}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Settings className="h-5 w-5" />
+                        {t('chart_editor_chart_actions', 'Import / Export & More')}
+                      </h3>
+                      {expandedSections.chartActions ? (
+                        <ChevronUp className="h-5 w-5 text-gray-500" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-gray-500" />
+                      )}
+                    </div>
+                  </CardHeader>
+                  {expandedSections.chartActions && (
+                    <CardContent className="space-y-4">
+                      {/* Export Image Section */}
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                          <Camera className="h-4 w-4" />
+                          {t('chart_editor_export_image', 'Export Image')}
+                        </Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <Button
+                            onClick={() => exportChartAsImage('png')}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-1 text-xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
+                          >
+                            <Download className="h-3 w-3" />
+                            PNG
+                          </Button>
+                          <Button
+                            onClick={() => exportChartAsImage('jpeg')}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-1 text-xs bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border-green-200 dark:border-green-800"
+                          >
+                            <Download className="h-3 w-3" />
+                            JPEG
+                          </Button>
+                          <Button
+                            onClick={() => exportChartAsImage('svg')}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-1 text-xs bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 border-purple-200 dark:border-purple-800"
+                          >
+                            <Download className="h-3 w-3" />
+                            SVG
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Config Management Section */}
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                          <Settings className="h-4 w-4" />
+                          {t('chart_editor_config_management', 'Config Management')}
+                        </Label>
+                        <div className="grid grid-cols-1 gap-2">
+                          <Button
+                            onClick={exportConfigToJSON}
+                            variant="outline"
+                            size="sm"
+                            className="w-full flex items-center gap-2 text-xs justify-start bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 border-orange-200 dark:border-orange-400"
+                          >
+                            <Download className="h-3 w-3" />
+                            {t('chart_editor_export_config', 'Export Config JSON')}
+                          </Button>
+                          <Button
+                            onClick={importConfigFromJSON}
+                            variant="outline"
+                            size="sm"
+                            className="w-full flex items-center gap-2 text-xs justify-start bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
+                          >
+                            <Upload className="h-3 w-3" />
+                            {t('chart_editor_import_config', 'Import Config JSON')}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Right Side - Chart Display */}
+          <div className="lg:col-span-6 space-y-6">
+            {/* Chart Display Area */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="sticky top-4 z-10"
+            >
+              <Card className="backdrop-blur-sm bg-white/95 dark:bg-gray-800/95 border-0 shadow-2xl">
+                <CardContent className="p-6">
+                  <div className="w-full h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                    {renderChart()}
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
-          )}
-          {/* Data Editor Section */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-          >
-            <DataEditorSection
-              isCollapsed={!expandedSections.dataEditor}
-              onToggleCollapse={() => toggleSection('dataEditor')}
-              data={chartData}
-              xAxisKey={safeChartConfig.xAxisKey}
-              yAxisKeys={safeChartConfig.yAxisKeys}
-              onOpenModal={() => {}}
-            />
-          </motion.div>
-
-          {/* Basic Settings Section */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-          >
-            <BasicSettingsSection
-              isCollapsed={!expandedSections.basicSettings}
-              onToggleCollapse={() => toggleSection('basicSettings')}
-              config={safeChartConfig}
-              onUpdateConfig={handleConfigChange}
-              onApplySizePreset={presetName => {
-                const preset = sizePresets[presetName];
-                if (chartConfig && preset) {
-                  handleConfigChange({
-                    width: preset.width,
-                    height: preset.height,
-                  });
-                }
-              }}
-            />
-          </motion.div>
-
-          {/* Chart Settings Section */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-          >
-            <ChartSettingsSection
-              isCollapsed={!expandedSections.chartSettings}
-              onToggleCollapse={() => toggleSection('chartSettings')}
-              config={safeChartConfig}
-              onUpdateConfig={handleConfigChange}
-              onUpdateChartSpecific={handleConfigChange}
-              chartType={chartType}
-              curveType={chartSpecificProps.curve}
-              curveOptions={curveOptions}
-              showPoints={chartSpecificProps.showPoints}
-              lineWidth={chartSpecificProps.lineWidth}
-              pointRadius={chartSpecificProps.pointRadius}
-              barType={chartSpecificProps.barType}
-            />
-          </motion.div>
-
-          {/* Axis Configuration Section */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-          >
-            <AxisConfigurationSection
-              isCollapsed={!expandedSections.axisConfiguration}
-              onToggleCollapse={() => toggleSection('axisConfiguration')}
-              config={safeChartConfig}
-              data={chartData}
-              formatters={formatters}
-              onUpdateConfig={handleConfigChange}
-              onUpdateFormatters={handleFormatterChange}
-            />
-          </motion.div>
-
-          {/* Series Management Section */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-          >
-            <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-              <CardHeader
-                className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
-                onClick={() => toggleSection('seriesManagement')}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    {t('chart_editor_seriesManagement')}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    {!expandedSections.seriesManagement && (
-                      <Button
-                        onClick={e => {
-                          e.stopPropagation();
-                          addSeries();
-                        }}
-                        size="sm"
-                        variant="outline"
-                        className="bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={getAvailableColumns().length === 0}
-                      >
-                        <Plus className="h-4 w-4 mr-1" /> {t('common.add', 'Add')}
-                      </Button>
-                    )}
-                    {expandedSections.seriesManagement ? (
-                      <ChevronUp className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-500" />
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              {!expandedSections.seriesManagement && (
-                <CardContent className="space-y-4">
-                  <SeriesManagement
-                    series={seriesConfigs}
-                    onUpdateSeries={updateSeriesConfig}
-                    onAddSeries={addSeries}
-                    onRemoveSeries={removeSeries}
-                    onMoveSeriesUp={(seriesId: string) => {
-                      const index = seriesConfigs.findIndex(s => s.id === seriesId);
-                      if (index > 0) {
-                        const newSeries = [...seriesConfigs];
-                        [newSeries[index], newSeries[index - 1]] = [
-                          newSeries[index - 1],
-                          newSeries[index],
-                        ];
-                        setSeriesConfigs(newSeries);
-                      }
-                    }}
-                    onMoveSeriesDown={(seriesId: string) => {
-                      const index = seriesConfigs.findIndex(s => s.id === seriesId);
-                      if (index < seriesConfigs.length - 1) {
-                        const newSeries = [...seriesConfigs];
-                        [newSeries[index], newSeries[index + 1]] = [
-                          newSeries[index + 1],
-                          newSeries[index],
-                        ];
-                        setSeriesConfigs(newSeries);
-                      }
-                    }}
-                    availableColumns={getAvailableColumns()}
-                  />
-                </CardContent>
-              )}
-            </Card>
-          </motion.div>
-
-          {/* Chart Actions Section - Import/Export */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.12 }}
-          >
-            <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-              <CardHeader
-                className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg"
-                onClick={() => toggleSection('chartActions')}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Settings className="h-5 w-5" />
-                    {t('chart_editor_chart_actions', 'Import / Export & More')}
-                  </h3>
-                  {expandedSections.chartActions ? (
-                    <ChevronUp className="h-5 w-5 text-gray-500" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-gray-500" />
-                  )}
-                </div>
-              </CardHeader>
-              {expandedSections.chartActions && (
-                <CardContent className="space-y-4">
-                  {/* Export Image Section */}
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                      <Camera className="h-4 w-4" />
-                      {t('chart_editor_export_image', 'Export Image')}
-                    </Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Button
-                        onClick={() => exportChartAsImage('png')}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-1 text-xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
-                      >
-                        <Download className="h-3 w-3" />
-                        PNG
-                      </Button>
-                      <Button
-                        onClick={() => exportChartAsImage('jpeg')}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-1 text-xs bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border-green-200 dark:border-green-800"
-                      >
-                        <Download className="h-3 w-3" />
-                        JPEG
-                      </Button>
-                      <Button
-                        onClick={() => exportChartAsImage('svg')}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-1 text-xs bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 border-purple-200 dark:border-purple-800"
-                      >
-                        <Download className="h-3 w-3" />
-                        SVG
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Config Management Section */}
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                      <Settings className="h-4 w-4" />
-                      {t('chart_editor_config_management', 'Config Management')}
-                    </Label>
-                    <div className="grid grid-cols-1 gap-2">
-                      <Button
-                        onClick={exportConfigToJSON}
-                        variant="outline"
-                        size="sm"
-                        className="w-full flex items-center gap-2 text-xs justify-start bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 border-orange-200 dark:border-orange-400"
-                      >
-                        <Download className="h-3 w-3" />
-                        {t('chart_editor_export_config', 'Export Config JSON')}
-                      </Button>
-                      <Button
-                        onClick={importConfigFromJSON}
-                        variant="outline"
-                        size="sm"
-                        className="w-full flex items-center gap-2 text-xs justify-start bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
-                      >
-                        <Upload className="h-3 w-3" />
-                        {t('chart_editor_import_config', 'Import Config JSON')}
-                      </Button>
-                      <Button
-                        onClick={resetToDefaultConfig}
-                        variant="outline"
-                        size="sm"
-                        className="w-full flex items-center gap-2 text-xs justify-start text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 border-red-200 dark:border-red-800"
-                      >
-                        <RotateCcw className="h-3 w-3" />
-                        {t('chart_editor_reset_config', 'Reset to Default')}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              )}
-            </Card>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Right Side - Chart Display */}
-      <div className="flex-1 flex flex-col">
-        {/* Chart Header */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white">
-                {chartTypeOptions.find(opt => opt.value === chartType)?.icon &&
-                  React.createElement(chartTypeOptions.find(opt => opt.value === chartType)!.icon, {
-                    className: 'w-4 h-4',
-                  })}
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {chartConfig?.title || t('chart_editor_title', 'Chart Editor')}
-                </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {chartTypeOptions.find(opt => opt.value === chartType)?.label}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Camera className="w-4 h-4 mr-2" />
-                {t('chart_export_image', 'Export')}
-              </Button>
-              <Button variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                {t('chart_download', 'Download')}
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Chart Display Area */}
-        <div className="flex-1 p-6 bg-gray-50 dark:bg-gray-900">
-          <div className="h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            {renderChart()}
           </div>
         </div>
       </div>

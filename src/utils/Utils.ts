@@ -88,12 +88,10 @@ export default class Utils {
 export const cloudName = 'dnel8ng9g';
 
 export const defaultColorsChart: Record<string, { light: string; dark: string }> = {
-  color1: { light: '#3b82f6', dark: '#60a5fa' },
-  color2: { light: '#f97316', dark: '#fb923c' },
-  color3: { light: '#f59e0b', dark: '#fbbf24' },
-  color4: { light: '#eab308', dark: '#facc15' },
-  color5: { light: '#ef4444', dark: '#f87171' },
-  color6: { light: '#10b981', dark: '#34d399' },
-  color7: { light: '#8b5cf6', dark: '#a78bfa' },
-  color8: { light: '#6b7280', dark: '#9ca3af' },
+  color1: { light: '#3b82f6', dark: '#3b82f6' }, // xanh dương
+  color2: { light: '#ef4444', dark: '#f87171' }, // đỏ
+  color3: { light: '#10b981', dark: '#34d399' }, // xanh lá
+  color4: { light: '#f59e0b', dark: '#fbbf24' }, // cam vàng
+  color5: { light: '#8b5cf6', dark: '#a78bfa' }, // tím
+  color6: { light: '#f97316', dark: '#fb923c' }, // cam
 };

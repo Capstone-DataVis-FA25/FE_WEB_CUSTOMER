@@ -3,6 +3,24 @@ import * as d3 from 'd3';
 // Color configuration
 export type ColorConfig = Record<string, { light: string; dark: string }>;
 
+// Structured Chart Config (complete format)
+export interface StructuredChartConfig {
+  config: Record<string, unknown> & {
+    title: string;
+    xLabel: string;
+    yLabel: string;
+    xColumn: number;
+    width: number;
+    height: number;
+    showLegend: boolean;
+    showGrid: boolean;
+    showDataLabels: boolean;
+  };
+  formatters: Partial<FormatterConfig>;
+  seriesConfigs: SeriesConfig[];
+  chartType: 'line' | 'bar' | 'area';
+}
+
 // Curve options
 export const curveOptions = {
   curveLinear: d3.curveLinear,

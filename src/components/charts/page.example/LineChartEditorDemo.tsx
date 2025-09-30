@@ -31,8 +31,6 @@ const LineChartEditorDemo: React.FC = () => {
         customYFormatter: '',
         customXFormatter: '',
       }}
-      title={t('lineChart_editor_demo_financialData')}
-      description={t('lineChart_editor_demo_financialDataDesc')}
     />
   );
 };
