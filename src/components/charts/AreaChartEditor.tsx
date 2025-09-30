@@ -534,8 +534,6 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
   // Export configuration to JSON (config only, no data)
   const exportConfigToJSON = () => {
     try {
-      console.log('🔄 EXPORTING CONFIG:');
-
       const exportData = {
         version: '1.0',
         timestamp: new Date().toISOString(),
@@ -626,9 +624,6 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
         try {
           const text = await file.text();
           const importData = JSON.parse(text);
-
-          console.log('🔄 IMPORTING CONFIG:');
-
           // Validate the imported data structure
           if (!importData.config || !importData.colors || !importData.formatters) {
             throw new Error('Invalid configuration file structure');

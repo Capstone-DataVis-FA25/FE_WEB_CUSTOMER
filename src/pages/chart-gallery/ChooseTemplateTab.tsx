@@ -78,8 +78,8 @@ export default function ChooseTemplateTab() {
         yAxisKeys: [],
         yAxisLabels: [],
         disabledLines: [],
-        xAxisLabel: '',
-        yAxisLabel: '',
+        xAxisLabel: 'xAxisLabel',
+        yAxisLabel: 'yAxisLabel',
 
         // Animation settings
         animationDuration: 1000,
@@ -229,7 +229,6 @@ export default function ChooseTemplateTab() {
 
       // Get default configuration for this template
       const defaultConfig = getDefaultChartConfig(template);
-
       // Create chart with default settings - only include ChartConfig properties
       const chartData = {
         name: defaultConfig.config.title,
@@ -238,13 +237,8 @@ export default function ChooseTemplateTab() {
         type: template.type,
         config: defaultConfig,
       };
-
-      console.log('ChooseTemplateTab - Creating chart with data:', chartData);
-
       const result = await createChart(chartData).unwrap();
-
       console.log('ChooseTemplateTab - Chart created successfully:', result);
-
       showSuccess(
         t('chart_create_success', 'Chart Created'),
         t('chart_create_success_message', 'Chart has been created successfully')
@@ -254,9 +248,8 @@ export default function ChooseTemplateTab() {
       navigate(`${Routers.CHART_EDITOR}?chartId=${result.id}&datasetId=${datasetId}`, {
         state: {
           chartId: result.id,
-          chartType: template.type,
           datasetId: datasetId,
-          datasetName: datasetName,
+          type: result.type,
           chart: result,
         },
       });
@@ -281,8 +274,8 @@ export default function ChooseTemplateTab() {
       'All',
       'line',
       'bar',
-      'pie',
       'area',
+      'pie',
       'donut',
       'column',
       'scatter',
@@ -340,20 +333,20 @@ export default function ChooseTemplateTab() {
                 configuration: { type: 'bar' },
               },
               {
-                id: 'pie-basic',
-                name: t('chart_gallery_pie_basic'),
-                description: t('chart_gallery_pie_basic_desc'),
-                type: 'pie',
-                category: 'basic',
-                configuration: { type: 'pie' },
-              },
-              {
                 id: 'area-basic',
                 name: t('chart_gallery_area_basic'),
                 description: t('chart_gallery_area_basic_desc'),
                 type: 'area',
                 category: 'basic',
                 configuration: { type: 'area' },
+              },
+              {
+                id: 'pie-basic',
+                name: t('chart_gallery_pie_basic'),
+                description: t('chart_gallery_pie_basic_desc'),
+                type: 'pie',
+                category: 'basic',
+                configuration: { type: 'pie' },
               },
               {
                 id: 'donut-basic',

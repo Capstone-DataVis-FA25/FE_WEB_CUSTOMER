@@ -2,7 +2,7 @@ export interface Chart {
   id: string;
   name: string;
   description?: string;
-  type: 'line' | 'bar' | 'area' | 'pie' | 'scatter';
+  type: 'line' | 'bar' | 'area';
   config?: {
     width?: number;
     height?: number;
@@ -47,24 +47,7 @@ export interface ChartState {
   error: string | null;
 }
 
-export const CHART_TYPES = [
-  'line',
-  'bar',
-  'pie',
-  'area',
-  'donut',
-  'column',
-  'scatter',
-  'map',
-  'heatmap',
-  'bubble',
-  'radar',
-  'treemap',
-  'sankey',
-  'gauge',
-  'funnel',
-  'waterfall',
-] as const;
+export const CHART_TYPES = ['line', 'bar', 'area'] as const;
 
 export type ChartType = (typeof CHART_TYPES)[number];
 
@@ -227,7 +210,7 @@ export interface CreateChartRequest {
 export interface UpdateChartRequest {
   name?: string;
   description?: string;
-  type?: 'line' | 'bar' | 'area' | 'pie' | 'scatter';
+  type?: ChartType;
   configuration?: {
     title?: string;
     xAxisLabel?: string;

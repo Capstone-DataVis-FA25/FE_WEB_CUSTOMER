@@ -65,22 +65,31 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
 
 const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
   ({ className, children, ...props }, ref) => {
-    const { setOpen } = React.useContext(SelectContext);
+    const { setOpen, open } = React.useContext(SelectContext);
+    const triggerRef = React.useRef<HTMLButtonElement>(null);
+
+    React.useImperativeHandle(ref, () => triggerRef.current!);
 
     return (
       <button
-        ref={ref}
+        ref={triggerRef}
         type="button"
         data-select-trigger
         className={cn(
-          'flex h-10 w-full items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm ring-offset-background placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer',
+          'flex h-10 w-full items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm ring-offset-background placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition-all duration-200',
+          open && 'ring-2 ring-blue-500 border-blue-500',
           className
         )}
         onClick={() => setOpen(prev => !prev)}
         {...props}
       >
         {children}
-        <ChevronDown className="h-4 w-4 opacity-50" />
+        <ChevronDown
+          className={cn(
+            'h-4 w-4 opacity-50 transition-transform duration-200',
+            open && 'rotate-180'
+          )}
+        />
       </button>
     );
   }
@@ -95,28 +104,35 @@ const SelectContent: React.FC<SelectContentProps> = ({ children }) => {
   return (
     <div
       data-select-content
-      className="absolute top-full left-0 right-0 z-[99999] mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-2xl max-h-60 overflow-auto"
+      className="absolute top-full left-0 right-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-2xl max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95"
       style={{
-        position: 'absolute',
-        zIndex: 99999,
+        zIndex: 9999,
       }}
     >
-      <div className="p-1">{children}</div>
+      <div className="p-1 space-y-1">{children}</div>
     </div>
   );
 };
 
 const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
-  const { onValueChange, setOpen } = React.useContext(SelectContext);
+  const { onValueChange, setOpen, value: selectedValue } = React.useContext(SelectContext);
 
   const handleClick = () => {
     onValueChange?.(value);
     setOpen(false);
   };
 
+  const isSelected = selectedValue === value;
+
   return (
     <div
-      className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700"
+      className={cn(
+        'relative flex w-full cursor-pointer select-none items-center rounded-md py-2.5 px-3 text-sm outline-none transition-all duration-150',
+        isSelected
+          ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 shadow-sm'
+          : 'hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 hover:shadow-sm'
+      )}
+      data-value={value}
       onClick={handleClick}
     >
       {children}
@@ -127,7 +143,11 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
 const SelectValue: React.FC<SelectValueProps> = ({ placeholder }) => {
   const { value } = React.useContext(SelectContext);
 
-  return <span className="block truncate">{value || placeholder}</span>;
+  if (!value) {
+    return <span className="block truncate text-gray-500">{placeholder}</span>;
+  }
+
+  return <span className="block truncate">{value}</span>;
 };
 
 export { Select, SelectTrigger, SelectContent, SelectItem, SelectValue };
