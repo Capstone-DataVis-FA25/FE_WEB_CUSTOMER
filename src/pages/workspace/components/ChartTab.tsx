@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 // import { useTranslation } from 'react-i18next';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ChartCard from './ChartCard';
+import DatasetSelectionDialog from './DatasetSelectionDialog';
 import type { Chart as BaseChart } from '@/features/charts/chartTypes';
 
 // Extended Chart type for UI with additional optional fields
@@ -22,8 +23,8 @@ interface ChartTabProps {
   datasetSelectingModal: boolean;
   filteredCharts: Chart[];
   searchTerm: string;
-  onCreateChart: () => void;
-  onHandleOpenModalSelectedDataset: () => void;
+  onCreateChart: (datasetId?: string) => void;
+  onHandleOpenModalSelectedDataset: (open: boolean) => void;
   onDeleteChart: (chart: Chart) => void;
   onEditChart: (chartId: string) => void;
   deletingChartId: string | null;
@@ -52,31 +53,42 @@ const ChartTab: React.FC<ChartTabProps> = ({
     );
   }
 
+  const handleSelectDataset = (datasetId: string) => {
+    onCreateChart(datasetId);
+  };
+
   if (filteredCharts.length === 0) {
     return (
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm dark:bg-gray-800/80">
-        <CardContent className="flex flex-col items-center justify-center py-16">
-          <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center mb-6">
-            <BarChart3 className="h-10 w-10 text-white" />
-          </div>
-          <h3 className="text-2xl font-semibold mb-2">No charts found</h3>
-          <p className="text-muted-foreground text-center mb-6 max-w-md">
-            {searchTerm
-              ? 'Try adjusting your search terms'
-              : 'Create your first chart to start visualizing your data!'}
-          </p>
-          {!searchTerm && (
-            <Button
-              onClick={onHandleOpenModalSelectedDataset}
-              size="lg"
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Create Your First Chart
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+      <>
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm dark:bg-gray-800/80">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center mb-6">
+              <BarChart3 className="h-10 w-10 text-white" />
+            </div>
+            <h3 className="text-2xl font-semibold mb-2">No charts found</h3>
+            <p className="text-muted-foreground text-center mb-6 max-w-md">
+              {searchTerm
+                ? 'Try adjusting your search terms'
+                : 'Create your first chart to start visualizing your data!'}
+            </p>
+            {!searchTerm && (
+              <Button
+                onClick={() => onHandleOpenModalSelectedDataset(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Chart
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        <DatasetSelectionDialog
+          open={datasetSelectingModal}
+          onOpenChange={onHandleOpenModalSelectedDataset}
+          onSelectDataset={handleSelectDataset}
+        />
+      </>
     );
   }
 

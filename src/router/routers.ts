@@ -6,6 +6,9 @@ const Routers = {
   RESET_PASSWORD: '/auth/reset-password',
   ABOUT_US: '/about-us',
 
+  // Resources routes
+  FREQUENT_QUESTIONS: '/resources/frequent-questions',
+
   // Profile routes
   PROFILE: '/profile',
   PROFILE_CHANGE_PASSWORD: '/profile/change-password',

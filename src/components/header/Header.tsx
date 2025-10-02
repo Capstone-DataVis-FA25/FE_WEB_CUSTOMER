@@ -38,7 +38,9 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isResourcesDropdownOpen, setIsResourcesDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const resourcesDropdownRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
 
   const { goToAuth } = useNavigation();
@@ -50,11 +52,28 @@ const Header: React.FC<HeaderProps> = ({
     { name: t('navigation_about'), href: '/about-us' },
   ];
 
+  // Resources dropdown items
+  const resourcesItems = [
+    { name: 'FAQ', href: '/resources/frequent-questions' },
+    { name: 'Changelog', href: '/resources/changelog' },
+    { name: 'Blog', href: '/resources/blog' },
+    { name: 'Docs', href: '/resources/docs' },
+    { name: 'Community', href: '/resources/community' },
+    { name: 'Forum', href: '/resources/forum' },
+    { name: 'Careers', href: '/resources/careers' },
+  ];
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsUserDropdownOpen(false);
+      }
+      if (
+        resourcesDropdownRef.current &&
+        !resourcesDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsResourcesDropdownOpen(false);
       }
     };
 
@@ -99,6 +118,44 @@ const Header: React.FC<HeaderProps> = ({
                   </a>
                 </FadeIn>
               ))}
+
+              {/* Resources Dropdown */}
+              <FadeIn delay={0.4}>
+                <div className="relative" ref={resourcesDropdownRef}>
+                  <button
+                    onClick={() => setIsResourcesDropdownOpen(!isResourcesDropdownOpen)}
+                    onMouseEnter={() => setIsResourcesDropdownOpen(true)}
+                    className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 font-medium relative group px-3 py-2 rounded-lg hover:bg-blue-50/50 dark:hover:bg-blue-900/20 flex items-center space-x-1"
+                  >
+                    <span>Resources</span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${isResourcesDropdownOpen ? 'rotate-180' : ''}`}
+                    />
+                    <span className="absolute inset-x-0 -bottom-1 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200 rounded-full" />
+                  </button>
+
+                  {/* Resources Dropdown Menu */}
+                  {isResourcesDropdownOpen && (
+                    <SlideInDown
+                      className="absolute left-0 mt-2 w-48 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-2 z-50 ring-1 ring-black/5 dark:ring-white/5"
+                      onMouseLeave={() => setIsResourcesDropdownOpen(false)}
+                    >
+                      <div className="grid grid-cols-2 gap-1 px-2">
+                        {resourcesItems.map((item, index) => (
+                          <FadeIn key={item.name} delay={index * 0.05}>
+                            <a
+                              href={item.href}
+                              className="block px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 rounded-xl font-medium"
+                            >
+                              {item.name}
+                            </a>
+                          </FadeIn>
+                        ))}
+                      </div>
+                    </SlideInDown>
+                  )}
+                </div>
+              </FadeIn>
             </nav>
 
             {/* Right Side Actions */}
@@ -265,6 +322,27 @@ const Header: React.FC<HeaderProps> = ({
                     </a>
                   </FadeIn>
                 ))}
+
+                {/* Resources Section - Mobile */}
+                <FadeIn delay={0.3}>
+                  <div className="pt-2">
+                    <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Resources
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {resourcesItems.map((item, index) => (
+                        <FadeIn key={item.name} delay={index * 0.05}>
+                          <a
+                            href={item.href}
+                            className="block px-3 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200 font-medium"
+                          >
+                            {item.name}
+                          </a>
+                        </FadeIn>
+                      ))}
+                    </div>
+                  </div>
+                </FadeIn>
 
                 {/* Mobile Actions */}
                 {!isAuthenticated && (

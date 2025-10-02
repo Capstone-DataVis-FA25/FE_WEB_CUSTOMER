@@ -1,16 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
-import { convertArrayToChartData } from '@/utils/dataConverter';
-import { defaultColorsChart } from '@/utils/Utils';
 
 export interface ChartDataPoint {
   [key: string]: number | string;
 }
 
 export interface D3BarChartProps {
-  data?: ChartDataPoint[];
-  arrayData?: (string | number)[][];
+  data: ChartDataPoint[];
   width?: number;
   height?: number;
   margin?: { top: number; right: number; bottom: number; left: number };
@@ -25,39 +22,29 @@ export interface D3BarChartProps {
   animationDuration?: number;
   yAxisFormatter?: (value: number) => string;
   xAxisFormatter?: (value: number) => string;
-  fontSize?: { axis: number; label: number; title: number };
+  fontSize?: { axis: number; label: number; title: number }; // Add fontSize prop
   barType?: 'grouped' | 'stacked';
-  // Advanced
-  gridOpacity?: number;
-  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
-  xAxisRotation?: number;
-  yAxisRotation?: number;
-  showAxisLabels?: boolean;
-  showAxisTicks?: boolean;
-  yAxisStart?: 'auto' | 'zero' | number;
-  theme?: 'light' | 'dark' | 'auto';
-  backgroundColor?: string;
-  showTooltip?: boolean;
-  barWidth?: number;
-  barSpacing?: number;
-  // Additional props for better customization
-  titleFontSize?: number;
-  labelFontSize?: number;
-  legendFontSize?: number;
-  enableZoom?: boolean;
-  enablePan?: boolean;
-  zoomExtent?: number;
 }
+
+const defaultColors: Record<string, { light: string; dark: string }> = {
+  bar1: { light: '#3b82f6', dark: '#60a5fa' },
+  bar2: { light: '#f97316', dark: '#fb923c' },
+  bar3: { light: '#6b7280', dark: '#9ca3af' },
+  bar4: { light: '#eab308', dark: '#facc15' },
+  bar5: { light: '#ef4444', dark: '#f87171' },
+  bar6: { light: '#10b981', dark: '#34d399' },
+  bar7: { light: '#8b5cf6', dark: '#a78bfa' },
+  bar8: { light: '#f59e0b', dark: '#fbbf24' },
+};
 
 const D3BarChart: React.FC<D3BarChartProps> = ({
   data,
-  arrayData,
   width = 800,
-  height = 600,
-  margin = { top: 20, right: 40, bottom: 60, left: 80 },
+  height = 600, // Reduced from 500 to 400 for better proportions
+  margin = { top: 20, right: 40, bottom: 60, left: 80 }, // Increased left margin for better Y-axis spacing
   xAxisKey,
   yAxisKeys,
-  colors = defaultColorsChart,
+  colors = defaultColors,
   title,
   yAxisLabel,
   xAxisLabel,
@@ -66,26 +53,8 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   animationDuration = 1000,
   yAxisFormatter,
   xAxisFormatter,
-  fontSize = { axis: 12, label: 14, title: 16 },
+  fontSize = { axis: 12, label: 14, title: 16 }, // Default fontSize
   barType = 'grouped',
-  gridOpacity = 0.5,
-  legendPosition = 'bottom',
-  xAxisRotation = 0,
-  yAxisRotation = 0,
-  showAxisLabels = true,
-  showAxisTicks = true,
-  yAxisStart = 'zero',
-  theme = 'auto',
-  backgroundColor = 'transparent',
-  showTooltip = true,
-  barWidth,
-  barSpacing = 4,
-  titleFontSize = 16,
-  labelFontSize = 12,
-  legendFontSize = 11,
-  enableZoom = false,
-  enablePan = false,
-  zoomExtent = 8,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -93,97 +62,105 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   const [dimensions, setDimensions] = React.useState({ width, height });
   const { t } = useTranslation();
 
-  // Convert array to data
-  const processedData = React.useMemo((): ChartDataPoint[] => {
-    if (arrayData && arrayData.length > 0) return convertArrayToChartData(arrayData);
-    return data || [];
-  }, [arrayData, data]);
-
-  // Update fontSize object with new props
-  const responsiveFontSize = {
-    axis: fontSize.axis,
-    label: labelFontSize,
-    title: titleFontSize,
-  };
-
-  // Resize observer
+  // Monitor container size for responsiveness
   useEffect(() => {
     const updateDimensions = () => {
-      if (!containerRef.current) return;
-      const containerWidth = containerRef.current.offsetWidth;
-      let aspectRatio = height / width;
-      if (containerWidth < 640) aspectRatio = Math.min(aspectRatio * 1.2, 0.75);
-      else if (containerWidth < 1024) aspectRatio = Math.min(aspectRatio, 0.6);
-      else aspectRatio = Math.min(aspectRatio, 0.5);
-      const newWidth = Math.min(containerWidth - 16, width);
-      const newHeight = newWidth * aspectRatio;
-      setDimensions({ width: newWidth, height: newHeight });
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        let aspectRatio = height / width;
+
+        if (containerWidth < 640) {
+          aspectRatio = Math.min(aspectRatio * 1.2, 0.75);
+        } else if (containerWidth < 1024) {
+          aspectRatio = Math.min(aspectRatio, 0.6);
+        } else {
+          aspectRatio = Math.min(aspectRatio, 0.5);
+        }
+
+        const newWidth = Math.min(containerWidth - 16, width);
+        const newHeight = newWidth * aspectRatio;
+        setDimensions({ width: newWidth, height: newHeight });
+      }
     };
+
     updateDimensions();
-    const ro = new ResizeObserver(updateDimensions);
-    if (containerRef.current) ro.observe(containerRef.current);
-    return () => ro.disconnect();
+
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
   }, [width, height]);
 
-  // Theme
+  // Monitor theme changes
   useEffect(() => {
     const updateTheme = () => {
-      if (theme === 'auto') setIsDarkMode(document.documentElement.classList.contains('dark'));
-      else setIsDarkMode(theme === 'dark');
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
     };
+
     updateTheme();
-    if (theme === 'auto') {
-      const obs = new MutationObserver(updateTheme);
-      obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-      return () => obs.disconnect();
-    }
-  }, [theme]);
+
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
-    if (!svgRef.current || !processedData.length) return;
+    if (!svgRef.current) return;
 
     const currentWidth = dimensions.width;
     const currentHeight = dimensions.height;
 
-    // Colors
+    // Get current theme colors
     const getCurrentColors = () => {
-      const mode = isDarkMode ? 'dark' : 'light';
+      const theme = isDarkMode ? 'dark' : 'light';
       const result: Record<string, string> = {};
       yAxisKeys.forEach((key, index) => {
         const colorKey = colors[key] ? key : `bar${index + 1}`;
-        result[key] = colors[colorKey]?.[mode] || defaultColorsChart[`color${index + 1}`][mode];
+        result[key] = colors[colorKey]?.[theme] || defaultColors[`bar${index + 1}`][theme];
       });
       return result;
     };
+
     const currentColors = getCurrentColors();
 
+    // Theme-aware colors
     const axisColor = isDarkMode ? '#9ca3af' : '#374151';
     const gridColor = isDarkMode ? '#4b5563' : '#9ca3af';
     const textColor = isDarkMode ? '#f3f4f6' : '#1f2937';
-    const bgColor =
-      backgroundColor !== 'transparent' ? backgroundColor : isDarkMode ? '#111827' : '#ffffff';
+    const backgroundColor = isDarkMode ? '#111827' : '#ffffff';
 
-    // Clear and setup
+    // Clear previous chart
     d3.select(svgRef.current).selectAll('*').remove();
+
     const svg = d3.select(svgRef.current);
 
+    // Responsive margin adjustments - better spacing for Y-axis
     const responsiveMargin = {
       top: currentWidth < 640 ? margin.top * 0.8 : margin.top,
       right: currentWidth < 640 ? margin.right * 0.7 : margin.right,
       bottom: currentWidth < 640 ? margin.bottom * 0.8 : margin.bottom,
-      left: currentWidth < 640 ? margin.left * 0.8 : margin.left,
+      left: currentWidth < 640 ? margin.left * 0.8 : margin.left, // Better left spacing on mobile
     };
 
+    // Set dimensions
     const innerWidth = currentWidth - responsiveMargin.left - responsiveMargin.right;
     const innerHeight = currentHeight - responsiveMargin.top - responsiveMargin.bottom;
 
+    // Add background
     svg
       .append('rect')
       .attr('width', currentWidth)
       .attr('height', currentHeight)
-      .attr('fill', bgColor)
+      .attr('fill', backgroundColor)
       .attr('rx', 8);
 
+    // Add subtle Y-axis background area
     svg
       .append('rect')
       .attr('x', 0)
@@ -193,6 +170,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       .attr('fill', isDarkMode ? '#111827' : '#f8fafc')
       .attr('opacity', 0.3);
 
+    // Create main group
     const g = svg
       .append('g')
       .attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top})`);
@@ -200,48 +178,30 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     // Scales
     const xScale = d3
       .scaleBand()
-      .domain(processedData.map(d => String(d[xAxisKey])))
+      .domain(data.map(d => String(d[xAxisKey])))
       .range([0, innerWidth])
       .padding(0.2);
 
+    // Get max value for y scale
     let maxValue: number;
     if (barType === 'stacked') {
       maxValue =
-        d3.max(processedData, d => yAxisKeys.reduce((sum, key) => sum + (d[key] as number), 0)) ||
-        0;
+        d3.max(data, d => yAxisKeys.reduce((sum, key) => sum + (d[key] as number), 0)) || 0;
     } else {
-      maxValue = d3.max(processedData, d => d3.max(yAxisKeys, key => d[key] as number) || 0) || 0;
+      maxValue = d3.max(data, d => d3.max(yAxisKeys, key => d[key] as number) || 0) || 0;
     }
-
-    let yMin = 0;
-    if (yAxisStart === 'auto') yMin = 0;
-    else if (yAxisStart === 'zero') yMin = 0;
-    else if (typeof yAxisStart === 'number') yMin = yAxisStart;
 
     const yScale = d3
       .scaleLinear()
-      .domain([yMin, maxValue * 1.1])
+      .domain([0, maxValue * 1.1])
       .range([innerHeight, 0]);
 
-    // Compute inner padding from barSpacing:
-    // - If <= 1: treat as fraction (0..0.5)
-    // - If > 1: treat as pixels and normalize by parent band width
-    const normalizedPadding = (() => {
-      if (typeof barSpacing !== 'number') return 0.1;
-      if (barSpacing <= 1) return Math.max(0, Math.min(0.5, barSpacing));
-      const bw = xScale.bandwidth();
-      if (bw <= 0) return 0.1;
-      return Math.max(0, Math.min(0.5, barSpacing / bw));
-    })();
+    // Create scales for grouped bars
+    const xSubScale = d3.scaleBand().domain(yAxisKeys).range([0, xScale.bandwidth()]).padding(0.1);
 
-    const xSubScale = d3
-      .scaleBand()
-      .domain(yAxisKeys)
-      .range([0, xScale.bandwidth()])
-      .padding(normalizedPadding);
-
-    // Grid
+    // Grid lines
     if (showGrid) {
+      // Horizontal grid lines
       g.selectAll('.grid-line-horizontal')
         .data(yScale.ticks())
         .enter()
@@ -254,8 +214,9 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         .attr('stroke', gridColor)
         .attr('stroke-width', 1)
         .attr('stroke-dasharray', '3,3')
-        .attr('opacity', gridOpacity);
+        .attr('opacity', isDarkMode ? 0.5 : 0.7); // Better opacity for light mode
 
+      // Vertical grid lines
       g.selectAll('.grid-line-vertical')
         .data(xScale.domain())
         .enter()
@@ -268,100 +229,94 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         .attr('stroke', gridColor)
         .attr('stroke-width', 1)
         .attr('stroke-dasharray', '3,3')
-        .attr('opacity', Math.max(0, Math.min(1, gridOpacity * 0.7)));
+        .attr('opacity', isDarkMode ? 0.3 : 0.5); // Better opacity for light mode
     }
 
-    // Axes
+    // X Axis with flexible formatting
     const xAxis = d3.axisBottom(xScale).tickFormat(d => {
-      if (xAxisFormatter) return xAxisFormatter(Number(d));
+      if (xAxisFormatter) {
+        return xAxisFormatter(Number(d));
+      }
       return String(d);
     });
-    const xAxisGroup = g.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis);
-    xAxisGroup
+
+    g.append('g')
+      .attr('transform', `translate(0,${innerHeight})`)
+      .call(xAxis)
       .selectAll('text')
       .attr('fill', textColor)
-      .style('font-size', `${responsiveFontSize.axis}px`)
-      .style('font-weight', '500')
-      .attr('transform', `rotate(${xAxisRotation})`)
-      .style('text-anchor', xAxisRotation === 0 ? 'middle' : xAxisRotation > 0 ? 'start' : 'end');
-    xAxisGroup.select('.domain').attr('stroke', axisColor).attr('stroke-width', 2);
-    if (showAxisTicks) xAxisGroup.selectAll('.tick line').attr('stroke', axisColor);
-    else xAxisGroup.selectAll('.tick line').attr('opacity', 0);
+      .style('font-size', `${fontSize.axis}px`)
+      .style('font-weight', '500');
 
+    g.select('.domain').attr('stroke', axisColor).attr('stroke-width', 2);
+
+    g.selectAll('.tick line').attr('stroke', axisColor);
+
+    // Y Axis with flexible formatting
     const yAxis = d3
       .axisLeft(yScale)
       .tickFormat(d => {
         const value = d.valueOf();
-        if (yAxisFormatter) return yAxisFormatter(value);
+        // Use custom formatter if provided, otherwise use simple number formatting
+        if (yAxisFormatter) {
+          return yAxisFormatter(value);
+        }
         return value.toLocaleString();
       })
-      .tickSize(showAxisTicks ? -5 : 0)
-      .tickPadding(8);
+      .tickSize(-5) // Shorter tick lines for cleaner look
+      .tickPadding(8); // More space between ticks and labels
+
     const yAxisGroup = g.append('g').call(yAxis);
+
+    // Style Y-axis labels beautifully
     yAxisGroup
       .selectAll('text')
       .attr('fill', textColor)
-      .style('font-size', `${responsiveFontSize.axis}px`)
+      .style('font-size', `${fontSize.axis}px`)
       .style('font-weight', '600')
       .style('font-family', 'system-ui, -apple-system, sans-serif')
       .attr('text-anchor', 'end')
-      .attr('x', -10)
-      .attr('transform', `rotate(${yAxisRotation})`);
+      .attr('x', -10); // Push labels further left for better spacing
+
+    // Style Y-axis domain line
     yAxisGroup
       .select('.domain')
       .attr('stroke', axisColor)
       .attr('stroke-width', 2)
       .attr('opacity', 0.8);
-    if (showAxisTicks) {
-      yAxisGroup
-        .selectAll('.tick line')
-        .attr('stroke', axisColor)
-        .attr('stroke-width', 1)
-        .attr('opacity', 0.6);
-    } else {
-      yAxisGroup.selectAll('.tick line').attr('opacity', 0);
-    }
 
-    // Bars
+    // Style Y-axis tick lines
+    yAxisGroup
+      .selectAll('.tick line')
+      .attr('stroke', axisColor)
+      .attr('stroke-width', 1)
+      .attr('opacity', 0.6);
+
+    // Create bars
     if (barType === 'grouped') {
+      // Grouped bars
       yAxisKeys.forEach((key, keyIndex) => {
         g.selectAll(`.bar-${keyIndex}`)
-          .data(processedData)
+          .data(data)
           .enter()
           .append('rect')
           .attr('class', `bar-${keyIndex}`)
-          .attr('x', d => {
-            const base = (xScale(String(d[xAxisKey])) || 0) + (xSubScale(key) || 0);
-            const subBW = xSubScale.bandwidth();
-            // barWidth semantics: <=1 = fraction, >1 = pixels, 0/undefined = auto (full)
-            let bw = subBW;
-            if (typeof barWidth === 'number') {
-              if (barWidth <= 0) bw = subBW;
-              else if (barWidth > 0 && barWidth <= 1) bw = subBW * barWidth;
-              else bw = Math.min(barWidth, subBW);
-            }
-            return base + (subBW - bw) / 2;
-          })
+          .attr('x', d => (xScale(String(d[xAxisKey])) || 0) + (xSubScale(key) || 0))
           .attr('y', innerHeight)
-          .attr('width', () => {
-            const subBW = xSubScale.bandwidth();
-            if (typeof barWidth !== 'number' || barWidth <= 0) return subBW;
-            if (barWidth <= 1) return subBW * barWidth; // fraction
-            return Math.min(barWidth, subBW); // pixels
-          })
+          .attr('width', xSubScale.bandwidth())
           .attr('height', 0)
           .attr('fill', currentColors[key])
           .attr('rx', 4)
           .attr('ry', 4)
           .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))')
           .on('mouseover', function (_event, d) {
-            if (!showTooltip) return;
             d3.select(this)
               .transition()
               .duration(200)
               .style('filter', 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))')
               .attr('opacity', 0.8);
 
+            // Create enhanced tooltip
             const tooltip = g
               .append('g')
               .attr('class', 'tooltip')
@@ -369,6 +324,8 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
                 'transform',
                 `translate(${(xScale(String(d[xAxisKey])) || 0) + (xSubScale(key) || 0) + xSubScale.bandwidth() / 2}, ${yScale(d[key] as number) - 15})`
               );
+
+            // Tooltip background with shadow
             tooltip
               .append('rect')
               .attr('x', -30)
@@ -384,14 +341,15 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
               .transition()
               .duration(200)
               .style('opacity', 0.95);
-            const value =
-              typeof d[key] === 'number' ? (d[key] as number).toLocaleString() : (d[key] as string);
+
+            // Tooltip text with better formatting
+            const value = typeof d[key] === 'number' ? d[key].toLocaleString() : d[key];
             tooltip
               .append('text')
               .attr('text-anchor', 'middle')
               .attr('y', -12)
               .attr('fill', textColor)
-              .style('font-size', `${responsiveFontSize.axis}px`)
+              .style('font-size', `${fontSize.axis}px`)
               .style('font-weight', '600')
               .style('opacity', 0)
               .text(value as string)
@@ -405,6 +363,8 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
               .duration(200)
               .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))')
               .attr('opacity', 1);
+
+            // Quick fade out
             g.select('.tooltip').transition().duration(100).style('opacity', 0).remove();
           })
           .transition()
@@ -415,10 +375,12 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .attr('height', d => innerHeight - yScale(d[key] as number));
       });
     } else {
+      // Stacked bars
       const stackedData = d3
         .stack<ChartDataPoint>()
         .keys(yAxisKeys)
-        .value((d, key) => d[key] as number)(processedData);
+        .value((d, key) => d[key] as number)(data);
+
       stackedData.forEach((series, seriesIndex) => {
         g.selectAll(`.bar-stack-${seriesIndex}`)
           .data(series)
@@ -434,12 +396,13 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .attr('ry', seriesIndex === 0 ? 4 : 0)
           .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))')
           .on('mouseover', function (_event, d) {
-            if (!showTooltip) return;
             d3.select(this)
               .transition()
               .duration(200)
               .style('filter', 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))')
               .attr('opacity', 0.8);
+
+            // Create minimal tooltip for stacked bars
             const value = d[1] - d[0];
             const tooltip = g
               .append('g')
@@ -448,6 +411,8 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
                 'transform',
                 `translate(${(xScale(String(d.data[xAxisKey])) || 0) + xScale.bandwidth() / 2}, ${yScale(d[1]) - 10})`
               );
+
+            // Simple background
             const tooltipBg = tooltip
               .append('rect')
               .attr('x', -25)
@@ -460,6 +425,8 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
               .attr('rx', 3)
               .style('filter', 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2))')
               .style('opacity', 0);
+
+            // Value only
             tooltip
               .append('text')
               .attr('text-anchor', 'middle')
@@ -470,6 +437,8 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
               .style('font-family', 'monospace')
               .style('opacity', 0)
               .text(value.toLocaleString());
+
+            // Smooth animation
             tooltipBg.transition().duration(100).style('opacity', 1);
             tooltip.selectAll('text').transition().duration(100).style('opacity', 1);
           })
@@ -479,6 +448,8 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
               .duration(200)
               .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))')
               .attr('opacity', 1);
+
+            // Quick fade out
             g.select('.tooltip').transition().duration(100).style('opacity', 0).remove();
           })
           .transition()
@@ -490,157 +461,31 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       });
     }
 
-    // Axis labels
-    if (xAxisLabel && showAxisLabels) {
+    // Add axis labels with responsive font sizes
+    if (xAxisLabel) {
       g.append('text')
         .attr('x', innerWidth / 2)
         .attr('y', innerHeight + (currentWidth < 768 ? 40 : 50))
         .attr('text-anchor', 'middle')
         .attr('fill', textColor)
-        .style('font-size', `${responsiveFontSize.label}px`)
+        .style('font-size', `${fontSize.label}px`)
         .style('font-weight', '600')
         .text(xAxisLabel);
     }
-    if (yAxisLabel && showAxisLabels) {
+
+    if (yAxisLabel) {
       g.append('text')
         .attr('transform', `rotate(-90)`)
         .attr('x', -innerHeight / 2)
-        .attr('y', currentWidth < 768 ? -55 : -65)
+        .attr('y', currentWidth < 768 ? -55 : -65) // Increased distance from Y-axis
         .attr('text-anchor', 'middle')
         .attr('fill', textColor)
-        .style('font-size', `${responsiveFontSize.label}px`)
+        .style('font-size', `${fontSize.label}px`)
         .style('font-weight', '600')
         .text(yAxisLabel);
     }
-
-    // Enhanced zoom and pan with mouse interactions
-    if (enableZoom || enablePan) {
-      let zoomLevel = 1;
-      let translateX = 0;
-      let translateY = 0;
-      let isDragging = false;
-      let dragStartX = 0;
-      let dragStartY = 0;
-      let dragStartTranslateX = 0;
-      let dragStartTranslateY = 0;
-
-      // Mouse wheel zoom
-      if (enableZoom) {
-        svg.on('wheel', function (event) {
-          event.preventDefault();
-
-          // Get mouse position relative to the chart
-          const rect = svg.node()?.getBoundingClientRect();
-          if (!rect) return;
-
-          const mouseX = event.clientX - rect.left - responsiveMargin.left;
-          const mouseY = event.clientY - rect.top - responsiveMargin.top;
-
-          const delta = event.deltaY;
-          const scaleFactor = delta > 0 ? 0.9 : 1.1;
-          const newZoomLevel = zoomLevel * scaleFactor;
-
-          // Limit zoom
-          const clampedZoomLevel = Math.max(0.5, Math.min(zoomExtent, newZoomLevel));
-          const actualScaleFactor = clampedZoomLevel / zoomLevel;
-
-          // Calculate new translation to zoom at mouse position
-          const newTranslateX = translateX + (mouseX - translateX) * (1 - actualScaleFactor);
-          const newTranslateY = translateY + (mouseY - translateY) * (1 - actualScaleFactor);
-
-          // Update zoom state
-          zoomLevel = clampedZoomLevel;
-          translateX = newTranslateX;
-          translateY = newTranslateY;
-
-          // Apply zoom and pan transform
-          const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
-          g.attr('transform', transform);
-        });
-      }
-
-      // Mouse drag to pan
-      if (enablePan) {
-        svg.on('mousedown', function (event) {
-          if (event.button !== 0) return; // Only left mouse button
-
-          isDragging = true;
-          dragStartX = event.clientX;
-          dragStartY = event.clientY;
-          dragStartTranslateX = translateX;
-          dragStartTranslateY = translateY;
-
-          // Change cursor to grabbing
-          svg.style('cursor', 'grabbing');
-
-          // Prevent text selection during drag
-          event.preventDefault();
-        });
-
-        svg.on('mousemove', function (event) {
-          if (!isDragging) {
-            // Show grab cursor when zoomed in
-            if (zoomLevel > 1) {
-              svg.style('cursor', 'grab');
-            } else {
-              svg.style('cursor', 'default');
-            }
-            return;
-          }
-
-          const deltaX = event.clientX - dragStartX;
-          const deltaY = event.clientY - dragStartY;
-
-          // Update translation based on drag distance
-          translateX = dragStartTranslateX + deltaX;
-          translateY = dragStartTranslateY + deltaY;
-
-          // Apply pan transform
-          const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
-          g.attr('transform', transform);
-        });
-
-        svg.on('mouseup', function () {
-          if (isDragging) {
-            isDragging = false;
-
-            // Reset cursor
-            if (zoomLevel > 1) {
-              svg.style('cursor', 'grab');
-            } else {
-              svg.style('cursor', 'default');
-            }
-          }
-        });
-
-        // Handle mouse leave to stop dragging
-        svg.on('mouseleave', function () {
-          if (isDragging) {
-            isDragging = false;
-            svg.style('cursor', 'default');
-          }
-        });
-
-        // Double-click to reset zoom
-        svg.on('dblclick', function () {
-          zoomLevel = 1;
-          translateX = 0;
-          translateY = 0;
-
-          svg.style('cursor', 'default');
-
-          g.transition()
-            .duration(300)
-            .ease(d3.easeQuadOut)
-            .attr(
-              'transform',
-              `translate(${responsiveMargin.left},${responsiveMargin.top}) scale(1)`
-            );
-        });
-      }
-    }
   }, [
-    processedData,
+    data,
     margin,
     xAxisKey,
     yAxisKeys,
@@ -657,104 +502,77 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     xAxisFormatter,
     fontSize,
     barType,
-    gridOpacity,
-    xAxisRotation,
-    yAxisRotation,
-    showAxisLabels,
-    showAxisTicks,
-    yAxisStart,
-    backgroundColor,
-    showTooltip,
-    barWidth,
-    barSpacing,
-    titleFontSize,
-    labelFontSize,
-    legendFontSize,
-    enableZoom,
-    enablePan,
-    zoomExtent,
-    responsiveFontSize.axis,
-    responsiveFontSize.label,
   ]);
 
-  const renderLegend = () => (
-    <div className="w-full">
-      <div className="w-full bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-        <h4
-          className="font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center"
-          style={{ fontSize: `${legendFontSize}px` }}
-        >
-          {t('legend')}
-        </h4>
-        <div
-          className="grid w-full gap-3 sm:gap-4 justify-items-stretch"
-          style={{ gridTemplateColumns: `repeat(${yAxisKeys.length}, minmax(0, 1fr))` }}
-        >
-          {yAxisKeys.map((key, index) => {
-            const colorKey = colors[key] ? key : `bar${index + 1}`;
-            const color =
-              colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
-              defaultColorsChart[`color${index + 1}`][isDarkMode ? 'dark' : 'light'];
-            return (
-              <div
-                key={key}
-                className="flex items-center justify-between w-full gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
-              >
-                <div className="flex-shrink-0">
-                  <div
-                    className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
-                    style={{ backgroundColor: color }}
-                  />
-                </div>
-                <span
-                  className="font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200"
-                  style={{ fontSize: `${legendFontSize}px` }}
-                >
-                  {key}
-                </span>
-                <div className="flex-1 flex justify-end">
-                  <div
-                    className="w-8 sm:w-8 h-2 sm:h-3 rounded opacity-60 group-hover:opacity-100 transition-opacity duration-200"
-                    style={{ backgroundColor: color }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-
   return (
-    <div
-      ref={containerRef}
-      className={`w-full ${legendPosition === 'top' || legendPosition === 'bottom' ? 'space-y-4' : 'flex gap-4'}`}
-    >
+    <div ref={containerRef} className="w-full space-y-4">
       {title && (
         <h3
           className="font-bold text-gray-900 dark:text-white text-center"
-          style={{ fontSize: `${titleFontSize}px` }}
+          style={{ fontSize: `${fontSize.title}px` }}
         >
           {title}
         </h3>
       )}
 
-      {/* Chart Container with integrated legend */}
-      <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3">
+      {/* Chart Container */}
+      <div className="relative w-full bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3">
         <svg
           ref={svgRef}
           width={dimensions.width}
           height={dimensions.height}
-          className="w-full h-auto chart-svg"
+          className="w-full h-auto"
           viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-          style={{ display: 'block' }}
           preserveAspectRatio="xMidYMid meet"
         />
       </div>
 
-      {/* Legend Bottom */}
-      {showLegend && legendPosition === 'bottom' && renderLegend()}
+      {/* Beautiful Legend Below Chart */}
+      {showLegend && (
+        <div className="inline-flex">
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <h4 className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center">
+              {t('legend')}
+            </h4>
+
+            {/* Responsive Grid Layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 justify-items-center">
+              {yAxisKeys.map((key, index) => {
+                const colorKey = colors[key] ? key : `bar${index + 1}`;
+                const color =
+                  colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
+                  defaultColors[`bar${index + 1}`][isDarkMode ? 'dark' : 'light'];
+
+                return (
+                  <div
+                    key={key}
+                    className="flex items-center min-w-[140px] max-w-[180px] gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
+                  >
+                    {/* Color Indicator */}
+                    <div className="flex-shrink-0">
+                      <div
+                        className="w-2 h-2 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
+                        style={{ backgroundColor: color }}
+                      />
+                    </div>
+                    {/* Label */}
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200">
+                      {key}
+                    </span>
+                    {/* Bar Preview */}
+                    <div className="flex-1 flex justify-end">
+                      <div
+                        className="w-8 sm:w-12 h-2 sm:h-3 rounded opacity-60 group-hover:opacity-100 transition-opacity duration-200"
+                        style={{ backgroundColor: color }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

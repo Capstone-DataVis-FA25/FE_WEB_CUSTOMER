@@ -25,6 +25,7 @@ const componentMap = {
   NotificationSettingsPage: lazy(() => import('../pages/profile/NotificationSettingsPage')),
   GeneralSettingsPage: lazy(() => import('../pages/profile/GeneralSettingsPage')),
   AboutPage: lazy(() => import('../pages/about-us/AboutUsPage')),
+  FrequentQuestionPage: lazy(() => import('../pages/resources/FrequentQuestionPage')),
   VerifyEmailErrorPage: lazy(() => import('../pages/verify/VerifyEmailErrorPage')),
   ResendEmailPage: lazy(() => import('../pages/verify/ResendEmailPage')),
   LineChartPage: lazy(() => import('../components/charts/page.example/LineChartPage')),

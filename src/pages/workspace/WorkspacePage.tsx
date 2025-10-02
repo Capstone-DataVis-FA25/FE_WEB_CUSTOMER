@@ -186,8 +186,8 @@ const WorkspacePage: React.FC = () => {
     navigate(Routers.CREATE_DATASET);
   };
 
-  const handleOpenModalSelectDataset = () => {
-    setSelectingDatasetModal(!selectingDatasetModal);
+  const handleOpenModalSelectDataset = (open: boolean) => {
+    setSelectingDatasetModal(open);
   };
 
   const handleCreateChart = (datasetId?: string) => {
