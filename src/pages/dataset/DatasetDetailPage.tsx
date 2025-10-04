@@ -457,7 +457,7 @@ const DatasetDetailPage: React.FC = () => {
                             <CustomExcel
                               initialData={bodyRows}
                               // Lỗi vì chưa mapping dữ liệu đúng TYPE
-                              initialColumns={columnDefs}
+                              // initialColumns={columnDefs}
                               mode="view"
                             />
                           </div>
