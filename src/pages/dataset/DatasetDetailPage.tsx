@@ -14,7 +14,7 @@ import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 
 import Routers from '@/router/routers';
-import CustomExcel from '@/components/excel/CustomExcel';
+import DatasetViewerTable from '@/components/dataset/DatasetViewerTable';
 
 // Type for header with data
 interface DatasetHeader {
@@ -202,20 +202,18 @@ const DatasetDetailPage: React.FC = () => {
     );
   }
 
-  // Build structured columns + rows for CustomExcel (first row is headers in edit page; here we send body & columns separately)
-  let bodyRows: string[][] = [];
-  let columnDefs: { name: string; type: 'text' }[] = [];
+  // Prepare flat header + body rows for lightweight viewer
   let headerRow: string[] = [];
+  let bodyRows: (string | number | null)[][] = [];
   if (currentDataset.headers && currentDataset.headers.length) {
     headerRow = currentDataset.headers.map((h: DatasetHeader) => h.name);
-    columnDefs = headerRow.map(name => ({ name, type: 'text' as const }));
-    const rowCount = currentDataset.rowCount;
-    const rows: string[][] = Array.from({ length: rowCount }, () =>
+    const rowCount = currentDataset.rowCount || 0;
+    const rows: (string | number | null)[][] = Array.from({ length: rowCount }, () =>
       Array(headerRow.length).fill('')
     );
-    currentDataset.headers.forEach((h: DatasetHeader, idx: number) => {
+    currentDataset.headers.forEach((h: DatasetHeader, colIdx: number) => {
       h.data?.forEach((cell: string | number | null, rowIdx: number) => {
-        if (rows[rowIdx]) rows[rowIdx][idx] = String(cell ?? '');
+        if (rows[rowIdx]) rows[rowIdx][colIdx] = cell ?? '';
       });
     });
     bodyRows = rows;
@@ -322,40 +320,7 @@ const DatasetDetailPage: React.FC = () => {
                   </Card>
                 </SlideInUp>
 
-                <SlideInUp delay={0.2}>
-                  <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/20 shadow-xl rounded-2xl overflow-hidden group hover:shadow-2xl transition-all duration-300">
-                    <div className="bg-gradient-to-r from-orange-500 to-red-500 p-4">
-                      <CardTitle className="flex items-center gap-3 text-white">
-                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                          <Edit className="w-4 h-4" />
-                        </div>
-                        <span className="font-semibold">{t('dataset_metadata', 'Metadata')}</span>
-                      </CardTitle>
-                    </div>
-                    <CardContent className="p-6 space-y-4">
-                      <div className="grid grid-cols-1 gap-3">
-                        <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200/30 dark:border-green-800/30">
-                          <label className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            {t('dataset_createdAt', 'Created')}
-                          </label>
-                          <p className="text-gray-900 dark:text-white font-medium mt-2">
-                            {formatDate(currentDataset.createdAt)}
-                          </p>
-                        </div>
-                        <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-100 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl border border-blue-200/30 dark:border-blue-800/30">
-                          <label className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide flex items-center gap-2">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            {t('dataset_updatedAt', 'Last Updated')}
-                          </label>
-                          <p className="text-gray-900 dark:text-white font-medium mt-2">
-                            {formatDate(currentDataset.updatedAt)}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </SlideInUp>
+                {/* Metadata card removed; created/updated info merged into information card above */}
 
                 <SlideInUp delay={0.25}>
                   <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/20 shadow-xl rounded-2xl overflow-hidden">
@@ -413,11 +378,6 @@ const DatasetDetailPage: React.FC = () => {
                             <h3 className="text-xl font-bold">
                               {t('dataset_dataPreview', 'Data Preview')}
                             </h3>
-                            <p className="text-violet-100 text-sm mt-1">
-                              Interactive data table with{' '}
-                              {currentDataset.rowCount?.toLocaleString()} rows ×{' '}
-                              {currentDataset.columnCount} columns
-                            </p>
                           </div>
                         </div>
                       </CardTitle>
@@ -454,11 +414,7 @@ const DatasetDetailPage: React.FC = () => {
                           style={{ minHeight: '400px', maxHeight: '1000px' }}
                         >
                           <div className="overflow-auto h-full">
-                            <CustomExcel
-                              initialData={bodyRows}
-                              initialColumns={columnDefs}
-                              mode="view"
-                            />
+                            <DatasetViewerTable columns={headerRow} rows={bodyRows} height="60vh" />
                           </div>
                         </div>
                       </div>
