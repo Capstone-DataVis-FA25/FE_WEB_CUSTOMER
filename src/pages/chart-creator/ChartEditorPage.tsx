@@ -31,6 +31,7 @@ import { useModalConfirm } from '@/hooks/useModal';
 import Utils from '@/utils/Utils';
 import { useBeforeUnload } from '@/hooks/useBeforeUnload';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal';
+import ToastContainer from '@/components/ui/toast-container';
 
 const ChartEditorPage: React.FC = () => {
   const { t } = useTranslation();
@@ -38,10 +39,11 @@ const ChartEditorPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { getDatasetById } = useDataset();
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
   const [isLoading, setLoading] = useState(false);
   const [dataset, setDataset] = useState<Dataset | undefined>(undefined);
+  const [currentModalAction, setCurrentModalAction] = useState<'save' | 'reset' | null>(null);
   const { currentChart, loading, error, getChartById, updateChart, clearChartError, clearCurrent } =
     useCharts();
 
@@ -298,6 +300,7 @@ const ChartEditorPage: React.FC = () => {
   // Handle save/update with confirmation - saves all changes at once
   const handleSave = async () => {
     if (mode === 'edit' && chartId && currentChart) {
+      setCurrentModalAction('save');
       modalConfirm.openConfirm(async () => {
         try {
           const updateData = {
@@ -307,16 +310,18 @@ const ChartEditorPage: React.FC = () => {
             config: chartConfig,
           };
 
-          await updateChart(chartId, updateData);
-
-          // Update original values after successful save
-          setOriginalName(editableName.trim() || currentChart.name || '');
-          setOriginalDescription(editableDescription.trim() || currentChart.description || '');
-          setOriginalConfig(chartConfig);
-          setOriginalChartType(currentChartType);
-
-          showSuccess(t('chart_updated', 'Chart updated successfully'));
-        } catch (error) {
+          const response: any = await updateChart(chartId, updateData);
+          if (response.meta.requestStatus === 'fulfilled') {
+            // Update original values after successful save
+            setOriginalName(editableName.trim() || currentChart.name || '');
+            setOriginalDescription(editableDescription.trim() || currentChart.description || '');
+            setOriginalConfig(chartConfig);
+            setOriginalChartType(currentChartType);
+            showSuccess(t(`${response.payload.message}`));
+          } else {
+            showError(t('chart_update_error', 'Failed to update chart'));
+          }
+        } catch (eror) {
           console.error('Error updating chart:', error);
           showError(t('chart_update_error', 'Failed to update chart'));
           throw error; // Re-throw to let modal handle loading state
@@ -324,6 +329,8 @@ const ChartEditorPage: React.FC = () => {
       });
     }
   };
+
+  console.log('currentChart 123:', currentChart);
 
   // Handle config changes from chart editors
   const handleConfigChange = useCallback(
@@ -376,6 +383,7 @@ const ChartEditorPage: React.FC = () => {
   // Handle reset to original values
   const handleReset = () => {
     if (hasChanges) {
+      setCurrentModalAction('reset');
       modalConfirm.openConfirm(async () => {
         try {
           // Reset all values to original (name, description, config, chart type)
@@ -431,16 +439,17 @@ const ChartEditorPage: React.FC = () => {
           config: chartConfig,
         };
 
-        await updateChart(chartId, updateData);
-
-        // Update original values after successful save
-        setOriginalName(editableName.trim() || currentChart.name || '');
-        setOriginalDescription(editableDescription.trim() || currentChart.description || '');
-        setOriginalConfig(chartConfig);
-        setOriginalChartType(currentChartType);
-
-        showSuccess(t('chart_updated', 'Chart updated successfully'));
-
+        const response: any = await updateChart(chartId, updateData);
+        if (response.meta.requestStatus === 'fulfilled') {
+          // Update original values after successful save
+          setOriginalName(editableName.trim() || currentChart.name || '');
+          setOriginalDescription(editableDescription.trim() || currentChart.description || '');
+          setOriginalConfig(chartConfig);
+          setOriginalChartType(currentChartType);
+          showSuccess(t(`${response.payload.message}`));
+        } else {
+          showError(t('chart_update_error', 'Failed to update chart'));
+        }
         // Execute pending navigation
         if (pendingNavigation) {
           pendingNavigation();
@@ -467,6 +476,12 @@ const ChartEditorPage: React.FC = () => {
     setPendingNavigation(null);
     setShowUnsavedModal(false);
   };
+
+  // Handle modal close with action cleanup
+  const handleModalClose = () => {
+    setCurrentModalAction(null);
+    modalConfirm.close();
+  };
   // Clear current chart when component unmounts to prevent stale data
   useEffect(() => {
     return () => {
@@ -487,40 +502,6 @@ const ChartEditorPage: React.FC = () => {
                 ? t('chart_editor_loading_data', 'Loading chart data...')
                 : t('chart_editor_loading_config', 'Loading chart configuration...')}
           </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error state
-  if (error && chartId) {
-    return (
-      <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-            {t('chart_editor_error_title', 'Error Loading Chart')}
-          </h2>
-          <p className="text-muted-foreground mb-6">
-            {error ||
-              t('chart_editor_error_message', 'Failed to load chart data. Please try again.')}
-          </p>
-          <div className="flex space-x-3 justify-center">
-            <Button variant="outline" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              {t('common_back', 'Back')}
-            </Button>
-            <Button
-              onClick={() => {
-                clearChartError();
-                if (chartId) getChartById(chartId);
-              }}
-            >
-              {t('common_retry', 'Retry')}
-            </Button>
-          </div>
         </div>
       </div>
     );
@@ -777,20 +758,41 @@ const ChartEditorPage: React.FC = () => {
           />
         </motion.div>
       </div>
-
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
       {/* Confirmation Modal */}
       <ModalConfirm
         isOpen={modalConfirm.isOpen}
-        onClose={modalConfirm.close}
+        onClose={handleModalClose}
         onConfirm={modalConfirm.confirm}
         loading={modalConfirm.isLoading}
         type="warning"
-        title={t('chart_save_confirm_title', 'Save Changes')}
-        message={t(
-          'chart_save_confirm_message',
-          'Are you sure you want to save these changes? This will update your chart configuration.'
-        )}
-        confirmText={t('common_save', 'Save')}
+        title={
+          currentModalAction === 'save'
+            ? t('chart_save_confirm_title', 'Save Changes')
+            : currentModalAction === 'reset'
+              ? t('chart_reset_confirm_title', 'Reset Changes')
+              : t('chart_confirm_title', 'Confirm Action')
+        }
+        message={
+          currentModalAction === 'save'
+            ? t(
+                'chart_save_confirm_message',
+                'Are you sure you want to save these changes? This will update your chart configuration.'
+              )
+            : currentModalAction === 'reset'
+              ? t(
+                  'chart_reset_confirm_message',
+                  'Are you sure you want to reset all changes? This will restore your chart to its original state and all unsaved changes will be lost.'
+                )
+              : t('chart_confirm_message', 'Are you sure you want to continue?')
+        }
+        confirmText={
+          currentModalAction === 'save'
+            ? t('common_save', 'Save')
+            : currentModalAction === 'reset'
+              ? t('common_reset', 'Reset')
+              : t('common_confirm', 'Confirm')
+        }
         cancelText={t('common_cancel', 'Cancel')}
       />
 
