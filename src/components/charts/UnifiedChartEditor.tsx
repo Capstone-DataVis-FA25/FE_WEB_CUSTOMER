@@ -75,6 +75,15 @@ export interface UnifiedChartEditorProps {
   onChartTypeChange?: (chartType: ChartType) => void;
   dataset?: Dataset;
   allowChartTypeChange?: boolean;
+  validationErrors?: {
+    name: boolean;
+    description: boolean;
+    title: boolean;
+    xAxisLabel: boolean;
+    yAxisLabel: boolean;
+    seriesNames: Record<string, boolean>;
+  };
+  onValidationChange?: () => void;
 }
 
 const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
@@ -88,6 +97,8 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
   onChartTypeChange,
   dataset,
   allowChartTypeChange = true,
+  validationErrors,
+  onValidationChange,
 }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
@@ -676,6 +687,11 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
 
       setChartConfig(updatedConfig);
 
+      // Call validation change callback if provided
+      if (onValidationChange) {
+        onValidationChange();
+      }
+
       // Encode names back to ids before sending to parent ChartEditor
       const encodedConfigForParent = {
         ...updatedConfig,
@@ -758,6 +774,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
       formatters,
       seriesConfigs,
       setSeriesConfigs,
+      onValidationChange,
     ]
   );
 
@@ -1780,6 +1797,9 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                       });
                     }
                   }}
+                  validationErrors={
+                    validationErrors ? { title: validationErrors.title } : undefined
+                  }
                 />
               </motion.div>
 
@@ -1802,6 +1822,14 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                   lineWidth={chartSpecificProps.lineWidth}
                   pointRadius={chartSpecificProps.pointRadius}
                   barType={chartSpecificProps.barType}
+                  validationErrors={
+                    validationErrors
+                      ? {
+                          xAxisLabel: validationErrors.xAxisLabel,
+                          yAxisLabel: validationErrors.yAxisLabel,
+                        }
+                      : undefined
+                  }
                 />
               </motion.div>
 
@@ -1819,6 +1847,14 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                   formatters={formatters}
                   onUpdateConfig={handleConfigChange}
                   onUpdateFormatters={handleFormatterChange}
+                  validationErrors={
+                    validationErrors
+                      ? {
+                          xAxisLabel: validationErrors.xAxisLabel,
+                          yAxisLabel: validationErrors.yAxisLabel,
+                        }
+                      : undefined
+                  }
                 />
               </motion.div>
 
@@ -1891,6 +1927,13 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                           }
                         }}
                         availableColumns={getAvailableColumns()}
+                        validationErrors={
+                          validationErrors
+                            ? {
+                                seriesNames: validationErrors.seriesNames,
+                              }
+                            : undefined
+                        }
                       />
                     </CardContent>
                   )}

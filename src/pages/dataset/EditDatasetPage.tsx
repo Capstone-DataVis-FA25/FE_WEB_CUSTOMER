@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import { ArrowLeft, Save, FileSpreadsheet, Loader2, Edit, RotateCcw } from 'lucide-react';
+import { Save, Loader2, Edit, RotateCcw } from 'lucide-react';
 import { useDataset } from '@/features/dataset/useDataset';
 import { useToastContext } from '@/components/providers/ToastProvider';
 
@@ -551,9 +551,11 @@ const EditDatasetPage: React.FC = () => {
                           <div className="overflow-auto h-full">
                             <CustomExcel
                               initialData={bodyRows}
-                              initialColumns={headerRow.map(name => ({
+                              // Đã sửa ở đây theo đúng TYPE - hungpt
+                              initialColumns={headerRow.map((name, idx) => ({
                                 name,
                                 type: 'text' as const,
+                                index: idx,
                               }))}
                               onDataChange={(rows, cols) => {
                                 const newHeader = cols.map(c => c.name);

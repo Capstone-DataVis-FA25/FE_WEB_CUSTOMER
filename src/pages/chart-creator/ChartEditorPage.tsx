@@ -11,16 +11,7 @@ import { useDataset } from '@/features/dataset/useDataset';
 import type { Dataset } from '@/features/dataset/datasetAPI';
 import { convertArrayToChartData, convertChartDataToArray } from '@/utils/dataConverter';
 import { useCharts } from '@/features/charts/useCharts';
-import {
-  Database,
-  BarChart3,
-  ArrowLeft,
-  Save,
-  AlertCircle,
-  Calendar,
-  Clock,
-  RotateCcw,
-} from 'lucide-react';
+import { Database, BarChart3, ArrowLeft, Save, Calendar, Clock, RotateCcw } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { Chart, ChartType } from '@/features/charts/chartTypes';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
@@ -41,11 +32,9 @@ const ChartEditorPage: React.FC = () => {
   const { getDatasetById } = useDataset();
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
-  const [isLoading, setLoading] = useState(false);
   const [dataset, setDataset] = useState<Dataset | undefined>(undefined);
   const [currentModalAction, setCurrentModalAction] = useState<'save' | 'reset' | null>(null);
-  const { currentChart, loading, error, getChartById, updateChart, clearChartError, clearCurrent } =
-    useCharts();
+  const { currentChart, loading, getChartById, updateChart, clearCurrent } = useCharts();
 
   // Unsaved changes modal state
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
@@ -80,14 +69,11 @@ const ChartEditorPage: React.FC = () => {
 
       // If we have a datasetId, fetch it
       if (datasetId) {
-        setLoading(true);
         try {
           const result = await getDatasetById(datasetId).unwrap();
           setDataset(result);
         } catch (error) {
           console.error('Failed to load dataset:', error);
-        } finally {
-          setLoading(false);
         }
       }
     };
@@ -114,6 +100,16 @@ const ChartEditorPage: React.FC = () => {
   const [originalDescription, setOriginalDescription] = useState('');
   const [originalConfig, setOriginalConfig] = useState<StructuredChartConfig | null>(null);
   const [originalChartType, setOriginalChartType] = useState<ChartType>(currentChartType);
+
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState({
+    name: false,
+    description: false,
+    title: false,
+    xAxisLabel: false,
+    yAxisLabel: false,
+    seriesNames: {} as Record<string, boolean>,
+  });
   // Check if there are any changes
   const hasChanges = useMemo(() => {
     // Only check for changes if we're in edit mode and have initialized the original values
@@ -148,6 +144,54 @@ const ChartEditorPage: React.FC = () => {
     mode,
     isInitialized,
   ]);
+
+  // Validation function
+  const validateForm = useCallback(() => {
+    const errors = {
+      name: !editableName.trim(),
+      description: !editableDescription.trim(),
+      title:
+        !chartConfig?.config?.title ||
+        typeof chartConfig.config.title !== 'string' ||
+        !chartConfig.config.title.trim(),
+      xAxisLabel:
+        !chartConfig?.config?.xAxisLabel ||
+        typeof chartConfig.config.xAxisLabel !== 'string' ||
+        !chartConfig.config.xAxisLabel.trim(),
+      yAxisLabel:
+        !chartConfig?.config?.yAxisLabel ||
+        typeof chartConfig.config.yAxisLabel !== 'string' ||
+        !chartConfig.config.yAxisLabel.trim(),
+      seriesNames: {} as Record<string, boolean>, // Keep for compatibility but not used
+    };
+
+    // Note: Series names validation removed since names are auto-synced with data columns
+    // No need to validate series names anymore as they are automatically generated
+
+    setValidationErrors(errors);
+
+    // Return true if no errors (excluding seriesNames since they're auto-managed)
+    return (
+      !errors.name &&
+      !errors.description &&
+      !errors.title &&
+      !errors.xAxisLabel &&
+      !errors.yAxisLabel
+    );
+  }, [
+    editableName,
+    editableDescription,
+    chartConfig?.config?.title,
+    chartConfig?.config?.xAxisLabel,
+    chartConfig?.config?.yAxisLabel,
+  ]);
+
+  // Real-time validation - runs whenever relevant fields change
+  useEffect(() => {
+    if (isInitialized) {
+      validateForm();
+    }
+  }, [validateForm, isInitialized]);
 
   // Enable beforeunload warning when there are unsaved changes
   useBeforeUnload({
@@ -193,7 +237,10 @@ const ChartEditorPage: React.FC = () => {
         let structuredConfig: StructuredChartConfig;
 
         // Check if it's already in the correct format (has nested config property)
-        if ((currentChart.config as any).config && (currentChart.config as any).chartType) {
+        if (
+          (currentChart.config as Record<string, unknown>).config &&
+          (currentChart.config as Record<string, unknown>).chartType
+        ) {
           structuredConfig = currentChart.config as unknown as StructuredChartConfig;
         } else {
           // Convert to the correct format
@@ -285,20 +332,44 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
-  // Handle name edit - just update state, don't save immediately
+  // Handle name edit - validate before exiting edit mode
   const handleNameSave = () => {
-    // Just exit editing mode, changes will be saved when user clicks Save button
+    // Validate name is not empty
+    if (!editableName.trim()) {
+      // Don't exit editing mode if name is empty
+      setValidationErrors(prev => ({ ...prev, name: true }));
+      return;
+    }
+
+    // Clear validation error and exit editing mode
+    setValidationErrors(prev => ({ ...prev, name: false }));
     setIsEditingName(false);
   };
 
-  // Handle description edit - just update state, don't save immediately
+  // Handle description edit - validate before exiting edit mode
   const handleDescriptionSave = () => {
-    // Just exit editing mode, changes will be saved when user clicks Save button
+    // Validate description is not empty
+    if (!editableDescription.trim()) {
+      // Don't exit editing mode if description is empty
+      setValidationErrors(prev => ({ ...prev, description: true }));
+      return;
+    }
+
+    // Clear validation error and exit editing mode
+    setValidationErrors(prev => ({ ...prev, description: false }));
     setIsEditingDescription(false);
   };
 
   // Handle save/update with confirmation - saves all changes at once
   const handleSave = async () => {
+    console.log('handleSave 123 ', !validateForm());
+    // Validate form before saving
+    if (!validateForm()) {
+      console.log('handleSave 456 ');
+      showError('Please fill in all required fields');
+      return;
+    }
+
     if (mode === 'edit' && chartId && currentChart) {
       setCurrentModalAction('save');
       modalConfirm.openConfirm(async () => {
@@ -310,18 +381,18 @@ const ChartEditorPage: React.FC = () => {
             config: chartConfig,
           };
 
-          const response: any = await updateChart(chartId, updateData);
+          const response = await updateChart(chartId, updateData);
           if (response.meta.requestStatus === 'fulfilled') {
             // Update original values after successful save
             setOriginalName(editableName.trim() || currentChart.name || '');
             setOriginalDescription(editableDescription.trim() || currentChart.description || '');
             setOriginalConfig(chartConfig);
             setOriginalChartType(currentChartType);
-            showSuccess(t(`${response.payload.message}`));
+            showSuccess(t('chart_update_success', 'Chart updated successfully'));
           } else {
             showError(t('chart_update_error', 'Failed to update chart'));
           }
-        } catch (eror) {
+        } catch (error) {
           console.error('Error updating chart:', error);
           showError(t('chart_update_error', 'Failed to update chart'));
           throw error; // Re-throw to let modal handle loading state
@@ -377,7 +448,7 @@ const ChartEditorPage: React.FC = () => {
         });
       }
     },
-    [mode, currentChartType] // Removed chartConfig to prevent infinite loop
+    [currentChartType] // Only depend on chart type
   );
 
   // Handle reset to original values
@@ -439,14 +510,14 @@ const ChartEditorPage: React.FC = () => {
           config: chartConfig,
         };
 
-        const response: any = await updateChart(chartId, updateData);
+        const response = await updateChart(chartId, updateData);
         if (response.meta.requestStatus === 'fulfilled') {
           // Update original values after successful save
           setOriginalName(editableName.trim() || currentChart.name || '');
           setOriginalDescription(editableDescription.trim() || currentChart.description || '');
           setOriginalConfig(chartConfig);
           setOriginalChartType(currentChartType);
-          showSuccess(t(`${response.payload.message}`));
+          showSuccess(t('chart_update_success', 'Chart updated successfully'));
         } else {
           showError(t('chart_update_error', 'Failed to update chart'));
         }
@@ -571,22 +642,46 @@ const ChartEditorPage: React.FC = () => {
                     {currentChart ? (
                       <>
                         {isEditingName && mode === 'edit' ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-col gap-1">
                             <Input
                               value={editableName}
-                              onChange={e => setEditableName(e.target.value)}
-                              className="w-100 text-xl font-bold bg-transparent border-dashed border-gray-300 px-2 py-1"
+                              onChange={e => {
+                                setEditableName(e.target.value);
+                                // Clear validation error when user types
+                                if (e.target.value.trim()) {
+                                  setValidationErrors(prev => ({ ...prev, name: false }));
+                                } else {
+                                  // Show validation error immediately when field becomes empty
+                                  setValidationErrors(prev => ({ ...prev, name: true }));
+                                }
+                              }}
+                              className={`w-100 text-xl font-bold bg-transparent border-dashed px-2 py-1 ${
+                                validationErrors.name
+                                  ? '!border-red-500 focus:border-red-500 ring-1 ring-red-500'
+                                  : 'border-gray-300'
+                              }`}
                               onBlur={handleNameSave}
                               onKeyDown={e => {
                                 if (e.key === 'Enter') {
                                   handleNameSave();
                                 } else if (e.key === 'Escape') {
-                                  setEditableName(editableName); // Keep current value
-                                  setIsEditingName(false);
+                                  // Only allow escape if name is not empty
+                                  if (editableName.trim()) {
+                                    setEditableName(originalName); // Restore original value
+                                    setValidationErrors(prev => ({ ...prev, name: false }));
+                                    setIsEditingName(false);
+                                  }
+                                  // If name is empty, do nothing (prevent escape)
                                 }
                               }}
                               autoFocus
+                              placeholder={t('chart_name_required', 'Chart name is required')}
                             />
+                            {validationErrors.name && (
+                              <span className="text-red-500 text-xs ml-2">
+                                {t('field_required', 'This field is required')}
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <h1
@@ -598,6 +693,10 @@ const ChartEditorPage: React.FC = () => {
                             onClick={() => {
                               if (mode === 'edit') {
                                 setIsEditingName(true);
+                                // Trigger validation if field is empty
+                                if (!editableName.trim()) {
+                                  setValidationErrors(prev => ({ ...prev, name: true }));
+                                }
                               }
                             }}
                           >
@@ -635,22 +734,47 @@ const ChartEditorPage: React.FC = () => {
                         {t('description', 'Description')}:
                       </span>
                       {isEditingDescription && mode === 'edit' ? (
-                        <Input
-                          value={editableDescription}
-                          onChange={e => setEditableDescription(e.target.value)}
-                          className="w-200 text-xl font-bold bg-transparent border-dashed border-gray-300 px-2 py-1"
-                          onBlur={handleDescriptionSave}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter' && e.ctrlKey) {
-                              handleDescriptionSave();
-                            } else if (e.key === 'Escape') {
-                              setEditableDescription(editableDescription); // Keep current value
-                              setIsEditingDescription(false);
-                            }
-                          }}
-                          placeholder="Click to add description..."
-                          autoFocus
-                        />
+                        <div className="flex flex-col gap-1">
+                          <Input
+                            value={editableDescription}
+                            onChange={e => {
+                              setEditableDescription(e.target.value);
+                              // Clear validation error when user types
+                              if (e.target.value.trim()) {
+                                setValidationErrors(prev => ({ ...prev, description: false }));
+                              } else {
+                                // Show validation error immediately when field becomes empty
+                                setValidationErrors(prev => ({ ...prev, description: true }));
+                              }
+                            }}
+                            className={`w-200 text-xl font-bold bg-transparent border-dashed px-2 py-1 ${
+                              validationErrors.description
+                                ? '!border-red-500 focus:border-red-500 ring-1 ring-red-500'
+                                : 'border-gray-300'
+                            }`}
+                            onBlur={handleDescriptionSave}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' && e.ctrlKey) {
+                                handleDescriptionSave();
+                              } else if (e.key === 'Escape') {
+                                // Only allow escape if description is not empty
+                                if (editableDescription.trim()) {
+                                  setEditableDescription(originalDescription); // Restore original value
+                                  setValidationErrors(prev => ({ ...prev, description: false }));
+                                  setIsEditingDescription(false);
+                                }
+                                // If description is empty, do nothing (prevent escape)
+                              }
+                            }}
+                            placeholder={t('description_required', 'Description is required')}
+                            autoFocus
+                          />
+                          {validationErrors.description && (
+                            <span className="text-red-500 text-xs">
+                              {t('field_required', 'This field is required')}
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <span
                           className={`text-xs text-gray-700 dark:text-gray-300 ${
@@ -661,6 +785,10 @@ const ChartEditorPage: React.FC = () => {
                           onClick={() => {
                             if (mode === 'edit') {
                               setIsEditingDescription(true);
+                              // Trigger validation if field is empty
+                              if (!editableDescription.trim()) {
+                                setValidationErrors(prev => ({ ...prev, description: true }));
+                              }
                             }
                           }}
                           style={{ fontWeight: '500', fontSize: '14px' }}
@@ -755,6 +883,8 @@ const ChartEditorPage: React.FC = () => {
             onChartTypeChange={(type: string) => handleChartTypeChange(type)}
             dataset={dataset}
             allowChartTypeChange={mode === 'edit'}
+            validationErrors={validationErrors}
+            onValidationChange={validateForm}
           />
         </motion.div>
       </div>

@@ -282,6 +282,9 @@ interface SeriesManagementProps {
   onMoveSeriesDown: (seriesId: string) => void;
   availableColumns: string[];
   getAvailableColumnsForSeries?: (seriesId: string) => string[];
+  validationErrors?: {
+    seriesNames: Record<string, boolean>;
+  };
 }
 
 export const SeriesManagement: React.FC<SeriesManagementProps> = ({
@@ -401,17 +404,23 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
 
             {/* Form Fields with Enhanced Styling */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Series Name Field */}
+              {/* Series Name Field - Read Only, synced with Data Column */}
               <div className="space-y-2">
                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   {t('chart_editor_series_name')}
                 </Label>
-                <Input
-                  value={seriesItem.name}
-                  onChange={e => onUpdateSeries(seriesItem.id, { name: e.target.value })}
-                  className="text-sm h-9 border-0 bg-background/60 backdrop-blur-sm focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all duration-200"
-                  placeholder={t('chart_editor_series_name_placeholder')}
-                />
+                <div className="flex flex-col gap-1">
+                  <Input
+                    value={seriesItem.dataColumn} // Use dataColumn as the display name
+                    readOnly
+                    disabled
+                    className="text-sm h-9 border-0 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed"
+                    placeholder={t(
+                      'chart_editor_series_name_auto',
+                      'Auto generated from data column'
+                    )}
+                  />
+                </div>
               </div>
 
               {/* Data Column Field */}
@@ -421,7 +430,14 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
                 </Label>
                 <select
                   value={seriesItem.dataColumn}
-                  onChange={e => onUpdateSeries(seriesItem.id, { dataColumn: e.target.value })}
+                  onChange={e => {
+                    const newDataColumn = e.target.value;
+                    // Auto update name to match data column
+                    onUpdateSeries(seriesItem.id, {
+                      dataColumn: newDataColumn,
+                      name: newDataColumn, // Sync name with data column
+                    });
+                  }}
                   className="w-full p-2 text-sm border-0 rounded-lg bg-background/60 backdrop-blur-sm focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all duration-200 h-9"
                 >
                   {/* Current column - always show the current selection */}
@@ -689,6 +705,9 @@ interface BasicSettingsSectionProps {
   onToggleCollapse: () => void;
   onUpdateConfig: (updates: Partial<BasicSettingsSectionProps['config']>) => void;
   onApplySizePreset: (presetKey: keyof typeof sizePresets) => void;
+  validationErrors?: {
+    title: boolean;
+  };
 }
 
 export const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({
@@ -697,6 +716,7 @@ export const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({
   onToggleCollapse,
   onUpdateConfig,
   onApplySizePreset,
+  validationErrors,
 }) => {
   const { t } = useTranslation();
 
@@ -897,13 +917,25 @@ export const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({
           <div>
             <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {t('lineChart_editor_title_chart')}
+              <span className="text-red-500 ml-1">*</span>
             </Label>
-            <Input
-              value={config.title}
-              onChange={e => onUpdateConfig({ title: e.target.value })}
-              placeholder={t('lineChart_editor_title_chart')}
-              className="mt-1"
-            />
+            <div className="flex flex-col gap-1">
+              <Input
+                value={config.title}
+                onChange={e => onUpdateConfig({ title: e.target.value })}
+                placeholder={t('chart_title_required', 'Chart title is required')}
+                className={`mt-1 ${
+                  validationErrors?.title
+                    ? '!border-red-500 focus:!border-red-500 focus:!ring-red-500 ring-1 ring-red-500'
+                    : ''
+                }`}
+              />
+              {validationErrors?.title && (
+                <span className="text-red-500 text-xs">
+                  {t('field_required', 'This field is required')}
+                </span>
+              )}
+            </div>
           </div>
         </CardContent>
       )}
@@ -953,6 +985,12 @@ interface ChartSettingsProps {
   barType?: 'grouped' | 'stacked';
   barWidth?: number;
   barSpacing?: number;
+
+  // Validation props
+  validationErrors?: {
+    xAxisLabel?: boolean;
+    yAxisLabel?: boolean;
+  };
 }
 
 export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
@@ -970,6 +1008,7 @@ export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
   barType,
   barWidth,
   barSpacing,
+  validationErrors,
 }) => {
   const { t } = useTranslation();
 
@@ -998,22 +1037,48 @@ export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
             <div>
               <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 {t('chart_editor_x_axis_label')}
+                <span className="text-red-500 ml-1">*</span>
               </Label>
-              <Input
-                value={config.xAxisLabel}
-                onChange={e => onUpdateConfig({ xAxisLabel: e.target.value })}
-                className="mt-1"
-              />
+              <div className="flex flex-col gap-1">
+                <Input
+                  value={config.xAxisLabel}
+                  onChange={e => onUpdateConfig({ xAxisLabel: e.target.value })}
+                  placeholder={t('x_axis_label_required', 'X-axis label is required')}
+                  className={`mt-1 ${
+                    validationErrors?.xAxisLabel
+                      ? '!border-red-500 focus:!border-red-500 focus:!ring-red-500 ring-1 ring-red-500'
+                      : ''
+                  }`}
+                />
+                {validationErrors?.xAxisLabel && (
+                  <span className="text-red-500 text-xs">
+                    {t('field_required', 'This field is required')}
+                  </span>
+                )}
+              </div>
             </div>
             <div>
               <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 {t('chart_editor_y_axis_label')}
+                <span className="text-red-500 ml-1">*</span>
               </Label>
-              <Input
-                value={config.yAxisLabel}
-                onChange={e => onUpdateConfig({ yAxisLabel: e.target.value })}
-                className="mt-1"
-              />
+              <div className="flex flex-col gap-1">
+                <Input
+                  value={config.yAxisLabel}
+                  onChange={e => onUpdateConfig({ yAxisLabel: e.target.value })}
+                  placeholder={t('y_axis_label_required', 'Y-axis label is required')}
+                  className={`mt-1 ${
+                    validationErrors?.yAxisLabel
+                      ? '!border-red-500 focus:!border-red-500 focus:!ring-red-500 ring-1 ring-red-500'
+                      : ''
+                  }`}
+                />
+                {validationErrors?.yAxisLabel && (
+                  <span className="text-red-500 text-xs">
+                    {t('field_required', 'This field is required')}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1478,6 +1543,10 @@ interface AxisConfigurationProps {
   onToggleCollapse: () => void;
   onUpdateConfig: (updates: Partial<AxisConfigurationConfig>) => void;
   onUpdateFormatters: (updates: Partial<FormatterConfig>) => void;
+  validationErrors?: {
+    xAxisLabel: boolean;
+    yAxisLabel: boolean;
+  };
 }
 
 export const AxisConfigurationSection: React.FC<AxisConfigurationProps> = ({

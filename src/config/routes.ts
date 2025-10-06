@@ -184,6 +184,18 @@ export const publicRoutes: RouteConfig[] = [
     },
   },
   {
+    path: Routers.FREQUENT_QUESTIONS,
+    name: 'frequent-questions',
+    component: 'FrequentQuestionPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Câu hỏi thường gặp',
+      description: 'Tìm câu trả lời cho những câu hỏi phổ biến nhất về dịch vụ của chúng tôi',
+    },
+  },
+  {
     path: Routers.CHART_EDITOR,
     name: 'chart-editor',
     component: 'ChartEditorPage',

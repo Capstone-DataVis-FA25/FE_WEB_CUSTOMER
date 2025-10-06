@@ -229,12 +229,22 @@ export default function ChooseTemplateTab() {
 
       // Get default configuration for this template
       const defaultConfig = getDefaultChartConfig(template);
+      // Only allow chart types supported by CreateChartRequest
+      if (!['line', 'bar', 'area'].includes(template.type)) {
+        showError(
+          t('chart_create_error', 'Error'),
+          t('chart_create_unsupported_type', 'This chart type is not supported for creation.')
+        );
+        setIsCreatingChart(false);
+        return;
+      }
+
       // Create chart with default settings - only include ChartConfig properties
       const chartData = {
         name: defaultConfig.config.title,
         description: `A ${template.name} chart created from template`,
         datasetId: datasetId,
-        type: template.type,
+        type: template.type as 'line' | 'bar' | 'area',
         config: defaultConfig,
       };
       const result = await createChart(chartData).unwrap();

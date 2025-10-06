@@ -59,6 +59,7 @@ const WorkspacePage: React.FC = () => {
   const [datasetTypeFilter, setDatasetTypeFilter] = useState<string>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingChartId, setDeletingChartId] = useState<string | null>(null);
+  const [selectingDatasetModal, setSelectingDatasetModal] = useState<boolean>(false);
 
   // Fetch datasets and charts on component mount
   useEffect(() => {
@@ -185,7 +186,14 @@ const WorkspacePage: React.FC = () => {
     navigate(Routers.CREATE_DATASET);
   };
 
+  const handleOpenModalSelectDataset = (open: boolean) => {
+    setSelectingDatasetModal(open);
+  };
+
   const handleCreateChart = (datasetId?: string) => {
+    // Thường thì rơi vào trường hợp không có dataset -> hiện button create chart
+    // 1. Hiện modal chọn dataset
+    // 2. Sau khi chọn dataset -> 'Continue (trong modal)' -> create chart
     // Điều hướng sang trang chart gallery kèm dataset_id
     if (datasetId) {
       navigate(Routers.CHART_GALLERY, {
@@ -340,8 +348,10 @@ const WorkspacePage: React.FC = () => {
               charts={charts}
               chartsLoading={chartsLoading}
               chartDeleting={chartDeleting}
+              datasetSelectingModal={selectingDatasetModal}
               filteredCharts={filteredCharts}
               searchTerm={searchTerm}
+              onHandleOpenModalSelectedDataset={handleOpenModalSelectDataset}
               onCreateChart={handleCreateChart}
               onDeleteChart={handleDeleteChart}
               onEditChart={handleEditChart}

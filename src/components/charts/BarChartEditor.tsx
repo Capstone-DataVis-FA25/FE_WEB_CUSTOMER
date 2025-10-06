@@ -50,6 +50,12 @@ export interface BarChartEditorProps {
   onDataChange?: (data: ChartDataPoint[]) => void;
   onColorsChange?: (colors: ColorConfig) => void;
   onFormattersChange?: (formatters: FormatterConfig) => void;
+  validationErrors?: {
+    title?: boolean;
+    xAxisLabel?: boolean;
+    yAxisLabel?: boolean;
+    seriesNames?: Record<string, boolean>;
+  };
 }
 
 const BarChartEditor: React.FC<BarChartEditorProps> = ({
@@ -61,6 +67,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
   onDataChange,
   onColorsChange,
   onFormattersChange,
+  validationErrors,
 }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
@@ -1072,6 +1079,9 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                 onToggleCollapse={() => toggleSection('basicSettings')}
                 onUpdateConfig={updates => updateConfig(updates)}
                 onApplySizePreset={applySizePreset}
+                validationErrors={
+                  validationErrors ? { title: !!validationErrors.title } : undefined
+                }
               />
             </motion.div>
 
@@ -1108,6 +1118,14 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                 onToggleCollapse={() => toggleSection('chartSettings')}
                 onUpdateConfig={updateConfig}
                 onUpdateChartSpecific={updateConfig}
+                validationErrors={
+                  validationErrors
+                    ? {
+                        xAxisLabel: validationErrors.xAxisLabel,
+                        yAxisLabel: validationErrors.yAxisLabel,
+                      }
+                    : undefined
+                }
               />
             </motion.div>
 
