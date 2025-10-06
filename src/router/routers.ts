@@ -18,11 +18,13 @@ const Routers = {
   // Chart Gallery
   CHART_GALLERY: '/chart-gallery',
 
-  // Dataset routes
-  DATASETS: '/datasets',
   // For state-based navigation, use location.state.datasetId (recommended)
   DATASET_DETAIL: '/datasets/detail', // state-based route, do not use slug param
   CREATE_DATASET: '/datasets/create',
+  CREATE_DATASET_UPLOAD: '/datasets/create/upload',
+  CREATE_DATASET_TEXT: '/datasets/create/text',
+  CREATE_DATASET_SAMPLE: '/datasets/create/sample',
+  CREATE_DATASET_VIEW: '/datasets/create/view',
   EDIT_DATASET: '/datasets/edit', // new state-based edit route (datasetId passed via location.state)
   EDIT_DATASET_LEGACY: '/datasets/:slug/edit', // legacy param route for backward compatibility
 

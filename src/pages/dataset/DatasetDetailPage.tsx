@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SlideInUp } from '@/theme/animation';
-import { ArrowLeft, Edit, Trash2, Database, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Database, BarChart3, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -79,7 +79,7 @@ const DatasetDetailPage: React.FC = () => {
       try {
         await deleteDataset(currentDataset.id).unwrap();
         // build list route
-        navigate(Routers.DATASETS);
+        navigate(Routers.WORKSPACE_DATASETS);
         showSuccess(
           t('dataset_deleteSuccess', 'Dataset Deleted'),
           t(
@@ -327,7 +327,7 @@ const DatasetDetailPage: React.FC = () => {
                     <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4">
                       <CardTitle className="flex items-center gap-3 text-white">
                         <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                          <ArrowLeft className="w-4 h-4" />
+                          <Settings className="w-4 h-4" />
                         </div>
                         <span className="font-semibold">Actions</span>
                       </CardTitle>
@@ -335,16 +335,12 @@ const DatasetDetailPage: React.FC = () => {
                     <CardContent className="p-6 space-y-4">
                       <Button
                         variant="outline"
-                        onClick={() =>
-                          navigate(Routers.EDIT_DATASET, {
-                            state: { datasetId: currentDataset.id, from: window.location.pathname },
-                          })
-                        }
+                        onClick={() => navigate(Routers.WORKSPACE_DATASETS)}
                         className="w-full h-12 flex items-center justify-start gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-800/50 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30 shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 group"
                       >
-                        <Edit className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                        <ArrowLeft className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors flex-shrink-0" />
                         <span className="text-blue-700 dark:text-blue-300 font-medium text-left">
-                          {t('dataset_edit', 'Edit')}
+                          {t('back', 'Back')}
                         </span>
                       </Button>
 

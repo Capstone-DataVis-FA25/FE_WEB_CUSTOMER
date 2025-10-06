@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as ReactDOM from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -30,6 +31,8 @@ const SelectContext = React.createContext<{
   onValueChange?: (value: string) => void;
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  triggerRef?: React.RefObject<HTMLButtonElement | null>;
+  contentRef?: React.RefObject<HTMLDivElement | null>;
 }>({
   open: false,
   setOpen: () => {},
@@ -38,12 +41,17 @@ const SelectContext = React.createContext<{
 const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside of the Select container
+  // Close dropdown when clicking outside of the Select container or content
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (open && containerRef.current && !containerRef.current.contains(target)) {
+      const isOutsideContainer = containerRef.current && !containerRef.current.contains(target);
+      const isOutsideContent = contentRef.current && !contentRef.current.contains(target);
+
+      if (open && isOutsideContainer && isOutsideContent) {
         setOpen(false);
       }
     };
@@ -55,7 +63,7 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
   }, [open]);
 
   return (
-    <SelectContext.Provider value={{ value, onValueChange, open, setOpen }}>
+    <SelectContext.Provider value={{ value, onValueChange, open, setOpen, triggerRef, contentRef }}>
       <div className="relative" ref={containerRef}>
         {children}
       </div>
@@ -65,10 +73,9 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
 
 const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
   ({ className, children, ...props }, ref) => {
-    const { setOpen, open } = React.useContext(SelectContext);
-    const triggerRef = React.useRef<HTMLButtonElement>(null);
+    const { setOpen, open, triggerRef } = React.useContext(SelectContext);
 
-    React.useImperativeHandle(ref, () => triggerRef.current!);
+    React.useImperativeHandle(ref, () => (triggerRef?.current ?? null) as HTMLButtonElement);
 
     return (
       <button
@@ -97,21 +104,39 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
 SelectTrigger.displayName = 'SelectTrigger';
 
 const SelectContent: React.FC<SelectContentProps> = ({ children }) => {
-  const { open } = React.useContext(SelectContext);
+  const { open, triggerRef, contentRef } = React.useContext(SelectContext);
+  const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 });
+
+  React.useEffect(() => {
+    if (open && triggerRef?.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+  }, [open, triggerRef]);
 
   if (!open) return null;
 
-  return (
+  const content = (
     <div
+      ref={contentRef}
       data-select-content
-      className="absolute top-full left-0 right-0 z-[9999] mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-2xl max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95"
+      className="fixed z-[99999] mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-2xl max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95"
       style={{
-        zIndex: 9999,
+        top: position.top,
+        left: position.left,
+        width: position.width,
+        zIndex: 99999,
       }}
     >
       <div className="p-1 space-y-1">{children}</div>
     </div>
   );
+
+  return ReactDOM.createPortal(content, document.body);
 };
 
 const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {

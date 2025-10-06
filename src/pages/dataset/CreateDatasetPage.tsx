@@ -5,6 +5,7 @@ import TextUpload from '@/components/dataset/TextUpload';
 import UploadMethodNavigation from '@/components/dataset/UploadMethodNavigation';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
 import { useAppDispatch } from '@/store/hooks';
 import { createDatasetThunk } from '@/features/dataset/datasetThunk';
@@ -25,7 +26,7 @@ import {
 } from '@/utils/dataProcessors';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import buildSlug from '@/utils/slug';
+import { useNavigate } from 'react-router-dom';
 
 type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view';
 
@@ -34,6 +35,7 @@ function CreateDatasetPageContent() {
   const { t } = useTranslation();
   const { showSuccess, showError, showWarning } = useToastContext();
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
   // Get states from context
   const {
@@ -57,6 +59,10 @@ function CreateDatasetPageContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('upload');
   const [previousViewMode, setPreviousViewMode] = useState<ViewMode>('upload');
+
+  // Modal state for confirm create dataset
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isCreatingDataset, setIsCreatingDataset] = useState(false);
 
   // Handle switching between upload methods; clear transient inputs
   const handleViewModeChange = useCallback(
@@ -150,8 +156,8 @@ function CreateDatasetPageContent() {
     setViewMode('upload');
   }, [setCurrentParsedData]);
 
-  // Handle file upload (create dataset)
-  const handleFileUpload = useCallback(async () => {
+  // Handle file upload (create dataset) - Execute the actual creation
+  const executeCreateDataset = useCallback(async () => {
     if (!currentParsedData) {
       showWarning('No Data Available', 'Please select a file or enter text data first');
       return;
@@ -226,15 +232,14 @@ function CreateDatasetPageContent() {
       const result = await dispatch(createDatasetThunk(requestData));
 
       if (createDatasetThunk.fulfilled.match(result)) {
+        // Show success message first
         showSuccess('Dataset Created Successfully', 'Your dataset has been created and saved');
 
-        // Navigate to detail page with pretty slug
+        // Navigate to workspace datasets page
         const created = result.payload as any; // dataset object
         if (created && created.id) {
-          // const slug = buildSlug({ id: created.id, name: created.name });
-          window.setTimeout(() => {
-            window.location.href = `/workspace/datasets`; // using href to fully reset state/context
-          }, 300);
+          // Use React Router navigation instead of window.location.href
+          navigate('/workspace/datasets');
         }
 
         // Reset state after successful upload
@@ -265,9 +270,45 @@ function CreateDatasetPageContent() {
     datasetName,
     description,
     dispatch,
+    navigate,
     t,
     setCurrentParsedData,
+    dateFormat,
+    numberFormat.decimalSeparator,
+    numberFormat.thousandsSeparator,
   ]);
+
+  // Handle file upload (create dataset) - Show confirm modal
+  const handleFileUpload = useCallback(async () => {
+    if (!currentParsedData) {
+      showWarning('No Data Available', 'Please select a file or enter text data first');
+      return;
+    }
+
+    if (!datasetName.trim()) {
+      showWarning('Dataset Name Required', 'Please enter a name for your dataset');
+      return;
+    }
+
+    if (datasetName.length > DATASET_NAME_MAX_LENGTH) {
+      showWarning(
+        t('dataset_nameTooLong'),
+        t('dataset_nameTooLongMessage', { maxLength: DATASET_NAME_MAX_LENGTH })
+      );
+      return;
+    }
+
+    if (description && description.length > DATASET_DESCRIPTION_MAX_LENGTH) {
+      showWarning(
+        t('dataset_descriptionTooLong'),
+        t('dataset_descriptionTooLongMessage', { maxLength: DATASET_DESCRIPTION_MAX_LENGTH })
+      );
+      return;
+    }
+
+    // Show confirmation modal
+    setShowConfirmModal(true);
+  }, [currentParsedData, datasetName, description, showWarning, t]);
 
   // Handle change data (go back to previous upload method and reset shared state)
   const handleChangeData = useCallback(() => {
@@ -393,6 +434,24 @@ function CreateDatasetPageContent() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ModalConfirm
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={async () => {
+          setIsCreatingDataset(true);
+          await executeCreateDataset();
+          setIsCreatingDataset(false);
+          setShowConfirmModal(false);
+        }}
+        title={'Confirm Dataset Creation'}
+        message={`Are you sure you want to create the dataset "${datasetName.trim()}"?`}
+        confirmText={t('dataset_createDatasetButton') || 'Create Dataset'}
+        cancelText={t('cancel') || 'Cancel'}
+        type="info"
+        loading={isCreatingDataset}
+      />
     </div>
   );
 }
