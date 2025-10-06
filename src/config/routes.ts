@@ -356,6 +356,62 @@ export const protectedRoutes: RouteConfig[] = [
       description: 'Upload and create a new dataset from Excel or CSV files',
     },
   },
+  {
+    path: Routers.CREATE_DATASET_UPLOAD,
+    name: 'create-dataset-upload',
+    component: 'CreateDatasetPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Create Dataset - Upload File',
+      description: 'Upload and create a new dataset from Excel or CSV files',
+      hideFromNav: true,
+    },
+  },
+  {
+    path: Routers.CREATE_DATASET_TEXT,
+    name: 'create-dataset-text',
+    component: 'CreateDatasetPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Create Dataset - Paste Text',
+      description: 'Create a new dataset by pasting text data',
+      hideFromNav: true,
+    },
+  },
+  {
+    path: Routers.CREATE_DATASET_SAMPLE,
+    name: 'create-dataset-sample',
+    component: 'CreateDatasetPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Create Dataset - Sample Data',
+      description: 'Create a new dataset using sample data',
+      hideFromNav: true,
+    },
+  },
+  {
+    path: Routers.CREATE_DATASET_VIEW,
+    name: 'create-dataset-view',
+    component: 'CreateDatasetPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Create Dataset - Preview',
+      description: 'Preview and configure dataset before creation',
+      hideFromNav: true,
+    },
+  },
   // Chart routes
   {
     path: Routers.CHART_GALLERY,
@@ -368,19 +424,6 @@ export const protectedRoutes: RouteConfig[] = [
     meta: {
       title: 'Chart Gallery',
       description: 'Browse chart templates and create new charts',
-    },
-  },
-  {
-    path: Routers.DATASETS,
-    name: 'datasets-list',
-    component: 'DatasetListPage',
-    layout: 'USER',
-    isProtected: true,
-    roles: [UserRole.USER],
-    permissions: [Permission.VIEW_PROFILE],
-    meta: {
-      title: 'My Datasets',
-      description: 'View and manage your datasets',
     },
   },
   {

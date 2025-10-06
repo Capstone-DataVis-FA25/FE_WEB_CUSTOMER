@@ -9,9 +9,7 @@ import { RefreshCw, Settings, Upload } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToastContext } from '../providers/ToastProvider';
-import DataTransformationSelector from './DataTransformationSelector';
 import { DateFormatSelector } from './DateFormatSelector';
-import DelimiterSelector from './DelimiterSelector';
 import { NumberFormatSelector } from './NumberFormatSelector';
 import './scrollbar.css';
 
@@ -210,13 +208,13 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
           </div>
 
           {/* Delimiter Selector - Only show for non-JSON formats */}
-          {!isJsonFormat && (
+          {/* {!isJsonFormat && (
             <DelimiterSelector
               selectedDelimiter={selectedDelimiter}
               onDelimiterChange={handleDelimiterChange}
               disabled={isUploading}
             />
-          )}
+          )} */}
 
           {/* Number Format Settings */}
           <NumberFormatSelector
