@@ -65,6 +65,12 @@ export interface LineChartEditorProps {
   onColorsChange?: (colors: ColorConfig) => void;
   onFormattersChange?: (formatters: FormatterConfig) => void;
   dataset?: Dataset; // Dataset prop with proper typing
+  validationErrors?: {
+    title?: boolean;
+    xAxisLabel?: boolean;
+    yAxisLabel?: boolean;
+    seriesNames?: Record<string, boolean>;
+  };
 }
 
 const LineChartEditor: React.FC<LineChartEditorProps> = ({
@@ -77,6 +83,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   onColorsChange,
   onFormattersChange,
   dataset,
+  validationErrors,
 }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
@@ -1246,6 +1253,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 onToggleCollapse={() => toggleSection('basicSettings')}
                 onUpdateConfig={updates => updateConfig(updates)}
                 onApplySizePreset={applySizePreset}
+                validationErrors={
+                  validationErrors ? { title: !!validationErrors.title } : undefined
+                }
               />
             </motion.div>
 
@@ -1286,6 +1296,14 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 onToggleCollapse={() => toggleSection('chartSettings')}
                 onUpdateConfig={updateConfig}
                 onUpdateChartSpecific={updateConfig}
+                validationErrors={
+                  validationErrors
+                    ? {
+                        xAxisLabel: validationErrors.xAxisLabel,
+                        yAxisLabel: validationErrors.yAxisLabel,
+                      }
+                    : undefined
+                }
               />
               {/* Chart Settings */}
             </motion.div>

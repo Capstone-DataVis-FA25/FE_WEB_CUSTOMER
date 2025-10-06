@@ -11,16 +11,7 @@ import { useDataset } from '@/features/dataset/useDataset';
 import type { Dataset } from '@/features/dataset/datasetAPI';
 import { convertArrayToChartData, convertChartDataToArray } from '@/utils/dataConverter';
 import { useCharts } from '@/features/charts/useCharts';
-import {
-  Database,
-  BarChart3,
-  ArrowLeft,
-  Save,
-  AlertCircle,
-  Calendar,
-  Clock,
-  RotateCcw,
-} from 'lucide-react';
+import { Database, BarChart3, ArrowLeft, Save, Calendar, Clock, RotateCcw } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { Chart, ChartType } from '@/features/charts/chartTypes';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
@@ -31,6 +22,7 @@ import { useModalConfirm } from '@/hooks/useModal';
 import Utils from '@/utils/Utils';
 import { useBeforeUnload } from '@/hooks/useBeforeUnload';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal';
+import ToastContainer from '@/components/ui/toast-container';
 
 const ChartEditorPage: React.FC = () => {
   const { t } = useTranslation();
@@ -38,12 +30,11 @@ const ChartEditorPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { getDatasetById } = useDataset();
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
-  const [isLoading, setLoading] = useState(false);
   const [dataset, setDataset] = useState<Dataset | undefined>(undefined);
-  const { currentChart, loading, error, getChartById, updateChart, clearChartError, clearCurrent } =
-    useCharts();
+  const [currentModalAction, setCurrentModalAction] = useState<'save' | 'reset' | null>(null);
+  const { currentChart, loading, getChartById, updateChart, clearCurrent } = useCharts();
 
   // Unsaved changes modal state
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
@@ -78,14 +69,11 @@ const ChartEditorPage: React.FC = () => {
 
       // If we have a datasetId, fetch it
       if (datasetId) {
-        setLoading(true);
         try {
           const result = await getDatasetById(datasetId).unwrap();
           setDataset(result);
         } catch (error) {
           console.error('Failed to load dataset:', error);
-        } finally {
-          setLoading(false);
         }
       }
     };
@@ -112,6 +100,16 @@ const ChartEditorPage: React.FC = () => {
   const [originalDescription, setOriginalDescription] = useState('');
   const [originalConfig, setOriginalConfig] = useState<StructuredChartConfig | null>(null);
   const [originalChartType, setOriginalChartType] = useState<ChartType>(currentChartType);
+
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState({
+    name: false,
+    description: false,
+    title: false,
+    xAxisLabel: false,
+    yAxisLabel: false,
+    seriesNames: {} as Record<string, boolean>,
+  });
   // Check if there are any changes
   const hasChanges = useMemo(() => {
     // Only check for changes if we're in edit mode and have initialized the original values
@@ -146,6 +144,54 @@ const ChartEditorPage: React.FC = () => {
     mode,
     isInitialized,
   ]);
+
+  // Validation function
+  const validateForm = useCallback(() => {
+    const errors = {
+      name: !editableName.trim(),
+      description: !editableDescription.trim(),
+      title:
+        !chartConfig?.config?.title ||
+        typeof chartConfig.config.title !== 'string' ||
+        !chartConfig.config.title.trim(),
+      xAxisLabel:
+        !chartConfig?.config?.xAxisLabel ||
+        typeof chartConfig.config.xAxisLabel !== 'string' ||
+        !chartConfig.config.xAxisLabel.trim(),
+      yAxisLabel:
+        !chartConfig?.config?.yAxisLabel ||
+        typeof chartConfig.config.yAxisLabel !== 'string' ||
+        !chartConfig.config.yAxisLabel.trim(),
+      seriesNames: {} as Record<string, boolean>, // Keep for compatibility but not used
+    };
+
+    // Note: Series names validation removed since names are auto-synced with data columns
+    // No need to validate series names anymore as they are automatically generated
+
+    setValidationErrors(errors);
+
+    // Return true if no errors (excluding seriesNames since they're auto-managed)
+    return (
+      !errors.name &&
+      !errors.description &&
+      !errors.title &&
+      !errors.xAxisLabel &&
+      !errors.yAxisLabel
+    );
+  }, [
+    editableName,
+    editableDescription,
+    chartConfig?.config?.title,
+    chartConfig?.config?.xAxisLabel,
+    chartConfig?.config?.yAxisLabel,
+  ]);
+
+  // Real-time validation - runs whenever relevant fields change
+  useEffect(() => {
+    if (isInitialized) {
+      validateForm();
+    }
+  }, [validateForm, isInitialized]);
 
   // Enable beforeunload warning when there are unsaved changes
   useBeforeUnload({
@@ -191,7 +237,10 @@ const ChartEditorPage: React.FC = () => {
         let structuredConfig: StructuredChartConfig;
 
         // Check if it's already in the correct format (has nested config property)
-        if ((currentChart.config as any).config && (currentChart.config as any).chartType) {
+        if (
+          (currentChart.config as Record<string, unknown>).config &&
+          (currentChart.config as Record<string, unknown>).chartType
+        ) {
           structuredConfig = currentChart.config as unknown as StructuredChartConfig;
         } else {
           // Convert to the correct format
@@ -283,21 +332,46 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
-  // Handle name edit - just update state, don't save immediately
+  // Handle name edit - validate before exiting edit mode
   const handleNameSave = () => {
-    // Just exit editing mode, changes will be saved when user clicks Save button
+    // Validate name is not empty
+    if (!editableName.trim()) {
+      // Don't exit editing mode if name is empty
+      setValidationErrors(prev => ({ ...prev, name: true }));
+      return;
+    }
+
+    // Clear validation error and exit editing mode
+    setValidationErrors(prev => ({ ...prev, name: false }));
     setIsEditingName(false);
   };
 
-  // Handle description edit - just update state, don't save immediately
+  // Handle description edit - validate before exiting edit mode
   const handleDescriptionSave = () => {
-    // Just exit editing mode, changes will be saved when user clicks Save button
+    // Validate description is not empty
+    if (!editableDescription.trim()) {
+      // Don't exit editing mode if description is empty
+      setValidationErrors(prev => ({ ...prev, description: true }));
+      return;
+    }
+
+    // Clear validation error and exit editing mode
+    setValidationErrors(prev => ({ ...prev, description: false }));
     setIsEditingDescription(false);
   };
 
   // Handle save/update with confirmation - saves all changes at once
   const handleSave = async () => {
+    console.log('handleSave 123 ', !validateForm());
+    // Validate form before saving
+    if (!validateForm()) {
+      console.log('handleSave 456 ');
+      showError('Please fill in all required fields');
+      return;
+    }
+
     if (mode === 'edit' && chartId && currentChart) {
+      setCurrentModalAction('save');
       modalConfirm.openConfirm(async () => {
         try {
           const updateData = {
@@ -307,15 +381,17 @@ const ChartEditorPage: React.FC = () => {
             config: chartConfig,
           };
 
-          await updateChart(chartId, updateData);
-
-          // Update original values after successful save
-          setOriginalName(editableName.trim() || currentChart.name || '');
-          setOriginalDescription(editableDescription.trim() || currentChart.description || '');
-          setOriginalConfig(chartConfig);
-          setOriginalChartType(currentChartType);
-
-          showSuccess(t('chart_updated', 'Chart updated successfully'));
+          const response = await updateChart(chartId, updateData);
+          if (response.meta.requestStatus === 'fulfilled') {
+            // Update original values after successful save
+            setOriginalName(editableName.trim() || currentChart.name || '');
+            setOriginalDescription(editableDescription.trim() || currentChart.description || '');
+            setOriginalConfig(chartConfig);
+            setOriginalChartType(currentChartType);
+            showSuccess(t('chart_update_success', 'Chart updated successfully'));
+          } else {
+            showError(t('chart_update_error', 'Failed to update chart'));
+          }
         } catch (error) {
           console.error('Error updating chart:', error);
           showError(t('chart_update_error', 'Failed to update chart'));
@@ -324,6 +400,8 @@ const ChartEditorPage: React.FC = () => {
       });
     }
   };
+
+  console.log('currentChart 123:', currentChart);
 
   // Handle config changes from chart editors
   const handleConfigChange = useCallback(
@@ -370,12 +448,13 @@ const ChartEditorPage: React.FC = () => {
         });
       }
     },
-    [mode, currentChartType] // Removed chartConfig to prevent infinite loop
+    [currentChartType] // Only depend on chart type
   );
 
   // Handle reset to original values
   const handleReset = () => {
     if (hasChanges) {
+      setCurrentModalAction('reset');
       modalConfirm.openConfirm(async () => {
         try {
           // Reset all values to original (name, description, config, chart type)
@@ -431,16 +510,17 @@ const ChartEditorPage: React.FC = () => {
           config: chartConfig,
         };
 
-        await updateChart(chartId, updateData);
-
-        // Update original values after successful save
-        setOriginalName(editableName.trim() || currentChart.name || '');
-        setOriginalDescription(editableDescription.trim() || currentChart.description || '');
-        setOriginalConfig(chartConfig);
-        setOriginalChartType(currentChartType);
-
-        showSuccess(t('chart_updated', 'Chart updated successfully'));
-
+        const response = await updateChart(chartId, updateData);
+        if (response.meta.requestStatus === 'fulfilled') {
+          // Update original values after successful save
+          setOriginalName(editableName.trim() || currentChart.name || '');
+          setOriginalDescription(editableDescription.trim() || currentChart.description || '');
+          setOriginalConfig(chartConfig);
+          setOriginalChartType(currentChartType);
+          showSuccess(t('chart_update_success', 'Chart updated successfully'));
+        } else {
+          showError(t('chart_update_error', 'Failed to update chart'));
+        }
         // Execute pending navigation
         if (pendingNavigation) {
           pendingNavigation();
@@ -467,6 +547,12 @@ const ChartEditorPage: React.FC = () => {
     setPendingNavigation(null);
     setShowUnsavedModal(false);
   };
+
+  // Handle modal close with action cleanup
+  const handleModalClose = () => {
+    setCurrentModalAction(null);
+    modalConfirm.close();
+  };
   // Clear current chart when component unmounts to prevent stale data
   useEffect(() => {
     return () => {
@@ -487,40 +573,6 @@ const ChartEditorPage: React.FC = () => {
                 ? t('chart_editor_loading_data', 'Loading chart data...')
                 : t('chart_editor_loading_config', 'Loading chart configuration...')}
           </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error state
-  if (error && chartId) {
-    return (
-      <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-            {t('chart_editor_error_title', 'Error Loading Chart')}
-          </h2>
-          <p className="text-muted-foreground mb-6">
-            {error ||
-              t('chart_editor_error_message', 'Failed to load chart data. Please try again.')}
-          </p>
-          <div className="flex space-x-3 justify-center">
-            <Button variant="outline" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              {t('common_back', 'Back')}
-            </Button>
-            <Button
-              onClick={() => {
-                clearChartError();
-                if (chartId) getChartById(chartId);
-              }}
-            >
-              {t('common_retry', 'Retry')}
-            </Button>
-          </div>
         </div>
       </div>
     );
@@ -590,22 +642,46 @@ const ChartEditorPage: React.FC = () => {
                     {currentChart ? (
                       <>
                         {isEditingName && mode === 'edit' ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-col gap-1">
                             <Input
                               value={editableName}
-                              onChange={e => setEditableName(e.target.value)}
-                              className="w-100 text-xl font-bold bg-transparent border-dashed border-gray-300 px-2 py-1"
+                              onChange={e => {
+                                setEditableName(e.target.value);
+                                // Clear validation error when user types
+                                if (e.target.value.trim()) {
+                                  setValidationErrors(prev => ({ ...prev, name: false }));
+                                } else {
+                                  // Show validation error immediately when field becomes empty
+                                  setValidationErrors(prev => ({ ...prev, name: true }));
+                                }
+                              }}
+                              className={`w-100 text-xl font-bold bg-transparent border-dashed px-2 py-1 ${
+                                validationErrors.name
+                                  ? '!border-red-500 focus:border-red-500 ring-1 ring-red-500'
+                                  : 'border-gray-300'
+                              }`}
                               onBlur={handleNameSave}
                               onKeyDown={e => {
                                 if (e.key === 'Enter') {
                                   handleNameSave();
                                 } else if (e.key === 'Escape') {
-                                  setEditableName(editableName); // Keep current value
-                                  setIsEditingName(false);
+                                  // Only allow escape if name is not empty
+                                  if (editableName.trim()) {
+                                    setEditableName(originalName); // Restore original value
+                                    setValidationErrors(prev => ({ ...prev, name: false }));
+                                    setIsEditingName(false);
+                                  }
+                                  // If name is empty, do nothing (prevent escape)
                                 }
                               }}
                               autoFocus
+                              placeholder={t('chart_name_required', 'Chart name is required')}
                             />
+                            {validationErrors.name && (
+                              <span className="text-red-500 text-xs ml-2">
+                                {t('field_required', 'This field is required')}
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <h1
@@ -617,6 +693,10 @@ const ChartEditorPage: React.FC = () => {
                             onClick={() => {
                               if (mode === 'edit') {
                                 setIsEditingName(true);
+                                // Trigger validation if field is empty
+                                if (!editableName.trim()) {
+                                  setValidationErrors(prev => ({ ...prev, name: true }));
+                                }
                               }
                             }}
                           >
@@ -654,22 +734,47 @@ const ChartEditorPage: React.FC = () => {
                         {t('description', 'Description')}:
                       </span>
                       {isEditingDescription && mode === 'edit' ? (
-                        <Input
-                          value={editableDescription}
-                          onChange={e => setEditableDescription(e.target.value)}
-                          className="w-200 text-xl font-bold bg-transparent border-dashed border-gray-300 px-2 py-1"
-                          onBlur={handleDescriptionSave}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter' && e.ctrlKey) {
-                              handleDescriptionSave();
-                            } else if (e.key === 'Escape') {
-                              setEditableDescription(editableDescription); // Keep current value
-                              setIsEditingDescription(false);
-                            }
-                          }}
-                          placeholder="Click to add description..."
-                          autoFocus
-                        />
+                        <div className="flex flex-col gap-1">
+                          <Input
+                            value={editableDescription}
+                            onChange={e => {
+                              setEditableDescription(e.target.value);
+                              // Clear validation error when user types
+                              if (e.target.value.trim()) {
+                                setValidationErrors(prev => ({ ...prev, description: false }));
+                              } else {
+                                // Show validation error immediately when field becomes empty
+                                setValidationErrors(prev => ({ ...prev, description: true }));
+                              }
+                            }}
+                            className={`w-200 text-xl font-bold bg-transparent border-dashed px-2 py-1 ${
+                              validationErrors.description
+                                ? '!border-red-500 focus:border-red-500 ring-1 ring-red-500'
+                                : 'border-gray-300'
+                            }`}
+                            onBlur={handleDescriptionSave}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' && e.ctrlKey) {
+                                handleDescriptionSave();
+                              } else if (e.key === 'Escape') {
+                                // Only allow escape if description is not empty
+                                if (editableDescription.trim()) {
+                                  setEditableDescription(originalDescription); // Restore original value
+                                  setValidationErrors(prev => ({ ...prev, description: false }));
+                                  setIsEditingDescription(false);
+                                }
+                                // If description is empty, do nothing (prevent escape)
+                              }
+                            }}
+                            placeholder={t('description_required', 'Description is required')}
+                            autoFocus
+                          />
+                          {validationErrors.description && (
+                            <span className="text-red-500 text-xs">
+                              {t('field_required', 'This field is required')}
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <span
                           className={`text-xs text-gray-700 dark:text-gray-300 ${
@@ -680,6 +785,10 @@ const ChartEditorPage: React.FC = () => {
                           onClick={() => {
                             if (mode === 'edit') {
                               setIsEditingDescription(true);
+                              // Trigger validation if field is empty
+                              if (!editableDescription.trim()) {
+                                setValidationErrors(prev => ({ ...prev, description: true }));
+                              }
                             }
                           }}
                           style={{ fontWeight: '500', fontSize: '14px' }}
@@ -774,23 +883,46 @@ const ChartEditorPage: React.FC = () => {
             onChartTypeChange={(type: string) => handleChartTypeChange(type)}
             dataset={dataset}
             allowChartTypeChange={mode === 'edit'}
+            validationErrors={validationErrors}
+            onValidationChange={validateForm}
           />
         </motion.div>
       </div>
-
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
       {/* Confirmation Modal */}
       <ModalConfirm
         isOpen={modalConfirm.isOpen}
-        onClose={modalConfirm.close}
+        onClose={handleModalClose}
         onConfirm={modalConfirm.confirm}
         loading={modalConfirm.isLoading}
         type="warning"
-        title={t('chart_save_confirm_title', 'Save Changes')}
-        message={t(
-          'chart_save_confirm_message',
-          'Are you sure you want to save these changes? This will update your chart configuration.'
-        )}
-        confirmText={t('common_save', 'Save')}
+        title={
+          currentModalAction === 'save'
+            ? t('chart_save_confirm_title', 'Save Changes')
+            : currentModalAction === 'reset'
+              ? t('chart_reset_confirm_title', 'Reset Changes')
+              : t('chart_confirm_title', 'Confirm Action')
+        }
+        message={
+          currentModalAction === 'save'
+            ? t(
+                'chart_save_confirm_message',
+                'Are you sure you want to save these changes? This will update your chart configuration.'
+              )
+            : currentModalAction === 'reset'
+              ? t(
+                  'chart_reset_confirm_message',
+                  'Are you sure you want to reset all changes? This will restore your chart to its original state and all unsaved changes will be lost.'
+                )
+              : t('chart_confirm_message', 'Are you sure you want to continue?')
+        }
+        confirmText={
+          currentModalAction === 'save'
+            ? t('common_save', 'Save')
+            : currentModalAction === 'reset'
+              ? t('common_reset', 'Reset')
+              : t('common_confirm', 'Confirm')
+        }
         cancelText={t('common_cancel', 'Cancel')}
       />
 

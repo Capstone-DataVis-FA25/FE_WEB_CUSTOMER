@@ -1359,5 +1359,6 @@
   "common.add": "Thêm",
   "chart_editor_series": "Chuỗi",
   "chart_editor_seriesManagement": "Quản Lý Chuỗi Dữ Liệu",
-  "chart_editor_save_chart": "Lưu Biểu Đồ"
+  "chart_editor_save_chart": "Lưu Biểu Đồ",
+  "chart_update_success_message": "Cập Nhật Biểu Đồ Thành Công"
 }
