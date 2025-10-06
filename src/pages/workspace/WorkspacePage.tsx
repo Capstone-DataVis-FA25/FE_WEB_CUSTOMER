@@ -16,7 +16,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Routers from '@/router/routers';
 import { useDataset } from '@/features/dataset/useDataset';
 import { useCharts } from '@/features/charts/useCharts';
-import { useToastContext } from '@/components/providers/ToastProvider';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import type { Dataset } from '@/features/dataset/datasetAPI';
@@ -31,12 +30,14 @@ type Chart = BaseChart & {
 };
 import DatasetTab from './components/DatasetTab';
 import ChartTab from './components/ChartTab';
+import ToastContainer from '@/components/ui/toast-container';
+import useToast from '@/hooks/useToast';
 
 const WorkspacePage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { showSuccess, showError } = useToastContext();
+  const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
 
   // Dataset API integration
@@ -191,10 +192,6 @@ const WorkspacePage: React.FC = () => {
   };
 
   const handleCreateChart = (datasetId?: string) => {
-    // Thường thì rơi vào trường hợp không có dataset -> hiện button create chart
-    // 1. Hiện modal chọn dataset
-    // 2. Sau khi chọn dataset -> 'Continue (trong modal)' -> create chart
-    // Điều hướng sang trang chart gallery kèm dataset_id
     if (datasetId) {
       navigate(Routers.CHART_GALLERY, {
         state: { datasetId },
@@ -280,17 +277,6 @@ const WorkspacePage: React.FC = () => {
                 />
               </div>
               <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
-                <Select value={datasetTypeFilter} onValueChange={setDatasetTypeFilter}>
-                  <SelectTrigger className="w-full sm:w-[160px] h-12 border-2 border-gray-200 rounded-xl bg-white/80 backdrop-blur-sm">
-                    <SelectValue placeholder="Dataset type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Datasets</SelectItem>
-                    <SelectItem value="csv">CSV Files</SelectItem>
-                    <SelectItem value="excel">Excel Files</SelectItem>
-                    <SelectItem value="json">JSON Files</SelectItem>
-                  </SelectContent>
-                </Select>
                 <Select value={chartTypeFilter} onValueChange={setChartTypeFilter}>
                   <SelectTrigger className="w-full sm:w-[160px] h-12 border-2 border-gray-200 rounded-xl bg-white/80 backdrop-blur-sm">
                     <SelectValue placeholder="Chart type" />
@@ -360,7 +346,7 @@ const WorkspacePage: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
-
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
       {/* Delete Confirmation Modal */}
       <ModalConfirm
         isOpen={modalConfirm.isOpen}
