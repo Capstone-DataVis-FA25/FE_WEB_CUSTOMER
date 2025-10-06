@@ -334,21 +334,6 @@ const DatasetDetailPage: React.FC = () => {
                     </div>
                     <CardContent className="p-6 space-y-4">
                       <Button
-                        variant="outline"
-                        onClick={() =>
-                          navigate(Routers.EDIT_DATASET, {
-                            state: { datasetId: currentDataset.id, from: window.location.pathname },
-                          })
-                        }
-                        className="w-full h-12 flex items-center justify-start gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-800/50 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30 shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 group"
-                      >
-                        <Edit className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors flex-shrink-0" />
-                        <span className="text-blue-700 dark:text-blue-300 font-medium text-left">
-                          {t('dataset_edit', 'Edit')}
-                        </span>
-                      </Button>
-
-                      <Button
                         variant="destructive"
                         onClick={handleDeleteDataset}
                         disabled={deleting}
@@ -401,9 +386,6 @@ const DatasetDetailPage: React.FC = () => {
                                   Rows: {currentDataset.rowCount?.toLocaleString()}
                                 </span>
                               </div>
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-3 py-1 rounded-full border">
-                              Read-only mode
                             </div>
                           </div>
                         </div>

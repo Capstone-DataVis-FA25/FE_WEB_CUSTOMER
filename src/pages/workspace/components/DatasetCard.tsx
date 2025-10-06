@@ -138,14 +138,7 @@ const DatasetCard: React.FC<DatasetCardProps> = ({ dataset, onDelete, isDeleting
           >
             <Eye className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleEdit}
-            className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-900/20"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
+
           <Button
             variant="ghost"
             size="sm"
