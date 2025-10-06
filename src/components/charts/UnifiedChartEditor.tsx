@@ -75,6 +75,15 @@ export interface UnifiedChartEditorProps {
   onChartTypeChange?: (chartType: ChartType) => void;
   dataset?: Dataset;
   allowChartTypeChange?: boolean;
+  validationErrors?: {
+    name: boolean;
+    description: boolean;
+    title: boolean;
+    xAxisLabel: boolean;
+    yAxisLabel: boolean;
+    seriesNames: Record<string, boolean>;
+  };
+  onValidationChange?: () => void;
 }
 
 const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
@@ -88,6 +97,8 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
   onChartTypeChange,
   dataset,
   allowChartTypeChange = true,
+  validationErrors,
+  onValidationChange,
 }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
@@ -676,6 +687,11 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
 
       setChartConfig(updatedConfig);
 
+      // Call validation change callback if provided
+      if (onValidationChange) {
+        onValidationChange();
+      }
+
       // Encode names back to ids before sending to parent ChartEditor
       const encodedConfigForParent = {
         ...updatedConfig,
@@ -758,6 +774,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
       formatters,
       seriesConfigs,
       setSeriesConfigs,
+      onValidationChange,
     ]
   );
 
@@ -1620,15 +1637,87 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                         value={chartType}
                         onValueChange={(value: string) => {
                           const newChartType = value as ChartType;
+                          console.log('🎯 Chart type changed from', chartType, 'to', newChartType);
                           setChartType(newChartType);
-                          // Create new config for the new chart type while preserving data mappings
-                          const newConfig = createDefaultConfig(newChartType, {
-                            ...chartConfig,
-                            xAxisKey: chartConfig?.xAxisKey,
-                            yAxisKeys: chartConfig?.yAxisKeys,
-                            title: chartConfig?.title,
+
+                          // Get current config to preserve existing settings
+                          const currentConfig = chartConfig || createDefaultConfig(chartType);
+
+                          // Create base new config preserving data mappings and user settings
+                          const baseNewConfig = createDefaultConfig(newChartType, {
+                            ...currentConfig,
+                            xAxisKey: currentConfig?.xAxisKey,
+                            yAxisKeys: currentConfig?.yAxisKeys,
+                            title: currentConfig?.title,
+                            xAxisLabel: currentConfig?.xAxisLabel,
+                            yAxisLabel: currentConfig?.yAxisLabel,
+                            width: currentConfig?.width,
+                            height: currentConfig?.height,
+                            showLegend: currentConfig?.showLegend,
+                            showGrid: currentConfig?.showGrid,
+                            animationDuration: currentConfig?.animationDuration,
                           });
-                          setChartConfig(newConfig);
+
+                          // Apply chart type-specific configurations
+                          let typeSpecificConfig = {};
+                          switch (newChartType) {
+                            case 'line':
+                              typeSpecificConfig = {
+                                lineType: 'basic' as const,
+                                showPoints: true,
+                                showPointValues: true,
+                                curve: 'curveMonotoneX' as const,
+                                lineWidth: 2,
+                                pointRadius: 3,
+                                strokeWidth: 2,
+                                // Reset disabled lines for new chart type
+                                disabledLines: [],
+                              };
+                              break;
+                            case 'bar':
+                              typeSpecificConfig = {
+                                barType: 'grouped' as const,
+                                barWidth: 0.8,
+                                barGap: 0.2,
+                                showValues: true,
+                                // Reset disabled bars for new chart type
+                                disabledBars: [],
+                              };
+                              break;
+                            case 'area':
+                              typeSpecificConfig = {
+                                areaType: 'basic' as const,
+                                showPoints: true,
+                                showPointValues: true,
+                                showStroke: true,
+                                curve: 'curveMonotoneX' as const,
+                                lineWidth: 2,
+                                pointRadius: 3,
+                                opacity: 0.7,
+                                fillOpacity: 0.6,
+                                strokeWidth: 2,
+                                stackedMode: true,
+                                // Reset disabled lines for new chart type
+                                disabledLines: [],
+                              };
+                              break;
+                            default:
+                              typeSpecificConfig = {};
+                          }
+
+                          // Merge base config with type-specific config
+                          const finalConfig = {
+                            ...baseNewConfig,
+                            ...typeSpecificConfig,
+                          };
+
+                          console.log(
+                            '🔧 Applied type-specific config for',
+                            newChartType,
+                            ':',
+                            typeSpecificConfig
+                          );
+                          setChartConfig(finalConfig);
                           onChartTypeChange?.(newChartType);
                         }}
                       >
@@ -1708,6 +1797,9 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                       });
                     }
                   }}
+                  validationErrors={
+                    validationErrors ? { title: validationErrors.title } : undefined
+                  }
                 />
               </motion.div>
 
@@ -1730,6 +1822,14 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                   lineWidth={chartSpecificProps.lineWidth}
                   pointRadius={chartSpecificProps.pointRadius}
                   barType={chartSpecificProps.barType}
+                  validationErrors={
+                    validationErrors
+                      ? {
+                          xAxisLabel: validationErrors.xAxisLabel,
+                          yAxisLabel: validationErrors.yAxisLabel,
+                        }
+                      : undefined
+                  }
                 />
               </motion.div>
 
@@ -1747,6 +1847,14 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                   formatters={formatters}
                   onUpdateConfig={handleConfigChange}
                   onUpdateFormatters={handleFormatterChange}
+                  validationErrors={
+                    validationErrors
+                      ? {
+                          xAxisLabel: validationErrors.xAxisLabel,
+                          yAxisLabel: validationErrors.yAxisLabel,
+                        }
+                      : undefined
+                  }
                 />
               </motion.div>
 
@@ -1819,6 +1927,13 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                           }
                         }}
                         availableColumns={getAvailableColumns()}
+                        validationErrors={
+                          validationErrors
+                            ? {
+                                seriesNames: validationErrors.seriesNames,
+                              }
+                            : undefined
+                        }
                       />
                     </CardContent>
                   )}

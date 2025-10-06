@@ -178,7 +178,7 @@ export default function ChooseTemplateTab() {
             ...baseConfig.config,
             lineType: 'basic' as const,
             showPoints: true,
-            showPointValues: false,
+            showPointValues: true,
             curveType: 'curveMonotoneX' as const,
             strokeWidth: 2,
           },

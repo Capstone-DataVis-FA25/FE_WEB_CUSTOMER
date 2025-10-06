@@ -52,6 +52,12 @@ export interface AreaChartEditorProps {
   onDataChange?: (data: ChartDataPoint[]) => void;
   onColorsChange?: (colors: ColorConfig) => void;
   onFormattersChange?: (formatters: FormatterConfig) => void;
+  validationErrors?: {
+    title?: boolean;
+    xAxisLabel?: boolean;
+    yAxisLabel?: boolean;
+    seriesNames?: Record<string, boolean>;
+  };
 }
 
 const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
@@ -63,6 +69,7 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
   onDataChange,
   onColorsChange,
   onFormattersChange,
+  validationErrors,
 }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
@@ -422,6 +429,12 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
   const updateSeriesConfig = (seriesId: string, updates: Partial<SeriesConfig>) => {
     setSeriesConfigs(prev => {
       const oldSeries = prev.find(s => s.id === seriesId);
+
+      // Auto-sync name with dataColumn when dataColumn changes
+      if (updates.dataColumn && updates.dataColumn !== oldSeries?.dataColumn) {
+        updates.name = updates.dataColumn;
+      }
+
       const updatedSeries = prev.map(s => (s.id === seriesId ? { ...s, ...updates } : s));
 
       // Sync chart config yAxisKeys & disabledLines
@@ -460,11 +473,11 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
   const addSeries = () => {
     const available = getAvailableColumns();
     const newKey = available.length > 0 ? available[0] : `series${seriesConfigs.length + 1}`;
-    // Add a new series config
+    // Add a new series config - name automatically matches dataColumn
     setSeriesConfigs(prev => {
       const newSeries: SeriesConfig = {
         id: `series-${Date.now()}`,
-        name: newKey,
+        name: newKey, // Name matches data column
         dataColumn: newKey,
         color: '#6366f1',
         visible: true,
@@ -874,6 +887,9 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
                 onToggleCollapse={() => toggleSection('basicSettings')}
                 onUpdateConfig={updateConfig}
                 onApplySizePreset={applySizePreset}
+                validationErrors={
+                  validationErrors ? { title: !!validationErrors.title } : undefined
+                }
               />
             </motion.div>
 
@@ -912,6 +928,14 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
                 onToggleCollapse={() => toggleSection('chartSettings')}
                 onUpdateConfig={updateConfig}
                 onUpdateChartSpecific={updateConfig}
+                validationErrors={
+                  validationErrors
+                    ? {
+                        xAxisLabel: validationErrors.xAxisLabel,
+                        yAxisLabel: validationErrors.yAxisLabel,
+                      }
+                    : undefined
+                }
               />
             </motion.div>
 

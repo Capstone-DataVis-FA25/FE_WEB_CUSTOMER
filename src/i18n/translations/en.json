@@ -1371,5 +1371,6 @@
   "chart_editor_preset_pastel": "Pastel",
   "common.add": "Add",
   "chart_editor_seriesManagement": "Series Management",
-  "chart_editor_save_chart": "Save Chart"
+  "chart_editor_save_chart": "Save Chart",
+  "chart_update_success_message": "Chart has been updated successfully"
 }
