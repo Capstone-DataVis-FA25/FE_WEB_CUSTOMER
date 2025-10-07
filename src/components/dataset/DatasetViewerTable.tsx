@@ -3,6 +3,7 @@ import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 interface DatasetViewerTableProps {
   columns: string[];
   rows: (string | number | null)[][]; // body rows only
+  columnTypes?: ('text' | 'number' | 'date')[]; // type for each column
   height?: number | string; // container height (default 60vh)
   className?: string;
   /** Approximate row height in px (for virtualization). */
@@ -23,6 +24,7 @@ interface DatasetViewerTableProps {
 const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
   columns,
   rows,
+  columnTypes,
   height = '60vh',
   className = '',
   rowHeight = 36,
@@ -34,6 +36,32 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
   const [scrollTop, setScrollTop] = useState(0);
   const totalRows = rows.length;
   const useVirtual = !disableVirtualization && totalRows > 400; // heuristic
+
+  // Type badge helper
+  const getTypeBadge = (type: 'text' | 'number' | 'date') => {
+    const badges = {
+      text: {
+        label: 'Text',
+        className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+      },
+      number: {
+        label: 'Num',
+        className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+      },
+      date: {
+        label: 'Date',
+        className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+      },
+    };
+    const badge = badges[type];
+    return (
+      <span
+        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${badge.className}`}
+      >
+        {badge.label}
+      </span>
+    );
+  };
 
   const onScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
@@ -86,11 +114,14 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
               {columns.map((col, idx) => (
                 <th
                   key={idx}
-                  className="border-b border-r p-2 font-semibold text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 text-left truncate"
+                  className="border-b border-r p-2 font-semibold text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 text-left"
                   style={{ minWidth: 120 }}
-                  title={col}
+                  title={`${col} (${columnTypes?.[idx] || 'text'})`}
                 >
-                  {col}
+                  <div className="flex items-center gap-2">
+                    <span className="truncate flex-1">{col}</span>
+                    {columnTypes && columnTypes[idx] && getTypeBadge(columnTypes[idx])}
+                  </div>
                 </th>
               ))}
             </tr>

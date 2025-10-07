@@ -1,6 +1,6 @@
 'use client';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SlideInUp } from '@/theme/animation';
@@ -15,12 +15,6 @@ import { useModalConfirm } from '@/hooks/useModal';
 
 import Routers from '@/router/routers';
 import DatasetViewerTable from '@/components/dataset/DatasetViewerTable';
-
-// Type for header with data
-interface DatasetHeader {
-  name: string;
-  data?: (string | number)[];
-}
 
 const DatasetDetailPage: React.FC = () => {
   const { id: legacyId, slug } = useParams<{ id?: string; slug?: string }>();
@@ -49,9 +43,6 @@ const DatasetDetailPage: React.FC = () => {
     clearDatasetError,
     clearCurrent,
   } = useDataset();
-
-  const [activeTab, setActiveTab] = useState<'data' | 'info'>('data');
-  const [selectedChartType, setSelectedChartType] = useState('bar');
 
   // Fetch dataset on component mount
   useEffect(() => {
@@ -204,14 +195,18 @@ const DatasetDetailPage: React.FC = () => {
 
   // Prepare flat header + body rows for lightweight viewer
   let headerRow: string[] = [];
+  let headerTypes: ('text' | 'number' | 'date')[] = [];
   let bodyRows: (string | number | null)[][] = [];
   if (currentDataset.headers && currentDataset.headers.length) {
-    headerRow = currentDataset.headers.map((h: DatasetHeader) => h.name);
+    headerRow = currentDataset.headers.map((h: any) => h.name);
+    headerTypes = currentDataset.headers.map(
+      (h: any) => (h.type as 'text' | 'number' | 'date') || 'text'
+    );
     const rowCount = currentDataset.rowCount || 0;
     const rows: (string | number | null)[][] = Array.from({ length: rowCount }, () =>
       Array(headerRow.length).fill('')
     );
-    currentDataset.headers.forEach((h: DatasetHeader, colIdx: number) => {
+    currentDataset.headers.forEach((h: any, colIdx: number) => {
       h.data?.forEach((cell: string | number | null, rowIdx: number) => {
         if (rows[rowIdx]) rows[rowIdx][colIdx] = cell ?? '';
       });
@@ -260,11 +255,32 @@ const DatasetDetailPage: React.FC = () => {
       ) : (
         <div className="py-8 relative z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex gap-3 items-start">
+            {/* Header with Title and Actions */}
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate(Routers.WORKSPACE_DATASETS)}
+                  className="hover:bg-white/50 dark:hover:bg-gray-800/50"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                    {currentDataset.name}
+                  </h1>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {currentDataset.rowCount?.toLocaleString()} rows × {currentDataset.columnCount}{' '}
+                    columns
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-6 items-start">
               {/* Left Sidebar - Dataset Information */}
               <div className="w-80 shrink-0 space-y-6">
                 <SlideInUp delay={0.15}>
-                  <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/20 shadow-xl rounded-2xl overflow-hidden group hover:shadow-2xl transition-all duration-300">
+                  <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/20 shadow-xl rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4">
                       <CardTitle className="flex items-center gap-3 text-white">
                         <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
@@ -316,34 +332,18 @@ const DatasetDetailPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </SlideInUp>
-
-                {/* Metadata card removed; created/updated info merged into information card above */}
-
-                <SlideInUp delay={0.25}>
-                  <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/20 shadow-xl rounded-2xl overflow-hidden">
-                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4">
-                      <CardTitle className="flex items-center gap-3 text-white">
-                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                          <ArrowLeft className="w-4 h-4" />
-                        </div>
-                        <span className="font-semibold">Actions</span>
-                      </CardTitle>
-                    </div>
-                    <CardContent className="p-6 space-y-4">
-                      <Button
-                        variant="destructive"
-                        onClick={handleDeleteDataset}
-                        disabled={deleting}
-                        className="w-full h-12 flex items-center justify-start gap-3 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border border-red-200/50 dark:border-red-800/50 hover:from-red-500 hover:to-pink-600 hover:text-white dark:hover:from-red-600 dark:hover:to-pink-700 shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 group disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Trash2 className="w-5 h-5 text-red-600 dark:text-white group-hover:text-white transition-colors flex-shrink-0" />
-                        <span className="text-red-700 dark:text-white font-medium group-hover:text-white text-left">
-                          {deleting ? 'Deleting...' : t('dataset_delete', 'Delete')}
-                        </span>
-                      </Button>
+                      {/* Delete Button */}
+                      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <Button
+                          variant="destructive"
+                          onClick={handleDeleteDataset}
+                          disabled={deleting}
+                          className="w-full gap-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          {deleting ? 'Deleting...' : t('dataset_delete', 'Delete Dataset')}
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 </SlideInUp>
@@ -396,7 +396,12 @@ const DatasetDetailPage: React.FC = () => {
                           style={{ minHeight: '400px', maxHeight: '1000px' }}
                         >
                           <div className="overflow-auto h-full">
-                            <DatasetViewerTable columns={headerRow} rows={bodyRows} height="60vh" />
+                            <DatasetViewerTable
+                              columns={headerRow}
+                              rows={bodyRows}
+                              columnTypes={headerTypes}
+                              height="60vh"
+                            />
                           </div>
                         </div>
                       </div>
