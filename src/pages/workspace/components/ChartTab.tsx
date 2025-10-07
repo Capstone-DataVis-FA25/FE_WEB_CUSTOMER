@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 // import { useTranslation } from 'react-i18next';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import Pagination from '@/components/ui/pagination';
 import ChartCard from './ChartCard';
 import DatasetSelectionDialog from './DatasetSelectionDialog';
 import type { Chart as BaseChart } from '@/features/charts/chartTypes';
+import type { UsePaginationReturn } from '@/hooks/usePagination';
 
 // Extended Chart type for UI with additional optional fields
 type Chart = BaseChart & {
@@ -22,12 +24,14 @@ interface ChartTabProps {
   chartDeleting: boolean;
   datasetSelectingModal: boolean;
   filteredCharts: Chart[];
+  allFilteredCharts: Chart[];
   searchTerm: string;
   onCreateChart: (datasetId?: string) => void;
   onHandleOpenModalSelectedDataset: (open: boolean) => void;
   onDeleteChart: (chart: Chart) => void;
   onEditChart: (chartId: string) => void;
   deletingChartId: string | null;
+  pagination: UsePaginationReturn;
 }
 
 const ChartTab: React.FC<ChartTabProps> = ({
@@ -36,16 +40,18 @@ const ChartTab: React.FC<ChartTabProps> = ({
   chartDeleting,
   datasetSelectingModal,
   filteredCharts,
+  allFilteredCharts,
   searchTerm,
   onCreateChart,
   onHandleOpenModalSelectedDataset,
   onDeleteChart,
   onEditChart,
   deletingChartId,
+  pagination,
 }) => {
   // const { t } = useTranslation();
 
-  if (chartsLoading && filteredCharts.length === 0) {
+  if (chartsLoading && allFilteredCharts.length === 0) {
     return (
       <div className="flex justify-center items-center py-16">
         <LoadingSpinner />
@@ -57,7 +63,7 @@ const ChartTab: React.FC<ChartTabProps> = ({
     onCreateChart(datasetId);
   };
 
-  if (filteredCharts.length === 0) {
+  if (allFilteredCharts.length === 0) {
     return (
       <>
         <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm dark:bg-gray-800/80">
@@ -93,17 +99,34 @@ const ChartTab: React.FC<ChartTabProps> = ({
   }
 
   return (
-    <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {filteredCharts.map(chart => (
-        // Giao diện của 1 chart hiển thị
-        <ChartCard
-          key={chart.id}
-          chart={chart}
-          onEdit={onEditChart}
-          onDelete={onDeleteChart}
-          isDeleting={chartDeleting && deletingChartId === chart.id}
-        />
-      ))}
+    <div className="space-y-6">
+      <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {filteredCharts.map(chart => (
+          // Giao diện của 1 chart hiển thị
+          <ChartCard
+            key={chart.id}
+            chart={chart}
+            onEdit={onEditChart}
+            onDelete={onDeleteChart}
+            isDeleting={chartDeleting && deletingChartId === chart.id}
+          />
+        ))}
+      </div>
+
+      {/* Pagination */}
+      {pagination.pagination.totalPages > 1 && (
+        <div className="flex justify-center">
+          <Pagination
+            currentPage={pagination.pagination.currentPage}
+            totalPages={pagination.pagination.totalPages}
+            totalItems={pagination.pagination.totalItems}
+            itemsPerPage={pagination.pagination.pageSize}
+            onPageChange={pagination.setPage}
+            showInfo={true}
+            size="md"
+          />
+        </div>
+      )}
     </div>
   );
 };

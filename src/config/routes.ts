@@ -439,32 +439,6 @@ export const protectedRoutes: RouteConfig[] = [
       description: 'View dataset details and data',
     },
   },
-  {
-    path: Routers.EDIT_DATASET,
-    name: 'edit-dataset',
-    component: 'EditDatasetPage',
-    layout: 'USER',
-    isProtected: true,
-    roles: [UserRole.USER],
-    permissions: [Permission.EDIT_PROFILE],
-    meta: {
-      title: 'Edit Dataset',
-      description: 'Edit dataset information and data',
-    },
-  },
-  {
-    path: Routers.EDIT_DATASET_LEGACY,
-    name: 'edit-dataset-legacy',
-    component: 'EditDatasetPage',
-    layout: 'USER',
-    isProtected: true,
-    roles: [UserRole.USER],
-    permissions: [Permission.EDIT_PROFILE],
-    meta: {
-      title: 'Edit Dataset (Legacy)',
-      hideFromNav: true,
-    },
-  },
   // Workspace routes
   {
     path: Routers.WORKSPACE,

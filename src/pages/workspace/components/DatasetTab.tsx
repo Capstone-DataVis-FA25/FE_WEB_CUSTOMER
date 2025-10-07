@@ -4,33 +4,37 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useTranslation } from 'react-i18next';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import Pagination from '@/components/ui/pagination';
 import DatasetCard from './DatasetCard';
 import type { Dataset } from '@/features/dataset/datasetAPI';
+import type { UsePaginationReturn } from '@/hooks/usePagination';
 
 interface DatasetTabProps {
-  datasets: Dataset[];
   loading: boolean;
   deleting: boolean;
   filteredDatasets: Dataset[];
+  allFilteredDatasets: Dataset[];
   searchTerm: string;
   onCreateDataset: () => void;
   onDeleteDataset: (dataset: Dataset) => void;
   deletingId: string | null;
+  pagination: UsePaginationReturn;
 }
 
 const DatasetTab: React.FC<DatasetTabProps> = ({
-  datasets,
   loading,
   deleting,
   filteredDatasets,
+  allFilteredDatasets,
   searchTerm,
   onCreateDataset,
   onDeleteDataset,
   deletingId,
+  pagination,
 }) => {
   const { t } = useTranslation();
 
-  if (loading && filteredDatasets.length === 0) {
+  if (loading && allFilteredDatasets.length === 0) {
     return (
       <div className="flex justify-center items-center py-16">
         <LoadingSpinner />
@@ -38,7 +42,7 @@ const DatasetTab: React.FC<DatasetTabProps> = ({
     );
   }
 
-  if (filteredDatasets.length === 0) {
+  if (allFilteredDatasets.length === 0) {
     return (
       <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm dark:bg-gray-800/80">
         <CardContent className="flex flex-col items-center justify-center py-16">
@@ -46,12 +50,17 @@ const DatasetTab: React.FC<DatasetTabProps> = ({
             <Database className="h-10 w-10 text-white" />
           </div>
           <h3 className="text-2xl font-semibold mb-2">
-            {searchTerm ? 'No datasets found' : 'No datasets yet'}
+            {searchTerm
+              ? t('workspace_noDatasetFound', 'No datasets found')
+              : t('workspace_noDatasetYet', 'No datasets yet')}
           </h3>
           <p className="text-muted-foreground text-center mb-6 max-w-md">
             {searchTerm
-              ? 'Try adjusting your search terms'
-              : 'Create your first dataset to get started with data visualization'}
+              ? t('workspace_adjustSearchTerms', 'Try adjusting your search terms')
+              : t(
+                  'workspace_createFirstDataset',
+                  'Create your first dataset to get started with data visualization'
+                )}
           </p>
           {!searchTerm && (
             <Button
@@ -60,7 +69,7 @@ const DatasetTab: React.FC<DatasetTabProps> = ({
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             >
               <Plus className="h-5 w-5 mr-2" />
-              Create Your First Dataset
+              {t('workspace_createFirstDatasetButton', 'Create Your First Dataset')}
             </Button>
           )}
         </CardContent>
@@ -69,15 +78,32 @@ const DatasetTab: React.FC<DatasetTabProps> = ({
   }
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {filteredDatasets.map(dataset => (
-        <DatasetCard
-          key={dataset.id}
-          dataset={dataset}
-          onDelete={onDeleteDataset}
-          isDeleting={deleting && deletingId === dataset.id}
-        />
-      ))}
+    <div className="space-y-6">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {filteredDatasets.map(dataset => (
+          <DatasetCard
+            key={dataset.id}
+            dataset={dataset}
+            onDelete={onDeleteDataset}
+            isDeleting={deleting && deletingId === dataset.id}
+          />
+        ))}
+      </div>
+
+      {/* Pagination */}
+      {pagination.pagination.totalPages > 1 && (
+        <div className="flex justify-center">
+          <Pagination
+            currentPage={pagination.pagination.currentPage}
+            totalPages={pagination.pagination.totalPages}
+            totalItems={pagination.pagination.totalItems}
+            itemsPerPage={pagination.pagination.pageSize}
+            onPageChange={pagination.setPage}
+            showInfo={true}
+            size="md"
+          />
+        </div>
+      )}
     </div>
   );
 };
