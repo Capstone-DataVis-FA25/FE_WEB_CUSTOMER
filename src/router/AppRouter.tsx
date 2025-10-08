@@ -36,7 +36,6 @@ const componentMap = {
   AreaChartEditorDemo: lazy(() => import('../components/charts/page.example/AreaChartEditorDemo')),
   CreateDatasetPage: lazy(() => import('../pages/dataset/CreateDatasetPage')),
   DatasetDetailPage: lazy(() => import('../pages/dataset/DatasetDetailPage')),
-  EditDatasetPage: lazy(() => import('../pages/dataset/EditDatasetPage')),
   ChartGalleryPickerPage: lazy(() => import('../pages/chart-gallery/ChartGalleryPickerPage')),
   WorkspacePage: lazy(() => import('../pages/workspace/WorkspacePage')),
   ChartCreatorPage: lazy(() => import('../pages/chart-creator/ChartCreatorPage')),
