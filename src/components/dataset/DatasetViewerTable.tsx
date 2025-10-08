@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 interface ColumnMeta {
   name: string;
@@ -142,20 +143,31 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
                       {showTypeIcons && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <button
+                            <Button
                               type="button"
-                              className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:ring-1 ring-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              size="icon"
+                              variant="ghost"
+                              className="w-6 h-6 flex-shrink-0 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                               title="Column data type"
+                              tabIndex={-1}
                             >
                               {typeIcon(col.type)}
-                            </button>
+                            </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent>
-                            {COLUMN_TYPES.map(t => (
-                              <DropdownMenuItem key={t.value} disabled className="gap-2">
-                                {t.icon} {t.label}
-                              </DropdownMenuItem>
-                            ))}
+                            {COLUMN_TYPES.map(t => {
+                              const active = t.value === col.type;
+                              return (
+                                <DropdownMenuItem
+                                  key={t.value}
+                                  // make it non-interactive but styleable
+                                  onSelect={e => e.preventDefault()}
+                                  className={`gap-2 cursor-default text-gray-700 dark:text-gray-200 pointer-events-none`}
+                                >
+                                  {t.icon} {t.label}
+                                </DropdownMenuItem>
+                              );
+                            })}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
