@@ -850,9 +850,6 @@ const DatasetDetailPage: React.FC = () => {
                                 </span>
                               </div>
                             </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-3 py-1 rounded-full border">
-                              Read-only mode
-                            </div>
                           </div>
                         </div>
 
