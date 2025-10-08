@@ -1,17 +1,19 @@
 import { Button } from '@/components/ui/button';
+import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useDataset, type DateFormat, type NumberFormat } from '@/contexts/DatasetContext';
 import { useAppSelector } from '@/store/hooks';
 import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
 import { parseTabularContent, transformWideToLong } from '@/utils/dataProcessors';
-import { RefreshCw, Settings, Upload } from 'lucide-react';
-import { useCallback, useEffect } from 'react';
+import { RefreshCw, Settings, Upload, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToastContext } from '../providers/ToastProvider';
 import { DateFormatSelector } from './DateFormatSelector';
 import { NumberFormatSelector } from './NumberFormatSelector';
 import './scrollbar.css';
+import DelimiterSelector from './DelimiterSelector';
 
 interface DataViewerOptionsProps {
   onUpload?: () => void;
@@ -22,6 +24,7 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
   const { t } = useTranslation();
   const { showError, showSuccess } = useToastContext();
   const { creating: isUploading } = useAppSelector(state => state.dataset);
+  const [showCleanConfirm, setShowCleanConfirm] = useState(false);
 
   // Get states from context
   const {
@@ -208,13 +211,13 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
           </div>
 
           {/* Delimiter Selector - Only show for non-JSON formats */}
-          {/* {!isJsonFormat && (
+          {!isJsonFormat && (
             <DelimiterSelector
               selectedDelimiter={selectedDelimiter}
               onDelimiterChange={handleDelimiterChange}
               disabled={isUploading}
             />
-          )} */}
+          )}
 
           {/* Number Format Settings */}
           <NumberFormatSelector
@@ -259,6 +262,17 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
               )}
             </Button>
 
+            {/* Placeholder button for future cleaning operations */}
+            <Button
+              onClick={() => setShowCleanConfirm(true)}
+              variant="secondary"
+              disabled={isUploading || !originalParsedData}
+              className="w-full flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Clean Dataset
+            </Button>
+
             <Button
               onClick={onChangeData}
               variant="outline"
@@ -268,6 +282,18 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
               {t('dataset_changeData')}
             </Button>
           </div>
+          <ModalConfirm
+            isOpen={showCleanConfirm}
+            onClose={() => setShowCleanConfirm(false)}
+            onConfirm={() => setShowCleanConfirm(false)}
+            title={'Reset and Clean Dataset'}
+            message={
+              'This action will reset all the settings you have made and will affect the original data.'
+            }
+            confirmText={t('confirm') || 'Confirm'}
+            cancelText={t('cancel') || 'Cancel'}
+            type="warning"
+          />
         </CardContent>
       </Card>
     </div>
