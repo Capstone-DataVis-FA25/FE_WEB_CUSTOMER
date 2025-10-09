@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { useTranslation } from 'react-i18next';
 import type { ColorConfig } from '../../types/chart';
 import { defaultColorsChart } from '@/utils/Utils';
 
