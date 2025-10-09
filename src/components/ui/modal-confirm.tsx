@@ -75,7 +75,7 @@ const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop - Mờ nhẹ để làm nổi bật modal */}
       <div className="absolute inset-0 bg-black/70" onClick={handleOverlayClick} />
 
@@ -195,7 +195,7 @@ const ModalConfirm: React.FC<ModalConfirmProps> = ({
         <p className="text-sm text-gray-500 dark:text-gray-300 mb-6">{message}</p>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-3 pointer-events-auto">
           <button
             type="button"
             onClick={onClose}

@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { useTranslation } from 'react-i18next';
 import type { ColorConfig } from '../../types/chart';
 import { defaultColorsChart } from '@/utils/Utils';
 
@@ -113,7 +112,6 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [dimensions, setDimensions] = React.useState({ width, height });
-  const { t } = useTranslation();
 
   // Monitor container size for responsiveness
   useEffect(() => {

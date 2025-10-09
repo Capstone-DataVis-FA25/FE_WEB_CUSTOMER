@@ -31,8 +31,7 @@ const BarChartEditorDemo: React.FC = () => {
         customYFormatter: '',
         customXFormatter: '',
       }}
-      title={t('lineChart_editor_demo_financialData')}
-      description={t('lineChart_editor_demo_financialDataDesc')}
+      dataset={undefined} // No dataset for demo, uses sample data
     />
   );
 };

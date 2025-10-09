@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, BarChart3, Database, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';

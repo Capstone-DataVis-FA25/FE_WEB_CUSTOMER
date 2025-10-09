@@ -596,7 +596,8 @@ export const DataEditorSection: React.FC<DataEditorSectionProps> = ({
               variant="outline"
             >
               <Edit3 className="h-4 w-4 mr-1" />
-              {t('lineChart_editor_editData')}
+              {/* {t('lineChart_editor_editData')} */}
+              Chỉnh sửa dữ liệu
             </Button>
           )}
           {isCollapsed ? (
