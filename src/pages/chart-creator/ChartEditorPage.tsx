@@ -697,13 +697,6 @@ const ChartEditorPage: React.FC = () => {
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
         <div className="text-center">
           <LoadingSpinner />
-          <p className="mt-4 text-lg text-muted-foreground">
-            {loading
-              ? t('chart_editor_loading', 'Loading chart...')
-              : !currentChart
-                ? t('chart_editor_loading_data', 'Loading chart data...')
-                : t('chart_editor_loading_config', 'Loading chart configuration...')}
-          </p>
         </div>
       </div>
     );

@@ -66,33 +66,38 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
       closeOnOverlay={!loading}
       showCloseButton={!loading}
     >
-      <div className="text-center">
-        {/* Warning Icon */}
-        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900/20 mb-4">
-          <span className="text-2xl" role="img" aria-label="warning">
+      <div className="bg-transparent">
+        {/* Warning Icon with gradient background */}
+        <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 mb-6 ring-4 ring-yellow-500/20">
+          <span className="text-4xl" role="img" aria-label="warning">
             ⚠️
           </span>
         </div>
 
-        {/* Title */}
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{defaultTitle}</h3>
+        {/* Title with gradient text */}
+        <h3 className="text-2xl font-bold text-center mb-3 bg-gradient-to-r from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400 bg-clip-text text-transparent">
+          {defaultTitle}
+        </h3>
 
         {/* Message */}
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{defaultMessage}</p>
+        <p className="text-center text-sm text-gray-700 dark:text-gray-300 mb-8 leading-relaxed">
+          {defaultMessage}
+        </p>
 
-        {/* Actions */}
+        {/* Actions with modern styling */}
         <div className="flex flex-col space-y-3">
-          {/* Save & Leave Button */}
+          {/* Save & Leave Button - Green gradient */}
           <button
             type="button"
             onClick={handleSaveAndLeave}
             disabled={loading}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-green-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="group relative w-full inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-base font-semibold text-white shadow-lg hover:shadow-xl dark:shadow-green-900/20 dark:hover:shadow-green-900/40 transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none overflow-hidden bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 dark:from-green-600 dark:to-emerald-700 dark:hover:from-green-700 dark:hover:to-emerald-800"
           >
+            <div className="absolute inset-0 bg-white/20 dark:bg-white/10 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></div>
             {loading ? (
               <>
                 <svg
-                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                  className="animate-spin h-5 w-5 text-white relative z-10"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
@@ -111,36 +116,39 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   ></path>
                 </svg>
-                {t('common_saving', 'Saving...')}
+                <span className="relative z-10">{t('common_saving', 'Saving...')}</span>
               </>
             ) : (
               <>
-                <Save className="h-4 w-4" />
-                {t('chart_unsaved_save_and_leave', 'Save & Leave')}
+                <Save className="h-5 w-5 relative z-10" />
+                <span className="relative z-10">
+                  {t('chart_unsaved_save_and_leave', 'Save & Leave')}
+                </span>
               </>
             )}
           </button>
 
-          {/* Leave Anyway Button */}
+          {/* Leave Anyway Button - Red gradient */}
           <button
             type="button"
             onClick={handleLeaveAnyway}
             disabled={loading}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="group relative w-full inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-base font-semibold text-white shadow-lg hover:shadow-xl dark:shadow-red-900/20 dark:hover:shadow-red-900/40 transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none overflow-hidden bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 dark:from-red-600 dark:to-pink-700 dark:hover:from-red-700 dark:hover:to-pink-800"
           >
-            <LogOut className="h-4 w-4" />
-            {t('chart_unsaved_leave_anyway', 'Leave Anyway')}
+            <div className="absolute inset-0 bg-white/20 dark:bg-white/10 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></div>
+            <LogOut className="h-5 w-5 relative z-10" />
+            <span className="relative z-10">{t('chart_unsaved_leave_anyway', 'Leave Anyway')}</span>
           </button>
 
-          {/* Stay Button */}
+          {/* Stay Button - Outline with gradient hover */}
           <button
             type="button"
             onClick={handleStay}
             disabled={loading}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-base font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="group relative w-full inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-base font-semibold shadow-sm transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none overflow-hidden border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-blue-500 dark:hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400"
           >
-            <Shield className="h-4 w-4" />
-            {t('chart_unsaved_stay', 'Stay')}
+            <Shield className="h-5 w-5 relative z-10" />
+            <span className="relative z-10">{t('chart_unsaved_stay', 'Stay')}</span>
           </button>
         </div>
       </div>
