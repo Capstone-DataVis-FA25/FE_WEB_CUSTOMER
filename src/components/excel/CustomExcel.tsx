@@ -13,6 +13,7 @@ import {
   Copy,
   FileText,
   FileDigit,
+  Calendar,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -48,7 +49,7 @@ const DEFAULT_WIDTH = 180;
 const COLUMN_TYPES = [
   { label: 'Text', value: 'text', icon: <FileText size={14} /> },
   { label: 'Number', value: 'number', icon: <FileDigit size={14} /> },
-  { label: 'Date', value: 'date', icon: <FileText size={14} /> },
+  { label: 'Date', value: 'date', icon: <Calendar size={14} /> },
 ];
 
 // Value validators (non-blocking)
