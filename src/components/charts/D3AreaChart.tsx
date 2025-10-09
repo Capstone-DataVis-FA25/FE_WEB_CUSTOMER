@@ -209,6 +209,26 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       left: currentWidth < 640 ? margin.left * 0.8 : margin.left,
     };
 
+    // Reserve space for legend when positioned top/bottom to avoid overlap (match LineChart behavior)
+    if (showLegend && (legendPosition === 'top' || legendPosition === 'bottom')) {
+      const isMobile = currentWidth < 640;
+      const isTablet = currentWidth < 1024;
+      const itemHeight = isMobile ? 18 : 20;
+      const padding = isMobile ? 8 : 10;
+      const legendBlock = itemHeight + padding * 2;
+      const xLabelSpacing =
+        xAxisLabel && showAxisLabels ? (isMobile ? 30 : isTablet ? 35 : 40) : isMobile ? 15 : 20;
+
+      if (legendPosition === 'top') {
+        // extra space for legend + small gap
+        responsiveMargin.top += legendBlock + 10;
+      } else {
+        // ensure enough bottom margin for legend and x-axis label
+        const minBottom = isMobile ? 100 : 110;
+        responsiveMargin.bottom = Math.max(margin.bottom * 2.0, minBottom) + xLabelSpacing;
+      }
+    }
+
     // Set dimensions
     const innerWidth = currentWidth - responsiveMargin.left - responsiveMargin.right;
     const innerHeight = currentHeight - responsiveMargin.top - responsiveMargin.bottom;
@@ -594,12 +614,12 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         const isMobile = currentWidth < 640;
 
         return {
-          itemHeight: isMobile ? 18 : 20,
-          padding: isMobile ? 8 : 10,
-          itemSpacing: isMobile ? 3 : 5,
-          fontSize: isMobile ? legendFontSize - 1 : legendFontSize,
-          iconSize: isMobile ? 12 : 16,
-          iconSpacing: isMobile ? 6 : 8,
+          itemHeight: isMobile ? 20 : 22,
+          padding: isMobile ? 10 : 12,
+          itemSpacing: isMobile ? 6 : 8,
+          fontSize: isMobile ? legendFontSize : legendFontSize + 1,
+          iconSize: isMobile ? 14 : 16,
+          iconSpacing: isMobile ? 8 : 10,
         };
       };
 
@@ -621,9 +641,19 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
               y: isMobile ? 10 : 15,
             };
           case 'bottom': {
+            const xLabelSpacing =
+              xAxisLabel && showAxisLabels
+                ? isMobile
+                  ? 30
+                  : isTablet
+                    ? 35
+                    : 40
+                : isMobile
+                  ? 15
+                  : 20;
             return {
               x: innerWidth / 2,
-              y: innerHeight + (xAxisLabel && showAxisLabels ? 30 : 20),
+              y: innerHeight + xLabelSpacing + (isMobile ? 15 : 40),
             };
           }
           case 'left':
