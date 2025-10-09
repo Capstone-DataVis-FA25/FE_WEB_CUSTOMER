@@ -1,5 +1,12 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import { FileText, FileDigit, Calendar, X as Close } from 'lucide-react';
+import { FileText, FileDigit, Calendar } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 interface ColumnMeta {
   name: string;
@@ -30,10 +37,21 @@ const normalizeColumns = (cols: (string | ColumnMeta)[]): Required<ColumnMeta>[]
   );
 
 const typeIcon = (type: ColumnMeta['type']) => {
-  if (type === 'number') return <FileDigit size={14} />;
-  if (type === 'date') return <Calendar size={14} />; // Different icon for date
-  return <FileText size={14} />; // text
+  switch (type) {
+    case 'number':
+      return <FileDigit size={14} />;
+    case 'date':
+      return <Calendar size={14} />;
+    default:
+      return <FileText size={14} />;
+  }
 };
+
+const COLUMN_TYPES = [
+  { label: 'Text', value: 'text', icon: <FileText size={14} /> },
+  { label: 'Number', value: 'number', icon: <FileDigit size={14} /> },
+  { label: 'Date', value: 'date', icon: <Calendar size={14} /> },
+];
 
 /**
  * Lightweight read‑only dataset viewer (no context, no editing).
@@ -88,38 +106,7 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
     }
   }, [startIndex, totalRows]);
 
-  const [legendOpen, setLegendOpen] = useState(false);
-  const legendRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [legendPos, setLegendPos] = useState<{ top: number; left: number }>({ top: 12, left: 12 });
-
-  // Close on outside click
-  useEffect(() => {
-    if (!legendOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (legendRef.current && !legendRef.current.contains(e.target as Node)) {
-        setLegendOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [legendOpen]);
-
-  // Reposition if container resizes while open
-  useEffect(() => {
-    if (!legendOpen) return; // simple responsive safeguard
-    const handleResize = () => {
-      if (!legendRef.current) return;
-      const w = legendRef.current.offsetWidth;
-      const contW = containerRef.current?.offsetWidth || 0;
-      setLegendPos(p => ({
-        top: p.top,
-        left: Math.min(p.left, Math.max(8, contW - w - 8)),
-      }));
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [legendOpen]);
 
   return (
     <div
@@ -130,45 +117,6 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
         ref={containerRef}
         className="relative w-full h-full rounded-md bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
       >
-        {/* Legend Popover (anchored to clicked icon) */}
-        {legendOpen && (
-          <div
-            ref={legendRef}
-            style={{ top: legendPos.top, left: legendPos.left, maxWidth: 240 }}
-            className="absolute z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-md shadow-xl p-3 w-56 text-xs space-y-2"
-          >
-            <div className="flex items-center justify-between font-semibold text-gray-700 dark:text-gray-200">
-              <span>Data Type Legend</span>
-              <button
-                onClick={() => setLegendOpen(false)}
-                aria-label="Close legend"
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                <Close size={14} />
-              </button>
-            </div>
-            <ul className="space-y-1">
-              <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
-                  <FileText size={14} />
-                </span>
-                Text (string)
-              </li>
-              <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
-                  <FileDigit size={14} />
-                </span>
-                Number (integer)
-              </li>
-              <li className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
-                  <Calendar size={14} />
-                </span>
-                Date (YYYY-MM-DD)
-              </li>
-            </ul>
-          </div>
-        )}
         <div
           ref={scrollRef}
           className="dataset-viewer-scroll w-full h-full overflow-auto"
@@ -193,24 +141,35 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       {showTypeIcons && (
-                        <button
-                          type="button"
-                          onClick={e => {
-                            const btn = e.currentTarget.getBoundingClientRect();
-                            const cont = containerRef.current?.getBoundingClientRect();
-                            if (cont) {
-                              const top = btn.bottom - cont.top + 6; // below icon
-                              const left = btn.left - cont.left; // align left edges
-                              setLegendPos({ top, left });
-                            }
-                            setLegendOpen(o => !o);
-                          }}
-                          className={`inline-flex items-center justify-center w-5 h-5 rounded text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${legendOpen ? 'bg-blue-100 dark:bg-blue-600/40 ring-1 ring-blue-400' : 'bg-gray-200 dark:bg-gray-600 hover:ring-1 ring-blue-400'}`}
-                          title="Click to view data type legend"
-                          aria-pressed={legendOpen}
-                        >
-                          {typeIcon(col.type)}
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="w-6 h-6 flex-shrink-0 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                              title="Column data type"
+                              tabIndex={-1}
+                            >
+                              {typeIcon(col.type)}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            {COLUMN_TYPES.map(t => {
+                              const active = t.value === col.type;
+                              return (
+                                <DropdownMenuItem
+                                  key={t.value}
+                                  // make it non-interactive but styleable
+                                  onSelect={e => e.preventDefault()}
+                                  className={`gap-2 cursor-default text-gray-700 dark:text-gray-200 pointer-events-none`}
+                                >
+                                  {t.icon} {t.label}
+                                </DropdownMenuItem>
+                              );
+                            })}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                       <span
                         className="truncate"

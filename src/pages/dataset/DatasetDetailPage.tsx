@@ -65,11 +65,9 @@ const DatasetDetailPage: React.FC = () => {
     currentDataset,
     loading,
     deleting,
-    error,
     getDatasetById,
     deleteDataset,
     updateDataset,
-    clearDatasetError,
     clearCurrent,
   } = useDataset();
 
@@ -551,11 +549,19 @@ const DatasetDetailPage: React.FC = () => {
     );
   }
 
-  // Prepare flat header + body rows for lightweight viewer
-  let headerRow: string[] = [];
+  // Prepare flat header + body rows for lightweight viewer with custom formatting
+  interface ColumnMetaView {
+    name: string;
+    type: 'text' | 'number' | 'date';
+  }
+  let headerRow: ColumnMetaView[] = [];
   let bodyRows: (string | number | null)[][] = [];
   if (currentDataset.headers && currentDataset.headers.length) {
-    headerRow = currentDataset.headers.map((h: DatasetHeader) => h.name);
+    headerRow = currentDataset.headers.map((h: any) => ({
+      name: h.name,
+      type: h.type === 'number' || h.type === 'date' ? h.type : 'text',
+    }));
+
     const rowCount = currentDataset.rowCount || 0;
     const rows: (string | number | null)[][] = Array.from({ length: rowCount }, () =>
       Array(headerRow.length).fill('')
@@ -565,7 +571,63 @@ const DatasetDetailPage: React.FC = () => {
         if (rows[rowIdx]) rows[rowIdx][colIdx] = cell ?? '';
       });
     });
-    bodyRows = rows;
+
+    const thousandsSep = currentDataset.thousandsSeparator || ',';
+    const decimalSep = currentDataset.decimalSeparator || '.';
+    const dateFmt = currentDataset.dateFormat || 'YYYY-MM-DD';
+
+    const alreadyFormattedPattern = /[@#]/; // legacy custom markers from old datasets
+    const formatNumberCustom = (val: number | string): string => {
+      if (val === null || val === undefined || val === '') return '';
+      const raw = String(val).trim();
+      // If data already contains the user-chosen separators exactly, keep it
+      if (
+        raw.includes(thousandsSep) ||
+        raw.includes(decimalSep) ||
+        alreadyFormattedPattern.test(raw)
+      ) {
+        return raw;
+      }
+      const m = raw.replace(/,/g, '').match(/^(-?\d+)(?:[.,](\d+))?$/);
+      if (!m) return raw; // not a plain number -> leave as is
+      const neg = m[1].startsWith('-') ? '-' : '';
+      const intPart = m[1].replace('-', '');
+      const decPart = m[2] || '';
+      // group every 3 digits from right
+      const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, thousandsSep);
+      return neg + grouped + (decPart ? decimalSep + decPart : '');
+    };
+
+    const formatDateCustom = (val: string): string => {
+      if (!val) return '';
+      // attempt to parse YYYY-MM-DD or ISO
+      let y: string, m: string, d: string;
+      const isoMatch = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (isoMatch) {
+        y = isoMatch[1];
+        m = isoMatch[2];
+        d = isoMatch[3];
+      } else {
+        const dt = new Date(val);
+        if (isNaN(dt.getTime())) return val;
+        y = String(dt.getFullYear());
+        m = String(dt.getMonth() + 1).padStart(2, '0');
+        d = String(dt.getDate()).padStart(2, '0');
+      }
+      let out = dateFmt;
+      // Replace tokens (order matters)
+      out = out.replace(/YYYY/g, y).replace(/MM/g, m).replace(/DD/g, d);
+      return out;
+    };
+
+    bodyRows = rows.map(r =>
+      r.map((cell, ci) => {
+        const colType = headerRow[ci]?.type;
+        if (colType === 'number') return formatNumberCustom(cell as any);
+        if (colType === 'date') return typeof cell === 'string' ? formatDateCustom(cell) : '';
+        return cell;
+      })
+    );
   }
 
   return (
@@ -715,6 +777,7 @@ const DatasetDetailPage: React.FC = () => {
                             </p>
                           )}
                         </div>
+
                         {/* Created & Last Updated info */}
                         <div className="grid grid-cols-1 gap-3">
                           <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200/30 dark:border-green-800/30">
@@ -838,16 +901,61 @@ const DatasetDetailPage: React.FC = () => {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                               <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <div className="w-2 h-2 bg-blue-500 rounded-full" />
                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                   Columns: {currentDataset.columnCount}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <div className="w-2 h-2 bg-green-500 rounded-full" />
                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                   Rows: {currentDataset.rowCount?.toLocaleString()}
                                 </span>
+                              </div>
+                              <div className="hidden md:flex items-center gap-4 pl-4 ml-2 border-l border-gray-300 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-400">
+                                <span className="flex items-center gap-1">
+                                  <span className="font-semibold">Thousands Separator:</span>
+                                  <code className="px-1.5 py-0.5 rounded bg-gray-200/70 dark:bg-gray-700/70 text-gray-800 dark:text-gray-200 text-[11px] font-mono">
+                                    {(currentDataset.thousandsSeparator || ',') === ' '
+                                      ? '␠'
+                                      : currentDataset.thousandsSeparator || ','}
+                                  </code>
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <span className="font-semibold">Decimal Separator:</span>
+                                  <code className="px-1.5 py-0.5 rounded bg-gray-200/70 dark:bg-gray-700/70 text-gray-800 dark:text-gray-200 text-[11px] font-mono">
+                                    {currentDataset.decimalSeparator || '.'}
+                                  </code>
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <span className="font-semibold">Date:</span>
+                                  <code className="px-1.5 py-0.5 rounded bg-gray-200/70 dark:bg-gray-700/70 text-gray-800 dark:text-gray-200 text-[11px] font-mono">
+                                    {currentDataset.dateFormat || 'YYYY-MM-DD'}
+                                  </code>
+                                </span>
+                              </div>
+                            </div>
+                            {/* Mobile format info */}
+                            <div className="md:hidden mt-2 grid grid-cols-1 gap-1 text-[11px] text-gray-600 dark:text-gray-400">
+                              <div className="flex items-center gap-1">
+                                <span className="font-semibold">Hàng nghìn:</span>
+                                <code className="px-1 py-0.5 rounded bg-gray-200/70 dark:bg-gray-700/70 font-mono">
+                                  {(currentDataset.thousandsSeparator || ',') === ' '
+                                    ? '␠'
+                                    : currentDataset.thousandsSeparator || ','}
+                                </code>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="font-semibold">Thập phân:</span>
+                                <code className="px-1 py-0.5 rounded bg-gray-200/70 dark:bg-gray-700/70 font-mono">
+                                  {currentDataset.decimalSeparator || '.'}
+                                </code>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="font-semibold">Ngày:</span>
+                                <code className="px-1 py-0.5 rounded bg-gray-200/70 dark:bg-gray-700/70 font-mono">
+                                  {currentDataset.dateFormat || 'YYYY-MM-DD'}
+                                </code>
                               </div>
                             </div>
                           </div>
