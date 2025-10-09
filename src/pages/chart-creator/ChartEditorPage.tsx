@@ -642,6 +642,7 @@ const ChartEditorPage: React.FC = () => {
 
       return result;
     } catch (error) {
+      console.error('[ChartEditor] convertDatasetToChartFormat error:', error);
       return [];
     }
   };
@@ -826,6 +827,7 @@ const ChartEditorPage: React.FC = () => {
       setShowDatasetModal(false);
       showSuccess(t('dataset_select_success', 'Dataset selected successfully'));
     } catch (error) {
+      console.error('[ChartEditor] getDatasetById error:', error);
       showError(t('dataset_select_error', 'Failed to load selected dataset'));
     }
   };
@@ -1101,24 +1103,12 @@ const ChartEditorPage: React.FC = () => {
     };
   }, [clearCurrent]);
 
-  // Show loading state for edit mode when waiting for chart data
-  if (mode === 'edit' && chartId && (loading || !currentChart || !isInitialized)) {
-    return (
-      <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
-        <div className="text-center">
-          <LoadingSpinner />
-        </div>
-      </div>
-    );
-  }
-
+  // Handle chart type change
   // Handle chart type change
   const handleChartTypeChange = (type: string) => {
-  // Handle chart type change - MUST BE BEFORE ANY RETURNS
-  const handleChartTypeChange = useCallback((type: string) => {
     const newType = type as ChartType;
     setCurrentChartType(newType);
-  }, []);
+  };
 
   const chartInfo = useMemo(() => {
     switch (currentChartType) {
@@ -1188,13 +1178,6 @@ const ChartEditorPage: React.FC = () => {
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
         <div className="text-center">
           <LoadingSpinner />
-          <p className="mt-4 text-lg text-muted-foreground">
-            {loading
-              ? t('chart_editor_loading', 'Loading chart...')
-              : !currentChart
-                ? t('chart_editor_loading_data', 'Loading chart data...')
-                : t('chart_editor_loading_config', 'Loading chart configuration...')}
-          </p>
         </div>
       </div>
     );
