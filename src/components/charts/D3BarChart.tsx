@@ -95,7 +95,8 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
 
   // Convert array to data
   const processedData = React.useMemo((): ChartDataPoint[] => {
-    if (arrayData && arrayData.length > 0) return convertArrayToChartData(arrayData);
+    if (arrayData && arrayData.length > 0)
+      return convertArrayToChartData(arrayData, { validateTypes: true });
     return data || [];
   }, [arrayData, data]);
 

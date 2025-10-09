@@ -461,11 +461,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
     dataset?.headers,
   ]); // Dependencies để tránh stale closure
 
-  // Track chart type changes
-  useEffect(() => {
-    // Chart type changed
-  }, [chartType]);
-
   // Auto-generate series when needed (fallback only)
   useEffect(() => {
     // Only auto-generate if we have data, a config with yAxisKeys, but no series yet
@@ -1552,6 +1547,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
         const areaConfig = safeChartConfig as AreaChartConfig;
         // Create minimal props for D3AreaChart to avoid TypeScript errors
         const areaProps = {
+          ...safeCommonProps,
           data: chartData,
           width: safeChartConfig.width,
           height: safeChartConfig.height,
@@ -1588,9 +1584,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
           yAxisRotation: areaConfig.yAxisRotation,
           showAxisLabels: areaConfig.showAxisLabels,
           showAxisTicks: areaConfig.showAxisTicks,
-          titleFontSize: areaConfig.titleFontSize,
-          labelFontSize: areaConfig.labelFontSize,
-          legendFontSize: areaConfig.legendFontSize,
+          showPointValues: areaConfig.showPointValues,
         };
         return <D3AreaChart {...areaProps} />;
       }
