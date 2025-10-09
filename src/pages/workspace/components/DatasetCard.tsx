@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, Eye, Edit, Trash2, Plus, Clock } from 'lucide-react';
+import { Database, Trash2, Plus, Clock, Share, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +27,6 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
   dataset,
   onDelete,
   onView,
-  onEdit,
   isDeleting = false,
 }) => {
   const { t } = useTranslation();
@@ -39,15 +38,6 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
       onView(dataset);
     }
     navigate(Routers.DATASET_DETAIL, {
-      state: { datasetId: dataset.id, from: Routers.WORKSPACE_DATASETS },
-    });
-  };
-
-  const handleEdit = () => {
-    if (onEdit) {
-      onEdit(dataset);
-    }
-    navigate(Routers.EDIT_DATASET, {
       state: { datasetId: dataset.id, from: Routers.WORKSPACE_DATASETS },
     });
   };
@@ -149,19 +139,19 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
                 : 'opacity-100 group-hover:opacity-100'
             }`}
           >
-            <Eye className="h-3 w-3 mr-1" />
+            <Edit3 className="h-3 w-3 mr-1" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleEdit}
+            onClick={() => {}}
             className={`px-2 transition-all duration-200 ${
               isHovered
                 ? 'opacity-100 bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400'
                 : 'opacity-100 group-hover:opacity-100'
             }`}
           >
-            <Edit className="h-3 w-3" />
+            <Share className="h-3 w-3" />
           </Button>
           <Button
             variant="ghost"

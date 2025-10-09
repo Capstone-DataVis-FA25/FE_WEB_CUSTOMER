@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, BarChart3, Database, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import Routers from '@/router/routers';
 import { useDataset } from '@/features/dataset/useDataset';
 import { useCharts } from '@/features/charts/useCharts';
@@ -32,11 +32,13 @@ import DatasetTab from './components/DatasetTab';
 import ChartTab from './components/ChartTab';
 import ToastContainer from '@/components/ui/toast-container';
 import useToast from '@/hooks/useToast';
+import { usePagination } from '@/hooks/usePagination';
 
 const WorkspacePage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
 
@@ -61,27 +63,25 @@ const WorkspacePage: React.FC = () => {
   const [deletingChartId, setDeletingChartId] = useState<string | null>(null);
   const [selectingDatasetModal, setSelectingDatasetModal] = useState<boolean>(false);
 
-  // Fetch datasets and charts on component mount
-  useEffect(() => {
-    getDatasets();
-    getCharts();
-  }, [getDatasets, getCharts]);
+  // Get current page from URL, default to 1
+  const getCurrentPageFromURL = () => {
+    const pageParam = searchParams.get('page');
+    return pageParam ? Math.max(1, parseInt(pageParam, 10)) : 1;
+  };
 
-  // Show error toast when error occurs
-  useEffect(() => {
-    if (error) {
-      showError(t('dataset_error', 'Error'), error);
-      clearDatasetError();
-    }
-  }, [error, showError, t, clearDatasetError]);
+  // Pagination for datasets - initialize with URL page
+  const datasetPagination = usePagination({
+    initialPage: getCurrentPageFromURL(),
+    initialPageSize: 8,
+    totalItems: 0, // Will be updated when datasets are loaded
+  });
 
-  // Show error toast when charts error occurs
-  useEffect(() => {
-    if (chartsError) {
-      showError(t('charts_error', 'Charts Error'), chartsError);
-      clearChartError();
-    }
-  }, [chartsError, showError, t, clearChartError]);
+  // Pagination for charts - initialize with URL page
+  const chartPagination = usePagination({
+    initialPage: getCurrentPageFromURL(),
+    initialPageSize: 8,
+    totalItems: 0, // Will be updated when charts are loaded
+  });
 
   // Determine current tab based on URL
   const getCurrentTab = () => {
@@ -96,6 +96,117 @@ const WorkspacePage: React.FC = () => {
 
   const currentTab = getCurrentTab();
 
+  // Sync pagination with URL - when URL changes, update pagination
+  useEffect(() => {
+    // Only sync if we're actually on workspace pages
+    if (!location.pathname.startsWith('/workspace')) {
+      return;
+    }
+
+    const urlPage = getCurrentPageFromURL();
+
+    if (currentTab === 'datasets') {
+      const currentPage = datasetPagination.pagination.currentPage;
+      if (urlPage !== currentPage) {
+        datasetPagination.setPage(urlPage);
+      }
+    } else if (currentTab === 'charts') {
+      const currentPage = chartPagination.pagination.currentPage;
+      if (urlPage !== currentPage) {
+        chartPagination.setPage(urlPage);
+      }
+    }
+  }, [searchParams.toString(), currentTab, location.pathname]);
+
+  // Sync URL with pagination - when pagination changes, update URL (for datasets)
+  useEffect(() => {
+    if (currentTab !== 'datasets' || !location.pathname.startsWith('/workspace')) return;
+
+    const currentPage = datasetPagination.pagination.currentPage;
+    const urlPage = getCurrentPageFromURL();
+
+    // Only update URL if the page is different from what's in the URL
+    if (currentPage !== urlPage) {
+      const newSearchParams = new URLSearchParams(searchParams);
+
+      if (currentPage > 1) {
+        newSearchParams.set('page', currentPage.toString());
+      } else {
+        newSearchParams.delete('page');
+      }
+
+      setSearchParams(newSearchParams, { replace: true });
+    }
+  }, [datasetPagination.pagination.currentPage, currentTab, location.pathname]);
+
+  // Sync URL with pagination - when pagination changes, update URL (for charts)
+  useEffect(() => {
+    if (currentTab !== 'charts' || !location.pathname.startsWith('/workspace')) return;
+
+    const currentPage = chartPagination.pagination.currentPage;
+    const urlPage = getCurrentPageFromURL();
+
+    // Only update URL if the page is different from what's in the URL
+    if (currentPage !== urlPage) {
+      const newSearchParams = new URLSearchParams(searchParams);
+
+      if (currentPage > 1) {
+        newSearchParams.set('page', currentPage.toString());
+      } else {
+        newSearchParams.delete('page');
+      }
+
+      setSearchParams(newSearchParams, { replace: true });
+    }
+  }, [chartPagination.pagination.currentPage, currentTab, location.pathname]);
+
+  // Fetch datasets and charts on component mount
+  useEffect(() => {
+    getDatasets();
+    getCharts();
+  }, [getDatasets, getCharts]);
+
+  // Check if initial loading is complete - both datasets and charts must be loaded OR have errors
+  const isInitialLoading = (loading && !error) || (chartsLoading && !chartsError);
+
+  // Show error toast when error occurs
+  useEffect(() => {
+    if (error) {
+      console.error('Dataset API error:', error);
+      const errorMessage =
+        typeof error === 'string'
+          ? error
+          : error && typeof error === 'object' && 'message' in error
+            ? (error as { message: string }).message
+            : 'An error occurred';
+
+      // Don't show UUID validation errors as they're usually due to data corruption
+      if (!errorMessage.includes('Invalid character') && !errorMessage.includes('findUnique')) {
+        showError(t('dataset_error', 'Dataset Error'), errorMessage);
+      }
+      clearDatasetError();
+    }
+  }, [error, showError, t, clearDatasetError]);
+
+  // Show error toast when charts error occurs
+  useEffect(() => {
+    if (chartsError) {
+      console.error('Charts API error:', chartsError);
+      const errorMessage =
+        typeof chartsError === 'string'
+          ? chartsError
+          : chartsError && typeof chartsError === 'object' && 'message' in chartsError
+            ? (chartsError as { message: string }).message
+            : 'An error occurred';
+
+      // Don't show UUID validation errors as they're usually due to data corruption
+      if (!errorMessage.includes('Invalid character') && !errorMessage.includes('findUnique')) {
+        showError(t('charts_error', 'Charts Error'), errorMessage);
+      }
+      clearChartError();
+    }
+  }, [chartsError, showError, t, clearChartError]);
+
   // Redirect from base workspace URL to datasets
   useEffect(() => {
     if (location.pathname === Routers.WORKSPACE) {
@@ -105,15 +216,18 @@ const WorkspacePage: React.FC = () => {
 
   // Handle tab change by navigating to appropriate URL
   const handleTabChange = (value: string) => {
+    // Reset pagination to page 1 when switching tabs
     if (value === 'datasets') {
+      datasetPagination.setPage(1);
       navigate(Routers.WORKSPACE_DATASETS);
     } else if (value === 'charts') {
+      chartPagination.setPage(1);
       navigate(Routers.WORKSPACE_CHARTS);
     }
   };
 
   // Filter datasets - using real API data
-  const filteredDatasets = Array.isArray(datasets)
+  const allFilteredDatasets = Array.isArray(datasets)
     ? datasets.filter(dataset => {
         const matchesSearch =
           dataset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -124,8 +238,19 @@ const WorkspacePage: React.FC = () => {
       })
     : [];
 
+  // Update total items for pagination when filtered datasets change
+  useEffect(() => {
+    datasetPagination.setTotalItems(allFilteredDatasets.length);
+  }, [allFilteredDatasets.length, datasetPagination.setTotalItems]);
+
+  // Get paginated datasets
+  const filteredDatasets = allFilteredDatasets.slice(
+    datasetPagination.getOffset(),
+    datasetPagination.getOffset() + datasetPagination.getLimit()
+  );
+
   // Filter charts - using real API data
-  const filteredCharts = Array.isArray(charts)
+  const allFilteredCharts = Array.isArray(charts)
     ? charts.filter(chart => {
         const matchesSearch =
           chart.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -135,12 +260,39 @@ const WorkspacePage: React.FC = () => {
       })
     : [];
 
+  // Update total items for charts pagination when filtered charts change
+  useEffect(() => {
+    chartPagination.setTotalItems(allFilteredCharts.length);
+  }, [allFilteredCharts.length, chartPagination.setTotalItems]);
+
+  // Get paginated charts
+  const filteredCharts = allFilteredCharts.slice(
+    chartPagination.getOffset(),
+    chartPagination.getOffset() + chartPagination.getLimit()
+  );
+
   // Handle delete dataset
   const handleDeleteDataset = async (dataset: Dataset) => {
     setDeletingId(dataset.id);
     modalConfirm.openConfirm(async () => {
       try {
         await deleteDataset(dataset.id).unwrap();
+
+        // Calculate if current page will be empty after deletion
+        const currentPage = datasetPagination.pagination.currentPage;
+        const itemsOnCurrentPage = filteredDatasets.length;
+        const totalItemsAfterDeletion = allFilteredDatasets.length - 1;
+
+        // Check if we need to go back to previous page
+        if (itemsOnCurrentPage === 1 && currentPage > 1) {
+          // This was the last item on current page and we're not on page 1
+          const newPage = Math.max(1, currentPage - 1);
+          datasetPagination.setPage(newPage);
+        } else if (totalItemsAfterDeletion === 0) {
+          // No items left, go to page 1
+          datasetPagination.setPage(1);
+        }
+
         showSuccess(
           t('dataset_deleteSuccess', 'Dataset Deleted'),
           t(
@@ -166,6 +318,22 @@ const WorkspacePage: React.FC = () => {
     modalConfirm.openConfirm(async () => {
       try {
         await deleteChart(chart.id).unwrap();
+
+        // Calculate if current page will be empty after deletion
+        const currentPage = chartPagination.pagination.currentPage;
+        const itemsOnCurrentPage = filteredCharts.length;
+        const totalItemsAfterDeletion = allFilteredCharts.length - 1;
+
+        // Check if we need to go back to previous page
+        if (itemsOnCurrentPage === 1 && currentPage > 1) {
+          // This was the last item on current page and we're not on page 1
+          const newPage = Math.max(1, currentPage - 1);
+          chartPagination.setPage(newPage);
+        } else if (totalItemsAfterDeletion === 0) {
+          // No items left, go to page 1
+          chartPagination.setPage(1);
+        }
+
         showSuccess(
           t('chart_deleteSuccess', 'Chart Deleted'),
           t('chart_deleteSuccessMessage', `Chart "${chart.name}" has been deleted successfully`)
@@ -217,134 +385,154 @@ const WorkspacePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      <div className="container mx-auto p-6 space-y-8">
-        {/* Header Section - Enhanced */}
-        <div className="flex flex-col space-y-6 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <div className="space-y-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Database className="h-6 w-6 text-white" />
-              </div>
-              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Workspace
-              </h1>
+      {isInitialLoading ? (
+        // Loading screen while fetching both datasets and charts
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center space-y-6">
+            <div className="w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-300">
+                Loading Workspace
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400">Fetching datasets and charts...</p>
             </div>
-            <p className="text-lg text-muted-foreground max-w-2xl">
-              Create, manage, and visualize your data with powerful charts and analytics
-            </p>
-            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-              <div className="flex items-center space-x-1">
-                <Database className="h-4 w-4 text-blue-500" />
-                <span>{Array.isArray(datasets) ? datasets.length : 0} datasets</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <BarChart3 className="h-4 w-4 text-emerald-500" />
-                <span>{filteredCharts.length} charts</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
-            <Button
-              variant="outline"
-              onClick={() => handleCreateChart()}
-              className="border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-900/20 shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Chart
-            </Button>
-            <Button
-              onClick={handleCreateDataset}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              <span>New Dataset</span>
-            </Button>
           </div>
         </div>
-
-        {/* Search and Filters - Enhanced */}
-        <Card className="border-0 shadow-xl bg-white/70 backdrop-blur-sm dark:bg-gray-800/70">
-          <CardContent className="p-6">
-            <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-x-6 md:space-y-0">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search datasets and charts..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="pl-12 h-12 text-lg border-2 border-gray-200 focus:border-blue-500 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm"
-                />
+      ) : (
+        // Main workspace content
+        <div className="container mx-auto p-6 space-y-8">
+          {/* Header Section - Enhanced */}
+          <div className="flex flex-col space-y-6 md:flex-row md:items-center md:justify-between md:space-y-0">
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Database className="h-6 w-6 text-white" />
+                </div>
+                <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Workspace
+                </h1>
               </div>
-              <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
-                <Select value={chartTypeFilter} onValueChange={setChartTypeFilter}>
-                  <SelectTrigger className="w-full sm:w-[160px] h-12 border-2 border-gray-200 rounded-xl bg-white/80 backdrop-blur-sm">
-                    <SelectValue placeholder="Chart type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Charts</SelectItem>
-                    <SelectItem value="line">Line Chart</SelectItem>
-                    <SelectItem value="bar">Bar Chart</SelectItem>
-                    <SelectItem value="area">Area Chart</SelectItem>
-                  </SelectContent>
-                </Select>
+              <p className="text-lg text-muted-foreground max-w-2xl">
+                Create, manage, and visualize your data with powerful charts and analytics
+              </p>
+              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                <div className="flex items-center space-x-1">
+                  <Database className="h-4 w-4 text-blue-500" />
+                  <span>{allFilteredDatasets.length} datasets</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <BarChart3 className="h-4 w-4 text-emerald-500" />
+                  <span>{allFilteredCharts.length} charts</span>
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Main Content - Enhanced Tabs */}
-        <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-8">
-          <div className="flex justify-center">
-            <TabsList className="grid w-full max-w-md grid-cols-2 h-14 p-1 bg-white/70 backdrop-blur-sm dark:bg-gray-800/70 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
-              <TabsTrigger
-                value="datasets"
-                className="flex items-center space-x-2 h-12 rounded-lg text-sm font-medium"
+            <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => handleCreateChart()}
+                className="border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-900/20 shadow-lg hover:shadow-xl transition-all duration-200"
               >
-                <Database className="h-4 w-4" />
-                <span>Datasets ({filteredDatasets.length})</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="charts"
-                className="flex items-center space-x-2 h-12 rounded-lg text-sm font-medium"
+                <Plus className="h-4 w-4 mr-2" />
+                New Chart
+              </Button>
+              <Button
+                onClick={handleCreateDataset}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
               >
-                <BarChart3 className="h-4 w-4" />
-                <span>Charts ({filteredCharts.length})</span>
-              </TabsTrigger>
-            </TabsList>
+                <Plus className="h-4 w-4 mr-2" />
+                <span>New Dataset</span>
+              </Button>
+            </div>
           </div>
 
-          {/* Datasets Tab */}
-          <TabsContent value="datasets" className="space-y-6">
-            <DatasetTab
-              datasets={datasets}
-              loading={loading}
-              deleting={deleting}
-              filteredDatasets={filteredDatasets}
-              searchTerm={searchTerm}
-              onCreateDataset={handleCreateDataset}
-              onDeleteDataset={handleDeleteDataset}
-              deletingId={deletingId}
-            />
-          </TabsContent>
+          {/* Search and Filters - Enhanced */}
+          <Card className="border-0 shadow-xl bg-white/70 backdrop-blur-sm dark:bg-gray-800/70">
+            <CardContent className="p-6">
+              <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-x-6 md:space-y-0">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search datasets and charts..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="pl-12 h-12 text-lg border-2 border-gray-200 focus:border-blue-500 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm"
+                  />
+                </div>
+                <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
+                  <Select value={chartTypeFilter} onValueChange={setChartTypeFilter}>
+                    <SelectTrigger className="w-full sm:w-[160px] h-12 border-2 border-gray-200 rounded-xl bg-white/80 backdrop-blur-sm">
+                      <SelectValue placeholder="Chart type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Charts</SelectItem>
+                      <SelectItem value="line">Line Chart</SelectItem>
+                      <SelectItem value="bar">Bar Chart</SelectItem>
+                      <SelectItem value="area">Area Chart</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Charts Tab */}
-          <TabsContent value="charts" className="space-y-6">
-            <ChartTab
-              charts={charts}
-              chartsLoading={chartsLoading}
-              chartDeleting={chartDeleting}
-              datasetSelectingModal={selectingDatasetModal}
-              filteredCharts={filteredCharts}
-              searchTerm={searchTerm}
-              onHandleOpenModalSelectedDataset={handleOpenModalSelectDataset}
-              onCreateChart={handleCreateChart}
-              onDeleteChart={handleDeleteChart}
-              onEditChart={handleEditChart}
-              deletingChartId={deletingChartId}
-            />
-          </TabsContent>
-        </Tabs>
-      </div>
+          {/* Main Content - Enhanced Tabs */}
+          <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-8">
+            <div className="flex justify-center">
+              <TabsList className="grid w-full max-w-md grid-cols-2 h-14 p-1 bg-white/70 backdrop-blur-sm dark:bg-gray-800/70 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
+                <TabsTrigger
+                  value="datasets"
+                  className="flex items-center space-x-2 h-12 rounded-lg text-sm font-medium"
+                >
+                  <Database className="h-4 w-4" />
+                  <span>Datasets ({allFilteredDatasets.length})</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="charts"
+                  className="flex items-center space-x-2 h-12 rounded-lg text-sm font-medium"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Charts ({allFilteredCharts.length})</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            {/* Datasets Tab */}
+            <TabsContent value="datasets" className="space-y-6">
+              <DatasetTab
+                loading={loading}
+                deleting={deleting}
+                filteredDatasets={filteredDatasets}
+                allFilteredDatasets={allFilteredDatasets}
+                searchTerm={searchTerm}
+                onCreateDataset={handleCreateDataset}
+                onDeleteDataset={handleDeleteDataset}
+                deletingId={deletingId}
+                pagination={datasetPagination}
+              />
+            </TabsContent>
+
+            {/* Charts Tab */}
+            <TabsContent value="charts" className="space-y-6">
+              <ChartTab
+                charts={charts}
+                chartsLoading={chartsLoading}
+                chartDeleting={chartDeleting}
+                datasetSelectingModal={selectingDatasetModal}
+                filteredCharts={filteredCharts}
+                allFilteredCharts={allFilteredCharts}
+                searchTerm={searchTerm}
+                onHandleOpenModalSelectedDataset={handleOpenModalSelectDataset}
+                onCreateChart={handleCreateChart}
+                onDeleteChart={handleDeleteChart}
+                onEditChart={handleEditChart}
+                deletingChartId={deletingChartId}
+                pagination={chartPagination}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+      )}
+
       <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
       {/* Delete Confirmation Modal */}
       <ModalConfirm

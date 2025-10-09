@@ -1206,7 +1206,7 @@ export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
               </Label>
             </div>
 
-            {/* Line Chart Specific: Show Points */}
+            {/* Line Chart Specific: Show Points (Area chart no longer needs points toggle) */}
             {chartType === 'line' && (
               <>
                 <div className="flex items-center space-x-2 mb-1">

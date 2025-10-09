@@ -25,8 +25,6 @@ const Routers = {
   CREATE_DATASET_TEXT: '/datasets/create/text',
   CREATE_DATASET_SAMPLE: '/datasets/create/sample',
   CREATE_DATASET_VIEW: '/datasets/create/view',
-  EDIT_DATASET: '/datasets/edit', // new state-based edit route (datasetId passed via location.state)
-  EDIT_DATASET_LEGACY: '/datasets/:slug/edit', // legacy param route for backward compatibility
 
   // Error routes
   NOT_FOUND: '/404',

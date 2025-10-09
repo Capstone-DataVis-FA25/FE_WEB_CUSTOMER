@@ -209,6 +209,26 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       left: currentWidth < 640 ? margin.left * 0.8 : margin.left,
     };
 
+    // Reserve space for legend when positioned top/bottom to avoid overlap (match LineChart behavior)
+    if (showLegend && (legendPosition === 'top' || legendPosition === 'bottom')) {
+      const isMobile = currentWidth < 640;
+      const isTablet = currentWidth < 1024;
+      const itemHeight = isMobile ? 18 : 20;
+      const padding = isMobile ? 8 : 10;
+      const legendBlock = itemHeight + padding * 2;
+      const xLabelSpacing =
+        xAxisLabel && showAxisLabels ? (isMobile ? 30 : isTablet ? 35 : 40) : isMobile ? 15 : 20;
+
+      if (legendPosition === 'top') {
+        // extra space for legend + small gap
+        responsiveMargin.top += legendBlock + 10;
+      } else {
+        // ensure enough bottom margin for legend and x-axis label
+        const minBottom = isMobile ? 100 : 110;
+        responsiveMargin.bottom = Math.max(margin.bottom * 2.0, minBottom) + xLabelSpacing;
+      }
+    }
+
     // Set dimensions
     const innerWidth = currentWidth - responsiveMargin.left - responsiveMargin.right;
     const innerHeight = currentHeight - responsiveMargin.top - responsiveMargin.bottom;
@@ -585,6 +605,327 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         .text(yAxisLabel);
     }
 
+    // Add responsive legend directly in SVG (similar to LineChart)
+    if (showLegend) {
+      const enabledAreas = yAxisKeys.filter(key => !disabledLines.includes(key));
+
+      // Responsive legend sizing based on screen width and position
+      const getResponsiveLegendSizes = () => {
+        const isMobile = currentWidth < 640;
+
+        return {
+          itemHeight: isMobile ? 20 : 22,
+          padding: isMobile ? 10 : 12,
+          itemSpacing: isMobile ? 6 : 8,
+          fontSize: isMobile ? legendFontSize : legendFontSize + 1,
+          iconSize: isMobile ? 14 : 16,
+          iconSpacing: isMobile ? 8 : 10,
+        };
+      };
+
+      const legendSizes = getResponsiveLegendSizes();
+      const totalLegendHeight =
+        enabledAreas.length * legendSizes.itemHeight +
+        (enabledAreas.length - 1) * legendSizes.itemSpacing +
+        2 * legendSizes.padding;
+
+      // Responsive legend positioning based on screen size and position
+      const getResponsiveLegendPosition = () => {
+        const isMobile = currentWidth < 640;
+        const isTablet = currentWidth < 1024;
+
+        switch (legendPosition) {
+          case 'top':
+            return {
+              x: innerWidth / 2,
+              y: isMobile ? 10 : 15,
+            };
+          case 'bottom': {
+            const xLabelSpacing =
+              xAxisLabel && showAxisLabels
+                ? isMobile
+                  ? 30
+                  : isTablet
+                    ? 35
+                    : 40
+                : isMobile
+                  ? 15
+                  : 20;
+            return {
+              x: innerWidth / 2,
+              y: innerHeight + xLabelSpacing + (isMobile ? 15 : 40),
+            };
+          }
+          case 'left':
+            return {
+              x: isMobile ? 10 : 15,
+              y: isMobile ? 15 : 20,
+            };
+          case 'right':
+          default: {
+            const rightOffset = isMobile ? 120 : isTablet ? 140 : 150;
+            return {
+              x: Math.max(innerWidth - rightOffset, 10),
+              y: isMobile ? 15 : 20,
+            };
+          }
+        }
+      };
+
+      const legendPos = getResponsiveLegendPosition();
+      const legendX = legendPos.x;
+      const legendY = legendPos.y;
+
+      // Create responsive legend background
+      const legendGroup = g.append('g').attr('class', 'legend-group');
+
+      // Calculate responsive legend dimensions
+      const isHorizontal = legendPosition === 'top' || legendPosition === 'bottom';
+
+      // Calculate optimal width for horizontal legends with even spacing
+      const calculateLegendWidth = () => {
+        if (!isHorizontal) return (currentWidth < 640 ? 100 : 120) + 2 * legendSizes.padding;
+
+        // Calculate total text width for all items
+        const totalTextWidth = enabledAreas.reduce((total, key) => {
+          const maxTextLength = currentWidth < 640 ? 8 : currentWidth < 1024 ? 10 : 12;
+          const displayName =
+            key.length > maxTextLength ? key.substring(0, maxTextLength) + '...' : key;
+          return (
+            total +
+            displayName.length * (legendSizes.fontSize * 0.6) +
+            legendSizes.iconSize +
+            legendSizes.iconSpacing
+          );
+        }, 0);
+
+        // Add minimum spacing between items
+        const minSpacingBetweenItems = currentWidth < 640 ? 20 : 30;
+        const totalSpacing = (enabledAreas.length - 1) * minSpacingBetweenItems;
+
+        return Math.max(totalTextWidth + totalSpacing + 2 * legendSizes.padding, 200);
+      };
+
+      const legendBgDimensions = {
+        x: isHorizontal ? legendX - calculateLegendWidth() / 2 : legendX - legendSizes.padding,
+        y: legendY - legendSizes.padding,
+        width: isHorizontal
+          ? calculateLegendWidth()
+          : (currentWidth < 640 ? 100 : 120) + 2 * legendSizes.padding,
+        height: isHorizontal ? legendSizes.itemHeight + 2 * legendSizes.padding : totalLegendHeight,
+      };
+
+      // Enhanced legend background with glass morphism effect
+      legendGroup
+        .append('rect')
+        .attr('x', legendBgDimensions.x)
+        .attr('y', legendBgDimensions.y)
+        .attr('width', legendBgDimensions.width)
+        .attr('height', legendBgDimensions.height)
+        .attr('fill', isDarkMode ? 'rgba(55, 65, 81, 0.8)' : 'rgba(248, 250, 252, 0.9)')
+        .attr('stroke', isDarkMode ? 'rgba(107, 114, 128, 0.3)' : 'rgba(209, 213, 219, 0.3)')
+        .attr('stroke-width', 1)
+        .attr('rx', currentWidth < 640 ? 8 : 12)
+        .attr('ry', currentWidth < 640 ? 8 : 12)
+        .style('filter', 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))')
+        .style('backdrop-filter', 'blur(10px)')
+        .style('transition', 'all 0.3s ease');
+
+      // Add subtle gradient overlay
+      const gradientId = `legend-gradient-${Math.random().toString(36).substr(2, 9)}`;
+      const gradient = svg
+        .append('defs')
+        .append('linearGradient')
+        .attr('id', gradientId)
+        .attr('x1', '0%')
+        .attr('y1', '0%')
+        .attr('x2', '100%')
+        .attr('y2', '100%');
+
+      gradient
+        .append('stop')
+        .attr('offset', '0%')
+        .attr('stop-color', isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)')
+        .attr('stop-opacity', 1);
+
+      gradient
+        .append('stop')
+        .attr('offset', '100%')
+        .attr('stop-color', isDarkMode ? 'rgba(255, 255, 255, 0.01)' : 'rgba(255, 255, 255, 0.1)')
+        .attr('stop-opacity', 1);
+
+      legendGroup
+        .append('rect')
+        .attr('x', legendBgDimensions.x)
+        .attr('y', legendBgDimensions.y)
+        .attr('width', legendBgDimensions.width)
+        .attr('height', legendBgDimensions.height)
+        .attr('fill', `url(#${gradientId})`)
+        .attr('rx', currentWidth < 640 ? 8 : 12)
+        .attr('ry', currentWidth < 640 ? 8 : 12);
+
+      // Enhanced legend items with modern design
+      enabledAreas.forEach((key, index) => {
+        const colorKey = colors[key] ? key : `area${index + 1}`;
+        const color =
+          colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
+          Object.values(colors)[index % Object.keys(colors).length]?.[
+            isDarkMode ? 'dark' : 'light'
+          ] ||
+          '#3b82f6';
+
+        // Calculate responsive text truncation
+        const maxTextLength = currentWidth < 640 ? 8 : currentWidth < 1024 ? 10 : 12;
+        const displayName =
+          key.length > maxTextLength ? key.substring(0, maxTextLength) + '...' : key;
+
+        let itemX = legendX;
+        let itemY = legendY;
+
+        if (isHorizontal) {
+          // Horizontal layout for top/bottom - distribute evenly across available width
+          const totalWidth = legendBgDimensions.width - 2 * legendSizes.padding;
+          const spaceBetweenItems = totalWidth / enabledAreas.length;
+          itemX = legendBgDimensions.x + legendSizes.padding + index * spaceBetweenItems;
+          itemY = legendY;
+        } else {
+          // Vertical layout for left/right
+          itemX = legendX;
+          itemY = legendY + index * (legendSizes.itemHeight + legendSizes.itemSpacing);
+        }
+
+        // Create interactive legend item group
+        const legendItem = legendGroup
+          .append('g')
+          .attr('class', 'legend-item')
+          .style('cursor', 'pointer')
+          .style('transition', 'all 0.2s ease');
+
+        // Modern color indicator with rounded rectangle and glow effect
+        const indicatorSize = currentWidth < 640 ? 12 : 16;
+        const colorIndicator = legendItem
+          .append('rect')
+          .attr('x', itemX)
+          .attr('y', itemY + (legendSizes.itemHeight - indicatorSize) / 2)
+          .attr('width', indicatorSize)
+          .attr('height', indicatorSize)
+          .attr('rx', 3)
+          .attr('ry', 3)
+          .attr('fill', color)
+          .style('filter', `drop-shadow(0 2px 4px ${color}40)`)
+          .style('transition', 'all 0.2s ease');
+
+        // Add subtle inner glow
+        const glowId = `indicator-glow-${index}`;
+        const glowFilter = svg
+          .select('defs')
+          .append('filter')
+          .attr('id', glowId)
+          .attr('x', '-50%')
+          .attr('y', '-50%')
+          .attr('width', '200%')
+          .attr('height', '200%');
+
+        glowFilter.append('feGaussianBlur').attr('stdDeviation', '2').attr('result', 'coloredBlur');
+
+        const feMerge = glowFilter.append('feMerge');
+        feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+        feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+        // Enhanced legend text with better typography
+        const legendText = legendItem
+          .append('text')
+          .attr('x', itemX + indicatorSize + legendSizes.iconSpacing + 2)
+          .attr('y', itemY + legendSizes.itemHeight / 2)
+          .attr('dy', '0.35em')
+          .attr('fill', textColor)
+          .style('font-size', `${legendSizes.fontSize}px`)
+          .style('font-weight', '600')
+          .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif')
+          .style('letter-spacing', '0.025em')
+          .style('transition', 'all 0.2s ease')
+          .text(displayName);
+
+        // Add interactive hover and click effects
+        legendItem
+          .on('mouseenter', function () {
+            d3.select(this).style('transform', 'translateY(-1px)').style('opacity', '0.9');
+
+            colorIndicator
+              .style('filter', `drop-shadow(0 4px 8px ${color}60) url(#${glowId})`)
+              .attr('width', indicatorSize + 2)
+              .attr('height', indicatorSize + 2)
+              .attr('x', itemX - 1)
+              .attr('y', itemY + (legendSizes.itemHeight - indicatorSize) / 2 - 1);
+
+            legendText.style('font-weight', '700').attr('fill', color);
+
+            // Add hover tooltip effect
+            const tooltip = legendGroup
+              .append('g')
+              .attr('class', 'legend-tooltip')
+              .style('opacity', 0);
+
+            tooltip
+              .append('rect')
+              .attr('x', itemX + indicatorSize + legendSizes.iconSpacing - 5)
+              .attr('y', itemY - 25)
+              .attr('width', Math.max(key.length * 6 + 16, 80))
+              .attr('height', 20)
+              .attr('rx', 4)
+              .attr('fill', isDarkMode ? '#1f2937' : '#374151')
+              .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))');
+
+            tooltip
+              .append('text')
+              .attr('x', itemX + indicatorSize + legendSizes.iconSpacing + 3)
+              .attr('y', itemY - 10)
+              .attr('fill', '#ffffff')
+              .style('font-size', '11px')
+              .style('font-weight', '500')
+              .text(key);
+
+            tooltip.transition().duration(200).style('opacity', 1);
+          })
+          .on('mouseleave', function () {
+            d3.select(this).style('transform', 'translateY(0px)').style('opacity', '1');
+
+            colorIndicator
+              .style('filter', `drop-shadow(0 2px 4px ${color}40)`)
+              .attr('width', indicatorSize)
+              .attr('height', indicatorSize)
+              .attr('x', itemX)
+              .attr('y', itemY + (legendSizes.itemHeight - indicatorSize) / 2);
+
+            legendText.style('font-weight', '600').attr('fill', textColor);
+
+            // Remove tooltip
+            legendGroup.selectAll('.legend-tooltip').remove();
+          })
+          .on('click', function () {
+            // Add ripple effect on click
+            const ripple = legendGroup
+              .append('circle')
+              .attr('cx', itemX + indicatorSize / 2)
+              .attr('cy', itemY + legendSizes.itemHeight / 2)
+              .attr('r', 0)
+              .attr('fill', color)
+              .attr('opacity', 0.3);
+
+            ripple.transition().duration(600).attr('r', 30).attr('opacity', 0).remove();
+
+            // Visual feedback for the click
+            d3.select(this)
+              .transition()
+              .duration(100)
+              .style('transform', 'scale(0.95)')
+              .transition()
+              .duration(100)
+              .style('transform', 'scale(1)');
+          });
+      });
+    }
+
     // Enhanced zoom and pan with mouse interactions (similar to BarChart)
     if (enableZoom || enablePan) {
       let zoomLevel = 1;
@@ -757,18 +1098,18 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
   ]);
 
   return (
-    <div ref={containerRef} className="w-full space-y-4">
+    <div ref={containerRef} className="w-full">
       {title && (
         <h3
-          className="font-bold text-gray-900 dark:text-white text-center"
+          className="font-bold text-gray-900 dark:text-white text-center mb-4"
           style={{ fontSize: `${fontSize.title}px` }}
         >
           {title}
         </h3>
       )}
 
-      {/* Chart Container */}
-      <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3">
+      {/* Chart Container with integrated legend */}
+      <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
         <svg
           ref={svgRef}
           width={dimensions.width}
@@ -778,59 +1119,6 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
           preserveAspectRatio="xMidYMid meet"
         />
       </div>
-
-      {/* Legend */}
-      {showLegend && (
-        <div className="w-full">
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <h4 className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center">
-              {t('legend')}
-            </h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {yAxisKeys.map((key, index) => {
-                const colorKey = colors[key] ? key : `area${index + 1}`;
-                const color =
-                  colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
-                  defaultColorsChart[`color${index + 1}`][isDarkMode ? 'dark' : 'light'];
-
-                return (
-                  <div
-                    key={key}
-                    className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
-                  >
-                    {/* Color Indicator - Area style */}
-                    <div className="flex-shrink-0">
-                      <div
-                        className="w-4 h-4 sm:w-5 sm:h-5 rounded border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
-                        style={{
-                          backgroundColor: color,
-                          opacity: opacity,
-                        }}
-                      />
-                    </div>
-
-                    <span className="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200">
-                      {key}
-                    </span>
-
-                    {/* Area Preview */}
-                    <div className="flex-1 flex justify-end">
-                      <div
-                        className="w-8 sm:w-12 h-3 sm:h-4 rounded opacity-60 group-hover:opacity-100 transition-opacity duration-200"
-                        style={{
-                          backgroundColor: color,
-                          opacity: opacity * 0.8,
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
