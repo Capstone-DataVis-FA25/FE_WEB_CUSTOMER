@@ -76,6 +76,7 @@ export interface D3LineChartProps {
   disabledLines?: string[]; // New prop for disabled lines
   colors?: Record<string, { light: string; dark: string }>;
   seriesNames?: Record<string, string>; // Add series names mapping
+  xAxisNames?: Record<string, string>; // Map X-axis values from ID to display name
   // Individual series configurations
   seriesConfigs?: Record<
     string,
@@ -161,6 +162,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   disabledLines = [], // Default to no disabled lines
   colors = defaultColorsChart,
   seriesNames = {}, // Default to empty object
+  xAxisNames = {}, // X-axis names mapping from ID to display name
   seriesConfigs = {}, // Individual series configurations
   title,
   yAxisLabel,
@@ -286,6 +288,9 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     }),
     [fontSize.axis, labelFontSize, titleFontSize]
   );
+
+  // Note: Suppress unused variable warning for xAxisNames (used in axis formatting and tooltips)
+  void xAxisNames;
 
   // Convert arrayData to ChartDataPoint[] if provided
   const processedData = React.useMemo((): ChartDataPoint[] => {
@@ -659,7 +664,11 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .axisBottom(xScale)
         .tickSizeInner(showAxisTicks ? 6 : 0)
         .tickSizeOuter(showAxisTicks ? 6 : 0)
-        .tickFormat((d: any) => String(d));
+        .tickFormat((d: any) => {
+          // Use xAxisNames to map ID to display name, fallback to original value
+          const displayName = xAxisNames[String(d)] || String(d);
+          return displayName;
+        });
     } else {
       // For numeric data, use actual data values as ticks
       const uniqueXValues = [...new Set(processedData.map(d => d[xAxisKey] as number))].sort(
@@ -675,7 +684,9 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           if (xAxisFormatter && !isNaN(value)) {
             return xAxisFormatter(value);
           }
-          return d3.format('d')(value);
+          // Use xAxisNames to map ID to display name for numeric values too
+          const displayName = xAxisNames[String(d)] || d3.format('d')(value);
+          return displayName;
         });
     }
 
@@ -931,8 +942,10 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
             hideCurrentTooltip();
 
             // Create enhanced tooltip
-            const xValue =
-              typeof d[xAxisKey] === 'number' ? d[xAxisKey].toLocaleString() : d[xAxisKey];
+            const rawXValue = d[xAxisKey];
+            const xValue = typeof rawXValue === 'number' ? rawXValue.toLocaleString() : rawXValue;
+            // Use xAxisNames to get display name for X-axis value
+            const xDisplayName = xAxisNames[String(rawXValue)] || xValue;
             const yValue = typeof d[key] === 'number' ? d[key].toLocaleString() : d[key];
             const seriesName = seriesNames[key] || key;
 
@@ -990,7 +1003,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
               .duration(200)
               .style('opacity', 1);
 
-            // X value
+            // X value (use display name from xAxisNames)
             tooltip
               .append('text')
               .attr('text-anchor', 'middle')
@@ -999,7 +1012,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
               .style('font-size', `${Math.max(responsiveFontSize.axis - 1, 10)}px`)
               .style('font-weight', '500')
               .style('opacity', 0)
-              .text(`${xAxisLabel || 'X'}: ${xValue}`)
+              .text(`${xAxisLabel || 'X'}: ${xDisplayName}`)
               .transition()
               .duration(200)
               .style('opacity', 0.8);

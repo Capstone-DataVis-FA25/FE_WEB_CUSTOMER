@@ -60,7 +60,8 @@ const ChartTab: React.FC<ChartTabProps> = ({
   }
 
   const handleSelectDataset = (datasetId: string) => {
-    onCreateChart(datasetId);
+    // Handle empty string as "skip dataset selection"
+    onCreateChart(datasetId || ''); // Pass empty string if datasetId is falsy
   };
 
   if (allFilteredCharts.length === 0) {

@@ -1,35 +1,35 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+import D3BarChart from './D3BarChart';
+import type { ChartDataPoint } from './D3BarChart';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
   Trash2,
-  Table,
-  Save,
   X,
-  TrendingUp,
+  Save,
   ChevronDown,
   ChevronUp,
-  Settings,
+  TrendingUp,
+  Table,
+  Camera,
   Download,
+  Settings,
   Upload,
   RotateCcw,
-  Camera,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '@/hooks/useToast';
-import { convertArrayToChartData } from '@/utils/dataConverter';
-import D3BarChart from './D3BarChart';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import ToastContainer from '@/components/ui/toast-container';
-
 import {
   sizePresets,
-  type ChartDataPoint,
   type BarChartConfig,
   type ColorConfig,
+  type SeriesConfig,
   type FormatterConfig,
 } from '@/types/chart';
 import {
@@ -39,6 +39,18 @@ import {
   AxisConfigurationSection,
   SeriesManagement,
 } from '@/components/charts/ChartEditorShared';
+
+import { defaultColorsChart } from '@/utils/Utils';
+
+// Interface for dataset headers
+interface DatasetHeader {
+  id: string;
+  name: string;
+}
+
+interface Dataset {
+  headers: DatasetHeader[];
+}
 
 // Props for BarChart Editor
 export interface BarChartEditorProps {
@@ -50,6 +62,7 @@ export interface BarChartEditorProps {
   onDataChange?: (data: ChartDataPoint[]) => void;
   onColorsChange?: (colors: ColorConfig) => void;
   onFormattersChange?: (formatters: FormatterConfig) => void;
+  dataset?: Dataset; // Dataset prop with proper typing
   validationErrors?: {
     title?: boolean;
     xAxisLabel?: boolean;
@@ -67,16 +80,88 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
   onDataChange,
   onColorsChange,
   onFormattersChange,
+  dataset,
   validationErrors,
 }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
 
-  // Convert arrayData to ChartDataPoint[] if provided
+  // Helper function to decode ids to names using dataset.headers
+  const decodeKeysToNames = useMemo(() => {
+    return (keys: string | string[]): string | string[] => {
+      if (!dataset?.headers) return keys;
+
+      const keysArray = Array.isArray(keys) ? keys : [keys];
+      const decodedNames = keysArray.map(keyId => {
+        const header = dataset.headers.find((h: DatasetHeader) => h.id === keyId);
+        return header ? header.name.toLowerCase() : keyId.toLowerCase(); // Convert to lowercase
+      });
+
+      return Array.isArray(keys) ? decodedNames : decodedNames[0];
+    };
+  }, [dataset]);
+
+  // Helper function to encode names to ids using dataset.headers
+  const encodeNamesToIds = useMemo(() => {
+    return (keys: string | string[]): string | string[] => {
+      if (!dataset?.headers) return keys;
+
+      const keysArray = Array.isArray(keys) ? keys : [keys];
+      const encodedIds = keysArray.map(keyName => {
+        const header = dataset.headers.find(
+          (h: DatasetHeader) => h.name.toLowerCase() === keyName.toLowerCase()
+        );
+        return header ? header.id : keyName; // Fallback to keyName if not found
+      });
+
+      return Array.isArray(keys) ? encodedIds : encodedIds[0];
+    };
+  }, [dataset]);
+
+  // Convert arrayData to ChartDataPoint[] if provided - now using internal conversion
   const processedInitialData = useMemo((): ChartDataPoint[] => {
     if (initialArrayData && initialArrayData.length > 0) {
-      return convertArrayToChartData(initialArrayData);
+      // Simple conversion function for BarChartEditor
+      const convertToChartData = (arrayData: (string | number)[][]) => {
+        if (!arrayData || arrayData.length === 0) return [];
+
+        const headers = arrayData[0] as string[];
+        const dataRows = arrayData.slice(1);
+
+        return dataRows.map((row, rowIndex) => {
+          const dataPoint: ChartDataPoint = {};
+          headers.forEach((header, index) => {
+            const value = row[index];
+
+            // Handle undefined/null/N/A values
+            if (value === undefined || value === null || value === 'N/A' || value === '') {
+              // For the first column (usually city/category), use a placeholder; for numeric columns, use 0
+              dataPoint[header] = index === 0 ? `Unknown_${rowIndex + 1}` : 0;
+              return;
+            }
+
+            if (typeof value === 'string') {
+              const numValue = parseFloat(value);
+
+              if (!isNaN(numValue)) {
+                // Keep as number, don't convert to string with toFixed
+                dataPoint[header] = numValue;
+              } else {
+                // Keep as string for categorical data (like month names)
+                dataPoint[header] = value;
+              }
+            } else {
+              // It's already a number
+              dataPoint[header] = value;
+            }
+          });
+          return dataPoint;
+        });
+      };
+
+      return convertToChartData(initialArrayData);
     }
+
     return [];
   }, [initialArrayData]);
 
@@ -94,14 +179,34 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
 
   const responsiveDefaults = getResponsiveDefaults();
 
-  // Default configuration
+  // Default configuration with decoded keys
   const defaultConfig: BarChartConfig = {
     width: responsiveDefaults.width,
     height: responsiveDefaults.height,
     margin: { top: 20, right: 40, bottom: 60, left: 80 },
-    xAxisKey: Object.keys(processedInitialData[0] || {})[0] || 'x',
-    yAxisKeys: Object.keys(processedInitialData[0] || {}).slice(1) || ['y'], // Lấy tất cả columns trừ column đầu tiên (xAxisKey)
-    disabledBars: [], // Default to no disabled bars
+    xAxisKey: (() => {
+      // Decode initialConfig.xAxisKey if provided, otherwise use first data column
+      if (initialConfig.xAxisKey) {
+        return decodeKeysToNames(initialConfig.xAxisKey) as string;
+      }
+      return processedInitialData.length > 0
+        ? Object.keys(processedInitialData[0])[0].toLowerCase()
+        : 'x';
+    })(),
+    yAxisKeys: (() => {
+      // Decode initialConfig.yAxisKeys if provided, otherwise use remaining data columns
+      if (initialConfig.yAxisKeys) {
+        return decodeKeysToNames(initialConfig.yAxisKeys) as string[];
+      }
+      return processedInitialData.length > 0
+        ? Object.keys(processedInitialData[0])
+            .slice(1)
+            .map(key => key.toLowerCase())
+        : ['y']; // Lấy tất cả columns trừ column đầu tiên (xAxisKey)
+    })(),
+    disabledBars: initialConfig.disabledBars
+      ? (decodeKeysToNames(initialConfig.disabledBars) as string[])
+      : [], // Default to no disabled bars
     title: t('barChart_editor_title') || 'Bar Chart',
     xAxisLabel: t('barChart_editor_xAxisLabel') || 'X Axis',
     yAxisLabel: t('barChart_editor_yAxisLabel') || 'Y Axis',
@@ -189,13 +294,6 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
   const [tempData, setTempData] = useState<ChartDataPoint[]>(processedInitialData);
 
   // Series management state (like LineChart): each series maps to a data column
-  type SeriesConfig = {
-    id: string;
-    name: string;
-    dataColumn: string;
-    color: string;
-    visible: boolean;
-  };
 
   const [seriesConfigs, setSeriesConfigs] = useState<SeriesConfig[]>(() => {
     const colorKeys = Object.keys(defaultColors);
@@ -212,36 +310,68 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     });
   });
 
-  // Collapse state for sections - THÊM MỚI
+  // Collapse state for sections
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
-    basicSettings: true, // Open basic settings by default
+    basicSettings: true,
     chartSettings: true,
     axisConfiguration: true,
     displayOptions: true,
     seriesManagement: true,
     dataEditor: true,
-    importExport: true, // Add missing section
+    chartActions: true, // Keep chart actions expanded by default for easy access
   });
 
-  // Config management dropdown state - THÊM MỚI
-  const [showConfigDropdown, setShowConfigDropdown] = useState(false);
-  const configDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown when clicking outside - THÊM MỚI
+  // Effect to sync data when initialArrayData changes
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (configDropdownRef.current && !configDropdownRef.current.contains(event.target as Node)) {
-        setShowConfigDropdown(false);
-      }
-    };
-
-    if (showConfigDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+    // Only update data state if processedInitialData has actually changed
+    if (
+      processedInitialData.length > 0 &&
+      JSON.stringify(processedInitialData) !== JSON.stringify(data)
+    ) {
+      setData(processedInitialData);
+      setTempData(processedInitialData);
     }
-  }, [showConfigDropdown]);
+  }, [processedInitialData, data]); // Only run when processedInitialData or data changes
 
-  // Toggle section collapse - THÊM MỚI
+  // Effect to update seriesConfigs when dataset headers change
+  useEffect(() => {
+    if (dataset?.headers && config.yAxisKeys.length > 0) {
+      setSeriesConfigs(prevConfigs => {
+        const newConfigs = config.yAxisKeys.map((key, index) => {
+          // Find the header with matching name (case insensitive)
+          const header = dataset.headers.find(
+            (h: DatasetHeader) => h.name.toLowerCase() === key.toLowerCase()
+          );
+
+          const colorKeys = Object.keys(defaultColorsChart);
+          const colorIndex = index % colorKeys.length;
+          const selectedColorKey = colorKeys[colorIndex];
+          const selectedColor = defaultColorsChart[selectedColorKey];
+
+          // Use header.id if found, otherwise fallback to series-index
+          const seriesId = header?.id || `series-${index}`;
+
+          // Try to preserve existing config if it exists
+          const existingConfig = prevConfigs.find(c => c.dataColumn === key);
+
+          return {
+            id: seriesId, // Use dataset header id instead of generated id
+            name: key,
+            dataColumn: key,
+            color: existingConfig?.color || selectedColor.light,
+            visible:
+              existingConfig?.visible !== undefined
+                ? existingConfig.visible
+                : !config.disabledBars.includes(key),
+          };
+        });
+
+        return newConfigs;
+      });
+    }
+  }, [dataset, config.yAxisKeys, config.disabledBars]); // seriesConfigs is not needed in dependencies as it's the state being set
+
+  // Toggle section collapse
   const toggleSection = (sectionKey: string) => {
     setCollapsedSections(prev => ({
       ...prev,
@@ -431,11 +561,23 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
   }, [formatters]);
 
   // Update handlers
-  const updateConfig = (newConfig: Partial<BarChartConfig>) => {
-    const updatedConfig = { ...config, ...newConfig };
-    setConfig(updatedConfig);
-    onConfigChange?.(updatedConfig);
-  };
+  const updateConfig = useCallback(
+    (newConfig: Partial<BarChartConfig>) => {
+      const updatedConfig = { ...config, ...newConfig };
+      setConfig(updatedConfig);
+
+      // Encode names back to ids before sending to parent ChartEditor
+      const encodedConfigForParent = {
+        ...updatedConfig,
+        xAxisKey: encodeNamesToIds(updatedConfig.xAxisKey) as string,
+        yAxisKeys: encodeNamesToIds(updatedConfig.yAxisKeys) as string[],
+        disabledBars: encodeNamesToIds(updatedConfig.disabledBars || []) as string[],
+      };
+
+      onConfigChange?.(encodedConfigForParent);
+    },
+    [config, onConfigChange, encodeNamesToIds]
+  );
 
   const updateColors = (newColors: ColorConfig) => {
     setColors(newColors);
@@ -1335,30 +1477,30 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
             </motion.div>
           </div>
 
-          {/* Import/Export Section */}
+          {/* Chart Actions Section - Combined Config Management and Export */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            transition={{ duration: 0.6, delay: 0.35 }}
           >
             <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
               <CardHeader
-                className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
-                onClick={() => toggleSection('importExport')}
+                className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg"
+                onClick={() => toggleSection('chartActions')}
               >
                 <div className="flex items-center justify-between w-full">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Settings className="h-5 w-5" />
                     {t('chart_editor_chart_actions', 'Import / Export & More')}
                   </h3>
-                  {collapsedSections.importExport ? (
+                  {collapsedSections.chartActions ? (
                     <ChevronDown className="h-5 w-5 text-gray-500" />
                   ) : (
                     <ChevronUp className="h-5 w-5 text-gray-500" />
                   )}
                 </div>
               </CardHeader>
-              {!collapsedSections.importExport && (
+              {!collapsedSections.chartActions && (
                 <CardContent className="space-y-4">
                   {/* Export Image Section */}
                   <div>

@@ -33,8 +33,7 @@ const Modal: React.FC<ModalProps> = ({
   size = 'md',
   closeOnOverlay = true,
   showCloseButton = true,
-}) => {  
-
+}) => {
   // Lock body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -76,15 +75,15 @@ const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop - Mờ nhẹ để làm nổi bật modal */}
       <div className="absolute inset-0 bg-black/70" onClick={handleOverlayClick} />
 
       {/* Modal */}
       <div
         className={`
-          relative bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]}
-          animate-in fade-in-0 zoom-in-95 duration-200
+          relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full ${sizeClasses[size]}
+          animate-in fade-in-0 zoom-in-95 duration-200 pointer-events-auto
         `}
         role="dialog"
         aria-modal="true"
@@ -129,7 +128,7 @@ const ModalConfirm: React.FC<ModalConfirmProps> = ({
   loading = false,
 }) => {
   const { t } = useTranslation();
-  
+
   // Set default values inside component after t() is available
   const finalConfirmText = confirmText || t('confirm');
   const finalCancelText = cancelText || t('cancel'); // Sửa thành 'cancel' thay vì 'loading'
@@ -194,12 +193,12 @@ const ModalConfirm: React.FC<ModalConfirmProps> = ({
         <p className="text-sm text-gray-500 mb-6">{message}</p>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-3 pointer-events-auto">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="w-full inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full inline-flex justify-center rounded-md border border-gray-300 bg-white dark:bg-gray-700 dark:border-gray-600 px-4 py-2 text-base font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
           >
             {finalCancelText}
           </button>
@@ -208,7 +207,7 @@ const ModalConfirm: React.FC<ModalConfirmProps> = ({
             onClick={handleConfirm}
             disabled={loading}
             className={`
-              w-full inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed
+              w-full inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto
               ${currentStyle.confirmButton}
             `}
           >

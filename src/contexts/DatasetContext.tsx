@@ -236,7 +236,10 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
   };
 
   const setCurrentParsedData = (data: ParsedDataResult | null) => {
-    setState(prev => ({ ...prev, currentParsedData: data }));
+    setState(prev => {
+      const newState = { ...prev, currentParsedData: data };
+      return newState;
+    });
   };
 
   const setIsJsonFormat = (isJson: boolean) => {

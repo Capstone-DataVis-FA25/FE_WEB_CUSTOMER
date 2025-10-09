@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, Calendar, Eye, Edit, Trash2, Plus, Clock, Share, Edit3 } from 'lucide-react';
+import { Database, Trash2, Plus, Clock, Share, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,53 +18,15 @@ interface DatasetCardProps {
   isDeleting?: boolean;
 }
 
-// Get category color based on dataset category
-const getCategoryColor = (category?: string) => {
-  switch (category) {
-    case 'Sales':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-    case 'Finance':
-      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
-    case 'Analytics':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-    case 'Marketing':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-  }
-};
-
 // Dataset color mapping
 const getDatasetColor = () => {
   return 'from-blue-500 to-purple-600';
-};
-
-// Format date helper
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - date.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 1) {
-    return 'today';
-  } else if (diffDays === 2) {
-    return 'a day ago';
-  } else if (diffDays <= 30) {
-    return `${diffDays} days ago`;
-  } else if (diffDays <= 60) {
-    return 'a month ago';
-  } else {
-    const diffMonths = Math.floor(diffDays / 30);
-    return `${diffMonths} months ago`;
-  }
 };
 
 const DatasetCard: React.FC<DatasetCardProps> = ({
   dataset,
   onDelete,
   onView,
-  onEdit,
   isDeleting = false,
 }) => {
   const { t } = useTranslation();
@@ -80,21 +42,13 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
     });
   };
 
-  const handleEdit = () => {
-    if (onEdit) {
-      onEdit(dataset);
-    }
-    navigate(Routers.EDIT_DATASET, {
-      state: { datasetId: dataset.id, from: Routers.WORKSPACE_DATASETS },
-    });
-  };
-
   const handleCreateChart = () => {
     // Điều hướng sang trang chart gallery kèm dataset_id
     if (dataset.id) {
       navigate(Routers.CHART_GALLERY, {
         state: {
           datasetId: dataset.id,
+          datasetName: dataset.name,
         },
       });
     } else {
@@ -164,7 +118,7 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
           </div>
         </div>
 
-        {/* Action buttons */}
+        {/* Đây là button tạo biểu đồ */}
         <div className="flex space-x-1 pt-2">
           <Button
             variant="outline"

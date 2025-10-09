@@ -18,22 +18,31 @@ interface DatasetSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelectDataset: (datasetId: string) => void;
+  currentDatasetId?: string; // ID của dataset hiện tại đang được sử dụng
 }
 
 const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
   open,
   onOpenChange,
   onSelectDataset,
+  currentDatasetId,
 }) => {
   const { datasets, loading, getDatasets } = useDataset();
   const [selectedDatasetId, setSelectedDatasetId] = useState<string>('');
 
-  // Fetch datasets when dialog opens
+  // Set initial selection based on current dataset when dialog opens
   useEffect(() => {
     if (open) {
+      // Pre-select current dataset if available
+      if (currentDatasetId) {
+        setSelectedDatasetId(currentDatasetId);
+      }
+
       getDatasets();
+    } else {
+      console.log('DatasetSelectionDialog closed');
     }
-  }, [open, getDatasets]);
+  }, [open, getDatasets, currentDatasetId]);
 
   const handleConfirm = () => {
     if (selectedDatasetId) {
@@ -45,24 +54,45 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
 
   const handleCancel = () => {
     onOpenChange(false);
+    // Reset về current dataset khi cancel
+    setSelectedDatasetId(currentDatasetId || '');
+  };
+
+  const handleSkip = () => {
+    onSelectDataset(''); // Pass empty string to indicate skip
+    onOpenChange(false);
     setSelectedDatasetId('');
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] bg-white dark:bg-gray-800">
+      <DialogContent
+        className="sm:max-w-[600px] max-h-[80vh] bg-white dark:bg-gray-800 z-50 pointer-events-auto"
+        aria-describedby="dataset-selection-description"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
             <Database className="w-6 h-6 text-blue-600" />
             Select a Dataset
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Choose a dataset to create your chart. You can only select one dataset at a time.
+          <DialogDescription id="dataset-selection-description" className="text-muted-foreground">
+            {currentDatasetId ? (
+              <>
+                Choose a dataset for your chart. Your current dataset is marked with a "Current"
+                badge.
+                <br />
+                <span className="text-amber-600 dark:text-amber-400 font-medium">
+                  Warning: Changing dataset will replace your current chart data.
+                </span>
+              </>
+            ) : (
+              'Choose a dataset to create your chart. You can only select one dataset at a time.'
+            )}
           </DialogDescription>
         </DialogHeader>
 
         {loading ? (
-          <div className="flex justify-center items-center py-12">
+          <div className="flex justify-center items-center h-[300px]">
             <LoadingSpinner />
           </div>
         ) : datasets.length === 0 ? (
@@ -77,17 +107,19 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
             </p>
           </div>
         ) : (
-          <ScrollArea className="max-h-[400px] pr-4">
-            <div className="space-y-3">
+          <ScrollArea className="max-h-[400px] pr-4 pointer-events-auto">
+            <div className="space-y-3 pointer-events-auto">
               {datasets.map((dataset: Dataset) => (
                 <div
                   key={dataset.id}
-                  className={`relative flex items-start space-x-3 rounded-xl border-2 p-4 transition-all duration-200 cursor-pointer hover:shadow-md ${
+                  className={`relative flex items-start space-x-3 rounded-xl border-2 p-4 transition-all duration-200 cursor-pointer hover:shadow-md pointer-events-auto ${
                     selectedDatasetId === dataset.id
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md'
                       : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700'
                   }`}
-                  onClick={() => setSelectedDatasetId(dataset.id)}
+                  onClick={() => {
+                    setSelectedDatasetId(dataset.id);
+                  }}
                 >
                   <input
                     type="radio"
@@ -103,9 +135,17 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
                       htmlFor={dataset.id}
                       className="flex items-center justify-between cursor-pointer"
                     >
-                      <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                        {dataset.name}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                          {dataset.name}
+                        </span>
+                        {/* Hiển thị badge khi đây là dataset hiện tại */}
+                        {currentDatasetId === dataset.id && (
+                          <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+                            Current
+                          </span>
+                        )}
+                      </div>
                       {selectedDatasetId === dataset.id && (
                         <Check className="w-5 h-5 text-blue-600" />
                       )}
@@ -136,22 +176,30 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
           </ScrollArea>
         )}
 
-        <DialogFooter className="flex gap-3 pt-4">
+        <DialogFooter className="flex gap-3 pt-4 pointer-events-auto">
           <Button
             type="button"
             variant="outline"
             onClick={handleCancel}
-            className="flex-1 rounded-lg"
+            className="rounded-lg pointer-events-auto"
           >
             Cancel
           </Button>
           <Button
             type="button"
+            variant="outline"
+            onClick={handleSkip}
+            className="rounded-lg pointer-events-auto"
+          >
+            Skip & Use Sample Data
+          </Button>
+          <Button
+            type="button"
             onClick={handleConfirm}
             disabled={!selectedDatasetId || loading}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
           >
-            Continue with Dataset
+            {selectedDatasetId === currentDatasetId ? 'Keep Current Dataset' : 'Switch to Dataset'}
           </Button>
         </DialogFooter>
       </DialogContent>
