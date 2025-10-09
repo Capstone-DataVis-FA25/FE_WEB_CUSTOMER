@@ -50,6 +50,8 @@ const ProfilePage: React.FC = () => {
   const { showSuccess, showError, showWarning } = useToastContext();
   const [focusFieldErrorFirstName, setFocusFieldErrorFirstName] = useState(false);
   const [focusFieldErrorLastName, setFocusFieldErrorLastName] = useState(false);
+  const [errorMessageFirstName, setErrorMessageFirstName] = useState('');
+  const [errorMessageLastName, setErrorMessageLastName] = useState('');
 
   // Modal state for different actions
   const [modalConfig, setModalConfig] = useState({
@@ -92,39 +94,25 @@ const ProfilePage: React.FC = () => {
   const handleEdit = () => {
     setIsEditing(true);
     setEditForm(userProfile);
+    // Clear previous validation errors when entering edit mode
+    setFocusFieldErrorFirstName(false);
+    setFocusFieldErrorLastName(false);
+    setErrorMessageFirstName('');
+    setErrorMessageLastName('');
   };
 
   const handleCancel = () => {
     setIsEditing(false);
     setEditForm(userProfile);
+    // Clear validation errors when cancelling
+    setFocusFieldErrorFirstName(false);
+    setFocusFieldErrorLastName(false);
+    setErrorMessageFirstName('');
+    setErrorMessageLastName('');
   };
 
   const handleSave = async () => {
     try {
-      if (editForm.firstName.trim() === '' || editForm.lastName.trim() === '') {
-        showError(t('profile_emptyFieldsError'));
-        setFocusFieldErrorFirstName(editForm.firstName.trim() === '');
-        setFocusFieldErrorLastName(editForm.lastName.trim() === '');
-        return;
-      }
-      if (
-        editForm.firstName === userProfile.firstName &&
-        editForm.lastName === userProfile.lastName
-      ) {
-        showWarning(t('profile_noChangesError'));
-        return;
-      }
-
-      if (!NAME_REGEX.test(editForm.firstName)) {
-        showError(t('profile_invalidFirstNameError'));
-        return;
-      }
-
-      if (!NAME_REGEX.test(editForm.lastName)) {
-        showError(t('profile_invalidLastNameError'));
-        return;
-      }
-
       // Call the thunk with dispatch
       const result = await dispatch(
         updateProfileThunk({
@@ -140,9 +128,49 @@ const ProfilePage: React.FC = () => {
       } else {
         showError(t('profile_updateError'), t('profile_updateErrorDesc'));
       }
-    } catch (_error) {
+    } catch {
       showError(t('profile_updateError'), t('profile_updateErrorDesc'));
     }
+  };
+
+  const validateField = (field: keyof UserProfile, value: string): boolean => {
+    if (field === 'firstName') {
+      if (value.trim() === '') {
+        setFocusFieldErrorFirstName(true);
+        setErrorMessageFirstName(t('profile_firstNameRequired', 'First name is required'));
+        return false;
+      }
+      if (!NAME_REGEX.test(value)) {
+        setFocusFieldErrorFirstName(true);
+        setErrorMessageFirstName(
+          t('profile_invalidFirstNameError', 'First name contains invalid characters')
+        );
+        return false;
+      }
+      setFocusFieldErrorFirstName(false);
+      setErrorMessageFirstName('');
+      return true;
+    }
+
+    if (field === 'lastName') {
+      if (value.trim() === '') {
+        setFocusFieldErrorLastName(true);
+        setErrorMessageLastName(t('profile_lastNameRequired', 'Last name is required'));
+        return false;
+      }
+      if (!NAME_REGEX.test(value)) {
+        setFocusFieldErrorLastName(true);
+        setErrorMessageLastName(
+          t('profile_invalidLastNameError', 'Last name contains invalid characters')
+        );
+        return false;
+      }
+      setFocusFieldErrorLastName(false);
+      setErrorMessageLastName('');
+      return true;
+    }
+
+    return true;
   };
 
   const handleInputChange = (field: keyof UserProfile, value: string) => {
@@ -150,10 +178,86 @@ const ProfilePage: React.FC = () => {
       ...prev,
       [field]: value,
     }));
+
+    // Validate immediately on change
+    validateField(field, value);
+  };
+
+  // Validate form before showing modal
+  const validateForm = (): boolean => {
+    let isValid = true;
+
+    // Reset errors
+    setFocusFieldErrorFirstName(false);
+    setFocusFieldErrorLastName(false);
+    setErrorMessageFirstName('');
+    setErrorMessageLastName('');
+
+    // Check if firstName is empty
+    if (editForm.firstName.trim() === '') {
+      setFocusFieldErrorFirstName(true);
+      setErrorMessageFirstName(t('profile_firstNameRequired', 'First name is required'));
+      isValid = false;
+    }
+    // Check if firstName has valid format
+    else if (!NAME_REGEX.test(editForm.firstName)) {
+      setFocusFieldErrorFirstName(true);
+      setErrorMessageFirstName(
+        t('profile_invalidFirstNameError', 'First name contains invalid characters')
+      );
+      isValid = false;
+    }
+
+    // Check if lastName is empty
+    if (editForm.lastName.trim() === '') {
+      setFocusFieldErrorLastName(true);
+      setErrorMessageLastName(t('profile_lastNameRequired', 'Last name is required'));
+      isValid = false;
+    }
+    // Check if lastName has valid format
+    else if (!NAME_REGEX.test(editForm.lastName)) {
+      setFocusFieldErrorLastName(true);
+      setErrorMessageLastName(
+        t('profile_invalidLastNameError', 'Last name contains invalid characters')
+      );
+      isValid = false;
+    }
+
+    return isValid;
+  };
+
+  // Check if there are any changes
+  const hasChanges = (): boolean => {
+    return (
+      editForm.firstName !== userProfile.firstName || editForm.lastName !== userProfile.lastName
+    );
+  };
+
+  // Returns true if there are validation errors currently shown
+  const hasValidationErrors = (): boolean => {
+    return Boolean(
+      focusFieldErrorFirstName ||
+        focusFieldErrorLastName ||
+        errorMessageFirstName ||
+        errorMessageLastName
+    );
   };
 
   // Modal action handlers
   const handleSaveWithConfirm = () => {
+    // First validate the form
+    if (!validateForm()) {
+      // Validation failed, errors are already shown
+      return;
+    }
+
+    // Check if there are actual changes
+    if (!hasChanges()) {
+      showWarning(t('profile_noChangesError', 'No changes to save'));
+      return;
+    }
+
+    // Show confirmation modal only if validation passes
     setModalConfig({
       title: t('profile_confirmSave'),
       message: t('profile_confirmSaveMessage'),
@@ -279,7 +383,8 @@ const ProfilePage: React.FC = () => {
                           <Button
                             onClick={handleSaveWithConfirm}
                             size="sm"
-                            className="bg-green-500 hover:bg-green-600 text-white border-0 w-full sm:w-auto"
+                            disabled={!hasChanges() || hasValidationErrors()}
+                            className="bg-green-500 hover:bg-green-600 text-white border-0 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <Save className="w-4 h-4 mr-2" />
                             {t('profile_save')}
@@ -332,15 +437,21 @@ const ProfilePage: React.FC = () => {
                         {t('profile_firstName')}
                       </label>
                       {isEditing ? (
-                        <Input
-                          value={editForm.firstName}
-                          onChange={e => handleInputChange('firstName', e.target.value)}
-                          placeholder={t('profile_enterFirstName')}
-                          className="border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 rounded-lg"
-                          style={{
-                            borderColor: focusFieldErrorFirstName ? 'red' : 'inherit',
-                          }}
-                        />
+                        <div>
+                          <Input
+                            value={editForm.firstName}
+                            onChange={e => handleInputChange('firstName', e.target.value)}
+                            placeholder={t('profile_enterFirstName')}
+                            className={`border-2 dark:border-gray-700 focus:border-blue-500 rounded-lg ${
+                              focusFieldErrorFirstName
+                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                                : 'border-gray-200'
+                            }`}
+                          />
+                          {focusFieldErrorFirstName && errorMessageFirstName && (
+                            <p className="text-red-500 text-xs mt-1">{errorMessageFirstName}</p>
+                          )}
+                        </div>
                       ) : (
                         <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-transparent">
                           <p className="text-gray-900 dark:text-white font-medium">
@@ -356,15 +467,21 @@ const ProfilePage: React.FC = () => {
                         {t('profile_lastName')}
                       </label>
                       {isEditing ? (
-                        <Input
-                          value={editForm.lastName}
-                          onChange={e => handleInputChange('lastName', e.target.value)}
-                          placeholder={t('profile_enterLastName')}
-                          className="border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 rounded-lg"
-                          style={{
-                            borderColor: focusFieldErrorLastName ? 'red' : 'inherit',
-                          }}
-                        />
+                        <div>
+                          <Input
+                            value={editForm.lastName}
+                            onChange={e => handleInputChange('lastName', e.target.value)}
+                            placeholder={t('profile_enterLastName')}
+                            className={`border-2 dark:border-gray-700 focus:border-blue-500 rounded-lg ${
+                              focusFieldErrorLastName
+                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                                : 'border-gray-200'
+                            }`}
+                          />
+                          {focusFieldErrorLastName && errorMessageLastName && (
+                            <p className="text-red-500 text-xs mt-1">{errorMessageLastName}</p>
+                          )}
+                        </div>
                       ) : (
                         <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-transparent">
                           <p className="text-gray-900 dark:text-white font-medium">

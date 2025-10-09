@@ -26,7 +26,7 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
   onUpdateNote,
   isLoading = false,
 }) => {
-  const { user } = useAuth(); // Get current user from auth context or however your app manages auth
+  const { user } = useAuth();
   const { t } = useTranslation();
   const [newNote, setNewNote] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
