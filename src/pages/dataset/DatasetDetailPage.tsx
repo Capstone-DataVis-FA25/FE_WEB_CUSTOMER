@@ -485,7 +485,13 @@ const DatasetDetailPage: React.FC = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner />
+        </div>
+      </div>
+    );
   }
 
   if (!currentDataset) {

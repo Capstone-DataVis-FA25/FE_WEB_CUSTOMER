@@ -7,17 +7,19 @@ import datasetReducer from '../features/dataset/datasetSlice';
 import type { AuthState } from '../features/auth/authType';
 import type { DatasetState } from '../features/dataset/datasetSlice';
 import { chartReducer, type ChartState } from '@/features/charts';
+import { chartNoteReducer, type ChartNoteState } from '@/features/chartNotes';
 
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth'], // Chỉ persist auth state, không persist dataset or chart
+  whitelist: ['auth', 'chartNote'], // Persist auth and chartNote state
 };
 
 const rootReducer = combineReducers({
   auth: authReducer,
   dataset: datasetReducer,
   chart: chartReducer,
+  chartNote: chartNoteReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -38,6 +40,7 @@ export type RootState = {
   auth: AuthState;
   dataset: DatasetState;
   chart: ChartState;
+  chartNote: ChartNoteState;
 };
 
 export type AppDispatch = typeof store.dispatch;
