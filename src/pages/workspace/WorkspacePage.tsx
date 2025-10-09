@@ -57,7 +57,6 @@ const WorkspacePage: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [chartTypeFilter, setChartTypeFilter] = useState<string>('all');
-  const [datasetTypeFilter, setDatasetTypeFilter] = useState<string>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingChartId, setDeletingChartId] = useState<string | null>(null);
   const [selectingDatasetModal, setSelectingDatasetModal] = useState<boolean>(false);

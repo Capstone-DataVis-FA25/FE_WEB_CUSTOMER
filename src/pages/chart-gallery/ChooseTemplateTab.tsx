@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { Button } from '@/components/ui/button';
@@ -18,40 +18,69 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import Pagination from '@/components/ui/pagination';
-import { Search, Star, Filter, Grid3X3, TrendingUp, Eye, ArrowRight, Info } from 'lucide-react';
+import ChartPreview from '@/components/charts/preview/ChartPreview';
+import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
+import {
+  Search,
+  Star,
+  Filter,
+  Grid3X3,
+  TrendingUp,
+  Eye,
+  ArrowRight,
+  Info,
+  Database,
+} from 'lucide-react';
 import { useToastContext } from '@/components/providers/ToastProvider';
+import { useDataset } from '@/features/dataset/useDataset';
 import Routers from '@/router/routers';
 import type { ChartCategory, ChartTemplate } from '@/types/chart-gallery-types';
-import { useCharts } from '@/features/charts';
 
 export default function ChooseTemplateTab() {
   const { t } = useTranslation();
   const location = useLocation();
   const { showError, showSuccess } = useToastContext();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { createChart } = useCharts();
+  const { getDatasetById } = useDataset();
 
   // Extract data from both location state AND query parameters
   const locationState = location.state as {
     datasetId?: string;
     datasetName?: string;
-    chartType?: string;
   } | null;
+
+  console.log(`DATASET ID GET FROM DATASET CARD :${locationState?.datasetId}`);
+  console.log(`DATASET NAME GET FROM DATASET CARD :${locationState?.datasetName}`);
 
   // Get datasetId from state first, then fallback to query params
   const datasetIdFromState = locationState?.datasetId;
-  const datasetIdFromQuery = searchParams.get('datasetId');
-  const datasetId = datasetIdFromState || datasetIdFromQuery;
-  const datasetName = locationState?.datasetName;
+  const initialDatasetId = datasetIdFromState;
+  const initialDatasetName = locationState?.datasetName;
+
+  // Local state to manage current selected dataset
+  const [currentDatasetId, setCurrentDatasetId] = useState(initialDatasetId || '');
+  const [currentDatasetName, setCurrentDatasetName] = useState(initialDatasetName || '');
+  const [isLoadingDataset, setIsLoadingDataset] = useState(false);
+
+  // Use local state instead of location state
+  const datasetId = currentDatasetId;
+  const datasetName = currentDatasetName;
   // const preselectedChartType = locationState?.chartType; // reserved for future use
 
   console.log('ChooseTemplateTab - datasetIdFromState:', datasetIdFromState);
-  console.log('ChooseTemplateTab - datasetIdFromQuery:', datasetIdFromQuery);
   console.log('ChooseTemplateTab - Final datasetId:', datasetId);
 
+  // // Effect to sync URL when dataset changes
+  // useEffect(() => {
+  //   if (datasetId) {
+  //     // Update URL params when dataset is selected
+  //     const newSearchParams = new URLSearchParams();
+  //     newSearchParams.set('datasetId', datasetId);
+  //     navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
+  //   }
+  // }, [datasetId, navigate, location.pathname]);
+
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreatingChart, setIsCreatingChart] = useState(false);
   const [categories, setCategories] = useState<ChartCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedTemplate, setSelectedTemplate] = useState<ChartTemplate | null>(null);
@@ -59,7 +88,10 @@ export default function ChooseTemplateTab() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['All']);
   const [selectedPurposes, setSelectedPurposes] = useState<string[]>(['All']);
   const [showFeatured, setShowFeatured] = useState(false);
-  const [showTemplateModal, setShowTemplateModal] = useState(false); // Function to get default chart configuration based on template
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showDatasetModal, setShowDatasetModal] = useState(false); // Function to get default chart configuration based on template
+
+  // Lấy cấu hình biểu đồ mặc định dựa trên mẫu đã chọn
   const getDefaultChartConfig = (template: ChartTemplate) => {
     const baseConfig = {
       config: {
@@ -212,67 +244,117 @@ export default function ChooseTemplateTab() {
     }
   };
 
-  // Navigation function for continuing with selected template - now creates chart first
-  const handleContinueWithTemplate = async (template: ChartTemplate) => {
-    if (!template || !datasetId) {
-      showError(
-        t('chart_create_error', 'Error'),
-        t('chart_create_missing_data', 'Missing template or dataset')
-      );
-      return;
-    }
-
-    setIsCreatingChart(true);
-
+  // Handle dataset selection from modal
+  const handleSelectDataset = async (selectedDatasetId: string) => {
     try {
-      console.log('ChooseTemplateTab - Creating chart with template:', template);
+      setIsLoadingDataset(true);
 
+      // If empty datasetId, clear dataset and continue with sample data
+      if (!selectedDatasetId) {
+        setCurrentDatasetId('');
+        setCurrentDatasetName('');
+        if (selectedTemplate) {
+          continueWithTemplate(selectedTemplate, '', '');
+        }
+        setShowDatasetModal(false);
+        setIsLoadingDataset(false);
+        return;
+      }
+
+      // Load dataset information
+      const dataset = await getDatasetById(selectedDatasetId).unwrap();
+
+      // Update current dataset state
+      setCurrentDatasetId(selectedDatasetId);
+      setCurrentDatasetName(dataset.name || 'Selected Dataset');
+
+      // If we have a template selected, continue with it
+      if (selectedTemplate) {
+        continueWithTemplate(selectedTemplate, selectedDatasetId, dataset.name);
+      }
+
+      setShowDatasetModal(false);
+      showSuccess(`Selected dataset: ${dataset.name}`);
+    } catch (error) {
+      console.error('Failed to load dataset:', error);
+      showError('Failed to load selected dataset');
+    } finally {
+      setIsLoadingDataset(false);
+    }
+  };
+
+  // Navigation function for continuing with selected template
+  const continueWithTemplate = (
+    template: ChartTemplate,
+    datasetIdParam?: string,
+    datasetNameParam?: string
+  ) => {
+    try {
       // Get default configuration for this template
       const defaultConfig = getDefaultChartConfig(template);
+
       // Only allow chart types supported by CreateChartRequest
       if (!['line', 'bar', 'area'].includes(template.type)) {
         showError(
           t('chart_create_error', 'Error'),
           t('chart_create_unsupported_type', 'This chart type is not supported for creation.')
         );
-        setIsCreatingChart(false);
         return;
       }
 
-      // Create chart with default settings - only include ChartConfig properties
-      const chartData = {
-        name: defaultConfig.config.title,
-        description: `A ${template.name} chart created from template`,
-        datasetId: datasetId,
-        type: template.type as 'line' | 'bar' | 'area',
-        config: defaultConfig,
-      };
-      const result = await createChart(chartData).unwrap();
-      console.log('ChooseTemplateTab - Chart created successfully:', result);
-      showSuccess(
-        t('chart_create_success', 'Chart Created'),
-        t('chart_create_success_message', 'Chart has been created successfully')
-      );
+      // Use passed parameters or existing datasetId
+      const finalDatasetId = datasetIdParam !== undefined ? datasetIdParam : datasetId;
+      const finalDatasetName = datasetNameParam !== undefined ? datasetNameParam : datasetName;
 
-      // Navigate to chart editor with the new chart ID
-      navigate(`${Routers.CHART_EDITOR}?chartId=${result.id}&datasetId=${datasetId}`, {
-        state: {
-          chartId: result.id,
-          datasetId: datasetId,
-          type: result.type,
-          chart: result,
-        },
+      // Prepare chart data for navigation state - will be created later in ChartEditor
+      const chartData = {
+        name: `${template.name} Chart`,
+        description: `Chart created from ${template.name} template`,
+        config: defaultConfig,
+        type: template.type,
+      };
+
+      // Save state to sessionStorage for persistence on refresh
+      const navigationState = {
+        datasetId: finalDatasetId || '', // Allow empty datasetId
+        datasetName: finalDatasetName || '',
+        type: template.type,
+        template: template,
+        chartData: chartData,
+        mode: 'create', // Indicate this is a new chart creation
+      };
+
+      sessionStorage.setItem('chartEditorState', JSON.stringify(navigationState));
+
+      // Navigate to chart editor without creating chart yet
+      const queryParams = finalDatasetId
+        ? `?mode=create&datasetId=${finalDatasetId}`
+        : '?mode=create';
+      navigate(`${Routers.CHART_EDITOR}${queryParams}`, {
+        state: navigationState,
       });
     } catch (error: unknown) {
-      console.error('ChooseTemplateTab - Failed to create chart:', error);
+      console.error('ChooseTemplateTab - Failed to navigate:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       showError(
-        t('chart_create_error', 'Create Chart Failed'),
-        errorMessage || t('chart_create_error_message', 'Failed to create chart')
+        t('chart_create_error', 'Navigation Failed'),
+        errorMessage || t('chart_create_error_message', 'Failed to navigate to chart editor')
       );
-    } finally {
-      setIsCreatingChart(false);
     }
+  };
+
+  // Check if user has datasetId or needs to select one
+  const handleContinueWithTemplate = (template: ChartTemplate) => {
+    if (!template) {
+      showError(
+        t('chart_create_error', 'Error'),
+        t('chart_create_missing_data', 'Missing template')
+      );
+      return;
+    }
+
+    // Always continue with template - if no dataset, will use sample data
+    continueWithTemplate(template);
   };
 
   // Pagination state
@@ -550,6 +632,37 @@ export default function ChooseTemplateTab() {
     <div className="h-full flex bg-gray-50 dark:bg-gray-900">
       {/* Left Sidebar - Fixed width, clean design */}
       <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+        {/* Dataset Section */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Database className="w-4 h-4 text-blue-500" />
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Dataset</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowDatasetModal(true)}
+              disabled={isLoadingDataset}
+              className="text-xs"
+            >
+              {isLoadingDataset ? 'Loading...' : datasetId ? 'Change' : 'Select'}
+            </Button>
+          </div>
+
+          {datasetId ? (
+            <div className="text-xs text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+              <div className="font-medium text-blue-800 dark:text-blue-200">
+                Dataset name: {datasetName || 'Selected Dataset'}
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs text-gray-600 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+              No dataset selected - will use sample data
+            </div>
+          )}
+        </div>
+
         {/* Search Section */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="relative">
@@ -880,15 +993,18 @@ export default function ChooseTemplateTab() {
                       }`}
                     >
                       <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 relative overflow-hidden">
-                        {/* Chart Preview Placeholder */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="text-4xl opacity-50">📊</div>
+                        {/* Chart Preview */}
+                        <div className="absolute inset-0 p-2">
+                          <ChartPreview
+                            type={template.type}
+                            className="w-full h-full border border-gray-200 dark:border-gray-600 rounded-md"
+                          />
                         </div>
 
                         {/* Selected Indicator */}
                         {isSelected && (
-                          <div className="absolute top-2 left-2">
-                            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                          <div className="absolute top-2 left-2 z-10">
+                            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
                               <svg
                                 className="w-4 h-4 text-white"
                                 fill="currentColor"
@@ -905,19 +1021,19 @@ export default function ChooseTemplateTab() {
                         )}
 
                         {/* Hover Actions */}
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                           <div className="flex gap-1">
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="w-8 h-8 p-0 bg-white/80 hover:bg-white"
+                              className="w-8 h-8 p-0 bg-white/90 hover:bg-white shadow-sm"
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="w-8 h-8 p-0 bg-white/80 hover:bg-white"
+                              className="w-8 h-8 p-0 bg-white/90 hover:bg-white shadow-sm"
                             >
                               <Star className="w-4 h-4" />
                             </Button>
@@ -983,7 +1099,7 @@ export default function ChooseTemplateTab() {
             )}
 
             {/* Continue Button - Show when template is selected */}
-            {selectedTemplate && datasetId && (
+            {selectedTemplate && (
               <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-6">
                 <div className="text-center">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -992,32 +1108,40 @@ export default function ChooseTemplateTab() {
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                     {t('chart_gallery_template_selected_desc', 'Ready to create chart with')}{' '}
                     <strong>{selectedTemplate.name}</strong>
-                    {datasetName && (
+                    {datasetName ? (
                       <>
                         {' '}
                         {t('chart_gallery_for_dataset', 'for dataset')}{' '}
                         <strong>{datasetName}</strong>
                       </>
+                    ) : (
+                      <span className="text-gray-500"> using sample data</span>
                     )}
                   </p>
-                  <Button
-                    onClick={() => handleContinueWithTemplate(selectedTemplate)}
-                    disabled={isCreatingChart}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
-                    size="lg"
-                  >
-                    {isCreatingChart ? (
-                      <>
-                        <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        {t('chart_gallery_creating', 'Creating Chart...')}
-                      </>
-                    ) : (
-                      <>
-                        <ArrowRight className="w-4 h-4 mr-2" />
-                        {t('chart_gallery_continue', 'Create Chart')}
-                      </>
+                  <div className="flex gap-3 justify-center">
+                    <Button
+                      onClick={() => handleContinueWithTemplate(selectedTemplate)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
+                      size="lg"
+                    >
+                      <ArrowRight className="w-4 h-4 mr-2" />
+                      {t('chart_gallery_continue', 'Continue')}
+                    </Button>
+                    {!datasetId && (
+                      <Button
+                        onClick={() => {
+                          setSelectedTemplate(selectedTemplate);
+                          setShowDatasetModal(true);
+                        }}
+                        variant="outline"
+                        size="lg"
+                        className="px-6 py-2"
+                      >
+                        <Database className="w-4 h-4 mr-2" />
+                        Select Dataset
+                      </Button>
                     )}
-                  </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1037,6 +1161,13 @@ export default function ChooseTemplateTab() {
           </div>
         </div>
       </div>
+
+      {/* Dataset Selection Modal */}
+      <DatasetSelectionDialog
+        open={showDatasetModal}
+        onOpenChange={setShowDatasetModal}
+        onSelectDataset={handleSelectDataset}
+      />
     </div>
   );
 }

@@ -66,6 +66,7 @@ const chartSlice = createSlice({
       .addCase(createChartThunk.fulfilled, (state, action: PayloadAction<Chart>) => {
         state.creating = false;
         state.charts.unshift(action.payload);
+        state.currentChart = action.payload;
       })
       .addCase(createChartThunk.rejected, (state, action) => {
         state.creating = false;

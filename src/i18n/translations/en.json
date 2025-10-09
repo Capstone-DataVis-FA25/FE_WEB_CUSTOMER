@@ -215,6 +215,13 @@
   "common_edit": "Edit",
   "common_save": "Save",
   "common_cancel": "Cancel",
+  "chart_create_save": "Create Chart",
+  "chart_create_creating": "Creating...",
+  "chart_create_success": "Chart Created",
+  "chart_create_error": "Create Chart Failed",
+  "chart_gallery_continue": "Continue",
+  "dataset_upload_success": "Dataset uploaded successfully",
+  "dataset_upload_error": "Failed to upload dataset",
   "theme_title": "Theme",
   "language_title": "Language",
   "profile_active": "Active",
@@ -1264,7 +1271,7 @@
   "dataset_customer_analytics_desc": "Customer behavior and demographics",
   "dataset_product_performance": "Product Performance",
   "dataset_product_performance_desc": "Product sales and performance metrics",
-  "chart_gallery_template_desc": "🎨 Browse premium chart templates",
+  "chart_gallery_template_desc": "Browse premium chart templates",
   "chart_gallery_data_desc": "🤖 AI-powered chart suggestions",
   "chart_gallery_templates": "Templates",
   "chart_gallery_beta_feature": "Beta Feature",
@@ -1372,5 +1379,7 @@
   "common.add": "Add",
   "chart_editor_seriesManagement": "Series Management",
   "chart_editor_save_chart": "Save Chart",
-  "chart_update_success_message": "Chart has been updated successfully"
+  "chart_update_success_message": "Chart has been updated successfully",
+  "chart_editor_no_series": "No data series selected",
+  "chart_editor_add_series_hint": "Add a data series to display the chart"
 }

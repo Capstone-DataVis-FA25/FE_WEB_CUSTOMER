@@ -1,10 +1,10 @@
 'use client';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SlideInUp } from '@/theme/animation';
-import { ArrowLeft, Edit, Trash2, Database, BarChart3, Settings } from 'lucide-react';
+import { ArrowLeft, Trash2, Database, BarChart3, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -49,9 +49,6 @@ const DatasetDetailPage: React.FC = () => {
     clearDatasetError,
     clearCurrent,
   } = useDataset();
-
-  const [activeTab, setActiveTab] = useState<'data' | 'info'>('data');
-  const [selectedChartType, setSelectedChartType] = useState('bar');
 
   // Fetch dataset on component mount
   useEffect(() => {

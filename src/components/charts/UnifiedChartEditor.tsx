@@ -55,11 +55,17 @@ export type UnifiedChartConfig = LineChartConfig | BarChartConfig | AreaChartCon
 
 // Interface for dataset headers
 interface DatasetHeader {
-  id: string;
+  id?: string;
   name: string;
+  type?: string;
+  index?: number;
+  data?: (string | number)[];
 }
 
 interface Dataset {
+  id?: string;
+  name?: string;
+  description?: string;
   headers: DatasetHeader[];
 }
 
@@ -96,7 +102,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
   onFormattersChange,
   onChartTypeChange,
   dataset,
-  allowChartTypeChange = true,
+  // allowChartTypeChange = true,
   validationErrors,
   onValidationChange,
 }) => {
@@ -155,19 +161,72 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
       if (!dataset?.headers) return keys;
 
       const keysArray = Array.isArray(keys) ? keys : [keys];
-      const encodedIds = keysArray.map(keyName => {
-        const header = dataset.headers.find(
-          (h: DatasetHeader) => h.name.toLowerCase() === keyName.toLowerCase()
-        );
-        return header ? header.id : keyName; // Fallback to keyName if not found
-      });
+      const encodedIds = keysArray
+        .map(keyName => {
+          const header = dataset.headers.find(
+            (h: DatasetHeader) => h.name.toLowerCase() === keyName.toLowerCase()
+          );
+          return header?.id || keyName; // Fallback to keyName if not found
+        })
+        .filter((id): id is string => typeof id === 'string');
 
-      return Array.isArray(keys) ? encodedIds : encodedIds[0];
+      return Array.isArray(keys) ? encodedIds : encodedIds[0] || '';
     };
+  }, [dataset]);
+
+  // Đưa dataset về dạng chart_data_point
+  const processedDatasetData = useMemo((): ChartDataPoint[] => {
+    if (dataset && dataset.headers && dataset.headers.length > 0) {
+      // Filter headers that have data
+      const validHeaders = dataset.headers.filter(
+        h => h && h.name && Array.isArray(h.data) && h.data.length > 0
+      );
+
+      if (validHeaders.length === 0) {
+        return [];
+      }
+
+      // Get the maximum row count
+      const maxRows = Math.max(...validHeaders.map(h => h.data?.length || 0));
+
+      // Create chart data points
+      const chartData: ChartDataPoint[] = [];
+      for (let i = 0; i < maxRows; i++) {
+        const dataPoint: ChartDataPoint = {};
+        validHeaders.forEach(header => {
+          const value = header.data?.[i];
+          if (value !== undefined && value !== null) {
+            // Convert string numbers to actual numbers for numeric columns
+            if (typeof value === 'string') {
+              const cleanedValue = value.trim().replace(/[,\s]/g, '');
+              const numValue = parseFloat(cleanedValue);
+              // If it's a valid number and not a date-like string, convert it
+              if (!isNaN(numValue) && !value.includes('-') && !value.includes('/')) {
+                dataPoint[header.name] = numValue;
+              } else {
+                // Keep as string for text/date columns
+                dataPoint[header.name] = value;
+              }
+            } else {
+              dataPoint[header.name] = value;
+            }
+          }
+        });
+        chartData.push(dataPoint);
+      }
+
+      return chartData;
+    }
+    return [];
   }, [dataset]);
 
   // Convert arrayData to ChartDataPoint[] if provided
   const processedInitialData = useMemo((): ChartDataPoint[] => {
+    // Prioritize dataset over initialArrayData
+    if (processedDatasetData.length > 0) {
+      return processedDatasetData;
+    }
+
     if (initialArrayData && initialArrayData.length > 0) {
       // Use the conversion function from D3LineChart
       const convertArrayToChartData = (arrayData: (string | number)[][]): ChartDataPoint[] => {
@@ -218,8 +277,10 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
 
       return convertArrayToChartData(initialArrayData);
     }
+
+    console.log('🔧 [UnifiedChartEditor] No data source available');
     return [];
-  }, [initialArrayData]);
+  }, [initialArrayData, processedDatasetData]);
 
   const responsiveDefaults = getResponsiveDefaults();
 
@@ -236,20 +297,23 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
           if (config?.xAxisKey) {
             return decodeKeysToNames(config.xAxisKey) as string;
           }
-          return processedInitialData.length > 0
-            ? Object.keys(processedInitialData[0])[0].toLowerCase()
-            : 'x';
+          if (processedInitialData.length > 0) {
+            const firstKey = Object.keys(processedInitialData[0])[0];
+            console.log('🔧 [createDefaultConfig] Using xAxisKey:', firstKey);
+            return firstKey; // Use exact key name, don't lowercase
+          }
+          return 'x';
         })(),
         yAxisKeys: (() => {
-          // Decode config.yAxisKeys if provided, otherwise use remaining data columns
+          // Decode config.yAxisKeys if provided, otherwise start with empty array for manual selection
           if (config?.yAxisKeys) {
             return decodeKeysToNames(config.yAxisKeys) as string[];
           }
-          return processedInitialData.length > 0
-            ? Object.keys(processedInitialData[0])
-                .slice(1)
-                .map(key => key.toLowerCase())
-            : ['y']; // Take all columns except the first one (xAxisKey)
+          // Don't auto-populate yAxisKeys - let users manually select series
+          console.log(
+            '🔧 [createDefaultConfig] Starting with empty yAxisKeys - users will manually select series'
+          );
+          return [];
         })(),
         title:
           config?.title ||
@@ -272,8 +336,8 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
         enablePan: config?.enablePan ?? false,
         zoomExtent: config?.zoomExtent ?? 10,
         showTooltip: config?.showTooltip ?? true,
-        theme: config?.theme ?? 'auto',
-        backgroundColor: config?.backgroundColor ?? 'transparent',
+        theme: config?.theme ?? 'light',
+        backgroundColor: config?.backgroundColor ?? '#ffffff',
         titleFontSize: config?.titleFontSize ?? 16,
         labelFontSize: config?.labelFontSize ?? 12,
         legendFontSize: config?.legendFontSize ?? 12,
@@ -303,8 +367,15 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
               ? (decodeKeysToNames(config.disabledBars) as string[])
               : [],
             barType: config?.barType ?? 'grouped',
-            barWidth: config?.barWidth ?? 0,
-            barSpacing: config?.barSpacing ?? 4,
+            barWidth: config?.barWidth ?? 0.9, // Use 90% of available width for thicker bars
+            barSpacing: config?.barSpacing ?? 2, // Reduce spacing for closer bars
+            // Enhanced margins for better legend and label placement
+            margin: config?.margin ?? {
+              top: 40,
+              right: 60,
+              bottom: 100, // Extra space for legend and labels
+              left: 100,
+            },
             ...config,
           } as BarChartConfig;
         }
@@ -445,12 +516,37 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
 
   // Initialize chart data and config (only once when component mounts)
   useEffect(() => {
+    console.log('🎯 [Init] Setting chart data from processedInitialData');
+    console.log('🎯 [Init] processedInitialData:', processedInitialData);
+    console.log('🎯 [Init] processedInitialData length:', processedInitialData.length);
+    console.log('🎯 [Init] Sample data point:', processedInitialData[0]);
+
     setChartData(processedInitialData);
 
-    // Only create default config if no chartConfig exists and no initialStructuredConfig
-    if (!chartConfig && !initialStructuredConfig) {
+    // Create default config if no chartConfig exists
+    if (!chartConfig) {
+      console.log('🎯 [Init] Creating default config for chart type:', chartType);
       const defaultConfig = createDefaultConfig(chartType);
+      console.log('🎯 [Init] Default config created:', defaultConfig);
+      console.log('🎯 [Init] xAxisKey:', defaultConfig.xAxisKey);
+      console.log('🎯 [Init] yAxisKeys:', defaultConfig.yAxisKeys);
       setChartConfig(defaultConfig);
+    } else if (chartConfig && (!chartConfig.yAxisKeys || chartConfig.yAxisKeys.length === 0)) {
+      // If chartConfig exists but has no yAxisKeys, keep it empty for manual selection
+      console.log(
+        '🎯 [Init] ChartConfig exists but no yAxisKeys - keeping empty for manual selection'
+      );
+      if (processedInitialData.length > 0 && !chartConfig.xAxisKey) {
+        // Only set xAxisKey if it's missing, but don't auto-populate yAxisKeys
+        const allKeys = Object.keys(processedInitialData[0]);
+        const updatedConfig = {
+          ...chartConfig,
+          xAxisKey: allKeys[0],
+          yAxisKeys: [], // Keep empty for manual selection
+        };
+        console.log('🎯 [Init] Updated config with xAxisKey only:', updatedConfig.xAxisKey);
+        setChartConfig(updatedConfig);
+      }
     }
   }, [
     processedInitialData,
@@ -466,45 +562,8 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
     // Chart type changed
   }, [chartType]);
 
-  // Auto-generate series when needed (fallback only)
-  useEffect(() => {
-    // Only auto-generate if we have data, a config with yAxisKeys, but no series yet
-    // AND we haven't tried to restore series from config yet
-    if (
-      chartData.length > 0 &&
-      chartConfig &&
-      chartConfig.yAxisKeys &&
-      chartConfig.yAxisKeys.length > 0 &&
-      seriesConfigs.length === 0
-    ) {
-      const colorKeys = Object.keys(defaultColorsChart);
-
-      const autoGeneratedSeries = chartConfig.yAxisKeys.map((yKey: string, index: number) => {
-        const colorKey = colorKeys[index % colorKeys.length];
-        const color = defaultColorsChart[colorKey]?.light || '#3B82F6';
-
-        return {
-          id: `series-fallback-${Date.now()}-${index}`,
-          name: yKey,
-          dataColumn: yKey,
-          color: color,
-          visible: true,
-        };
-      });
-
-      setSeriesConfigs(autoGeneratedSeries);
-
-      // Also update colors
-      const newColors = { ...colors };
-      autoGeneratedSeries.forEach(series => {
-        newColors[series.dataColumn] = {
-          light: series.color,
-          dark: series.color,
-        };
-      });
-      setColors(newColors);
-    }
-  }, [chartData, chartConfig, seriesConfigs.length, colors]); // Only trigger when these change
+  // Series configuration is now manual - no auto-generation
+  // Users must explicitly add series through the UI
 
   // Sync external chart type changes
   useEffect(() => {
@@ -555,71 +614,32 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
     }
   }, [seriesConfigs, colors]); // Include colors but it's OK since we check needsSync first
 
-  // Synchronize seriesConfigs with yAxisKeys - add missing, remove extra
+  // Synchronize yAxisKeys with seriesConfigs - manual selection approach
   useEffect(() => {
-    if (chartConfig && chartConfig.yAxisKeys && chartConfig.yAxisKeys.length > 0) {
-      setSeriesConfigs(prev => {
-        const currentYAxisKeys = chartConfig.yAxisKeys;
-        const existingSeries = prev.filter(series => currentYAxisKeys.includes(series.dataColumn));
+    if (chartConfig) {
+      const currentSeriesDataColumns = seriesConfigs.map(series => series.dataColumn);
+      const currentYAxisKeys = chartConfig.yAxisKeys || [];
 
-        // Find missing keys that need new series
-        const missingKeys = currentYAxisKeys.filter(
-          key => !existingSeries.some(series => series.dataColumn === key)
-        );
+      // Check if yAxisKeys needs to be updated to match seriesConfigs
+      const yAxisKeysNeedUpdate =
+        JSON.stringify(currentYAxisKeys.sort()) !== JSON.stringify(currentSeriesDataColumns.sort());
 
-        // Create new series for missing keys
-        const colorKeys = Object.keys(defaultColorsChart);
-        const newSeries = missingKeys.map((yKey: string, index: number) => {
-          const colorIndex = (existingSeries.length + index) % colorKeys.length;
-          const colorKey = colorKeys[colorIndex];
-          const color = defaultColorsChart[colorKey]?.light || '#3B82F6';
+      if (yAxisKeysNeedUpdate) {
+        console.log('🔄 [Sync] Updating yAxisKeys to match seriesConfigs');
+        console.log('🔄 [Sync] Current seriesConfigs data columns:', currentSeriesDataColumns);
+        console.log('🔄 [Sync] Current yAxisKeys:', currentYAxisKeys);
 
-          return {
-            id: `series-${Date.now()}-${index}`,
-            name: yKey,
-            dataColumn: yKey,
-            color: color,
-            visible: true,
-          };
-        });
+        // Update yAxisKeys to match seriesConfigs
+        const updatedConfig = {
+          ...chartConfig,
+          yAxisKeys: currentSeriesDataColumns,
+        };
 
-        // Combine existing and new series, maintaining order of yAxisKeys
-        const syncedSeries = currentYAxisKeys.map(key => {
-          const existing = existingSeries.find(series => series.dataColumn === key);
-          if (existing) {
-            return existing;
-          }
-          return newSeries.find(series => series.dataColumn === key)!;
-        });
-
-        // Only update if there's actually a change
-        if (JSON.stringify(prev.map(s => s.dataColumn)) !== JSON.stringify(currentYAxisKeys)) {
-          // Update colors for new series
-          const newColors = { ...colors };
-          newSeries.forEach(series => {
-            newColors[series.dataColumn] = {
-              light: series.color,
-              dark: series.color,
-            };
-          });
-
-          // Remove colors for removed series
-          prev.forEach(series => {
-            if (!currentYAxisKeys.includes(series.dataColumn)) {
-              delete newColors[series.dataColumn];
-            }
-          });
-
-          setColors(newColors);
-          onColorsChange?.(newColors);
-
-          return syncedSeries;
-        }
-
-        return prev;
-      });
+        console.log('🔄 [Sync] Updated yAxisKeys:', updatedConfig.yAxisKeys);
+        setChartConfig(updatedConfig);
+      }
     }
-  }, [chartConfig?.yAxisKeys, colors, onColorsChange]);
+  }, [seriesConfigs]); // Only depend on seriesConfigs to avoid circular updates
 
   // Helper functions to safely access chart-specific properties
   const getChartSpecificProps = useMemo(() => {
@@ -712,31 +732,9 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
           : {}),
       };
 
-      // Auto-generate series if seriesConfigs is empty but yAxisKeys exist
-      let workingSeriesConfigs = seriesConfigs;
-      if (
-        seriesConfigs.length === 0 &&
-        updatedConfig.yAxisKeys &&
-        updatedConfig.yAxisKeys.length > 0
-      ) {
-        const colorKeys = Object.keys(defaultColorsChart);
-
-        workingSeriesConfigs = updatedConfig.yAxisKeys.map((yKey: string, index: number) => {
-          const colorKey = colorKeys[index % colorKeys.length];
-          const color = defaultColorsChart[colorKey]?.light || '#3B82F6';
-
-          return {
-            id: `series-${Date.now()}-${index}`,
-            name: yKey,
-            dataColumn: yKey,
-            color: color,
-            visible: true,
-          };
-        });
-
-        // Update local seriesConfigs state for future use
-        setSeriesConfigs(workingSeriesConfigs);
-      }
+      // Use existing seriesConfigs without auto-generation
+      // Users must manually add series through the UI
+      const workingSeriesConfigs = seriesConfigs;
 
       // Safely encode seriesConfigs with validation
       const encodedSeriesConfigs = workingSeriesConfigs.map(series => {
@@ -1109,7 +1107,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
             }
           };
 
-          img.onerror = error => {
+          img.onerror = () => {
             showError(`${format.toUpperCase()} export failed. Please try SVG export instead.`);
           };
 
@@ -1356,6 +1354,23 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
       );
     }
 
+    // Check if no series are selected
+    if (!seriesConfigs || seriesConfigs.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+          <div className="text-center">
+            <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-gray-400 mb-2">
+              {t('chart_editor_no_series', 'No data series selected')}
+            </p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">
+              {t('chart_editor_add_series_hint', 'Add a data series to display the chart')}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     // Common props that are safe for all chart types
     const safeCommonProps = {
       data: chartData,
@@ -1521,13 +1536,17 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
         return (
           <D3BarChart
             {...safeCommonProps}
-            yAxisKeys={safeChartConfig.yAxisKeys.filter(
-              key => !(barConfig.disabledBars || []).includes(key)
+            yAxisKeys={safeChartConfig.yAxisKeys}
+            disabledBars={barConfig.disabledBars || []}
+            seriesNames={Object.fromEntries(
+              seriesConfigs.map(series => [series.dataColumn, series.name])
             )}
             barType={barConfig.barType}
             barWidth={barConfig.barWidth}
             barSpacing={barConfig.barSpacing}
             // Bar chart specific props
+            showLegend={safeChartConfig.showLegend} // Add missing showLegend prop
+            showGrid={safeChartConfig.showGrid} // Add missing showGrid prop
             gridOpacity={barConfig.gridOpacity}
             legendPosition={barConfig.legendPosition}
             xAxisRotation={barConfig.xAxisRotation}
@@ -1535,6 +1554,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
             showAxisLabels={barConfig.showAxisLabels}
             showAxisTicks={barConfig.showAxisTicks}
             yAxisStart={barConfig.yAxisStart}
+            xAxisStart={barConfig.xAxisStart} // Add missing xAxisStart prop
             theme={barConfig.theme}
             backgroundColor={barConfig.backgroundColor}
             showTooltip={barConfig.showTooltip}

@@ -64,7 +64,6 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
 
       <div className="flex flex-col sm:flex-row gap-6 relative z-10">
         {tabs.map((tab, index) => {
-          const IconComponent = tab.icon;
           const isActive = activeTab === tab.id;
 
           return (
@@ -109,9 +108,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
                           repeat: isActive ? Infinity : 0,
                           repeatDelay: 3,
                         }}
-                      >
-                        <IconComponent className="w-6 h-6" />
-                      </motion.div>
+                      ></motion.div>
 
                       <span className="font-bold text-lg">{tab.label}</span>
 
@@ -134,9 +131,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
                               className="absolute -top-1 -right-1"
                               animate={{ rotate: [0, 360] }}
                               transition={{ duration: 2, repeat: Infinity }}
-                            >
-                              <Sparkles className="w-3 h-3 text-yellow-300" />
-                            </motion.div>
+                            ></motion.div>
                           )}
                         </div>
                       )}
