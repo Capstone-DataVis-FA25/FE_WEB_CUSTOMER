@@ -113,7 +113,6 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [dimensions, setDimensions] = React.useState({ width, height });
-  const { t } = useTranslation();
 
   // Monitor container size for responsiveness
   useEffect(() => {
