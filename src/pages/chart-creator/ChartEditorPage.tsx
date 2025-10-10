@@ -95,6 +95,7 @@ const ChartEditorPage: React.FC = () => {
 
   // State for dataset upload modal
   const [showDatasetUploadModal, setShowDatasetUploadModal] = useState(false);
+
   // State for dataset selection modal
   const [showDatasetModal, setShowDatasetModal] = useState(false);
 
@@ -126,39 +127,16 @@ const ChartEditorPage: React.FC = () => {
 
   // Effect to convert dataset to chart data when dataset is loaded
   useEffect(() => {
-    console.log('🔥 [Dataset useEffect] Running with dataset:', !!dataset);
-    console.log('🔥 [Dataset useEffect] Dataset headers:', dataset?.headers?.length);
-    console.log('🔥 [Dataset useEffect] Full dataset:', dataset);
-
     if (dataset && dataset.headers && dataset.headers.length > 0) {
-      console.log('📊 [Dataset] Dataset loaded, full structure:', JSON.stringify(dataset, null, 2));
-      console.log('📊 [Dataset] Headers structure:', dataset.headers);
-      console.log(
-        '📊 [Dataset] First header details:',
-        JSON.stringify(dataset.headers[0], null, 2)
-      );
-      console.log('📊 [Dataset] All header keys:', Object.keys(dataset.headers[0] || {}));
-
       try {
         // Check if headers have data property first
         const headersWithData = dataset.headers.filter((h: any) => {
-          console.log(
-            '🔍 [Header Check] Header:',
-            h.name,
-            'has data:',
-            !!h.data,
-            'data length:',
-            h.data?.length
-          );
           return h.data && Array.isArray(h.data) && h.data.length > 0;
         });
-        console.log('📊 [Dataset] Headers with data property:', headersWithData.length);
 
         if (headersWithData.length > 0) {
           // Use existing logic for headers with data
-          console.log('🔧 [Dataset] Processing headers with data...');
           const validHeaders = headersWithData.map((h: any) => {
-            console.log('🔧 [Dataset] Processing header:', h.name, 'with data:', h.data);
             return {
               name: h.name,
               type: h.type,
@@ -167,16 +145,10 @@ const ChartEditorPage: React.FC = () => {
             };
           });
 
-          console.log('🔧 [Dataset] Valid headers for conversion:', validHeaders);
           const convertedData = convertDatasetToChartFormat(validHeaders);
-          console.log('📊 [Dataset] Converted dataset to chart data:', convertedData);
-          console.log('📊 [Dataset] Converted data length:', convertedData?.length);
-          console.log('📊 [Dataset] First few data points:', convertedData?.slice(0, 3));
 
           if (convertedData.length > 0) {
-            console.log('✅ [Dataset] SETTING CHART DATA WITH:', convertedData);
             setChartData(convertedData);
-            console.log('📊 [Dataset] Chart data updated from dataset headers with data');
             return;
           } else {
             console.warn(
@@ -187,11 +159,7 @@ const ChartEditorPage: React.FC = () => {
         }
 
         // FOR DEBUGGING: Try to force use sample data with dataset headers as column names
-        console.log(
-          '🔧 [Dataset] TEMPORARY DEBUG: Using sample data but with dataset column names'
-        );
         const headerNames = dataset.headers.map((h: any) => h.name);
-        console.log('🔧 [Dataset] Header names from dataset:', headerNames);
 
         // Create sample data with actual dataset column names if we have at least 2 columns
         if (headerNames.length >= 2) {
@@ -217,19 +185,14 @@ const ChartEditorPage: React.FC = () => {
 
           if (sampleChartData.length > 0) {
             setChartData(sampleChartData);
-            console.log('🔧 [Dataset] Chart data updated with sample data using dataset headers');
             return;
           }
         }
 
         // If headers don't have data, try to fetch dataset data from API
-        console.log('📊 [Dataset] Headers do not contain data, need to fetch dataset rows');
-        console.log('📊 [Dataset] Dataset ID:', dataset.id);
-        console.log('📊 [Dataset] Available properties:', Object.keys(dataset));
 
         // Check if dataset has rows property or similar
         if ((dataset as any).rows && Array.isArray((dataset as any).rows)) {
-          console.log('📊 [Dataset] Found rows property:', (dataset as any).rows);
           // Convert rows to chart format using headers for column names
           const headerNames = dataset.headers.map((h: any) => h.name);
           const rows = (dataset as any).rows;
@@ -237,26 +200,20 @@ const ChartEditorPage: React.FC = () => {
           const convertedData = convertArrayToChartData(arrayFormat);
           if (convertedData.length > 0) {
             setChartData(convertedData);
-            console.log('📊 [Dataset] Chart data updated from dataset rows');
             return;
           }
         }
 
         // If no data found, keep chartData empty to force dataset selection
-        console.warn('📊 [Dataset] No data found in dataset, chartData remains empty');
         setChartData([]);
       } catch (error) {
-        console.error('Error converting dataset to chart data:', error);
         // Keep chartData empty on error to force dataset fix
-        console.log('Dataset conversion failed, chartData remains empty');
         setChartData([]);
       }
     } else if (datasetId && !dataset) {
       // If we expected a dataset but didn't get one, ensure we have sample data
-      console.log('Expected dataset but none loaded, using sample data');
     } else if (!datasetId) {
       // No datasetId provided, explicitly use sample data
-      console.log('No datasetId provided, using sample data');
     }
   }, [dataset, datasetId]);
 
@@ -463,7 +420,6 @@ const ChartEditorPage: React.FC = () => {
 
       // Load chart configuration after setting originals
       if (currentChart.config) {
-        // Ensure config follows the exact structure: {config: {...}, formatters: {...}, seriesConfigs: [...], chartType: "..."}
         let structuredConfig: StructuredChartConfig;
 
         // Check if it's already in the correct format (has nested config property)
@@ -860,7 +816,7 @@ const ChartEditorPage: React.FC = () => {
     [currentChartType] // Only depend on chart type
   );
 
-  // Handle reset to original values
+  // Reset lại giá trị của chart config
   const handleReset = () => {
     if (hasChanges) {
       setCurrentModalAction('reset');
@@ -961,6 +917,7 @@ const ChartEditorPage: React.FC = () => {
     setCurrentModalAction(null);
     modalConfirm.close();
   };
+
   // Handle chart type change - MUST BE BEFORE ANY RETURNS
   const handleChartTypeChange = useCallback((type: string) => {
     const newType = type as ChartType;
