@@ -5,7 +5,7 @@ import '@/i18n/i18n';
 import { ThemeProvider } from './theme/ThemeProvider';
 
 createRoot(document.getElementById('root')!).render(
-  <ThemeProvider>
+  <ThemeProvider defaultTheme="system">
     <App />
   </ThemeProvider>
 );

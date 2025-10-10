@@ -32,10 +32,14 @@ import Utils from '@/utils/Utils';
 import { useBeforeUnload } from '@/hooks/useBeforeUnload';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal';
 import ToastContainer from '@/components/ui/toast-container';
+import ChartNoteSidebar from '@/components/charts/ChartNoteSidebar';
+import { useChartNotes, updateNoteLocally } from '@/features/chartNotes';
+import { useAppDispatch } from '@/store/hooks';
 import DatasetUploadModal from '@/components/dataset/DatasetUploadModal';
 import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
 
 const ChartEditorPage: React.FC = () => {
+  const dispatch = useAppDispatch();
   const { t } = useTranslation();
   const location = useLocation(); // Để có thể lấy state từ navigate
   const [searchParams] = useSearchParams();
@@ -47,6 +51,22 @@ const ChartEditorPage: React.FC = () => {
   const [currentModalAction, setCurrentModalAction] = useState<'save' | 'reset' | null>(null);
   const { currentChart, loading, creating, getChartById, updateChart, clearCurrent, createChart } =
     useCharts();
+
+  // Chart notes management with Redux
+  const {
+    currentChartNotes,
+    creating: creatingNote,
+    updating: updatingNote,
+    deleting: deletingNote,
+    createNote,
+    updateNote,
+    deleteNote,
+    getChartNotes,
+    clearCurrentNotes,
+  } = useChartNotes();
+
+  // Chart notes sidebar state
+  const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(false);
 
   // Unsaved changes modal state
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
@@ -578,6 +598,7 @@ const ChartEditorPage: React.FC = () => {
 
       return result;
     } catch (error) {
+      console.error('[ChartEditor] convertDatasetToChartFormat error:', error);
       return [];
     }
   };
@@ -762,6 +783,7 @@ const ChartEditorPage: React.FC = () => {
       setShowDatasetModal(false);
       showSuccess(t('dataset_select_success', 'Dataset selected successfully'));
     } catch (error) {
+      console.error('[ChartEditor] getDatasetById error:', error);
       showError(t('dataset_select_error', 'Failed to load selected dataset'));
     }
   };
@@ -918,11 +940,131 @@ const ChartEditorPage: React.FC = () => {
     modalConfirm.close();
   };
 
-  // Handle chart type change - MUST BE BEFORE ANY RETURNS
-  const handleChartTypeChange = useCallback((type: string) => {
+  // Handle notes sidebar
+  const handleToggleNotesSidebar = () => {
+    const newState = !isNotesSidebarOpen;
+    setIsNotesSidebarOpen(newState);
+
+    // Load notes when opening sidebar
+    if (newState && chartId) {
+      console.log('[ChartEditor] Sidebar opened, loading notes for chart:', chartId);
+      getChartNotes(chartId).then(result => {
+        if (result.meta.requestStatus === 'fulfilled') {
+          console.log('[ChartEditor] Notes loaded successfully:', result.payload);
+        } else {
+          console.error('[ChartEditor] Failed to load notes:', result);
+        }
+      });
+    }
+  };
+
+  const handleAddNote = async (content: string) => {
+    if (!chartId) {
+      console.warn('[ChartEditor] Cannot create note: chartId is missing');
+      showError(t('chartEditor.notes.noChartId', 'Please save the chart first'));
+      return;
+    }
+
+    console.log('[ChartEditor] Creating note:', { chartId, content });
+
+    try {
+      const result = await createNote({ chartId, content });
+      console.log('result createNote: ', result);
+
+      if (result.meta.requestStatus === 'fulfilled') {
+        // Refresh notes list after creating
+        await getChartNotes(chartId);
+      } else {
+        console.error('[ChartEditor] Failed to create note:', result);
+        showError(t('chartEditor.notes.createError', 'Failed to add note'));
+      }
+    } catch (error) {
+      console.error('[ChartEditor] Error creating note:', error);
+      showError(t('chartEditor.notes.createError', 'Failed to add note'));
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!chartId) return;
+
+    console.log('[ChartEditor] Deleting note:', { chartId, noteId });
+
+    try {
+      const result = await deleteNote(chartId, noteId);
+
+      if (result.meta.requestStatus === 'fulfilled') {
+        // Refresh notes list after deleting
+        await getChartNotes(chartId);
+      } else {
+        console.error('[ChartEditor] Failed to delete note:', result);
+        showError(t('chartEditor.notes.deleteError', 'Failed to delete note'));
+      }
+    } catch (error) {
+      console.error('[ChartEditor] Error deleting note:', error);
+      showError(t('chartEditor.notes.deleteError', 'Failed to delete note'));
+    }
+  };
+
+  const handleUpdateNote = async (noteId: string, content: string) => {
+    if (!chartId) return;
+
+    console.log('[ChartEditor] Updating note:', { chartId, noteId, content });
+
+    try {
+      // Optimistically update the note in Redux store
+      // This will immediately update the UI without waiting for server response
+      dispatch(updateNoteLocally({ chartId, noteId, content }));
+
+      const result = await updateNote(noteId, { content });
+
+      if (result.meta.requestStatus === 'fulfilled') {
+        console.log('[ChartEditor] Note updated successfully');
+        // The UI already shows the updated content due to optimistic update
+        // No need to refresh notes list
+      } else {
+        console.error('[ChartEditor] Failed to update note:', result);
+        showError(t('chartEditor.notes.updateError', 'Failed to update note'));
+        // If update failed, refresh to get the original note back
+        await getChartNotes(chartId);
+      }
+    } catch (error) {
+      console.error('[ChartEditor] Error updating note:', error);
+      showError(t('chartEditor.notes.updateError', 'Failed to update note'));
+      // If update failed, refresh to get the original note back
+      await getChartNotes(chartId);
+    }
+  };
+
+  // Load chart notes when chart is loaded
+  useEffect(() => {
+    if (chartId && mode === 'edit') {
+      console.log('[ChartEditor] Loading notes for chart:', chartId);
+      getChartNotes(chartId).then(result => {
+        if (result.meta.requestStatus === 'fulfilled') {
+          console.log('[ChartEditor] Notes loaded successfully:', result.payload);
+        } else {
+          console.error('[ChartEditor] Failed to load notes:', result);
+        }
+      });
+    }
+    return () => {
+      clearCurrentNotes();
+    };
+  }, [chartId, mode, getChartNotes, clearCurrentNotes]);
+
+  // Clear current chart when component unmounts to prevent stale data
+  useEffect(() => {
+    return () => {
+      clearCurrent();
+    };
+  }, [clearCurrent]);
+
+  // Handle chart type change
+  // Handle chart type change
+  const handleChartTypeChange = (type: string) => {
     const newType = type as ChartType;
     setCurrentChartType(newType);
-  }, []);
+  };
 
   const chartInfo = useMemo(() => {
     switch (currentChartType) {
@@ -992,13 +1134,6 @@ const ChartEditorPage: React.FC = () => {
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
         <div className="text-center">
           <LoadingSpinner />
-          <p className="mt-4 text-lg text-muted-foreground">
-            {loading
-              ? t('chart_editor_loading', 'Loading chart...')
-              : !currentChart
-                ? t('chart_editor_loading_data', 'Loading chart data...')
-                : t('chart_editor_loading_config', 'Loading chart configuration...')}
-          </p>
         </div>
       </div>
     );
@@ -1387,6 +1522,19 @@ const ChartEditorPage: React.FC = () => {
         onStay={handleStay}
         loading={isSavingBeforeLeave}
       />
+
+      {/* Chart Notes Sidebar - Only show in edit mode when chartId exists */}
+      {mode === 'edit' && chartId && (
+        <ChartNoteSidebar
+          isOpen={isNotesSidebarOpen}
+          onToggle={handleToggleNotesSidebar}
+          notes={currentChartNotes}
+          onAddNote={handleAddNote}
+          isLoading={creatingNote || updatingNote || deletingNote}
+          onDeleteNote={handleDeleteNote}
+          onUpdateNote={handleUpdateNote}
+        />
+      )}
     </div>
   );
 };
