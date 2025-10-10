@@ -2,16 +2,12 @@ import type { StructuredChartConfig } from '@/types/chart';
 import type { ChartType } from '@/features/charts/chartTypes';
 
 // Returns a consistent default StructuredChartConfig for given chart type and optional dataset name
-export const getDefaultChartConfig = (
-  chartType: ChartType,
-  datasetName?: string
-): StructuredChartConfig => {
+export const getDefaultChartConfig = (chartType: ChartType): StructuredChartConfig => {
   const chartTypeName = chartType.charAt(0).toUpperCase() + chartType.slice(1);
-  const datasetNameForTitle = datasetName || 'Chart';
 
   const baseConfig: StructuredChartConfig = {
     config: {
-      title: `${chartTypeName} - ${datasetNameForTitle}`,
+      title: `${chartTypeName}`,
       xLabel: 'X Axis',
       yLabel: 'Y Axis',
       xColumn: 0,

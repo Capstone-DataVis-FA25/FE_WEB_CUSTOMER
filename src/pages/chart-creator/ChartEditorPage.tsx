@@ -129,91 +129,51 @@ const ChartEditorPage: React.FC = () => {
   useEffect(() => {
     if (dataset && dataset.headers && dataset.headers.length > 0) {
       try {
-        // Check if headers have data property first
-        const headersWithData = dataset.headers.filter((h: any) => {
-          return h.data && Array.isArray(h.data) && h.data.length > 0;
-        });
+        // Check if headers contain data
+        const headersWithData = dataset.headers.filter(
+          (h: any) => Array.isArray(h.data) && h.data.length > 0
+        );
 
         if (headersWithData.length > 0) {
-          // Use existing logic for headers with data
-          const validHeaders = headersWithData.map((h: any) => {
-            return {
-              name: h.name,
-              type: h.type,
-              index: h.index,
-              data: h.data as (string | number)[],
-            };
-          });
+          const validHeaders = headersWithData.map((h: any) => ({
+            name: h.name,
+            type: h.type,
+            index: h.index,
+            data: h.data as (string | number)[],
+          }));
 
           const convertedData = convertDatasetToChartFormat(validHeaders);
 
           if (convertedData.length > 0) {
             setChartData(convertedData);
             return;
-          } else {
-            console.warn(
-              '❌ [Dataset] Conversion resulted in empty data - convertedData:',
-              convertedData
-            );
           }
+
+          console.warn(
+            '❌ [Dataset] Conversion resulted in empty data - convertedData:',
+            convertedData
+          );
         }
 
-        // FOR DEBUGGING: Try to force use sample data with dataset headers as column names
-        const headerNames = dataset.headers.map((h: any) => h.name);
-
-        // Create sample data with actual dataset column names if we have at least 2 columns
-        if (headerNames.length >= 2) {
-          // Create simple sample data using first few columns
-          const sampleRows: (string | number)[][] = [];
-          for (let i = 1; i <= 10; i++) {
-            const row: (string | number)[] = [];
-            headerNames.forEach((_, index) => {
-              if (index === 0) {
-                // First column: labels
-                row.push(`Item ${i}`);
-              } else {
-                // Other columns: random numbers
-                row.push(Math.floor(Math.random() * 100) + 10);
-              }
-            });
-            sampleRows.push(row);
-          }
-
-          const sampleArrayFormat = [headerNames, ...sampleRows];
-          const sampleChartData = convertArrayToChartData(sampleArrayFormat);
-          console.log('🔧 [Dataset] Sample data with dataset headers:', sampleChartData);
-
-          if (sampleChartData.length > 0) {
-            setChartData(sampleChartData);
-            return;
-          }
-        }
-
-        // If headers don't have data, try to fetch dataset data from API
-
-        // Check if dataset has rows property or similar
-        if ((dataset as any).rows && Array.isArray((dataset as any).rows)) {
-          // Convert rows to chart format using headers for column names
+        // Fallback: if dataset has row data, convert it
+        if (Array.isArray((dataset as any).rows)) {
           const headerNames = dataset.headers.map((h: any) => h.name);
           const rows = (dataset as any).rows;
           const arrayFormat = [headerNames, ...rows];
           const convertedData = convertArrayToChartData(arrayFormat);
+
           if (convertedData.length > 0) {
             setChartData(convertedData);
             return;
           }
         }
 
-        // If no data found, keep chartData empty to force dataset selection
+        // No valid data
         setChartData([]);
       } catch (error) {
-        // Keep chartData empty on error to force dataset fix
+        console.error('⚠️ [Dataset] Error processing dataset:', error);
         setChartData([]);
       }
-    } else if (datasetId && !dataset) {
-      // If we expected a dataset but didn't get one, ensure we have sample data
-    } else if (!datasetId) {
-      // No datasetId provided, explicitly use sample data
     }
   }, [dataset, datasetId]);
 
@@ -511,7 +471,7 @@ const ChartEditorPage: React.FC = () => {
 
       // Create default chart configuration using helper function
       // Only initialize config once - don't recreate when dataset changes
-      const defaultConfig = getDefaultChartConfig(currentChartType, dataset?.name);
+      const defaultConfig = getDefaultChartConfig(currentChartType);
 
       setChartConfig(defaultConfig);
       setOriginalName('');
@@ -520,7 +480,7 @@ const ChartEditorPage: React.FC = () => {
       setOriginalChartType('line');
       setIsInitialized(true);
     }
-  }, [mode, isInitialized, currentChartType]); // Removed dataset?.name dependency
+  }, [mode, isInitialized, currentChartType]);
 
   // Convert dataset headers to chart data format using the utility function
   const convertDatasetToChartFormat = (
