@@ -26,6 +26,7 @@ import type { Chart, ChartType } from '@/features/charts/chartTypes';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
 import type { StructuredChartConfig } from '@/types/chart';
 import { useToast } from '@/hooks/useToast';
+import type { CreateChartRequest } from '@/features/charts/chartTypes';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import Utils from '@/utils/Utils';
@@ -37,11 +38,12 @@ import { useChartNotes, updateNoteLocally } from '@/features/chartNotes';
 import { useAppDispatch } from '@/store/hooks';
 import DatasetUploadModal from '@/components/dataset/DatasetUploadModal';
 import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
+import { getDefaultChartConfig } from '@/utils/chartDefaults';
 
 const ChartEditorPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
-  const location = useLocation(); // Để có thể lấy state từ navigate
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { getDatasetById, createDataset } = useDataset();
@@ -72,46 +74,24 @@ const ChartEditorPage: React.FC = () => {
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
   const [isSavingBeforeLeave, setIsSavingBeforeLeave] = useState(false);
+
   // Get parameters from URL
   const chartId = searchParams.get('chartId');
-  const mode = searchParams.get('mode') || 'edit';
+  const datasetId = searchParams.get('datasetId') || '';
 
-  // Lấy state từ location (nếu có) để ưu tiên sử dụng
-  const locationState = location.state as {
-    datasetId?: string;
-    datasetName?: string;
-    dataset?: Dataset;
-    type?: ChartType;
-    template?: any;
-    chartData?: any;
-    mode?: string;
-  } | null;
+  // Get chart type from location state (passed from ChooseTemplateTab)
+  const locationState = location.state as { type?: ChartType } | null;
+  const typeFromState = locationState?.type;
 
-  // Try to restore state from sessionStorage if location state is not available
-  // Use useState to ensure this only runs once and doesn't cause re-renders
-  // If locationState is present, we skip sessionStorage to avoid stale data
-  // Nếu có locationState thì bỏ qua sessionStorage để tránh dữ liệu cũ
-  const [savedState] = useState(() => {
-    if (locationState) return null;
-    try {
-      const saved = sessionStorage.getItem('chartEditorState');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  // Determine mode based on URL parameters:
+  // - If chartId exists: edit mode
+  // - Otherwise: create mode
+  const mode = chartId ? 'edit' : 'create';
 
-  // Priority: location state > sessionStorage > URL parameters > defaults
-  const datasetId =
-    locationState?.datasetId || savedState?.datasetId || searchParams.get('datasetId') || '';
-  const passedDataset = locationState?.dataset;
-  // Get chart type with stable default - avoid dynamic dependencies
+  // Get chart type from state with stable default
   const [currentChartType, setCurrentChartType] = useState<ChartType>(() => {
-    return (locationState?.type || savedState?.type || 'line') as ChartType;
+    return typeFromState || 'line';
   });
-
-  // Use Redux state for chart creation (no local state needed)
-  const pendingChartData = locationState?.chartData || savedState?.chartData || null;
 
   // State for dataset upload modal
   const [showDatasetUploadModal, setShowDatasetUploadModal] = useState(false);
@@ -119,17 +99,15 @@ const ChartEditorPage: React.FC = () => {
   // State for dataset selection modal
   const [showDatasetModal, setShowDatasetModal] = useState(false);
 
-  // Load dataset if not passed directly and we have a datasetId
+  // State for dataset loading
+  const [isLoadingDataset, setIsLoadingDataset] = useState(false);
+
+  // Load dataset if we have a datasetId
   useEffect(() => {
     const loadDataset = async () => {
-      // If dataset is passed directly, use it
-      if (passedDataset) {
-        setDataset(passedDataset);
-        return;
-      }
-
       // If we have a datasetId, fetch it
       if (datasetId) {
+        setIsLoadingDataset(true);
         try {
           console.log('Loading dataset with ID:', datasetId);
           const result = await getDatasetById(datasetId).unwrap();
@@ -138,12 +116,14 @@ const ChartEditorPage: React.FC = () => {
           setDataset(result);
         } catch (error) {
           console.error('Failed to load dataset:', error);
+        } finally {
+          setIsLoadingDataset(false);
         }
       }
     };
 
     loadDataset();
-  }, [datasetId, passedDataset, getDatasetById]);
+  }, [datasetId, getDatasetById]);
 
   // Effect to convert dataset to chart data when dataset is loaded
   useEffect(() => {
@@ -522,41 +502,25 @@ const ChartEditorPage: React.FC = () => {
   // Initialize for create mode
   useEffect(() => {
     if (mode === 'create' && !isInitialized) {
-      // Only initialize once when in create mode
-      const chartData = pendingChartData;
+      // Get chart type name for display
+      const chartTypeName = currentChartType.charAt(0).toUpperCase() + currentChartType.slice(1);
 
-      if (chartData) {
-        console.log('Initializing create mode with data:', chartData);
+      // Initialize with default values for create mode
+      setEditableName(`${chartTypeName} Chart`);
+      setEditableDescription(`Chart created from ${chartTypeName.toLowerCase()} template`);
 
-        // Initialize editable fields
-        setEditableName(chartData.name || '');
-        setEditableDescription(chartData.description || '');
+      // Create default chart configuration using helper function
+      // Only initialize config once - don't recreate when dataset changes
+      const defaultConfig = getDefaultChartConfig(currentChartType, dataset?.name);
 
-        // Note: Chart type should already be set from initialization, don't update it here
-
-        // Set chart configuration
-        if (chartData.config) {
-          setChartConfig(chartData.config);
-        }
-
-        // For create mode, original values start empty since this is a new chart
-        setOriginalName('');
-        setOriginalDescription('');
-        setOriginalConfig(null);
-        setOriginalChartType('line'); // Use consistent default
-      } else if (!pendingChartData) {
-        // No pending data, initialize with defaults
-        setEditableName('New Chart');
-        setEditableDescription('Chart created from template');
-        setOriginalName('');
-        setOriginalDescription('');
-        setOriginalConfig(null);
-        setOriginalChartType('line');
-      }
-
+      setChartConfig(defaultConfig);
+      setOriginalName('');
+      setOriginalDescription('');
+      setOriginalConfig(null);
+      setOriginalChartType('line');
       setIsInitialized(true);
     }
-  }, [mode, isInitialized, pendingChartData]); // Removed currentChartType from dependencies to prevent loop
+  }, [mode, isInitialized, currentChartType]); // Removed dataset?.name dependency
 
   // Convert dataset headers to chart data format using the utility function
   const convertDatasetToChartFormat = (
@@ -642,28 +606,42 @@ const ChartEditorPage: React.FC = () => {
     if (mode === 'create') {
       // Create new chart (Redux will handle loading state)
       try {
-        if (!pendingChartData) {
-          showError('Missing chart data');
+        // Validate required fields
+        if (!editableName.trim()) {
+          showError('Chart name is required');
+          return;
+        }
+        if (!editableDescription.trim()) {
+          showError('Chart description is required');
+          return;
+        }
+        if (!chartConfig) {
+          showError('Chart configuration is required');
           return;
         }
 
-        const createData = {
-          name: editableName.trim() || pendingChartData.name,
-          description: editableDescription.trim() || pendingChartData.description,
-          datasetId: datasetId || null, // Allow null datasetId
-          type: currentChartType || pendingChartData.type,
-          config: chartConfig || pendingChartData.config,
+        const createData: CreateChartRequest = {
+          name: editableName.trim(),
+          description: editableDescription.trim(),
+          datasetId: datasetId || '', // Use empty string instead of null for optional field
+          type: currentChartType,
+          // Cast StructuredChartConfig to the API expected shape. We ensure default includes required fields (e.g., margin)
+          config: chartConfig as unknown as CreateChartRequest['config'],
         };
 
         const result = await createChart(createData).unwrap();
 
-        // Clear session storage
-        sessionStorage.removeItem('chartEditorState');
-
         showSuccess(t('chart_create_success', 'Chart created successfully'));
 
-        // Chuyển sang chart edit mode với chartId mới tạo
-        navigate(`${location.pathname}?chartId=${result.id}&datasetId=${datasetId}&mode=edit`, {
+        // Navigate to edit mode with the new chartId
+        // Keep only chartId and datasetId in URL (type is stored in database)
+        const urlParams = new URLSearchParams();
+        urlParams.set('chartId', result.id);
+        if (datasetId) {
+          urlParams.set('datasetId', datasetId);
+        }
+
+        navigate(`${location.pathname}?${urlParams.toString()}`, {
           replace: true,
         });
       } catch (error: unknown) {
@@ -1098,7 +1076,7 @@ const ChartEditorPage: React.FC = () => {
         };
     }
   }, [currentChartType, t]);
-
+  console.log('chartConfig 123: ', chartConfig);
   // Clear current chart when component unmounts to prevent stale data
   useEffect(() => {
     return () => {
@@ -1107,22 +1085,25 @@ const ChartEditorPage: React.FC = () => {
   }, [clearCurrent]);
 
   // Show loading state for edit mode when waiting for chart data
-  // Only show loading if we're actually loading a different chart or don't have the chart yet
+  // OR when waiting for dataset to load in create mode
   const shouldShowLoading =
-    mode === 'edit' &&
-    chartId &&
-    (loading ||
-      creating || // Also check creating state
-      !currentChart ||
-      currentChart.id !== chartId ||
-      !isInitialized);
+    (mode === 'edit' &&
+      chartId &&
+      (loading ||
+        creating || // Also check creating state
+        !currentChart ||
+        currentChart.id !== chartId ||
+        !isInitialized)) ||
+    (mode === 'create' && datasetId && isLoadingDataset); // Wait for dataset in create mode
 
   // Debug logging
   console.log('🔍 Loading check:', {
     mode,
     chartId,
+    datasetId,
     loading,
     creating,
+    isLoadingDataset,
     hasCurrentChart: !!currentChart,
     currentChartId: currentChart?.id,
     isInitialized,
@@ -1134,6 +1115,11 @@ const ChartEditorPage: React.FC = () => {
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
         <div className="text-center">
           <LoadingSpinner />
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            {mode === 'create' && isLoadingDataset
+              ? t('loading_dataset', 'Loading dataset...')
+              : t('loading_chart', 'Loading chart...')}
+          </p>
         </div>
       </div>
     );
@@ -1428,7 +1414,7 @@ const ChartEditorPage: React.FC = () => {
           className="h-full"
         >
           <UnifiedChartEditor
-            key={`chart-editor-${resetTrigger}-${dataset?.id || 'no-dataset'}-${chartConfig?.seriesConfigs?.length || 'no-series'}`}
+            key={`chart-editor-${resetTrigger}-${dataset?.id || 'no-dataset'}`}
             initialArrayData={(() => {
               // Use converted chartData only - no fallback to sample
 
@@ -1448,7 +1434,7 @@ const ChartEditorPage: React.FC = () => {
             initialStructuredConfig={(() => {
               return chartConfig || undefined;
             })()}
-            onConfigChange={mode === 'edit' ? handleConfigChange : noOpCallback}
+            onConfigChange={handleConfigChange}
             onChartTypeChange={handleChartTypeChange}
             dataset={dataset}
             allowChartTypeChange={mode === 'edit'}

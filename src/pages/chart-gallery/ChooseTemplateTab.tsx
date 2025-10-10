@@ -89,160 +89,7 @@ export default function ChooseTemplateTab() {
   const [selectedPurposes, setSelectedPurposes] = useState<string[]>(['All']);
   const [showFeatured, setShowFeatured] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [showDatasetModal, setShowDatasetModal] = useState(false); // Function to get default chart configuration based on template
-
-  // Lấy cấu hình biểu đồ mặc định dựa trên mẫu đã chọn
-  const getDefaultChartConfig = (template: ChartTemplate) => {
-    const baseConfig = {
-      config: {
-        title: `${template.name} - ${datasetName || 'Chart'}`,
-        width: 800,
-        height: 400,
-        margin: {
-          top: 20,
-          left: 80,
-          right: 40,
-          bottom: 60,
-        },
-
-        // Axis configuration
-        xAxisKey: '',
-        yAxisKeys: [],
-        yAxisLabels: [],
-        disabledLines: [],
-        xAxisLabel: 'xAxisLabel',
-        yAxisLabel: 'yAxisLabel',
-
-        // Animation settings
-        animationDuration: 1000,
-
-        // Display settings
-        showLegend: true,
-        showGrid: true,
-        showPoints: true,
-        showPointValues: true,
-        showValues: false,
-        showTooltip: true,
-        enableZoom: false,
-        enablePan: false,
-        showAxisLabels: true,
-        showAxisTicks: true,
-
-        // Chart-type specific settings
-        lineType: 'basic' as const,
-        curveType: 'curveMonotoneX' as const,
-        curve: 'curveMonotoneX',
-        strokeWidth: 2,
-        lineWidth: 2,
-        pointRadius: 4,
-
-        // Axis formatting
-        xAxisRotation: 0,
-        yAxisRotation: 0,
-        xAxisFormatterType: 'auto' as const,
-        yAxisFormatterType: 'number' as const,
-
-        // Colors & Theme
-        theme: 'dark',
-        backgroundColor: '#18181b',
-        gridColor: '#e0e0e0',
-        gridOpacity: 0.3,
-        textColor: '#f3f4f6',
-        colorPalette: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#f97316'],
-
-        // Text & Font settings
-        titleFontSize: 18,
-        titleFontFamily: 'Arial, sans-serif',
-        axisLabelFontSize: 12,
-        labelFontSize: 12,
-        axisLabelFontFamily: 'Arial, sans-serif',
-        legendFontSize: 12,
-        legendFontFamily: 'Arial, sans-serif',
-
-        // Legend positioning
-        legendPosition: 'bottom' as const,
-        legendAlignment: 'center' as const,
-        legendSize: 150,
-
-        // Border & Visual effects
-        borderWidth: 0,
-        borderColor: '#23232a',
-        shadowEffect: false,
-
-        // Axis range & scale settings
-        xAxisMin: null,
-        xAxisMax: null,
-        yAxisMin: null,
-        yAxisMax: null,
-        xAxisStart: 'auto',
-        yAxisStart: 'auto',
-        xAxisTickInterval: undefined,
-        yAxisTickInterval: undefined,
-        xAxisScale: 'linear' as const,
-        yAxisScale: 'linear' as const,
-
-        // Padding & Spacing
-        titlePadding: 20,
-        legendPadding: 15,
-        axisPadding: 10,
-
-        // Zoom & pan
-        zoomLevel: 1,
-        zoomExtent: 8,
-      },
-      formatters: {
-        useYFormatter: true,
-        useXFormatter: true,
-        yFormatterType: 'number',
-        xFormatterType: 'number',
-        customYFormatter: '',
-        customXFormatter: '',
-      },
-      seriesConfigs: [],
-    };
-
-    // Type-specific configurations - merge into config object
-    switch (template.type) {
-      case 'line':
-        return {
-          ...baseConfig,
-          config: {
-            ...baseConfig.config,
-            lineType: 'basic' as const,
-            showPoints: true,
-            showPointValues: true,
-            curveType: 'curveMonotoneX' as const,
-            strokeWidth: 2,
-          },
-        };
-      case 'bar':
-        return {
-          ...baseConfig,
-          config: {
-            ...baseConfig.config,
-            barType: 'grouped' as const,
-            barWidth: 0.8,
-            barGap: 0.2,
-            showValues: true,
-          },
-        };
-      case 'area':
-        return {
-          ...baseConfig,
-          config: {
-            ...baseConfig.config,
-            areaType: 'basic' as const,
-            showPoints: false,
-            showPointValues: false,
-            curveType: 'curveMonotoneX' as const,
-            fillOpacity: 0.6,
-            strokeWidth: 2,
-          },
-        };
-      default:
-        return baseConfig;
-    }
-  };
+  const [showDatasetModal, setShowDatasetModal] = useState(false);
 
   // Handle dataset selection from modal
   const handleSelectDataset = async (selectedDatasetId: string) => {
@@ -254,7 +101,7 @@ export default function ChooseTemplateTab() {
         setCurrentDatasetId('');
         setCurrentDatasetName('');
         if (selectedTemplate) {
-          continueWithTemplate(selectedTemplate, '', '');
+          continueWithTemplate(selectedTemplate, '');
         }
         setShowDatasetModal(false);
         setIsLoadingDataset(false);
@@ -270,7 +117,7 @@ export default function ChooseTemplateTab() {
 
       // If we have a template selected, continue with it
       if (selectedTemplate) {
-        continueWithTemplate(selectedTemplate, selectedDatasetId, dataset.name);
+        continueWithTemplate(selectedTemplate, selectedDatasetId);
       }
 
       setShowDatasetModal(false);
@@ -284,15 +131,8 @@ export default function ChooseTemplateTab() {
   };
 
   // Navigation function for continuing with selected template
-  const continueWithTemplate = (
-    template: ChartTemplate,
-    datasetIdParam?: string,
-    datasetNameParam?: string
-  ) => {
+  const continueWithTemplate = (template: ChartTemplate, datasetIdParam?: string) => {
     try {
-      // Get default configuration for this template
-      const defaultConfig = getDefaultChartConfig(template);
-
       // Only allow chart types supported by CreateChartRequest
       if (!['line', 'bar', 'area'].includes(template.type)) {
         showError(
@@ -304,34 +144,19 @@ export default function ChooseTemplateTab() {
 
       // Use passed parameters or existing datasetId
       const finalDatasetId = datasetIdParam !== undefined ? datasetIdParam : datasetId;
-      const finalDatasetName = datasetNameParam !== undefined ? datasetNameParam : datasetName;
 
-      // Prepare chart data for navigation state - will be created later in ChartEditor
-      const chartData = {
-        name: `${template.name} Chart`,
-        description: `Chart created from ${template.name} template`,
-        config: defaultConfig,
-        type: template.type,
-      };
+      // Build URL parameters - only include datasetId if it exists
+      const params = new URLSearchParams();
+      if (finalDatasetId) {
+        params.set('datasetId', finalDatasetId); // Only pass datasetId if not empty
+      }
 
-      // Save state to sessionStorage for persistence on refresh
-      const navigationState = {
-        datasetId: finalDatasetId || '', // Allow empty datasetId
-        datasetName: finalDatasetName || '',
-        type: template.type,
-        template: template,
-        chartData: chartData,
-        mode: 'create', // Indicate this is a new chart creation
-      };
-
-      sessionStorage.setItem('chartEditorState', JSON.stringify(navigationState));
-
-      // Navigate to chart editor without creating chart yet
-      const queryParams = finalDatasetId
-        ? `?mode=create&datasetId=${finalDatasetId}`
-        : '?mode=create';
-      navigate(`${Routers.CHART_EDITOR}${queryParams}`, {
-        state: navigationState,
+      // Navigate to chart editor with datasetId in URL and type in state
+      // ChartEditorPage will fetch dataset and setup default config, name, description
+      navigate(`${Routers.CHART_EDITOR}${finalDatasetId ? `?${params.toString()}` : ''}`, {
+        state: {
+          type: template.type, // Pass chart type via state
+        },
       });
     } catch (error: unknown) {
       console.error('ChooseTemplateTab - Failed to navigate:', error);

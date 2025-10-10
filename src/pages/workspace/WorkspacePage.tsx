@@ -371,15 +371,7 @@ const WorkspacePage: React.FC = () => {
   const handleEditChart = (chartId: string) => {
     const chart = charts.find((c: Chart) => c.id === chartId);
     if (chart) {
-      navigate(
-        `${Routers.CHART_EDITOR}?chartId=${chartId}&datasetId=${chart.datasetId}&mode=edit`,
-        {
-          state: {
-            chartId: chartId,
-            datasetId: chart.datasetId || null,
-          },
-        }
-      );
+      navigate(`${Routers.CHART_EDITOR}?chartId=${chartId}`);
     }
   };
 

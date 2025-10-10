@@ -131,20 +131,18 @@ const RouteRenderer: React.FC<{ route: RouteConfig }> = ({ route }) => {
 
 const AppRouter: React.FC = () => {
   return (
-    <ErrorBoundaryClass>
-      <BrowserRouter>
-        <Routes>
-          {/* Render all routes dynamically */}
-          {allRoutes.map(route => (
-            <Route key={route.name} path={route.path} element={<RouteRenderer route={route} />} />
-          ))}
+    <BrowserRouter>
+      <Routes>
+        {/* Render all routes dynamically */}
+        {allRoutes.map(route => (
+          <Route key={route.name} path={route.path} element={<RouteRenderer route={route} />} />
+        ))}
 
-          {/* Catch all route */}
-          <Route path="*" element={<Navigate to="/404" replace />} />
-        </Routes>
-        <DebugContainer />
-      </BrowserRouter>
-    </ErrorBoundaryClass>
+        {/* Catch all route */}
+        <Route path="*" element={<Navigate to="/404" replace />} />
+      </Routes>
+      <DebugContainer />
+    </BrowserRouter>
   );
 };
 
