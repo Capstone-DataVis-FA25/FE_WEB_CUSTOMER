@@ -1,5 +1,5 @@
 import { axiosPrivate } from './axios';
-import { AxiosResponse } from 'axios';
+import type { AxiosResponse } from 'axios';
 
 // Types/Interfaces
 export interface ChartNoteAuthor {

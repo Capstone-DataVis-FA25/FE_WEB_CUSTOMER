@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Grid3X3, BarChart3, Sparkles } from 'lucide-react';
+import { Grid3X3, BarChart3 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 

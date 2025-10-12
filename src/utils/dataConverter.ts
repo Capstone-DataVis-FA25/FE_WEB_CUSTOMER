@@ -428,7 +428,7 @@ export const validateBackendData = (
   // Check for consistent data lengths
   if (headers.length > 0 && headers[0].data) {
     const expectedLength = headers[0].data.length;
-    headers.forEach((header, index) => {
+    headers.forEach(header => {
       if (header.data && header.data.length !== expectedLength) {
         result.warnings.push(
           `Header "${header.name}" has ${header.data.length} data points, expected ${expectedLength}`
