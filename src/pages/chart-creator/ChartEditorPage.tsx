@@ -1024,9 +1024,7 @@ const ChartEditorPage: React.FC = () => {
     const newType = type as ChartType;
     setCurrentChartType(newType);
   };
-
   // ==================== RENDER HELPERS ====================
-  console.log('chartConfig 123: ', chartConfig);
 
   // Show loading state for edit mode when waiting for chart data
   // OR when waiting for dataset to load in create mode
