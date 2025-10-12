@@ -228,7 +228,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
     }
 
     if (initialArrayData && initialArrayData.length > 0) {
-      // Use the conversion function from D3LineChart
       const convertArrayToChartData = (arrayData: (string | number)[][]): ChartDataPoint[] => {
         if (!arrayData || arrayData.length === 0) return [];
 
@@ -278,7 +277,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
       return convertArrayToChartData(initialArrayData);
     }
 
-    console.log('🔧 [UnifiedChartEditor] No data source available');
     return [];
   }, [initialArrayData, processedDatasetData]);
 
@@ -293,13 +291,12 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
         height: responsiveDefaults.height,
         margin: { top: 20, right: 40, bottom: 60, left: 80 },
         xAxisKey: (() => {
-          // Decode config.xAxisKey if provided, otherwise use first data column
+          // Giải mã cột x theo xAxisKey
           if (config?.xAxisKey) {
             return decodeKeysToNames(config.xAxisKey) as string;
           }
           if (processedInitialData.length > 0) {
             const firstKey = Object.keys(processedInitialData[0])[0];
-            console.log('🔧 [createDefaultConfig] Using xAxisKey:', firstKey);
             return firstKey; // Use exact key name, don't lowercase
           }
           return 'x';
@@ -309,10 +306,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
           if (config?.yAxisKeys) {
             return decodeKeysToNames(config.yAxisKeys) as string[];
           }
-          // Don't auto-populate yAxisKeys - let users manually select series
-          console.log(
-            '🔧 [createDefaultConfig] Starting with empty yAxisKeys - users will manually select series'
-          );
           return [];
         })(),
         title:
@@ -370,12 +363,12 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
             barWidth: config?.barWidth ?? 0.9, // Use 90% of available width for thicker bars
             barSpacing: config?.barSpacing ?? 2, // Reduce spacing for closer bars
             // Enhanced margins for better legend and label placement
-            margin: config?.margin ?? {
-              top: 40,
-              right: 60,
-              bottom: 100, // Extra space for legend and labels
-              left: 100,
-            },
+            // margin: config?.margin ?? {
+            //   top: 40,
+            //   right: 60,
+            //   bottom: 100, // Extra space for legend and labels
+            //   left: 100,
+            // },
             ...config,
           } as BarChartConfig;
         }
@@ -625,17 +618,12 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
         JSON.stringify(currentYAxisKeys.sort()) !== JSON.stringify(currentSeriesDataColumns.sort());
 
       if (yAxisKeysNeedUpdate) {
-        console.log('🔄 [Sync] Updating yAxisKeys to match seriesConfigs');
-        console.log('🔄 [Sync] Current seriesConfigs data columns:', currentSeriesDataColumns);
-        console.log('🔄 [Sync] Current yAxisKeys:', currentYAxisKeys);
-
         // Update yAxisKeys to match seriesConfigs
         const updatedConfig = {
           ...chartConfig,
           yAxisKeys: currentSeriesDataColumns,
         };
 
-        console.log('🔄 [Sync] Updated yAxisKeys:', updatedConfig.yAxisKeys);
         setChartConfig(updatedConfig);
       }
     }
@@ -674,10 +662,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
           curve: config.curve || 'curveMonotoneX',
           showPoints: config.showPoints || false,
           lineWidth: config.lineWidth || 2,
-          pointRadius: config.pointRadius || 3,
           barType: 'grouped' as const,
-          opacity: config.opacity || 0.7,
-          stackedMode: config.stackedMode || true,
         };
       }
       default:
@@ -952,12 +937,12 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
 
           showSuccess(t('chart_editor_configImported', 'Configuration imported'));
         } catch (parseError) {
-          showError(t('chart_editor_invalidConfigFile', 'Invalid configuration file'));
+          showError(`Error importing configuration: ${(parseError as Error).message}`);
         }
       };
       input.click();
     } catch (error) {
-      showError(t('chart_editor_invalidConfigFile', 'Import failed'));
+      showError(`Error importing configuration: ${(error as Error).message}`);
     }
   };
 
@@ -1507,7 +1492,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
             curve={curveOptions[lineConfig.curve as keyof typeof curveOptions]}
             lineWidth={lineConfig.lineWidth}
             pointRadius={lineConfig.pointRadius}
-            // Chart-specific props that are supported by D3LineChart
             xAxisStart={lineConfig.xAxisStart}
             yAxisStart={lineConfig.yAxisStart}
             gridOpacity={lineConfig.gridOpacity}
@@ -1538,13 +1522,9 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
             {...safeCommonProps}
             yAxisKeys={safeChartConfig.yAxisKeys}
             disabledBars={barConfig.disabledBars || []}
-            seriesNames={Object.fromEntries(
-              seriesConfigs.map(series => [series.dataColumn, series.name])
-            )}
             barType={barConfig.barType}
             barWidth={barConfig.barWidth}
             barSpacing={barConfig.barSpacing}
-            // Bar chart specific props
             showLegend={safeChartConfig.showLegend} // Add missing showLegend prop
             showGrid={safeChartConfig.showGrid} // Add missing showGrid prop
             gridOpacity={barConfig.gridOpacity}
@@ -1564,6 +1544,8 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
             enableZoom={barConfig.enableZoom}
             enablePan={barConfig.enablePan}
             zoomExtent={barConfig.zoomExtent}
+            yFormatterType={formatters.useYFormatter ? formatters.yFormatterType : undefined}
+            xFormatterType={formatters.useXFormatter ? formatters.xFormatterType : undefined}
           />
         );
       }
@@ -1593,9 +1575,6 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
           showPoints: areaConfig.showPoints,
           showStroke: areaConfig.showStroke,
           curve: curveOptions[areaConfig.curve as keyof typeof curveOptions],
-          opacity: areaConfig.opacity,
-          stackedMode: areaConfig.stackedMode,
-          // Add zoom functionality to area chart
           enableZoom: areaConfig.enableZoom,
           enablePan: areaConfig.enablePan,
           zoomExtent: areaConfig.zoomExtent,

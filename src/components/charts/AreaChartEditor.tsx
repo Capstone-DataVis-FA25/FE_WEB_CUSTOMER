@@ -103,13 +103,9 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
     showStroke: true,
     animationDuration: 1000,
     curve: 'curveMonotoneX',
-    opacity: 0.7,
-    stackedMode: true,
-    // sensible defaults for the added fields
     xAxisStart: 'auto',
     yAxisStart: 'auto',
     lineWidth: 2,
-    pointRadius: 3,
     gridOpacity: 0.3,
     legendPosition: 'bottom',
     xAxisRotation: 0,
@@ -923,7 +919,6 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
                 curveOptions={curveOptions}
                 showPoints={config.showPoints}
                 lineWidth={config.lineWidth}
-                pointRadius={config.pointRadius}
                 isCollapsed={collapsedSections.chartSettings}
                 onToggleCollapse={() => toggleSection('chartSettings')}
                 onUpdateConfig={updateConfig}
@@ -1225,8 +1220,6 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
                     showStroke={config.showStroke}
                     animationDuration={config.animationDuration}
                     curve={curveOptions[config.curve]}
-                    opacity={config.opacity}
-                    stackedMode={config.stackedMode}
                     yAxisFormatter={getYAxisFormatter}
                     xAxisFormatter={getXAxisFormatter}
                     fontSize={getResponsiveFontSize(config)}

@@ -297,6 +297,7 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
   availableColumns,
   getAvailableColumnsForSeries,
 }) => {
+  // I18N setup
   const { t } = useTranslation();
 
   return (
@@ -349,7 +350,6 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
 
               {/* Action Buttons with Modern Design */}
               <div className="flex items-center gap-1 bg-background/50 rounded-lg p-1 backdrop-blur-sm">
-                {/* Visibility Toggle with Enhanced States */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -389,7 +389,7 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
                   <ArrowDown className="w-4 h-4" />
                 </Button>
 
-                {/* Remove Button with Warning Style */}
+                {/* Remove Button with Confirmation */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -407,7 +407,8 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
               {/* Series Name Field - Read Only, synced with Data Column */}
               <div className="space-y-2">
                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {t('chart_editor_series_name')}
+                  {/* {t('chart_editor_series_name')} */}
+                  Chart Editor Series Name
                 </Label>
                 <div className="flex flex-col gap-1">
                   <Input
@@ -426,7 +427,8 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
               {/* Data Column Field */}
               <div className="space-y-2">
                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {t('chart_editor_data_column')}
+                  {/* {t('chart_editor_data_column')} */}
+                  Chart Editor Data Column
                 </Label>
                 <select
                   value={seriesItem.dataColumn}
@@ -486,7 +488,8 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
               <div className="p-1 rounded-full bg-primary/20 group-hover:bg-primary/30 transition-colors duration-200">
                 <Plus className="w-4 h-4 text-primary" />
               </div>
-              <span className="text-primary">{t('chart_editor_add_series')}</span>
+              {/* <span className="text-primary">{t('chart_editor_add_series')}</span> */}
+              <span className="text-primary">Chart Editor Series</span>
             </div>
           </Button>
         </motion.div>

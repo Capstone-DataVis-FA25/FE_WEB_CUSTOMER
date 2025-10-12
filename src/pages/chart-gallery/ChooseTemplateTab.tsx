@@ -155,7 +155,7 @@ export default function ChooseTemplateTab() {
       // ChartEditorPage will fetch dataset and setup default config, name, description
       navigate(`${Routers.CHART_EDITOR}${finalDatasetId ? `?${params.toString()}` : ''}`, {
         state: {
-          type: template.type, // Pass chart type via state
+          type: template.type,
         },
       });
     } catch (error: unknown) {

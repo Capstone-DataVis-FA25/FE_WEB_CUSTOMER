@@ -41,6 +41,7 @@ import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectio
 import { getDefaultChartConfig } from '@/utils/chartDefaults';
 
 const ChartEditorPage: React.FC = () => {
+  // ==================== HOOKS ====================
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
   const location = useLocation();
@@ -49,12 +50,8 @@ const ChartEditorPage: React.FC = () => {
   const { getDatasetById, createDataset } = useDataset();
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
-  const [dataset, setDataset] = useState<Dataset | undefined>(undefined);
-  const [currentModalAction, setCurrentModalAction] = useState<'save' | 'reset' | null>(null);
   const { currentChart, loading, creating, getChartById, updateChart, clearCurrent, createChart } =
     useCharts();
-
-  // Chart notes management with Redux
   const {
     currentChartNotes,
     creating: creatingNote,
@@ -67,55 +64,290 @@ const ChartEditorPage: React.FC = () => {
     clearCurrentNotes,
   } = useChartNotes();
 
-  // Chart notes sidebar state
-  const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(false);
+  // ==================== URL PARAMS & MODE ====================
+  const chartId = searchParams.get('chartId');
+  const datasetId = searchParams.get('datasetId') || '';
+  const locationState = location.state as { type?: ChartType } | null;
+  const typeFromState = locationState?.type;
+  const mode = chartId ? 'edit' : 'create';
 
-  // Unsaved changes modal state
+  // ==================== STATE: DATASET ====================
+  const [dataset, setDataset] = useState<Dataset | undefined>(undefined);
+  const [isLoadingDataset, setIsLoadingDataset] = useState(false);
+
+  // ==================== STATE: CHART DATA & CONFIG ====================
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [chartConfig, setChartConfig] = useState<StructuredChartConfig | null>(null);
+  const [currentChartType, setCurrentChartType] = useState<ChartType>(() => {
+    return typeFromState || 'line';
+  });
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [resetTrigger, setResetTrigger] = useState(0);
+
+  // ==================== STATE: EDIT MODE ====================
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editableName, setEditableName] = useState('');
+  const [editableDescription, setEditableDescription] = useState('');
+
+  // ==================== STATE: ORIGINAL VALUES (for change tracking) ====================
+  const [originalName, setOriginalName] = useState('');
+  const [originalDescription, setOriginalDescription] = useState('');
+  const [originalConfig, setOriginalConfig] = useState<StructuredChartConfig | null>(null);
+  const [originalChartType, setOriginalChartType] = useState<ChartType>('line');
+
+  // ==================== STATE: VALIDATION ====================
+  const [validationErrors, setValidationErrors] = useState({
+    name: false,
+    description: false,
+    title: false,
+    xAxisLabel: false,
+    yAxisLabel: false,
+    seriesNames: {} as Record<string, boolean>,
+  });
+  const [isFormValid, setIsFormValid] = useState(false);
+
+  // ==================== STATE: MODALS ====================
+  const [currentModalAction, setCurrentModalAction] = useState<'save' | 'reset' | null>(null);
+  const [showDatasetUploadModal, setShowDatasetUploadModal] = useState(false);
+  const [showDatasetModal, setShowDatasetModal] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
   const [isSavingBeforeLeave, setIsSavingBeforeLeave] = useState(false);
 
-  // Get parameters from URL
-  const chartId = searchParams.get('chartId');
-  const datasetId = searchParams.get('datasetId') || '';
+  // ==================== STATE: CHART NOTES ====================
+  const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(false);
 
-  // Get chart type from location state (passed from ChooseTemplateTab)
-  const locationState = location.state as { type?: ChartType } | null;
-  const typeFromState = locationState?.type;
+  // ==================== MEMOIZED VALUES ====================
+  // Check if there are any changes
+  const hasChanges = useMemo(() => {
+    // Only check for changes if we're in edit mode and have initialized the original values
+    if (mode !== 'edit' || !isInitialized) {
+      return false;
+    }
 
-  // Determine mode based on URL parameters:
-  // - If chartId exists: edit mode
-  // - Otherwise: create mode
-  const mode = chartId ? 'edit' : 'create';
+    const nameChanged = editableName !== originalName;
+    const descriptionChanged = editableDescription !== originalDescription;
+    const chartTypeChanged = currentChartType !== originalChartType;
 
-  // Get chart type from state with stable default
-  const [currentChartType, setCurrentChartType] = useState<ChartType>(() => {
-    return typeFromState || 'line';
+    // Handle config comparison more carefully
+    const configChanged = (() => {
+      // If both are null or undefined, no change
+      if (!chartConfig && !originalConfig) return false;
+      // If one is null and other isn't, there's a change
+      if (!chartConfig || !originalConfig) return true;
+      // Compare JSON strings
+      return JSON.stringify(chartConfig) !== JSON.stringify(originalConfig);
+    })();
+
+    return nameChanged || descriptionChanged || chartTypeChanged || configChanged;
+  }, [
+    editableName,
+    originalName,
+    editableDescription,
+    originalDescription,
+    currentChartType,
+    originalChartType,
+    chartConfig,
+    originalConfig,
+    mode,
+    isInitialized,
+  ]);
+
+  const chartInfo = useMemo(() => {
+    switch (currentChartType) {
+      case 'line':
+        return {
+          name: t('chart_type_line', 'Line Chart'),
+          icon: '📈',
+          color: 'bg-blue-500',
+          description: t('chart_type_line_desc', 'Perfect for showing trends over time'),
+        };
+      case 'bar':
+        return {
+          name: t('chart_type_bar', 'Bar Chart'),
+          icon: '📊',
+          color: 'bg-green-500',
+          description: t('chart_type_bar_desc', 'Great for comparing values across categories'),
+        };
+      case 'area':
+        return {
+          name: t('chart_type_area', 'Area Chart'),
+          icon: '📉',
+          color: 'bg-purple-500',
+          description: t('chart_type_area_desc', 'Ideal for showing data volume over time'),
+        };
+      default:
+        return {
+          name: t('chart_type_default', 'Chart'),
+          icon: '📊',
+          color: 'bg-gray-500',
+          description: t('chart_type_default_desc', 'Interactive chart visualization'),
+        };
+    }
+  }, [currentChartType, t]);
+
+  // ==================== UTILITY FUNCTIONS ====================
+  // Convert dataset headers to chart data format
+  const convertDatasetToChartFormat = (
+    headers: Array<{ name: string; type: string; index: number; data: (string | number)[] }>
+  ) => {
+    try {
+      if (!headers || headers.length === 0) {
+        return [];
+      }
+
+      // Validate that headers have the required structure
+      const validHeaders = headers.filter(
+        h => h && typeof h === 'object' && h.name && Array.isArray(h.data) && h.data.length > 0
+      );
+
+      if (validHeaders.length === 0) {
+        return [];
+      }
+
+      // Create array format and use convertArrayToChartData instead
+      const headerNames = validHeaders.map(h => h.name);
+      const rowCount = Math.max(...validHeaders.map(h => h.data.length));
+
+      const rows: (string | number)[][] = [];
+
+      for (let i = 0; i < rowCount; i++) {
+        const row = validHeaders.map(h => h.data[i] ?? 0);
+        rows.push(row);
+      }
+
+      const arrayFormat = [headerNames, ...rows];
+
+      const result = convertArrayToChartData(arrayFormat as (string | number)[][], {
+        headerTransform: (header: string) => header, // Keep original header names
+        skipEmptyRows: true,
+        defaultValue: 0,
+        validateTypes: true,
+      });
+
+      return result;
+    } catch (error) {
+      console.error('[ChartEditor] convertDatasetToChartFormat error:', error);
+      return [];
+    }
+  };
+
+  // Create stable callback for no-op
+  const noOpCallback = useCallback(() => {}, []);
+
+  // ==================== VALIDATION FUNCTIONS ====================
+  // Validation function - only used for explicit validation, not in render
+  const validateForm = useCallback(() => {
+    const errors = {
+      name: !editableName.trim(),
+      description: !editableDescription.trim(),
+      title:
+        !chartConfig?.config?.title ||
+        typeof chartConfig.config.title !== 'string' ||
+        !chartConfig.config.title.trim(),
+      xAxisLabel:
+        !chartConfig?.config?.xAxisLabel ||
+        typeof chartConfig.config.xAxisLabel !== 'string' ||
+        !chartConfig.config.xAxisLabel.trim(),
+      yAxisLabel:
+        !chartConfig?.config?.yAxisLabel ||
+        typeof chartConfig.config.yAxisLabel !== 'string' ||
+        !chartConfig.config.yAxisLabel.trim(),
+      seriesNames: {} as Record<string, boolean>, // Keep for compatibility but not used
+    };
+
+    // Note: Series names validation removed since names are auto-synced with data columns
+    // No need to validate series names anymore as they are automatically generated
+
+    setValidationErrors(errors);
+
+    const isValid =
+      !errors.name &&
+      !errors.description &&
+      !errors.title &&
+      !errors.xAxisLabel &&
+      !errors.yAxisLabel;
+
+    setIsFormValid(isValid);
+    return isValid;
+  }, [
+    editableName,
+    editableDescription,
+    chartConfig?.config?.title,
+    chartConfig?.config?.xAxisLabel,
+    chartConfig?.config?.yAxisLabel,
+  ]);
+
+  // ==================== EFFECTS: VALIDATION ====================
+  // Real-time validation - runs whenever relevant fields change
+  useEffect(() => {
+    if (isInitialized) {
+      // Call validation function directly without including it in dependencies
+      const errors = {
+        name: !editableName.trim(),
+        description: !editableDescription.trim(),
+        title:
+          !chartConfig?.config?.title ||
+          typeof chartConfig.config.title !== 'string' ||
+          !chartConfig.config.title.trim(),
+        xAxisLabel:
+          !chartConfig?.config?.xAxisLabel ||
+          typeof chartConfig.config.xAxisLabel !== 'string' ||
+          !chartConfig.config.xAxisLabel.trim(),
+        yAxisLabel:
+          !chartConfig?.config?.yAxisLabel ||
+          typeof chartConfig.config.yAxisLabel !== 'string' ||
+          !chartConfig.config.yAxisLabel.trim(),
+        seriesNames: {} as Record<string, boolean>,
+      };
+
+      setValidationErrors(errors);
+
+      // Update form validity state
+      const isValid =
+        !errors.name &&
+        !errors.description &&
+        !errors.title &&
+        !errors.xAxisLabel &&
+        !errors.yAxisLabel;
+
+      setIsFormValid(isValid);
+    }
+  }, [
+    isInitialized,
+    editableName,
+    editableDescription,
+    chartConfig?.config?.title,
+    chartConfig?.config?.xAxisLabel,
+    chartConfig?.config?.yAxisLabel,
+  ]);
+
+  // ==================== EFFECTS: INITIALIZATION ====================
+  // Reset initialization when chartId or mode changes
+  useEffect(() => {
+    setIsInitialized(false);
+  }, [chartId, mode]);
+
+  // Thông báo rằng là chart chưa lưu -> người dùng lưu hoặc cancel
+  useBeforeUnload({
+    hasUnsavedChanges: hasChanges && mode === 'edit',
+    message: t(
+      'chart_unsaved_changes_warning',
+      'You have unsaved changes to your chart. Are you sure you want to leave?'
+    ),
   });
 
-  // State for dataset upload modal
-  const [showDatasetUploadModal, setShowDatasetUploadModal] = useState(false);
-
-  // State for dataset selection modal
-  const [showDatasetModal, setShowDatasetModal] = useState(false);
-
-  // State for dataset loading
-  const [isLoadingDataset, setIsLoadingDataset] = useState(false);
-
+  // ==================== EFFECTS: LOAD DATASET ====================
   // Load dataset if we have a datasetId
   useEffect(() => {
     const loadDataset = async () => {
-      // If we have a datasetId, fetch it
       if (datasetId) {
         setIsLoadingDataset(true);
         try {
-          console.log('Loading dataset with ID:', datasetId);
           const result = await getDatasetById(datasetId).unwrap();
-          console.log('Dataset loaded successfully:', result);
-          console.log('💾 [Dataset API] Raw API response:', JSON.stringify(result, null, 2));
           setDataset(result);
         } catch (error) {
-          console.error('Failed to load dataset:', error);
         } finally {
           setIsLoadingDataset(false);
         }
@@ -177,174 +409,7 @@ const ChartEditorPage: React.FC = () => {
     }
   }, [dataset, datasetId]);
 
-  // Default sample data removed - forcing use of dataset only
-  // const defaultSampleData: (string | number)[][] = [...];
-
-  // Local state for managing chart data and config
-  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
-  const [chartConfig, setChartConfig] = useState<StructuredChartConfig | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [resetTrigger, setResetTrigger] = useState(0);
-
-  // Edit mode states
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
-  const [editableName, setEditableName] = useState('');
-  const [editableDescription, setEditableDescription] = useState('');
-
-  // Original values for change tracking
-  const [originalName, setOriginalName] = useState('');
-  const [originalDescription, setOriginalDescription] = useState('');
-  const [originalConfig, setOriginalConfig] = useState<StructuredChartConfig | null>(null);
-  const [originalChartType, setOriginalChartType] = useState<ChartType>('line'); // Use static default
-
-  // Validation states
-  const [validationErrors, setValidationErrors] = useState({
-    name: false,
-    description: false,
-    title: false,
-    xAxisLabel: false,
-    yAxisLabel: false,
-    seriesNames: {} as Record<string, boolean>,
-  });
-
-  // State to track if form is valid (to avoid calling validateForm in render)
-  const [isFormValid, setIsFormValid] = useState(false);
-
-  // Check if there are any changes
-  const hasChanges = useMemo(() => {
-    // Only check for changes if we're in edit mode and have initialized the original values
-    if (mode !== 'edit' || !isInitialized) {
-      return false;
-    }
-
-    const nameChanged = editableName !== originalName;
-    const descriptionChanged = editableDescription !== originalDescription;
-    const chartTypeChanged = currentChartType !== originalChartType;
-
-    // Handle config comparison more carefully
-    const configChanged = (() => {
-      // If both are null or undefined, no change
-      if (!chartConfig && !originalConfig) return false;
-      // If one is null and other isn't, there's a change
-      if (!chartConfig || !originalConfig) return true;
-      // Compare JSON strings
-      return JSON.stringify(chartConfig) !== JSON.stringify(originalConfig);
-    })();
-
-    return nameChanged || descriptionChanged || chartTypeChanged || configChanged;
-  }, [
-    editableName,
-    originalName,
-    editableDescription,
-    originalDescription,
-    currentChartType,
-    originalChartType,
-    chartConfig,
-    originalConfig,
-    mode,
-    isInitialized,
-  ]);
-
-  // Validation function - only used for explicit validation, not in render
-  const validateForm = useCallback(() => {
-    const errors = {
-      name: !editableName.trim(),
-      description: !editableDescription.trim(),
-      title:
-        !chartConfig?.config?.title ||
-        typeof chartConfig.config.title !== 'string' ||
-        !chartConfig.config.title.trim(),
-      xAxisLabel:
-        !chartConfig?.config?.xAxisLabel ||
-        typeof chartConfig.config.xAxisLabel !== 'string' ||
-        !chartConfig.config.xAxisLabel.trim(),
-      yAxisLabel:
-        !chartConfig?.config?.yAxisLabel ||
-        typeof chartConfig.config.yAxisLabel !== 'string' ||
-        !chartConfig.config.yAxisLabel.trim(),
-      seriesNames: {} as Record<string, boolean>, // Keep for compatibility but not used
-    };
-
-    // Note: Series names validation removed since names are auto-synced with data columns
-    // No need to validate series names anymore as they are automatically generated
-
-    setValidationErrors(errors);
-
-    const isValid =
-      !errors.name &&
-      !errors.description &&
-      !errors.title &&
-      !errors.xAxisLabel &&
-      !errors.yAxisLabel;
-
-    setIsFormValid(isValid);
-    return isValid;
-  }, [
-    editableName,
-    editableDescription,
-    chartConfig?.config?.title,
-    chartConfig?.config?.xAxisLabel,
-    chartConfig?.config?.yAxisLabel,
-  ]);
-
-  // Real-time validation - runs whenever relevant fields change
-  useEffect(() => {
-    if (isInitialized) {
-      // Call validation function directly without including it in dependencies
-      const errors = {
-        name: !editableName.trim(),
-        description: !editableDescription.trim(),
-        title:
-          !chartConfig?.config?.title ||
-          typeof chartConfig.config.title !== 'string' ||
-          !chartConfig.config.title.trim(),
-        xAxisLabel:
-          !chartConfig?.config?.xAxisLabel ||
-          typeof chartConfig.config.xAxisLabel !== 'string' ||
-          !chartConfig.config.xAxisLabel.trim(),
-        yAxisLabel:
-          !chartConfig?.config?.yAxisLabel ||
-          typeof chartConfig.config.yAxisLabel !== 'string' ||
-          !chartConfig.config.yAxisLabel.trim(),
-        seriesNames: {} as Record<string, boolean>,
-      };
-
-      setValidationErrors(errors);
-
-      // Update form validity state
-      const isValid =
-        !errors.name &&
-        !errors.description &&
-        !errors.title &&
-        !errors.xAxisLabel &&
-        !errors.yAxisLabel;
-
-      setIsFormValid(isValid);
-    }
-  }, [
-    isInitialized,
-    editableName,
-    editableDescription,
-    chartConfig?.config?.title,
-    chartConfig?.config?.xAxisLabel,
-    chartConfig?.config?.yAxisLabel,
-  ]);
-
-  // Thông báo rằng là chart chưa lưu -> người dùng lưu hoặc cancel
-  useBeforeUnload({
-    hasUnsavedChanges: hasChanges && mode === 'edit',
-    message: t(
-      'chart_unsaved_changes_warning',
-      'You have unsaved changes to your chart. Are you sure you want to leave?'
-    ),
-  });
-
-  // Reset initialization when chartId or mode changes
-  useEffect(() => {
-    setIsInitialized(false);
-  }, [chartId, mode]);
-
+  // ==================== EFFECTS: LOAD CHART ====================
   // Lấy data của chart khi mà có chart_id (mode edit)
   useEffect(() => {
     if (chartId && mode === 'edit' && !isInitialized) {
@@ -482,51 +547,7 @@ const ChartEditorPage: React.FC = () => {
     }
   }, [mode, isInitialized, currentChartType]);
 
-  // Convert dataset headers to chart data format using the utility function
-  const convertDatasetToChartFormat = (
-    headers: Array<{ name: string; type: string; index: number; data: (string | number)[] }>
-  ) => {
-    try {
-      if (!headers || headers.length === 0) {
-        return [];
-      }
-
-      // Validate that headers have the required structure
-      const validHeaders = headers.filter(
-        h => h && typeof h === 'object' && h.name && Array.isArray(h.data) && h.data.length > 0
-      );
-
-      if (validHeaders.length === 0) {
-        return [];
-      }
-
-      // Create array format and use convertArrayToChartData instead
-      const headerNames = validHeaders.map(h => h.name);
-      const rowCount = Math.max(...validHeaders.map(h => h.data.length));
-
-      const rows: (string | number)[][] = [];
-
-      for (let i = 0; i < rowCount; i++) {
-        const row = validHeaders.map(h => h.data[i] ?? 0);
-        rows.push(row);
-      }
-
-      const arrayFormat = [headerNames, ...rows];
-
-      const result = convertArrayToChartData(arrayFormat as (string | number)[][], {
-        headerTransform: (header: string) => header, // Keep original header names
-        skipEmptyRows: true,
-        defaultValue: 0,
-        validateTypes: true,
-      });
-
-      return result;
-    } catch (error) {
-      console.error('[ChartEditor] convertDatasetToChartFormat error:', error);
-      return [];
-    }
-  };
-
+  // ==================== HANDLERS: NAME & DESCRIPTION ====================
   // Handle name edit - validate before exiting edit mode
   const handleNameSave = () => {
     // Validate name is not empty
@@ -545,7 +566,6 @@ const ChartEditorPage: React.FC = () => {
   const handleDescriptionSave = () => {
     // Validate description is not empty
     if (!editableDescription.trim()) {
-      // Don't exit editing mode if description is empty
       setValidationErrors(prev => ({ ...prev, description: true }));
       return;
     }
@@ -555,6 +575,7 @@ const ChartEditorPage: React.FC = () => {
     setIsEditingDescription(false);
   };
 
+  // ==================== HANDLERS: SAVE & RESET ====================
   // Handle save/create chart
   const handleSave = async () => {
     // Validate form before saving
@@ -585,13 +606,12 @@ const ChartEditorPage: React.FC = () => {
           description: editableDescription.trim(),
           datasetId: datasetId || '', // Use empty string instead of null for optional field
           type: currentChartType,
-          // Cast StructuredChartConfig to the API expected shape. We ensure default includes required fields (e.g., margin)
           config: chartConfig as unknown as CreateChartRequest['config'],
         };
 
         const result = await createChart(createData).unwrap();
 
-        showSuccess(t('chart_create_success', 'Chart created successfully'));
+        showSuccess('Chart created successfully');
 
         // Navigate to edit mode with the new chartId
         // Keep only chartId and datasetId in URL (type is stored in database)
@@ -606,10 +626,9 @@ const ChartEditorPage: React.FC = () => {
         });
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        showError(t('chart_create_error', 'Failed to create chart'), errorMessage);
+        showError('Failed to create chart ' + errorMessage);
       }
     } else if (mode === 'edit' && chartId && currentChart) {
-      // Edit với chart đã tồn tại (hiện đại)
       setCurrentModalAction('save');
       modalConfirm.openConfirm(async () => {
         try {
@@ -622,23 +641,53 @@ const ChartEditorPage: React.FC = () => {
 
           const response = await updateChart(chartId, updateData);
           if (response.meta.requestStatus === 'fulfilled') {
-            // Update original values after successful save
             setOriginalName(editableName.trim() || currentChart.name || '');
             setOriginalDescription(editableDescription.trim() || currentChart.description || '');
             setOriginalConfig(chartConfig);
             setOriginalChartType(currentChartType);
-            showSuccess(t('chart_update_success', 'Chart updated successfully'));
+            showSuccess('Chart updated successfully');
           } else {
-            showError(t('chart_update_error', 'Failed to update chart'));
+            showError('Failed to update chart');
           }
         } catch (error) {
-          showError(t('chart_update_error', 'Failed to update chart'));
+          showError('Failed to update chart');
           throw error; // Re-throw to let modal handle loading state
         }
       });
     }
   };
 
+  // Reset lại giá trị của chart config
+  const handleReset = () => {
+    if (hasChanges) {
+      setCurrentModalAction('reset');
+      modalConfirm.openConfirm(async () => {
+        try {
+          // Reset all values to original (name, description, config, chart type)
+          setEditableName(originalName);
+          setEditableDescription(originalDescription);
+          setCurrentChartType(originalChartType);
+          if (originalConfig) {
+            setChartConfig(originalConfig);
+          }
+
+          // Trigger re-render of UnifiedChartEditor to force config reload
+          setResetTrigger(prev => prev + 1);
+
+          // Also exit edit modes if currently editing
+          setIsEditingName(false);
+          setIsEditingDescription(false);
+
+          showSuccess('Chart reset to original values');
+        } catch (error) {
+          console.error('Error resetting chart:', error);
+          showError('Failed to reset chart');
+        }
+      });
+    }
+  };
+
+  // ==================== HANDLERS: DATASET ====================
   // Handle dataset upload from modal
   const handleDatasetCreated = (dataset: any) => {
     // Set the new dataset
@@ -726,9 +775,7 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
-  // Create stable callback for no-op
-  const noOpCallback = useCallback(() => {}, []);
-
+  // ==================== HANDLERS: CHART CONFIG ====================
   // Handle config changes from chart editors
   const handleConfigChange = useCallback(
     (newConfig: unknown) => {
@@ -776,36 +823,7 @@ const ChartEditorPage: React.FC = () => {
     [currentChartType] // Only depend on chart type
   );
 
-  // Reset lại giá trị của chart config
-  const handleReset = () => {
-    if (hasChanges) {
-      setCurrentModalAction('reset');
-      modalConfirm.openConfirm(async () => {
-        try {
-          // Reset all values to original (name, description, config, chart type)
-          setEditableName(originalName);
-          setEditableDescription(originalDescription);
-          setCurrentChartType(originalChartType);
-          if (originalConfig) {
-            setChartConfig(originalConfig);
-          }
-
-          // Trigger re-render of UnifiedChartEditor to force config reload
-          setResetTrigger(prev => prev + 1);
-
-          // Also exit edit modes if currently editing
-          setIsEditingName(false);
-          setIsEditingDescription(false);
-
-          showSuccess(t('chart_reset', 'Chart reset to original values'));
-        } catch (error) {
-          console.error('Error resetting chart:', error);
-          showError(t('chart_reset_error', 'Failed to reset chart'));
-        }
-      });
-    }
-  };
-
+  // ==================== HANDLERS: NAVIGATION ====================
   // Handle back navigation with cleanup
   const handleBack = () => {
     // Check if there are unsaved changes in edit mode
@@ -878,6 +896,7 @@ const ChartEditorPage: React.FC = () => {
     modalConfirm.close();
   };
 
+  // ==================== HANDLERS: CHART NOTES ====================
   // Handle notes sidebar
   const handleToggleNotesSidebar = () => {
     const newState = !isNotesSidebarOpen;
@@ -973,6 +992,7 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
+  // ==================== EFFECTS: CHART NOTES ====================
   // Load chart notes when chart is loaded
   useEffect(() => {
     if (chartId && mode === 'edit') {
@@ -990,6 +1010,7 @@ const ChartEditorPage: React.FC = () => {
     };
   }, [chartId, mode, getChartNotes, clearCurrentNotes]);
 
+  // ==================== EFFECTS: CLEANUP ====================
   // Clear current chart when component unmounts to prevent stale data
   useEffect(() => {
     return () => {
@@ -997,52 +1018,15 @@ const ChartEditorPage: React.FC = () => {
     };
   }, [clearCurrent]);
 
-  // Handle chart type change
+  // ==================== HANDLERS: CHART TYPE ====================
   // Handle chart type change
   const handleChartTypeChange = (type: string) => {
     const newType = type as ChartType;
     setCurrentChartType(newType);
   };
 
-  const chartInfo = useMemo(() => {
-    switch (currentChartType) {
-      case 'line':
-        return {
-          name: t('chart_type_line', 'Line Chart'),
-          icon: '📈',
-          color: 'bg-blue-500',
-          description: t('chart_type_line_desc', 'Perfect for showing trends over time'),
-        };
-      case 'bar':
-        return {
-          name: t('chart_type_bar', 'Bar Chart'),
-          icon: '📊',
-          color: 'bg-green-500',
-          description: t('chart_type_bar_desc', 'Great for comparing values across categories'),
-        };
-      case 'area':
-        return {
-          name: t('chart_type_area', 'Area Chart'),
-          icon: '📉',
-          color: 'bg-purple-500',
-          description: t('chart_type_area_desc', 'Ideal for showing data volume over time'),
-        };
-      default:
-        return {
-          name: t('chart_type_default', 'Chart'),
-          icon: '📊',
-          color: 'bg-gray-500',
-          description: t('chart_type_default_desc', 'Interactive chart visualization'),
-        };
-    }
-  }, [currentChartType, t]);
+  // ==================== RENDER HELPERS ====================
   console.log('chartConfig 123: ', chartConfig);
-  // Clear current chart when component unmounts to prevent stale data
-  useEffect(() => {
-    return () => {
-      clearCurrent();
-    };
-  }, [clearCurrent]);
 
   // Show loading state for edit mode when waiting for chart data
   // OR when waiting for dataset to load in create mode

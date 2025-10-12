@@ -145,21 +145,23 @@ export interface AreaChartConfig extends BaseChartConfig {
   showStroke: boolean;
   curve: keyof typeof curveOptions;
   lineWidth: number;
-  pointRadius: number;
-  opacity: number;
-  stackedMode: boolean;
+  // pointRadius: number;
+  // opacity: number;
+  // stackedMode: boolean;
 }
 
 // Bar chart specific configuration
 export interface BarChartConfig extends BaseChartConfig {
   disabledBars: string[];
+  showPoints: boolean;
+  showPointValues: boolean; // Show values on bars
   barType: 'grouped' | 'stacked';
   barWidth: number;
   barSpacing: number;
 }
 
 // For backward compatibility, keep ChartConfig as LineChartConfig
-export type ChartConfig = LineChartConfig;
+export type ChartConfig = LineChartConfig | BarChartConfig | AreaChartConfig;
 
 // Formatter configuration
 export interface FormatterConfig {
