@@ -156,12 +156,11 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
                           </DropdownMenuTrigger>
                           <DropdownMenuContent>
                             {COLUMN_TYPES.map(t => {
-                              const active = t.value === col.type;
                               return (
                                 <DropdownMenuItem
                                   key={t.value}
                                   // make it non-interactive but styleable
-                                  onSelect={e => e.preventDefault()}
+                                  onSelect={(e: Event) => e.preventDefault()}
                                   className={`gap-2 cursor-default text-gray-700 dark:text-gray-200 pointer-events-none`}
                                 >
                                   {t.icon} {t.label}

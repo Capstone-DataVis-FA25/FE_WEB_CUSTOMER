@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Monitor, 
-  Shield, 
-  Database,
-  Download,
-  Trash2,
-  Save,
-  Info,
-  AlertTriangle
-} from 'lucide-react';
+import { Monitor, Shield, Database, Download, Trash2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
@@ -48,7 +39,7 @@ const GeneralSettingsPage: React.FC = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [canDelete, setCanDelete] = useState(false);
+  // const [canDelete, setCanDelete] = useState(false);
   const [deleteEmail, setDeleteEmail] = useState('');
   const [deleteError, setDeleteError] = useState('');
 
@@ -84,14 +75,14 @@ const GeneralSettingsPage: React.FC = () => {
     try {
       // Simulate data export
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       // Create a dummy file for download simulation
       const data = {
         profile: 'User profile data...',
         settings: settings,
         exportDate: new Date().toISOString(),
       };
-      
+
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -116,7 +107,8 @@ const GeneralSettingsPage: React.FC = () => {
 
   const handleDeleteAccount = () => {
     modalConfirm.openConfirm(() => {});
-    setTimeout(() => setCanDelete(true), 10000);
+    // Delay enabling delete for safety (not used currently)
+    // setTimeout(() => setCanDelete(true), 10000);
   };
 
   const handleConfirmDelete = async () => {
@@ -166,9 +158,7 @@ const GeneralSettingsPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             {t('general_settings_title')}
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            {t('general_settings_description')}
-          </p>
+          <p className="text-gray-600 dark:text-gray-300">{t('general_settings_description')}</p>
         </div>
 
         <div className="space-y-6">
@@ -179,14 +169,14 @@ const GeneralSettingsPage: React.FC = () => {
                 <Monitor className="w-5 h-5 mr-2 text-blue-600" />
                 {t('general_appearance_title')}
               </CardTitle>
-              <CardDescription>
-                {t('general_appearance_description')}
-              </CardDescription>
+              <CardDescription>{t('general_appearance_description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{t('general_display_mode')}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {t('general_display_mode')}
+                  </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     {t('general_display_mode_description')}
                   </p>
@@ -196,7 +186,9 @@ const GeneralSettingsPage: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{t('general_language')}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {t('general_language')}
+                  </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     {t('general_language_description')}
                   </p>
@@ -213,14 +205,14 @@ const GeneralSettingsPage: React.FC = () => {
                 <Shield className="w-5 h-5 mr-2 text-purple-600" />
                 {t('general_privacy_data_title')}
               </CardTitle>
-              <CardDescription>
-                {t('general_privacy_data_description')}
-              </CardDescription>
+              <CardDescription>{t('general_privacy_data_description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{t('general_auto_save')}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {t('general_auto_save')}
+                  </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     {t('general_auto_save_description')}
                   </p>
@@ -233,7 +225,9 @@ const GeneralSettingsPage: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{t('general_data_collection')}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {t('general_data_collection')}
+                  </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     {t('general_data_collection_description')}
                   </p>
@@ -246,7 +240,9 @@ const GeneralSettingsPage: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{t('general_crash_reports')}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {t('general_crash_reports')}
+                  </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     {t('general_crash_reports_description')}
                   </p>
@@ -259,7 +255,9 @@ const GeneralSettingsPage: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{t('general_analytics')}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {t('general_analytics')}
+                  </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     {t('general_analytics_description')}
                   </p>
@@ -279,9 +277,7 @@ const GeneralSettingsPage: React.FC = () => {
                 <Database className="w-5 h-5 mr-2 text-orange-600" />
                 {t('general_data_management_title')}
               </CardTitle>
-              <CardDescription>
-                {t('general_data_management_description')}
-              </CardDescription>
+              <CardDescription>{t('general_data_management_description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -314,11 +310,7 @@ const GeneralSettingsPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <Button 
-                  onClick={handleDeleteAccount} 
-                  variant="destructive" 
-                  size="sm"
-                >
+                <Button onClick={handleDeleteAccount} variant="destructive" size="sm">
                   <Trash2 className="w-4 h-4 mr-2" />
                   {t('general_delete_account')}
                 </Button>
@@ -328,12 +320,7 @@ const GeneralSettingsPage: React.FC = () => {
 
           {/* Save Button */}
           <div className="flex justify-end pt-6">
-            <Button
-              onClick={handleSave}
-              disabled={isLoading}
-              size="lg"
-              className="px-8"
-            >
+            <Button onClick={handleSave} disabled={isLoading} size="lg" className="px-8">
               {isLoading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
@@ -365,7 +352,10 @@ const GeneralSettingsPage: React.FC = () => {
         inputType="email"
         inputPlaceholder={t('common_email_placeholder')}
         inputError={deleteError}
-        onInputChange={e => { setDeleteEmail(e.target.value); setDeleteError(''); }}
+        onInputChange={e => {
+          setDeleteEmail(e.target.value);
+          setDeleteError('');
+        }}
         userEmail={user?.email}
       />
     </div>

@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, AlertCircle } from 'lucide-react';
-import { useToastContext } from '@/components/providers/ToastProvider';
 import { MathSpinner } from '@/components/ui/MathSpinner';
 
 interface FileUploadProps {
@@ -13,15 +12,8 @@ interface FileUploadProps {
   isProcessing: boolean;
 }
 
-function FileUpload({
-  onFileSelect,
-  onFileRemove: _onFileRemove,
-  selectedFile: _selectedFile,
-  isValidFileType,
-  isProcessing,
-}: FileUploadProps) {
+function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
   const { t } = useTranslation();
-  const { showError } = useToastContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 

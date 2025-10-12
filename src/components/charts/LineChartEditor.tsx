@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import * as d3 from 'd3';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,6 +88,19 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
 }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
+
+  // Map curve option keys to actual d3 curve factories
+  const curveFactoryMap: Record<keyof typeof curveOptions, d3.CurveFactory> = {
+    curveLinear: d3.curveLinear,
+    curveMonotoneX: d3.curveMonotoneX,
+    curveMonotoneY: d3.curveMonotoneY,
+    curveBasis: d3.curveBasis,
+    curveCardinal: d3.curveCardinal,
+    curveCatmullRom: d3.curveCatmullRom,
+    curveStep: d3.curveStep,
+    curveStepBefore: d3.curveStepBefore,
+    curveStepAfter: d3.curveStepAfter,
+  };
 
   // Helper function to decode ids to names using dataset.headers
   const decodeKeysToNames = useMemo(() => {
@@ -1643,7 +1657,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     showPoints={config.showPoints}
                     showPointValues={config.showPointValues}
                     animationDuration={config.animationDuration}
-                    curve={curveOptions[config.curve]}
+                    curve={curveFactoryMap[config.curve]}
                     yAxisFormatter={getYAxisFormatter}
                     xAxisFormatter={getXAxisFormatter}
                     fontSize={getResponsiveFontSize(config)}

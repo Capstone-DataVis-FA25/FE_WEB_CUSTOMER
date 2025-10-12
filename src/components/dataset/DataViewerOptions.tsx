@@ -4,11 +4,11 @@ import { Input } from '@/components/ui/input';
 import { useDataset, type DateFormat, type NumberFormat } from '@/contexts/DatasetContext';
 import { useAppSelector } from '@/store/hooks';
 import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
-import { parseTabularContent, transformWideToLong } from '@/utils/dataProcessors';
-import { RefreshCw, Settings, Upload } from 'lucide-react';
-import { useCallback, useEffect } from 'react';
+// import { transformWideToLong } from '@/utils/dataProcessors';
+import { Settings, Upload } from 'lucide-react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useToastContext } from '../providers/ToastProvider';
+// import { useToastContext } from '../providers/ToastProvider';
 import { DateFormatSelector } from './DateFormatSelector';
 import { NumberFormatSelector } from './NumberFormatSelector';
 import './scrollbar.css';
@@ -20,7 +20,7 @@ interface DataViewerOptionsProps {
 
 function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
   const { t } = useTranslation();
-  const { showError, showSuccess } = useToastContext();
+  // const { showError } = useToastContext();
   const { creating: isUploading } = useAppSelector(state => state.dataset);
 
   // Get states from context
@@ -31,19 +31,19 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
     setValidationError,
     description,
     setDescription,
-    selectedDelimiter,
-    setSelectedDelimiter,
+    // selectedDelimiter,
+    // setSelectedDelimiter,
     numberFormat,
     setNumberFormat,
     dateFormat,
     setDateFormat,
-    originalParsedData,
-    setOriginalParsedData,
-    setCurrentParsedData,
-    isJsonFormat,
-    transformationColumn,
-    setTransformationColumn,
-    originalTextContent,
+    // originalParsedData,
+    // setOriginalParsedData,
+    // setCurrentParsedData,
+    // isJsonFormat,
+    // transformationColumn,
+    // setTransformationColumn,
+    // originalTextContent,
     hasValidationErrors,
   } = useDataset();
 
@@ -54,35 +54,35 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
   }, [datasetName, setValidationError]);
 
   // Handle delimiter change - reparse the original content with new delimiter
-  const handleDelimiterChange = useCallback(
-    (delimiter: string) => {
-      // No-op if user reselects the same delimiter
-      if (delimiter === selectedDelimiter) return;
-      if (!originalTextContent) return;
+  // const handleDelimiterChange = useCallback(
+  //   (delimiter: string) => {
+  //     // No-op if user reselects the same delimiter
+  //     if (delimiter === selectedDelimiter) return;
+  //     if (!originalTextContent) return;
 
-      setSelectedDelimiter(delimiter);
-      // Reset transformation when delimiter changes
-      setTransformationColumn(null);
-      try {
-        const result = parseTabularContent(originalTextContent, { delimiter });
-        // Update Layer 2: Original parsed data
-        setOriginalParsedData(result);
-        // Update Layer 3: Current working data (starts as copy of original)
-        setCurrentParsedData({ ...result });
-      } catch (error) {
-        showError('Parse Error', 'Failed to parse with the selected delimiter');
-      }
-    },
-    [
-      originalTextContent,
-      showError,
-      setOriginalParsedData,
-      setCurrentParsedData,
-      setSelectedDelimiter,
-      setTransformationColumn,
-      selectedDelimiter,
-    ]
-  );
+  //     setSelectedDelimiter(delimiter);
+  //     // Reset transformation when delimiter changes
+  //     setTransformationColumn(null);
+  //     try {
+  //       const result = parseTabularContent(originalTextContent, { delimiter });
+  //       // Update Layer 2: Original parsed data
+  //       setOriginalParsedData(result);
+  //       // Update Layer 3: Current working data (starts as copy of original)
+  //       setCurrentParsedData({ ...result });
+  //     } catch (error) {
+  //       showError('Parse Error', 'Failed to parse with the selected delimiter');
+  //     }
+  //   },
+  //   [
+  //     originalTextContent,
+  //     showError,
+  //     setOriginalParsedData,
+  //     setCurrentParsedData,
+  //     setSelectedDelimiter,
+  //     setTransformationColumn,
+  //     selectedDelimiter,
+  //   ]
+  // );
 
   const handleNumberFormatChange = (format: NumberFormat) => {
     // Replace old state with the new format
@@ -95,51 +95,7 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
     setDateFormat(format);
   };
 
-  const handleTransformationColumnChange = (column: string) => {
-    // No-op if user reselects the same column
-    if (column === (transformationColumn ?? '')) return;
-    // Validate: need at least 2 columns to perform stack transformation
-    if (!originalParsedData || (originalParsedData.headers?.length || 0) <= 1) {
-      showError('Invalid Operation', 'Stack transformation requires at least 2 columns');
-      return;
-    }
-    setTransformationColumn(column);
-
-    if (!originalParsedData) return;
-
-    try {
-      // If no column selected, reset to original parsed data
-      if (!column) {
-        setCurrentParsedData({ ...originalParsedData });
-        return;
-      }
-
-      // Transform using currentParsedData (user's working data)
-      // Convert to 2D array format for transformation function
-      const headers = originalParsedData.headers.map(h => h.name);
-      const data2D = [headers, ...originalParsedData.data];
-
-      const transformed = transformWideToLong(data2D, column);
-
-      // Update current working data with transformation result
-      // Note: transformed data has different structure, so we need to parse it back
-      if (transformed.length > 0) {
-        const transformedHeaders = transformed[0].map((name, index) => ({
-          name,
-          type: 'text' as const,
-          index,
-        }));
-        const transformedData = transformed.slice(1);
-
-        setCurrentParsedData({
-          headers: transformedHeaders,
-          data: transformedData,
-        });
-      }
-    } catch (error) {
-      showError('Parse Error', 'Failed to process data transformation');
-    }
-  };
+  // Note: transformation UI is currently disabled; remove unused handler to satisfy type checks.
 
   return (
     <div className="w-full flex-shrink-0">
@@ -259,14 +215,15 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
               )}
             </Button>
 
-            <Button
-              onClick={onChangeData}
-              variant="outline"
-              className="w-full flex items-center justify-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              {t('dataset_changeData')}
-            </Button>
+            {onChangeData && (
+              <Button
+                onClick={onChangeData}
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2"
+              >
+                {t('dataset_changeData')}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
