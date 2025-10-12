@@ -1,5 +1,4 @@
-import type { SeriesConfig } from '@/contexts/ChartCreationContext';
-import type { ChartConfig } from '@/types/chart';
+import type { ChartConfig, SeriesConfig } from '@/types/chart';
 
 /**
  * Helper function to check if a column is available for a specific series
@@ -15,7 +14,7 @@ export const isColumnAvailableForSeries = (
   column: string,
   seriesId: string
 ) => {
-  const isNotXAxis = column !== config.xAxisKey; // Không được là xAxisKey
+  const isNotXAxis = column !== config.xAxisKey;
   const currentSeries = seriesConfigs.find(s => s.id === seriesId);
   const isCurrentColumn = currentSeries?.dataColumn === column;
   const isUsedByOther = seriesConfigs.some(s => s.id !== seriesId && s.dataColumn === column);

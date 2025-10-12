@@ -7,12 +7,10 @@ export interface BackendDataHeader {
   name: string;
   type: string;
   index: number;
-  // Encrypted fields from database
   encryptedData?: string;
   iv?: string;
   authTag?: string;
   encryptedDataKey?: string;
-  // Decrypted data (populated after decryption)
   data?: any[];
 }
 
