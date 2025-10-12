@@ -43,8 +43,6 @@ const AreaChartEditorDemo: React.FC = () => {
         marketing: { light: '#f97316', dark: '#fb923c' },
         support: { light: '#10b981', dark: '#34d399' },
       }}
-      title="Area Chart Configuration Studio"
-      description="Design and customize beautiful area charts with real-time preview and advanced styling options"
     />
   );
 };

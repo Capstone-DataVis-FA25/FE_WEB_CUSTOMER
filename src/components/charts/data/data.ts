@@ -1,9 +1,10 @@
-import type { ChartDataPoint } from '@/components/charts/D3LineChart';
-import type { ScatterPlotDataPoint } from '@/components/charts/page.example/home_chart_sample/D3ScatterPlot';
-import type { AreaChartDataPoint } from '@/components/charts/page.example/home_chart_sample/D3AreaChart';
-import type { TrendChartDataPoint } from '@/components/charts/page.example/home_chart_sample/D3TrendChart';
-import type { MapDataPoint } from '@/components/charts/page.example/home_chart_sample/D3MapChart';
-import type { TableDataPoint } from '@/components/charts/page.example/home_chart_sample/D3TableChart';
+// Local lightweight types to avoid coupling to demo/example pages
+export type ChartDataPoint = Record<string, string | number | boolean>;
+export type ScatterPlotDataPoint = ChartDataPoint;
+export type AreaChartDataPoint = ChartDataPoint;
+export type TrendChartDataPoint = ChartDataPoint;
+export type MapDataPoint = ChartDataPoint;
+export type TableDataPoint = ChartDataPoint;
 import { convertArrayToChartData } from '@/utils/dataConverter';
 
 // Sales data

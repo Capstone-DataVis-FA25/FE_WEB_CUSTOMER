@@ -3,9 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { allRoutes, type RouteConfig } from '@/config/routes';
 import CustomerLayout from '../components/layout/CustomerLayout';
 import { FadeIn } from '../theme/animation';
-import { ErrorBoundaryClass } from '@/components/error/ErrorBoundary';
 import { useAuth } from '@/features/auth/useAuth';
-import DebugContainer from '@/components/debug/DebugContainer';
+// import DebugContainer from '@/components/debug/DebugContainer';
 import { useTranslation } from 'react-i18next';
 // ================================
 // LAZY LOAD COMPONENTS
@@ -141,7 +140,7 @@ const AppRouter: React.FC = () => {
         {/* Catch all route */}
         <Route path="*" element={<Navigate to="/404" replace />} />
       </Routes>
-      <DebugContainer />
+      {/* <DebugContainer /> */}
     </BrowserRouter>
   );
 };
