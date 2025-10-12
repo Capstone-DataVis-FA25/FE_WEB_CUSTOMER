@@ -16,9 +16,10 @@ export interface User {
   email: string;
   avatar?: string;
   role: UserRole;
-  isVerified?: boolean; // Optional since not in response
+  isVerified?: boolean;
   currentHashedRefreshToken: string | null;
   isActive: boolean;
+  isSocialAccount ?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,6 +41,10 @@ export interface GoogleAuthRequest {
   idToken: string;
 }
 
+export interface ResendEmailRequest {
+  email: string;
+}
+
 // ## RESPONSE
 export interface AuthResponse {
   user: User;
@@ -47,6 +52,15 @@ export interface AuthResponse {
   refresh_token: string;
   verify_token?: string;
   message?: string;
+}
+
+export interface ResendEmailResponse {
+  message: string;
+}
+
+export interface RefreshTokenResponse {
+  access_token: string;
+  refresh_token: string
 }
 
 // ## INITSTATE - Dựa theo initialState trong authSlice
@@ -60,6 +74,8 @@ export interface AuthState {
   successMessage?: string | null;
   deleteUserStatus?: 'idle' | 'pending' | 'success' | 'error';
   deleteUserError?: string | null;
+  resendEmailStatus?: 'idle' | 'pending' | 'success' | 'error';
+  resendEmailError?: string | null;
 }
 
 export interface UpdateProfileRequest {

@@ -1,5 +1,14 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import type { AuthResponse, SignInRequest, SignUpRequest, GoogleAuthRequest, UpdateProfileResponse, UpdateProfileRequest } from './authType';
+import type {
+  AuthResponse,
+  SignInRequest,
+  SignUpRequest,
+  GoogleAuthRequest,
+  UpdateProfileResponse,
+  UpdateProfileRequest,
+  ResendEmailRequest,
+  ResendEmailResponse,
+} from './authType';
 import { authAPI } from './authAPI';
 import { t } from 'i18next';
 
@@ -60,19 +69,37 @@ export const updateProfileThunk = createAsyncThunk<
     const response = await authAPI.updateProfile(updateData);
     return response;
   } catch (error: unknown) {
-    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth_updateProfileFailed');
+    const errorMessage =
+      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      t('auth_updateProfileFailed');
+    return rejectWithValue({ message: errorMessage });
+  }
+});
+
+export const viewProfileThunk = createAsyncThunk<
+  UpdateProfileResponse,
+  void,
+  { rejectValue: { message: string } }
+>('users/me/view-profile', async (_, { rejectWithValue }) => {
+  try {
+    const response = await authAPI.viewProfile();
+    return response;
+  } catch (error: unknown) {
+    const errorMessage =
+      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      t('auth_viewProfileFailed');
     return rejectWithValue({ message: errorMessage });
   }
 });
 
 export const deleteUserThunk = createAsyncThunk<
   { message: string; id: string },
-  string,
+  { id: string; password: string },
   { rejectValue: { message: string } }
->('auth/deleteUser', async (userId, { rejectWithValue }) => {
+>('auth/deleteUser', async ({ id, password }, { rejectWithValue }) => {
   try {
-    const response = await authAPI.deleteUser(userId);
-    return { message: response.message, id: userId };
+    const response = await authAPI.deleteUser(id, password);
+    return { message: response.message, id };
   } catch (error: unknown) {
     const errorMessage =
       (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -90,7 +117,40 @@ export const changePasswordThunk = createAsyncThunk<
     await authAPI.changePassword(changeData);
     return { message: 'Mật khẩu đã được thay đổi thành công' };
   } catch (error: unknown) {
-    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth_changePasswordFailed');
+    console.error('Change password thunk error:', error);
+
+    let errorMessage = t('auth_changePasswordFailed') || 'Đổi mật khẩu thất bại';
+
+    // Xử lý lỗi từ API response
+    if (error && typeof error === 'object') {
+      const axiosError = error as {
+        response?: {
+          data?: { message?: string };
+          status?: number;
+        };
+        message?: string;
+      };
+
+      // Ưu tiên message từ response data
+      if (axiosError.response?.data?.message) {
+        errorMessage = axiosError.response.data.message;
+      }
+      // Xử lý lỗi theo status code
+      else if (axiosError.response?.status === 401) {
+        errorMessage = 'Mật khẩu hiện tại không đúng';
+      } else if (axiosError.response?.status === 400) {
+        errorMessage = 'Thông tin đổi mật khẩu không hợp lệ';
+      } else if (axiosError.response?.status === 403) {
+        errorMessage = 'Không có quyền thực hiện thao tác này';
+      } else if (axiosError.response?.status && axiosError.response.status >= 500) {
+        errorMessage = 'Lỗi server, vui lòng thử lại sau';
+      }
+      // Fallback to error message
+      else if (axiosError.message) {
+        errorMessage = axiosError.message;
+      }
+    }
+
     return rejectWithValue({ message: errorMessage });
   }
 });
@@ -103,7 +163,9 @@ export const forgotPasswordThunk = createAsyncThunk<
   try {
     await authAPI.forgotPassword(forgotData);
   } catch (error: unknown) {
-    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth_forgotPasswordFailed');
+    const errorMessage =
+      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      t('auth_forgotPasswordFailed');
     return rejectWithValue({ message: errorMessage });
   }
 });
@@ -116,7 +178,25 @@ export const resetPasswordThunk = createAsyncThunk<
   try {
     await authAPI.resetPassword(resetData);
   } catch (error: unknown) {
-    const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || t('auth_resetPasswordFailed');
+    const errorMessage =
+      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      t('auth_resetPasswordFailed');
+    return rejectWithValue({ message: errorMessage });
+  }
+});
+
+export const resendVerifyEmailThunk = createAsyncThunk<
+  ResendEmailResponse,
+  ResendEmailRequest,
+  { rejectValue: { message: string } }
+>('auth/resendVerifyEmail', async (resendData, { rejectWithValue }) => {
+  try {
+    const response = await authAPI.resendVerifyEmail(resendData);
+    return response;
+  } catch (error: unknown) {
+    const errorMessage =
+      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      t('auth_resendEmailFailed');
     return rejectWithValue({ message: errorMessage });
   }
 });

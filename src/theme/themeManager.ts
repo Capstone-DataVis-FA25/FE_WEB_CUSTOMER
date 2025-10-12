@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 
 // Định nghĩa các loại theme có thể sử dụng
-export type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark' | 'system';
 
 // Interface cho context props của theme
 interface ThemeContextProps {
@@ -32,6 +32,14 @@ export const getSystemTheme = (): 'light' | 'dark' => {
 // Áp dụng theme vào DOM bằng cách thêm/xóa class 'dark'
 export const applyTheme = (theme: Theme) => {
   const root = document.documentElement;
+
+  // If theme is 'system', use OS/browser preference
+  if (theme === 'system') {
+    const system = getSystemTheme();
+    root.classList.toggle('dark', system === 'dark');
+    return;
+  }
+
   root.classList.toggle('dark', theme === 'dark');
 };
 

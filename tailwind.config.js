@@ -1,24 +1,21 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       fontFamily: {
         // Font chính cho UI
-        'roboto': ['Roboto', 'system-ui', 'sans-serif'],
+        roboto: ['Roboto', 'system-ui', 'sans-serif'],
         // Font cho design/branding
-        'miso': ['Miso', 'system-ui', 'sans-serif'],
+        miso: ['Miso', 'system-ui', 'sans-serif'],
         // Font digital cho số liệu/dashboard
-        'digital': ['Digital-7', 'monospace'],
+        digital: ['Digital-7', 'monospace'],
         // Font chính
-        'inter': ['Inter', 'system-ui', 'sans-serif'],
+        inter: ['Inter', 'system-ui', 'sans-serif'],
         // Default sans-serif sử dụng Roboto
-        'sans': ['Roboto', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Roboto', 'Inter', 'system-ui', 'sans-serif'],
       },
     },
   },
   plugins: [],
-}
+};

@@ -1,4 +1,5 @@
 import type { Variants } from 'framer-motion';
+import type { Transition } from 'framer-motion';
 
 // Transition configs có thể tái sử dụng
 export const transitions = {
@@ -6,27 +7,27 @@ export const transitions = {
     type: 'tween',
     duration: 0.3,
     ease: 'easeInOut',
-  },
+  } as Transition,
   spring: {
     type: 'spring',
     stiffness: 300,
     damping: 30,
-  },
+  } as Transition,
   bouncy: {
     type: 'spring',
     stiffness: 400,
     damping: 25,
-  },
+  } as Transition,
   slow: {
     type: 'tween',
     duration: 0.6,
     ease: 'easeInOut',
-  },
+  } as Transition,
   fast: {
     type: 'tween',
     duration: 0.15,
     ease: 'easeInOut',
-  },
+  } as Transition,
 };
 
 // Animation variants cho fade effects
@@ -278,18 +279,23 @@ export const pageVariants: Variants = {
 };
 
 // Utility function để tạo delay
+
 export const createDelayedVariants = (baseVariants: Variants, delay: number): Variants => {
   const delayedVariants: Variants = {};
 
   Object.keys(baseVariants).forEach(key => {
     const variant = baseVariants[key];
     if (typeof variant === 'object' && variant !== null) {
+      const baseTransition: Transition =
+        typeof variant.transition === 'object'
+          ? { ...variant.transition }
+          : { ...transitions.smooth };
       delayedVariants[key] = {
         ...variant,
         transition: {
-          ...(variant.transition || transitions.smooth),
+          ...baseTransition,
           delay,
-        },
+        } as Transition,
       };
     }
   });
@@ -316,6 +322,97 @@ export const animationPresets = {
   progress: progressVariants,
   toast: toastVariants,
   page: pageVariants,
+};
+
+// Repeatable animation variants (for elements that should animate every time they come into view)
+export const repeatableVariants = {
+  // Slide variants that work well with repeat animations
+  slideRepeatLeft: {
+    hidden: { x: -100, opacity: 0 },
+    visible: { 
+      x: 0, 
+      opacity: 1, 
+      transition: { 
+        type: 'spring' as const,
+        stiffness: 100,
+        damping: 15
+      } 
+    },
+    exit: { x: -100, opacity: 0, transition: transitions.fast },
+  },
+  slideRepeatRight: {
+    hidden: { x: 100, opacity: 0 },
+    visible: { 
+      x: 0, 
+      opacity: 1, 
+      transition: { 
+        type: 'spring' as const,
+        stiffness: 100,
+        damping: 15
+      } 
+    },
+    exit: { x: 100, opacity: 0, transition: transitions.fast },
+  },
+  slideRepeatBottom: {
+    hidden: { y: 80, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1, 
+      transition: { 
+        type: 'spring' as const,
+        stiffness: 100,
+        damping: 15
+      } 
+    },
+    exit: { y: 80, opacity: 0, transition: transitions.fast },
+  },
+  // Fade with elastic effect
+  fadeElastic: {
+    hidden: { opacity: 0, scale: 0.5 },
+    visible: { 
+      opacity: 1, 
+      scale: 1,
+      transition: {
+        type: 'spring' as const,
+        stiffness: 200,
+        damping: 20,
+        duration: 0.6
+      }
+    },
+    exit: { opacity: 0, scale: 0.5, transition: transitions.fast },
+  },
+  // Bounce effect
+  bounceIn: {
+    hidden: { opacity: 0, scale: 0.3, y: 50 },
+    visible: { 
+      opacity: 1, 
+      scale: 1,
+      y: 0,
+      transition: {
+        type: 'spring' as const,
+        stiffness: 300,
+        damping: 10,
+        duration: 0.8
+      }
+    },
+    exit: { opacity: 0, scale: 0.3, y: 50, transition: transitions.fast },
+  }
+} as const;
+
+// Viewport configuration presets
+export const viewportConfigs = {
+  // Standard - triggers once when 30% visible
+  standard: { once: true, amount: 0.3 },
+  // Repeat - triggers every time when 30% visible  
+  repeat: { once: false, amount: 0.3 },
+  // Early - triggers once when 10% visible
+  early: { once: true, amount: 0.1 },
+  // Late - triggers once when 50% visible
+  late: { once: true, amount: 0.5 },
+  // Repeat early - triggers every time when 10% visible
+  repeatEarly: { once: false, amount: 0.1 },
+  // Repeat late - triggers every time when 50% visible
+  repeatLate: { once: false, amount: 0.5 },
 };
 
 export default animationPresets;

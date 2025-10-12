@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,21 +25,27 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
   const { signIn, signUp, signInWithGoogle, user, isAuthenticated, isLoading, successMessage } =
     useAuth();
   const [isLogin, setIsLogin] = useState(true);
-  const hasShownSuccessToast = useRef(false);
+  const [mode, setMode] = useState<string>('login');
   const location = useLocation();
 
   // Lấy mode từ query string
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const mode = params.get('mode');
-    if (mode === 'register') {
+    const modeParam = params.get('mode');
+    const newMode = modeParam || 'login';
+    setMode(newMode);
+
+    if (newMode === 'register') {
       setIsLogin(false);
     } else {
       setIsLogin(true);
     }
+
+    console.log(`URL changed - mode: ${newMode}, isLogin: ${newMode !== 'register'}`);
   }, [location.search]);
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Persist form data để tránh mất khi component re-mount
   const getPersistedFormData = () => {
@@ -74,74 +80,71 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
 
   // Chỉ điều hướng khi thành công
   useEffect(() => {
-    if (isAuthenticated && user && !hasShownSuccessToast.current) {
-      if (user.isVerified) {
+    if (isAuthenticated && user) {
+      if (mode === 'reset-password') {
+        goToAuth();
+      } else if (user.isVerified === true) {
         goToHome();
-      } else if (successMessage != null) {
+      } else if (mode === 'register' && successMessage) {
         goToSendEmailVerify();
       } else {
         goToAuth();
       }
     }
-  }, [isAuthenticated, user, goToHome]);
+  }, [isAuthenticated, user, mode, successMessage, goToHome, goToSendEmailVerify, goToAuth]);
 
-  // Reset success toast flag khi logout
-  useEffect(() => {
-    if (!isAuthenticated) {
-      hasShownSuccessToast.current = false;
-    }
-  }, [isAuthenticated]);
+  // useEffect(() => {
+  //   // Component cleanup logic nếu cần
+  // }, [isAuthenticated]);
 
   // Validation form
   const validateForm = (): string | null => {
     if (!formData.email.trim()) {
-      return 'Email không được để trống';
+      return t('validation_email_required');
     }
 
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      return 'Email không hợp lệ';
+      return t('validation_email_invalid');
     }
 
     if (!formData.password.trim()) {
-      return 'Mật khẩu không được để trống';
+      return t('validation_password_required');
     }
 
     if (formData.password.length < 6) {
-      return 'Mật khẩu phải có ít nhất 6 ký tự';
+      return t('validation_password_min_length');
     }
 
     if (!isLogin) {
       if (!isPasswordStrong) {
-        return 'Mật khẩu chưa đủ mạnh';
+        return t('validation_password_weak');
       }
       if (!formData.firstName.trim()) {
-        return 'Tên không được để trống';
+        return t('validation_firstname_required');
       }
       if (!formData.lastName.trim()) {
-        return 'Họ không được để trống';
+        return t('validation_lastname_required');
       }
       if (formData.password !== formData.confirmPassword) {
-        return 'Mật khẩu xác nhận không khớp';
+        return t('validation_password_mismatch');
       }
     }
 
-    return null; // Không có lỗi
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate form - CHỈ show toast nếu có lỗi
     const validationError = validateForm();
     if (validationError) {
-      showError('Lỗi xác thực', validationError, 3000);
+      showError(t('validation_error'), validationError, 3000);
       return;
     }
 
     try {
       let result;
 
-      // Dispatch action
       if (isLogin) {
         result = await signIn({
           email: formData.email,
@@ -158,27 +161,27 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
 
       // Kiểm tra kết quả
       if (result.type.endsWith('/fulfilled')) {
-        // Thành công - KHÔNG show toast ở đây, sẽ show ở HomePage
-        hasShownSuccessToast.current = true;
-
-        // Clear persisted form data khi thành công
+        if (!isLogin) {
+          // Đảm bảo mode được set là 'register' khi signUp thành công
+          setMode('register');
+          showSuccess(t('auth_registerSuccess'));
+          console.log('SignUp successful - mode set to register');
+        }
         try {
           delete (window as any).__authFormData__;
         } catch (error) {
           console.warn('Could not clear persisted form data:', error);
         }
-
         // useEffect sẽ tự động navigate
       } else if (result.type.endsWith('/rejected')) {
         const errorMessage =
           (result as { payload?: { message?: string } })?.payload?.message ||
-          (isLogin ? 'Email hoặc mật khẩu không đúng' : 'Đăng ký thất bại');
-
-        showError(isLogin ? 'Đăng nhập thất bại' : 'Đăng ký thất bại', errorMessage, 5000);
+          (isLogin ? t('auth_invalid_credentials') : t('auth_signup_failed'));
+        showError(isLogin ? t('auth_signin_failed') : t('auth_signup_failed'), errorMessage, 5000);
       }
     } catch (error) {
       console.error('Submit error:', error);
-      showError('Lỗi hệ thống', 'Vui lòng thử lại sau', 5000);
+      showError(t('auth_system_error'), t('auth_try_again_later'), 5000);
     }
   };
 
@@ -385,14 +388,28 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <Input
                         id="confirmPassword"
-                        type={showPassword ? 'text' : 'password'}
+                        type={showConfirmPassword ? 'text' : 'password'}
                         name="confirmPassword"
                         value={formData.confirmPassword}
                         onChange={handleInputChange}
-                        className="pl-10"
+                        className="pl-10 pr-12"
                         placeholder={t('auth_enterConfirmPassword')}
                         required={!isLogin}
                       />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent transition-colors duration-200 hover:text-secondary"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        disabled={isLoading}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-5 w-5 transition-transform duration-200" />
+                        ) : (
+                          <Eye className="h-5 w-5 transition-transform duration-200" />
+                        )}
+                      </Button>
                     </div>
                   </div>
                 </FadeIn>
@@ -432,15 +449,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                   <span>{isLogin ? t('auth_loginButton') : t('auth_registerButton')}</span>
                 )}
               </Button>
-
-              {/* Error Message Display */}
-              {/* {localError && (
-                <FadeIn>
-                  <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                    <p className="text-destructive text-sm font-medium">{localError}</p>
-                  </div>
-                </FadeIn>
-              )} */}
             </form>
 
             {/* Social Login */}
@@ -463,7 +471,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                     theme="outline"
                     size="large"
                     shape="rectangular"
-                    i18nIsDynamicList
                   />
                 </div>
               </div>
@@ -478,8 +485,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
                 type="button"
                 variant="link"
                 onClick={() => {
-                  setIsLogin(!isLogin);
-                  // setLocalError(''); // Clear error khi chuyển mode
+                  const newIsLogin = !isLogin;
+                  setIsLogin(newIsLogin);
+                  setMode(newIsLogin ? 'login' : 'register');
                 }}
                 className="p-0 ml-2 h-auto font-semibold transition-colors duration-200 text-accent hover:text-secondary"
                 disabled={isLoading}

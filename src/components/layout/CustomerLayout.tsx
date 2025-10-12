@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Header from '../header/Header';
 import Footer from '../footer/Footer';
 import { PageTransition, LoadingSpinner } from '../../theme/animation';
@@ -14,6 +14,8 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const { t } = useTranslation();
+  const location = useLocation();
+  const isFullScreen = location.pathname.includes('/chart-editor');
 
   const handleLogin = () => {
     navigate('/auth');
@@ -39,7 +41,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col min-w-0 bg-gray-50">
       {/* Header */}
       <Header
         isAuthenticated={isAuthenticated}
@@ -59,7 +61,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
       </main>
 
       {/* Footer */}
-      <Footer />
+      {!isFullScreen && <Footer />}
     </div>
   );
 };

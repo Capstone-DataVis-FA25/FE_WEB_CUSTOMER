@@ -7,7 +7,6 @@ import { ErrorBoundaryClass } from '@/components/error/ErrorBoundary';
 import { useAuth } from '@/features/auth/useAuth';
 import DebugContainer from '@/components/debug/DebugContainer';
 import { useTranslation } from 'react-i18next';
-
 // ================================
 // LAZY LOAD COMPONENTS
 // ================================
@@ -19,9 +18,6 @@ const componentMap = {
   ResetPasswordPage: lazy(() => import('../pages/auth/ResetPasswordPage')),
   NotFoundPage: lazy(() => import('../pages/not-found/NotFoundPage')),
   ForbiddenPage: lazy(() => import('../pages/forbidden/ForbiddenPage')),
-  ToastDemoPage: lazy(() => import('../pages/demo/ToastDemo')),
-  ModalConfirmDemoPage: lazy(() => import('../pages/demo/ModalConfirmDemo')),
-  PaginationDemoPage: lazy(() => import('../pages/demo/PaginationDemo')),
   VerifyEmailSuccessPage: lazy(() => import('../pages/verify/VerifyEmailSuccessPage')),
   SendEmailSuccessPage: lazy(() => import('../pages/verify/SendEmailSuccessPage')),
   ProfilePage: lazy(() => import('../pages/profile/ProfilePage')),
@@ -29,6 +25,21 @@ const componentMap = {
   NotificationSettingsPage: lazy(() => import('../pages/profile/NotificationSettingsPage')),
   GeneralSettingsPage: lazy(() => import('../pages/profile/GeneralSettingsPage')),
   AboutPage: lazy(() => import('../pages/about-us/AboutUsPage')),
+  FrequentQuestionPage: lazy(() => import('../pages/resources/FrequentQuestionPage')),
+  VerifyEmailErrorPage: lazy(() => import('../pages/verify/VerifyEmailErrorPage')),
+  ResendEmailPage: lazy(() => import('../pages/verify/ResendEmailPage')),
+  LineChartPage: lazy(() => import('../components/charts/page.example/LineChartPage')),
+  BarChartPage: lazy(() => import('../components/charts/page.example/BarChartPage')),
+  AreaChartPage: lazy(() => import('../components/charts/page.example/AreaChartPage')),
+  LineChartEditorDemo: lazy(() => import('../components/charts/page.example/LineChartEditorDemo')),
+  BarChartEditorDemo: lazy(() => import('../components/charts/page.example/BarChartEditorDemo')),
+  AreaChartEditorDemo: lazy(() => import('../components/charts/page.example/AreaChartEditorDemo')),
+  CreateDatasetPage: lazy(() => import('../pages/dataset/CreateDatasetPage')),
+  DatasetDetailPage: lazy(() => import('../pages/dataset/DatasetDetailPage')),
+  ChartGalleryPickerPage: lazy(() => import('../pages/chart-gallery/ChartGalleryPickerPage')),
+  WorkspacePage: lazy(() => import('../pages/workspace/WorkspacePage')),
+  ChartCreatorPage: lazy(() => import('../pages/chart-creator/ChartCreatorPage')),
+  ChartEditorPage: lazy(() => import('../pages/chart-creator/ChartEditorPage')),
 };
 
 // ================================
@@ -54,10 +65,6 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
-
-  console.log('user:', user);
-  console.log('isAuthenticated:', isAuthenticated);
-  console.log('isLoading:', isLoading);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -124,20 +131,18 @@ const RouteRenderer: React.FC<{ route: RouteConfig }> = ({ route }) => {
 
 const AppRouter: React.FC = () => {
   return (
-    <ErrorBoundaryClass>
-      <BrowserRouter>
-        <Routes>
-          {/* Render all routes dynamically */}
-          {allRoutes.map(route => (
-            <Route key={route.name} path={route.path} element={<RouteRenderer route={route} />} />
-          ))}
+    <BrowserRouter>
+      <Routes>
+        {/* Render all routes dynamically */}
+        {allRoutes.map(route => (
+          <Route key={route.name} path={route.path} element={<RouteRenderer route={route} />} />
+        ))}
 
-          {/* Catch all route */}
-          <Route path="*" element={<Navigate to="/404" replace />} />
-        </Routes>
-        <DebugContainer />
-      </BrowserRouter>
-    </ErrorBoundaryClass>
+        {/* Catch all route */}
+        <Route path="*" element={<Navigate to="/404" replace />} />
+      </Routes>
+      <DebugContainer />
+    </BrowserRouter>
   );
 };
 

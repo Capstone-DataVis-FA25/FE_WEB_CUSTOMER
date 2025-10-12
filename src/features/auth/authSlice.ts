@@ -9,6 +9,8 @@ import {
   forgotPasswordThunk,
   resetPasswordThunk,
   deleteUserThunk,
+  viewProfileThunk,
+  resendVerifyEmailThunk,
 } from './authThunk';
 
 import { t } from 'i18next';
@@ -33,6 +35,8 @@ const initialState: AuthState = {
   successMessage: null,
   deleteUserStatus: 'idle',
   deleteUserError: null,
+  resendEmailStatus: 'idle',
+  resendEmailError: null,
 };
 
 const authSlice = createSlice({
@@ -77,6 +81,12 @@ const authSlice = createSlice({
         localStorage.setItem('refreshToken', action.payload.refreshToken);
       }
     },
+
+    // Clear resend email status
+    clearResendEmailStatus: state => {
+      state.resendEmailStatus = 'idle';
+      state.resendEmailError = null;
+    },
   },
   extraReducers: builder => {
     // Sign In
@@ -115,6 +125,8 @@ const authSlice = createSlice({
         state.accessToken = action.payload.access_token;
         state.refreshToken = action.payload.refresh_token;
         state.error = null;
+        state.isAuthenticated = true;
+        console.log(`Message đăng ký thành công [SLICE]: ${action.payload.message}`);
         state.successMessage = action.payload.message;
       })
       .addCase(signUpThunk.rejected, (state, action) => {
@@ -149,6 +161,20 @@ const authSlice = createSlice({
         state.accessToken = null;
         state.refreshToken = null;
         state.isAuthenticated = false;
+      });
+
+    //View Profile
+    builder
+      .addCase(viewProfileThunk.pending, state => {
+        state.error = null;
+      })
+      .addCase(viewProfileThunk.fulfilled, (state, action) => {
+        state.user = action.payload.user;
+        state.error = null;
+      })
+      .addCase(viewProfileThunk.rejected, (state, action) => {
+        state.error =
+          action.payload?.message || action.error?.message || t('auth_viewProfileFailed');
       });
 
     // Update Profile
@@ -243,10 +269,27 @@ const authSlice = createSlice({
         state.error =
           action.payload?.message || action.error?.message || t('auth_resetPasswordFailed');
       });
+
+    // Resend Verify Email
+    builder
+      .addCase(resendVerifyEmailThunk.pending, state => {
+        state.resendEmailStatus = 'pending';
+        state.resendEmailError = null;
+      })
+      .addCase(resendVerifyEmailThunk.fulfilled, (state, action) => {
+        state.resendEmailStatus = 'success';
+        state.resendEmailError = null;
+        state.successMessage = action.payload.message;
+      })
+      .addCase(resendVerifyEmailThunk.rejected, (state, action) => {
+        state.resendEmailStatus = 'error';
+        state.resendEmailError = action.payload?.message || t('auth_resendEmailFailed');
+      });
   },
 });
 
-export const { logout, clearError, setLoading, setTokens } = authSlice.actions;
+export const { logout, clearError, setLoading, setTokens, clearResendEmailStatus } =
+  authSlice.actions;
 
 // TODO: Lỗi cái này chưa dám xóa updateUserProfile (note)
 

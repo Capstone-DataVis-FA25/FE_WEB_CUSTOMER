@@ -74,17 +74,32 @@ axiosPrivate.interceptors.response.use(
 
     // Nếu lỗi 401 và chưa retry
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Kiểm tra nếu là change password API thì không retry
+      if (originalRequest.url?.includes('/users/me/change-password')) {
+        // Không retry cho change password, để component xử lý lỗi
+        return Promise.reject(error);
+      }
+
       originalRequest._retry = true;
 
       const refreshToken = tokenStorage.getRefreshToken();
       if (refreshToken) {
         try {
-          // Gọi API refresh token
-          const response = await axiosPublic.post('/auth/refresh', {
-            refreshToken,
-          });
+          const response = await axiosPublic.post(
+            '/auth/refresh',
+            {},
+            {
+              headers: {
+                Authorization: `Bearer ${refreshToken}`,
+              },
+            }
+          );
 
-          const { accessToken, refreshToken: newRefreshToken } = response.data;
+          // Tùy backend có ResponseInterceptor hay không, lấy đúng structure
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const wrapped = (response as any)?.data?.data ?? (response as any)?.data ?? {};
+          const accessToken = wrapped.access_token ?? wrapped.accessToken;
+          const newRefreshToken = wrapped.refresh_token ?? wrapped.refreshToken;
           tokenStorage.setTokens(accessToken, newRefreshToken);
 
           // Retry request với token mới

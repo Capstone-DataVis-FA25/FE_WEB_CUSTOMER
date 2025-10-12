@@ -18,6 +18,13 @@ export const useNavigation = () => {
     [navigate]
   );
 
+  const goToVerifyEmailError = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.VERIFY_EMAIL_ERROR, options);
+    },
+    [navigate]
+  );
+
   const goToSendEmailVerify = useCallback(
     (options?: NavigationOptions) => {
       navigate(Routers.SEND_EMAIL_SUCCESS, options);
@@ -28,6 +35,13 @@ export const useNavigation = () => {
   const goToVerifyEmailSuccess = useCallback(
     (options?: NavigationOptions) => {
       navigate(Routers.VERIFY_EMAIL_SUCCESS, options);
+    },
+    [navigate]
+  );
+
+  const goToResendEmail = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.RESEND_EMAIL, options);
     },
     [navigate]
   );
@@ -57,6 +71,20 @@ export const useNavigation = () => {
   const goToAboutUs = useCallback(
     (options?: NavigationOptions) => {
       navigate(Routers.ABOUT_US, options);
+    },
+    [navigate]
+  );
+
+  const goToBarChart = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.BAR_CHART_DEMO, options);
+    },
+    [navigate]
+  );
+
+  const goToBarChartEditor = useCallback(
+    (options?: NavigationOptions) => {
+      navigate(Routers.BAR_CHART_EDITOR_DEMO, options);
     },
     [navigate]
   );
@@ -116,8 +144,11 @@ export const useNavigation = () => {
   return {
     // Public routes
     goToHome,
+    goToAboutUs,
     goToAuth,
     goToForgotPassword,
+    goToBarChart,
+    goToBarChartEditor,
 
     // Profile routes
     goToProfile,
@@ -128,6 +159,7 @@ export const useNavigation = () => {
     // Error routes
     goToNotFound,
     goToForbidden,
+    goToVerifyEmailError,
 
     // Navigation controls
     goBack,
@@ -137,6 +169,7 @@ export const useNavigation = () => {
     // Verify
     goToSendEmailVerify,
     goToVerifyEmailSuccess,
+    goToResendEmail,
   };
 };
 

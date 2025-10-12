@@ -3,6 +3,7 @@ import { Bell, Mail, MessageSquare, Smartphone, Save, Volume2, VolumeX } from 'l
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/useToast';
+import { useTranslation } from 'react-i18next';
 
 interface NotificationSettings {
   email: {
@@ -30,6 +31,7 @@ interface NotificationSettings {
 
 const NotificationSettingsPage: React.FC = () => {
   const { showToast } = useToast();
+  const { t } = useTranslation();
 
   const [settings, setSettings] = useState<NotificationSettings>({
     email: {
@@ -82,13 +84,13 @@ const NotificationSettingsPage: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       showToast({
-        title: 'Thành công',
-        options: { type: 'success', message: 'Cài đặt thông báo đã được lưu' },
+        title: t('notification_save_success'),
+        options: { type: 'success', message: t('notification_save_success_message') },
       });
     } catch (_error) {
       showToast({
-        title: 'Lỗi',
-        options: { type: 'error', message: 'Có lỗi xảy ra khi lưu cài đặt' },
+        title: t('notification_save_error'),
+        options: { type: 'error', message: t('notification_save_error_message') },
       });
     } finally {
       setIsLoading(false);
@@ -118,43 +120,43 @@ const NotificationSettingsPage: React.FC = () => {
   const notificationCategories = [
     {
       id: 'email',
-      title: 'Thông báo Email',
-      description: 'Nhận thông báo qua email',
+      title: t('notification_email_title'),
+      description: t('notification_email_description'),
       icon: Mail,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
       settings: [
-        { key: 'news', label: 'Tin tức và cập nhật', description: 'Nhận tin tức mới nhất' },
-        { key: 'updates', label: 'Cập nhật sản phẩm', description: 'Thông báo về tính năng mới' },
-        { key: 'marketing', label: 'Email quảng cáo', description: 'Nhận ưu đãi và khuyến mãi' },
-        { key: 'security', label: 'Bảo mật', description: 'Thông báo đăng nhập và bảo mật' },
+        { key: 'news', label: t('notification_news'), description: t('notification_news_description') },
+        { key: 'updates', label: t('notification_product_updates'), description: t('notification_product_updates_description') },
+        { key: 'marketing', label: t('notification_marketing_email'), description: t('notification_marketing_email_description') },
+        { key: 'security', label: t('notification_security'), description: t('notification_security_description') },
       ],
     },
     {
       id: 'push',
-      title: 'Thông báo đẩy',
-      description: 'Nhận thông báo trên thiết bị',
+      title: t('notification_push_title'),
+      description: t('notification_push_description'),
       icon: Smartphone,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       settings: [
-        { key: 'orders', label: 'Đơn hàng', description: 'Cập nhật trạng thái đơn hàng' },
-        { key: 'promotions', label: 'Khuyến mãi', description: 'Thông báo ưu đãi đặc biệt' },
-        { key: 'reminders', label: 'Nhắc nhở', description: 'Nhắc nhở về các hoạt động' },
-        { key: 'messages', label: 'Tin nhắn', description: 'Tin nhắn từ hỗ trợ khách hàng' },
+        { key: 'orders', label: t('notification_orders'), description: t('notification_orders_description') },
+        { key: 'promotions', label: t('notification_promotions'), description: t('notification_promotions_description') },
+        { key: 'reminders', label: t('notification_reminders'), description: t('notification_reminders_description') },
+        { key: 'messages', label: t('notification_messages'), description: t('notification_messages_description') },
       ],
     },
     {
       id: 'sms',
-      title: 'Thông báo SMS',
-      description: 'Nhận tin nhắn SMS',
+      title: t('notification_sms_title'),
+      description: t('notification_sms_description'),
       icon: MessageSquare,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       settings: [
-        { key: 'orders', label: 'Đơn hàng', description: 'SMS xác nhận đơn hàng' },
-        { key: 'security', label: 'Bảo mật', description: 'Mã OTP và xác thực' },
-        { key: 'marketing', label: 'Quảng cáo', description: 'SMS khuyến mãi' },
+        { key: 'orders', label: t('notification_orders_sms'), description: t('notification_orders_sms_description') },
+        { key: 'security', label: t('notification_security_sms'), description: t('notification_security_sms_description') },
+        { key: 'marketing', label: t('notification_marketing_sms'), description: t('notification_marketing_sms_description') },
       ],
     },
   ];
@@ -165,10 +167,10 @@ const NotificationSettingsPage: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Cài đặt thông báo
+            {t('notification_settings_title')}
           </h1>
           <p className="text-gray-600 dark:text-gray-300">
-            Quản lý cách bạn nhận thông báo từ ứng dụng
+            {t('notification_settings_subtitle')}
           </p>
         </div>
 
@@ -178,10 +180,10 @@ const NotificationSettingsPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Volume2 className="w-5 h-5 mr-2 text-orange-600" />
-                Cài đặt âm thanh
+                {t('notification_sound_title')}
               </CardTitle>
               <CardDescription>
-                Điều chỉnh âm thanh thông báo
+                {t('notification_sound_description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -194,10 +196,10 @@ const NotificationSettingsPage: React.FC = () => {
                   )}
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      Âm thanh thông báo
+                      {t('notification_sound_enable')}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Phát âm thanh khi có thông báo mới
+                      {t('notification_sound_enable_description')}
                     </p>
                   </div>
                 </div>
@@ -210,7 +212,7 @@ const NotificationSettingsPage: React.FC = () => {
               {settings.sound.enabled && (
                 <div className="pl-8 space-y-2">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Âm lượng: {settings.sound.volume}%
+                    {t('notification_volume')}: {settings.sound.volume}%
                   </label>
                   <input
                     type="range"
@@ -269,12 +271,12 @@ const NotificationSettingsPage: React.FC = () => {
               {isLoading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Đang lưu...
+                  {t('notification_saving')}
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Lưu cài đặt
+                  {t('notification_save_settings')}
                 </>
               )}
             </Button>
@@ -287,12 +289,10 @@ const NotificationSettingsPage: React.FC = () => {
                 <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                 <div>
                   <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-                    Lưu ý về quyền riêng tư
+                    {t('notification_privacy_title')}
                   </h4>
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    Chúng tôi cam kết bảo vệ thông tin cá nhân của bạn. Bạn có thể thay đổi cài đặt 
-                    thông báo bất kỳ lúc nào. Thông tin liên hệ của bạn sẽ không được chia sẻ với 
-                    bên thứ ba mà không có sự đồng ý của bạn.
+                    {t('notification_privacy_message')}
                   </p>
                 </div>
               </div>

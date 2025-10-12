@@ -1,5 +1,14 @@
 import { axiosPrivate, axiosPublic } from '@/services/axios';
-import type { SignInRequest, SignUpRequest, GoogleAuthRequest, AuthResponse, UpdateProfileRequest, UpdateProfileResponse } from './authType';
+import type {
+  SignInRequest,
+  SignUpRequest,
+  GoogleAuthRequest,
+  AuthResponse,
+  UpdateProfileRequest,
+  UpdateProfileResponse,
+  ResendEmailRequest,
+  ResendEmailResponse,
+} from './authType';
 
 const SIGN_IN = '/auth/signin';
 const SIGN_UP = '/auth/signup';
@@ -8,11 +17,14 @@ const CHANGE_PASSWORD = '/users/me/change-password';
 const FORGOT_PASSWORD = '/auth/forgot-password';
 const RESET_PASSWORD = '/auth/reset-password';
 const UPDATE_PROFILE = 'users/me/update-profile';
+const VIEW_PROFILE = 'users/me';
+const DELETE_USER = '/users';
+const RESEND_VERIFY_EMAIL = '/auth/resend-verify-email';
 
 export const authAPI = {
   signInWithEmailPassword: async (data: SignInRequest): Promise<AuthResponse> => {
     const response = await axiosPublic.post(`${SIGN_IN}`, data);
-    const responseData = response.data.data;
+    const responseData = response.data.data; // data: {}
 
     return {
       user: responseData.user,
@@ -23,7 +35,6 @@ export const authAPI = {
   signUpWithEmailPassword: async (data: SignUpRequest): Promise<AuthResponse> => {
     const response = await axiosPublic.post(`${SIGN_UP}`, data);
     const responseData = response.data.data;
-    console.log(`Dữ liệu response data: ${JSON.stringify(responseData, null, 2)}`);
     return {
       user: responseData.user,
       access_token: responseData.tokens.access_token,
@@ -53,14 +64,26 @@ export const authAPI = {
     };
   },
 
+  //View Profile
+  viewProfile: async (): Promise<UpdateProfileResponse> => {
+    const response = await axiosPrivate.get(`${VIEW_PROFILE}`);
+    const responseData = response.data.data;
+    return {
+      user: responseData,
+    };
+  },
 
-  deleteUser: async (userId: string): Promise<{ message: string }> => {
-    // Lấy accessToken từ localStorage
+  deleteUser: async (userId: string, email: string): Promise<{ message: string }> => {
     const accessToken = localStorage.getItem('accessToken');
-    const response = await axiosPrivate.delete(`/users/${userId}`, {
+    if (!accessToken) throw new Error('Access token is missing. Vui lòng đăng nhập lại.');
+    const response = await axiosPrivate.request({
+      url: `${DELETE_USER}/${userId}`,
+      method: 'DELETE',
       headers: {
         Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
       },
+      data: { email },
     });
     return { message: response.data.message };
   },
@@ -84,5 +107,10 @@ export const authAPI = {
       token: data.token,
     });
   },
-};
 
+  // Resend verify email
+  resendVerifyEmail: async (data: ResendEmailRequest): Promise<ResendEmailResponse> => {
+    const response = await axiosPublic.post(`${RESEND_VERIFY_EMAIL}`, data);
+    return { message: response.data.message };
+  },
+};

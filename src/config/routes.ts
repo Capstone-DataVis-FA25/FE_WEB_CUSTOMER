@@ -15,10 +15,12 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 export const Permission = {
   // Public permissions
   VIEW_PUBLIC: 'view_public',
+  FORGOT_PASSWORD: 'forgot_password',
+
   // USER permissions
   VIEW_PROFILE: 'view_profile',
   EDIT_PROFILE: 'edit_profile',
-  DEMO_TEST: 'demo_test',
+  CHANGE_PASSWORD: 'change_password',
 
   // Admin permissions
   ADMIN_ACCESS: 'admin_access',
@@ -29,18 +31,17 @@ export type Permission = (typeof Permission)[keyof typeof Permission];
 
 // Role permissions mapping
 export const rolePermissions: Record<UserRole, Permission[]> = {
-  [UserRole.GUEST]: [Permission.VIEW_PUBLIC],
+  [UserRole.GUEST]: [Permission.VIEW_PUBLIC, Permission.FORGOT_PASSWORD],
   [UserRole.USER]: [
     Permission.VIEW_PUBLIC,
     Permission.VIEW_PROFILE,
     Permission.EDIT_PROFILE,
-    Permission.DEMO_TEST,
+    Permission.CHANGE_PASSWORD,
   ],
   [UserRole.ADMIN]: [
     Permission.VIEW_PUBLIC,
     Permission.VIEW_PROFILE,
     Permission.EDIT_PROFILE,
-    Permission.DEMO_TEST,
     Permission.ADMIN_ACCESS,
     Permission.MANAGE_USERS,
   ],
@@ -74,6 +75,78 @@ export interface RouteConfig {
 // Public routes (không cần đăng nhập)
 export const publicRoutes: RouteConfig[] = [
   {
+    path: Routers.LINE_CHART_DEMO,
+    name: 'line-chart',
+    component: 'LineChartPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Biểu đồ dân số',
+      description: 'Biểu đồ dân số qua các năm',
+    },
+  },
+  {
+    path: Routers.BAR_CHART_DEMO,
+    name: 'bar-chart',
+    component: 'BarChartPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Biểu đồ cột',
+      description: 'Biểu đồ cột doanh số theo tháng',
+    },
+  },
+  {
+    path: Routers.AREA_CHART_DEMO,
+    name: 'area-chart',
+    component: 'AreaChartPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Biểu đồ vùng',
+      description: 'Biểu đồ vùng doanh số theo tháng',
+    },
+  },
+  {
+    path: Routers.LINE_CHART_EDITOR_DEMO,
+    name: 'line-chart-editor-demo',
+    component: 'LineChartEditorDemo',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'LineChart Editor Demo',
+      description: 'Interactive demonstration of the LineChart editor component',
+    },
+  },
+  {
+    path: Routers.BAR_CHART_EDITOR_DEMO,
+    name: 'bar-chart-editor-demo',
+    component: 'BarChartEditorDemo',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'BarChart Editor Demo',
+      description: 'Interactive demonstration of the BarChart editor component',
+    },
+  },
+  {
+    path: Routers.AREA_CHART_EDITOR_DEMO,
+    name: 'area-chart-editor-demo',
+    component: 'AreaChartEditorDemo',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'AreaChart Editor Demo',
+      description: 'Interactive demonstration of the AreaChart editor component',
+    },
+  },
+  {
     path: Routers.HOME,
     name: 'home',
     component: 'HomePage',
@@ -83,6 +156,19 @@ export const publicRoutes: RouteConfig[] = [
     meta: {
       title: 'Trang chủ',
       description: 'Trang chủ website',
+    },
+  },
+
+  {
+    path: Routers.CHART_GALLERY,
+    name: 'chartgallery',
+    component: 'ChartGalleryPickerPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Dashboard',
+      description: 'Dashboard',
     },
   },
   {
@@ -95,6 +181,30 @@ export const publicRoutes: RouteConfig[] = [
     meta: {
       title: 'Về chúng tôi',
       description: 'Về chúng tôi website',
+    },
+  },
+  {
+    path: Routers.FREQUENT_QUESTIONS,
+    name: 'frequent-questions',
+    component: 'FrequentQuestionPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Câu hỏi thường gặp',
+      description: 'Tìm câu trả lời cho những câu hỏi phổ biến nhất về dịch vụ của chúng tôi',
+    },
+  },
+  {
+    path: Routers.CHART_EDITOR,
+    name: 'chart-editor',
+    component: 'ChartEditorPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Chart Editor',
+      description: 'Interactive chart editor with customizable settings and data management',
     },
   },
 ];
@@ -120,7 +230,7 @@ export const authRoutes: RouteConfig[] = [
     component: 'ForgotPasswordPage',
     layout: 'AUTH',
     isProtected: false,
-    permissions: [Permission.VIEW_PUBLIC],
+    permissions: [Permission.FORGOT_PASSWORD],
     meta: {
       title: 'Quên mật khẩu',
       description: 'Yêu cầu reset mật khẩu',
@@ -133,7 +243,7 @@ export const authRoutes: RouteConfig[] = [
     component: 'ResetPasswordPage',
     layout: 'AUTH',
     isProtected: false,
-    permissions: [Permission.VIEW_PUBLIC],
+    permissions: [Permission.FORGOT_PASSWORD],
     meta: {
       title: 'Reset mật khẩu',
       description: 'Tạo mật khẩu mới',
@@ -197,7 +307,7 @@ export const protectedRoutes: RouteConfig[] = [
     layout: 'USER',
     isProtected: true,
     roles: [UserRole.USER],
-    permissions: [Permission.EDIT_PROFILE],
+    permissions: [Permission.CHANGE_PASSWORD],
     meta: {
       title: 'Đổi mật khẩu',
       description: 'Thay đổi mật khẩu tài khoản',
@@ -232,45 +342,194 @@ export const protectedRoutes: RouteConfig[] = [
       hideFromNav: true,
     },
   },
-  // Demo routes
+  // Dataset routes
   {
-    path: Routers.TOAST_DEMO,
-    name: 'toast-demo',
-    component: 'ToastDemoPage',
+    path: Routers.CREATE_DATASET,
+    name: 'create-dataset',
+    component: 'CreateDatasetPage',
     layout: 'USER',
     isProtected: true,
     roles: [UserRole.USER],
     permissions: [Permission.VIEW_PROFILE],
     meta: {
-      title: 'Demo Toast',
-      description: 'Demo trang Toast',
+      title: 'Create Dataset',
+      description: 'Upload and create a new dataset from Excel or CSV files',
+    },
+  },
+  {
+    path: Routers.CREATE_DATASET_UPLOAD,
+    name: 'create-dataset-upload',
+    component: 'CreateDatasetPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Create Dataset - Upload File',
+      description: 'Upload and create a new dataset from Excel or CSV files',
       hideFromNav: true,
     },
   },
   {
-    path: Routers.MODAL_DEMO,
-    name: 'modal-demo',
-    component: 'ModalConfirmDemoPage',
+    path: Routers.CREATE_DATASET_TEXT,
+    name: 'create-dataset-text',
+    component: 'CreateDatasetPage',
     layout: 'USER',
     isProtected: true,
     roles: [UserRole.USER],
-    permissions: [Permission.DEMO_TEST],
+    permissions: [Permission.VIEW_PROFILE],
     meta: {
-      title: 'Demo Modal',
-      description: 'Demo Modal Confirm',
+      title: 'Create Dataset - Paste Text',
+      description: 'Create a new dataset by pasting text data',
+      hideFromNav: true,
     },
   },
   {
-    path: Routers.PAGINATION_DEMO,
-    name: 'pagination-demo',
-    component: 'PaginationDemoPage',
+    path: Routers.CREATE_DATASET_SAMPLE,
+    name: 'create-dataset-sample',
+    component: 'CreateDatasetPage',
     layout: 'USER',
     isProtected: true,
     roles: [UserRole.USER],
-    permissions: [Permission.DEMO_TEST],
+    permissions: [Permission.VIEW_PROFILE],
     meta: {
-      title: 'Demo Pagination',
-      description: 'Demo Pagination Component',
+      title: 'Create Dataset - Sample Data',
+      description: 'Create a new dataset using sample data',
+      hideFromNav: true,
+    },
+  },
+  {
+    path: Routers.CREATE_DATASET_VIEW,
+    name: 'create-dataset-view',
+    component: 'CreateDatasetPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Create Dataset - Preview',
+      description: 'Preview and configure dataset before creation',
+      hideFromNav: true,
+    },
+  },
+  // Chart routes
+  {
+    path: Routers.CHART_GALLERY,
+    name: 'chart-gallery',
+    component: 'ChartGalleryPickerPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Chart Gallery',
+      description: 'Browse chart templates and create new charts',
+    },
+  },
+  {
+    path: Routers.DATASET_DETAIL,
+    name: 'dataset-detail',
+    component: 'DatasetDetailPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Dataset Details',
+      description: 'View dataset details and data',
+    },
+  },
+  // Workspace routes
+  {
+    path: Routers.WORKSPACE,
+    name: 'workspace',
+    component: 'WorkspacePage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Workspace',
+      description: 'Manage your datasets and charts',
+    },
+  },
+  {
+    path: Routers.WORKSPACE_DATASETS,
+    name: 'workspace-datasets',
+    component: 'WorkspacePage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Workspace - Datasets',
+      description: 'Manage your datasets',
+    },
+  },
+  {
+    path: Routers.WORKSPACE_CHARTS,
+    name: 'workspace-charts',
+    component: 'WorkspacePage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Workspace - Charts',
+      description: 'Manage your charts',
+    },
+  },
+  {
+    path: Routers.CHART_CREATOR,
+    name: 'chart-creator',
+    component: 'ChartCreatorPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Chart Creator',
+      description: 'Create new charts from your datasets',
+    },
+  },
+  // Chart Editor routes with ID parameter
+  {
+    path: Routers.LINE_CHART_EDITOR_DEMO,
+    name: 'line-chart-editor',
+    component: 'LineChartEditorPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Line Chart Editor',
+      description: 'Edit line charts with advanced customization options',
+    },
+  },
+  {
+    path: Routers.BAR_CHART_EDITOR_DEMO,
+    name: 'bar-chart-editor',
+    component: 'BarChartEditorPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Bar Chart Editor',
+      description: 'Edit bar charts with advanced customization options',
+    },
+  },
+  {
+    path: Routers.AREA_CHART_EDITOR_DEMO,
+    name: 'area-chart-editor',
+    component: 'AreaChartEditorPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Area Chart Editor',
+      description: 'Edit area charts with advanced customization options',
     },
   },
 ];
@@ -307,6 +566,38 @@ export const errorRoutes: RouteConfig[] = [
 // COMBINED ROUTES
 // ================================
 
+export const verifyEmailError: RouteConfig[] = [
+  {
+    path: Routers.VERIFY_EMAIL_ERROR,
+    name: 'verify-email-error',
+    component: 'VerifyEmailErrorPage',
+    layout: 'NONE',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Lỗi xác thực email',
+      description: 'Token xác thực không hợp lệ hoặc đã hết hạn',
+      hideFromNav: true,
+    },
+  },
+];
+
+export const resendEmailRoute: RouteConfig[] = [
+  {
+    path: Routers.RESEND_EMAIL,
+    name: 'resend-email',
+    component: 'ResendEmailPage',
+    layout: 'NONE',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Gửi lại email xác thực',
+      description: 'Gửi lại email xác thực tài khoản',
+      hideFromNav: true,
+    },
+  },
+];
+
 export const allRoutes: RouteConfig[] = [
   ...publicRoutes,
   ...authRoutes,
@@ -314,6 +605,8 @@ export const allRoutes: RouteConfig[] = [
   ...errorRoutes,
   ...verifyEmailSuccess,
   ...sendEmailVerifySuccess,
+  ...verifyEmailError,
+  ...resendEmailRoute,
 ];
 
 // ================================

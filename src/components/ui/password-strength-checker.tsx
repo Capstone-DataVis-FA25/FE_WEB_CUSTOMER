@@ -3,8 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Check, X, Info } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { MotionWrapper } from '@/theme/animation';
-import { motion } from 'framer-motion';
-import { progressVariants } from '@/theme/animation/animation.config';
 import { usePasswordStrength } from '@/hooks/usePasswordStrength';
 
 interface PasswordStrengthRule {
@@ -127,18 +125,6 @@ export const PasswordStrengthTooltip: React.FC<PasswordStrengthTooltipProps> = (
                   {strengthInfo.label}
                 </MotionWrapper>
               </MotionWrapper>
-
-              {/* Progress Bar */}
-              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                <motion.div
-                  variants={progressVariants}
-                  initial="initial"
-                  animate="animate"
-                  custom={strengthPercentage}
-                  className={`h-2 rounded-full ${strengthInfo.color}`}
-                  style={{ minWidth: 8 }}
-                />
-              </div>
 
               {/* Rules List */}
               <div className="space-y-2">
