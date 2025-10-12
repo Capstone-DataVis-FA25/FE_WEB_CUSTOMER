@@ -54,12 +54,6 @@ export const useNavigation = () => {
     [navigate]
   );
 
-  const goToAboutUs = useCallback(
-    (options?: NavigationOptions) => {
-      navigate(Routers.ABOUT_US, options);
-    },
-    [navigate]
-  );
 
   const goToChangePassword = useCallback(
     (options?: NavigationOptions) => {
@@ -117,7 +111,7 @@ export const useNavigation = () => {
     // Public routes
     goToHome,
     goToAuth,
-    goToForgotPassword,
+  goToForgotPassword,
 
     // Profile routes
     goToProfile,
@@ -125,7 +119,7 @@ export const useNavigation = () => {
     goToNotificationSettings,
     goToGeneralSettings,
 
-    // Error routes
+  // Error routes
     goToNotFound,
     goToForbidden,
 

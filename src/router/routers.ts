@@ -1,6 +1,7 @@
 const Routers = {
   // Public routes
   HOME: '/',
+  ABOUT_US: '/about-us',
   AUTH: '/auth',
   FORGOT_PASSWORD: '/auth/forgot-password',
   RESET_PASSWORD: '/auth/reset-password',

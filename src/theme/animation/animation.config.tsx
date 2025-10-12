@@ -1,7 +1,13 @@
-import type { Variants } from 'framer-motion';
+import type { Variants, Transition } from 'framer-motion';
 
 // Transition configs có thể tái sử dụng
-export const transitions = {
+export const transitions: {
+  smooth: Transition;
+  spring: Transition;
+  bouncy: Transition;
+  slow: Transition;
+  fast: Transition;
+} = {
   smooth: {
     type: 'tween',
     duration: 0.3,
@@ -70,7 +76,7 @@ export const slideVariants = {
     visible: { y: 0, opacity: 1, transition: transitions.smooth },
     exit: { y: 50, opacity: 0, transition: transitions.fast },
   },
-};
+} as const;
 
 // Animation variants cho scale effects
 export const scaleVariants: Variants = {
@@ -282,15 +288,15 @@ export const createDelayedVariants = (baseVariants: Variants, delay: number): Va
   const delayedVariants: Variants = {};
 
   Object.keys(baseVariants).forEach(key => {
-    const variant = baseVariants[key];
-    if (typeof variant === 'object' && variant !== null) {
-      delayedVariants[key] = {
+    const variant = (baseVariants as any)[key];
+    if (variant && typeof variant === 'object') {
+      (delayedVariants as any)[key] = {
         ...variant,
         transition: {
-          ...(variant.transition || transitions.smooth),
+          ...((variant.transition as Transition | undefined) || transitions.smooth),
           delay,
         },
-      };
+      } as any;
     }
   });
 

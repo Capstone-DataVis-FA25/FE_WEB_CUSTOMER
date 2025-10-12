@@ -6,11 +6,7 @@ import { AnimatedButton } from '../../theme/animation';
 const ThemeSwitcher: React.FC = () => {
   const { theme, setTheme } = useTheme();
 
-  const isDark =
-    theme === 'dark' ||
-    (theme === 'system' &&
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const isDark = theme === 'dark';
 
   const toggleTheme = () => {
     setTheme(isDark ? 'light' : 'dark');

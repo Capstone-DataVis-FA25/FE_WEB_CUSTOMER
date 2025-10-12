@@ -34,7 +34,7 @@ const GeneralSettingsPage: React.FC = () => {
   const { showToast } = useToast();
   const modalConfirm = useModalConfirm();
   const { showSuccess, showError } = useToastContext();
-  const { user, deleteUser, deleteUserStatus, deleteUserError, logout } = useAuth();
+  const { user, deleteUser, deleteUserError, logout } = useAuth();
   const { goToHome } = useNavigation();
 
   const [settings, setSettings] = useState<GeneralSettings>({
