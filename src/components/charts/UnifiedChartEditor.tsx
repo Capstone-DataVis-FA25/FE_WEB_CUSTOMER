@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import * as d3 from 'd3';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -108,6 +109,18 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
 }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
+  // Map curve option keys to actual d3 curve factories
+  const curveFactoryMap: Record<keyof typeof curveOptions, d3.CurveFactory> = {
+    curveLinear: d3.curveLinear,
+    curveMonotoneX: d3.curveMonotoneX,
+    curveMonotoneY: d3.curveMonotoneY,
+    curveBasis: d3.curveBasis,
+    curveCardinal: d3.curveCardinal,
+    curveCatmullRom: d3.curveCatmullRom,
+    curveStep: d3.curveStep,
+    curveStepBefore: d3.curveStepBefore,
+    curveStepAfter: d3.curveStepAfter,
+  };
   // State management
   const [chartType, setChartType] = useState<ChartType>(initialChartType);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
@@ -1504,7 +1517,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
             disabledLines={lineConfig.disabledLines}
             showPoints={lineConfig.showPoints}
             showPointValues={lineConfig.showPointValues}
-            curve={curveOptions[lineConfig.curve as keyof typeof curveOptions]}
+            curve={curveFactoryMap[lineConfig.curve as keyof typeof curveOptions]}
             lineWidth={lineConfig.lineWidth}
             pointRadius={lineConfig.pointRadius}
             // Chart-specific props that are supported by D3LineChart
@@ -1592,7 +1605,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
           disabledLines: areaConfig.disabledLines,
           showPoints: areaConfig.showPoints,
           showStroke: areaConfig.showStroke,
-          curve: curveOptions[areaConfig.curve as keyof typeof curveOptions],
+          curve: curveFactoryMap[areaConfig.curve as keyof typeof curveOptions],
           opacity: areaConfig.opacity,
           stackedMode: areaConfig.stackedMode,
           // Add zoom functionality to area chart

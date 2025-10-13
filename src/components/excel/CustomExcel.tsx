@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useDataset, type DateFormat, type NumberFormat } from '@/contexts/DatasetContext';
+import { useDataset } from '@/contexts/DatasetContext';
 import { Button } from '@/components/ui/button';
 import * as XLSX from 'xlsx';
 import saveAs from 'file-saver';
@@ -52,13 +52,7 @@ const COLUMN_TYPES = [
   { label: 'Date', value: 'date', icon: <Calendar size={14} /> },
 ];
 
-// Value validators (non-blocking)
-const isValidValue = (type: DataHeader['type'], v: string): boolean => {
-  if (v === '' || v == null) return true;
-  if (type === 'number') return /^[-+]?\d+$/.test(v.trim());
-  if (type === 'date') return /^\d{4}-\d{2}-\d{2}$/.test(v.trim());
-  return true;
-};
+// removed unused isValidValue
 
 // Normalization / conversion when changing type
 
@@ -96,7 +90,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   // New states for validation UX
-  const [touchedCells, setTouchedCells] = useState<Set<string>>(new Set());
+  // We only need the setter; the value is not read
+  const [, setTouchedCells] = useState<Set<string>>(new Set());
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const {
     setExcelErrors,

@@ -7,12 +7,10 @@ export interface BackendDataHeader {
   name: string;
   type: string;
   index: number;
-  // Encrypted fields from database
   encryptedData?: string;
   iv?: string;
   authTag?: string;
   encryptedDataKey?: string;
-  // Decrypted data (populated after decryption)
   data?: any[];
 }
 
@@ -428,7 +426,7 @@ export const validateBackendData = (
   // Check for consistent data lengths
   if (headers.length > 0 && headers[0].data) {
     const expectedLength = headers[0].data.length;
-    headers.forEach((header, index) => {
+    headers.forEach(header => {
       if (header.data && header.data.length !== expectedLength) {
         result.warnings.push(
           `Header "${header.name}" has ${header.data.length} data points, expected ${expectedLength}`

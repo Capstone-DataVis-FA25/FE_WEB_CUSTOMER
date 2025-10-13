@@ -130,6 +130,7 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
 
     return Utils.getDate(date, 4);
   };
+
   return (
     <>
       {/* Toggle Button - Always visible */}
