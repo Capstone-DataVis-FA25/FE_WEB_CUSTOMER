@@ -8,7 +8,6 @@ const transformChartNote = (note: {
   id: string;
   chartId: string;
   content: string;
-  timestamp?: string;
   isCompleted: boolean;
   author: {
     id: string;
@@ -17,13 +16,11 @@ const transformChartNote = (note: {
     lastName?: string;
   };
   createdAt: string;
-  updatedAt: string;
 }): ChartNote => {
   return {
     id: note.id,
     chartId: note.chartId,
     content: note.content,
-    timestamp: note.timestamp || note.createdAt,
     isCompleted: note.isCompleted,
     author: {
       id: note.author.id,
@@ -32,7 +29,6 @@ const transformChartNote = (note: {
       lastName: note.author.lastName,
     },
     createdAt: note.createdAt,
-    updatedAt: note.updatedAt,
   };
 };
 

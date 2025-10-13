@@ -76,7 +76,6 @@ export const useChartNotes = () => {
           note: {
             chartId,
             content,
-            timestamp: new Date().toISOString(),
             isCompleted: false,
             author,
           },

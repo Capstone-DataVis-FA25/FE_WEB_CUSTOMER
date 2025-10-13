@@ -14,10 +14,7 @@ export interface ChartNote {
   content: string;
   chartId: string;
   authorId: string;
-  timestamp: string;
   createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
   author: ChartNoteAuthor;
 }
 

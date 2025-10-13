@@ -2,7 +2,6 @@ export interface ChartNote {
   id: string;
   chartId: string;
   content: string;
-  timestamp: string;
   isCompleted: boolean;
   author: {
     id: string;
@@ -11,7 +10,6 @@ export interface ChartNote {
     lastName?: string;
   };
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface ChartNoteState {

@@ -36,7 +36,7 @@ const chartNoteSlice = createSlice({
       state,
       action: PayloadAction<{
         chartId: string;
-        note: Omit<ChartNote, 'id' | 'createdAt' | 'updatedAt'>;
+        note: Omit<ChartNote, 'id' | 'createdAt'>;
       }>
     ) => {
       const { chartId, note } = action.payload;
@@ -45,7 +45,6 @@ const chartNoteSlice = createSlice({
         id: `temp-${Date.now()}`,
         isCompleted: false,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       };
 
       if (!state.notes[chartId]) {
@@ -74,20 +73,17 @@ const chartNoteSlice = createSlice({
       action: PayloadAction<{ chartId: string; noteId: string; content: string }>
     ) => {
       const { chartId, noteId, content } = action.payload;
-      const updatedAt = new Date().toISOString();
 
       if (state.notes[chartId]) {
         const noteIndex = state.notes[chartId].findIndex(note => note.id === noteId);
         if (noteIndex !== -1) {
           state.notes[chartId][noteIndex].content = content;
-          state.notes[chartId][noteIndex].updatedAt = updatedAt;
         }
       }
 
       const currentNoteIndex = state.currentChartNotes.findIndex(note => note.id === noteId);
       if (currentNoteIndex !== -1) {
         state.currentChartNotes[currentNoteIndex].content = content;
-        state.currentChartNotes[currentNoteIndex].updatedAt = updatedAt;
       }
     },
     // Toggle note completed status locally
@@ -96,14 +92,12 @@ const chartNoteSlice = createSlice({
       action: PayloadAction<{ chartId: string; noteId: string }>
     ) => {
       const { chartId, noteId } = action.payload;
-      const updatedAt = new Date().toISOString();
 
       if (state.notes[chartId]) {
         const noteIndex = state.notes[chartId].findIndex(note => note.id === noteId);
         if (noteIndex !== -1) {
           state.notes[chartId][noteIndex].isCompleted =
             !state.notes[chartId][noteIndex].isCompleted;
-          state.notes[chartId][noteIndex].updatedAt = updatedAt;
         }
       }
 
@@ -111,7 +105,6 @@ const chartNoteSlice = createSlice({
       if (currentNoteIndex !== -1) {
         state.currentChartNotes[currentNoteIndex].isCompleted =
           !state.currentChartNotes[currentNoteIndex].isCompleted;
-        state.currentChartNotes[currentNoteIndex].updatedAt = updatedAt;
       }
     },
   },
