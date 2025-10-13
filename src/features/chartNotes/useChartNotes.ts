@@ -7,20 +7,21 @@ import {
   createChartNoteThunk,
   updateChartNoteThunk,
   deleteChartNoteThunk,
+  toggleChartNoteCompletedThunk,
 } from './chartNoteThunk';
 import {
   clearError,
   clearCurrentChartNotes,
   addNoteLocally,
   setCurrentChartNotes,
+  toggleNoteCompletedLocally,
 } from './chartNoteSlice';
 import type { CreateChartNoteRequest, UpdateChartNoteRequest } from './chartNoteTypes';
 
 export const useChartNotes = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { notes, currentChartNotes, loading, creating, updating, deleting, error } = useSelector(
-    (state: RootState) => state.chartNote
-  );
+  const { notes, currentChartNotes, loading, creating, updating, deleting, toggling, error } =
+    useSelector((state: RootState) => state.chartNote);
 
   // Fetch all notes for a chart
   const getChartNotes = useCallback(
@@ -76,10 +77,27 @@ export const useChartNotes = () => {
             chartId,
             content,
             timestamp: new Date().toISOString(),
+            isCompleted: false,
             author,
           },
         })
       );
+    },
+    [dispatch]
+  );
+
+  // Toggle note completed status
+  const toggleNoteCompleted = useCallback(
+    (noteId: string) => {
+      return dispatch(toggleChartNoteCompletedThunk({ noteId }));
+    },
+    [dispatch]
+  );
+
+  // Toggle note completed status locally (optimistic)
+  const toggleNoteCompletedOptimistic = useCallback(
+    (chartId: string, noteId: string) => {
+      dispatch(toggleNoteCompletedLocally({ chartId, noteId }));
     },
     [dispatch]
   );
@@ -109,12 +127,15 @@ export const useChartNotes = () => {
     creating,
     updating,
     deleting,
+    toggling,
     error,
     getChartNotes,
     getChartNoteById,
     createNote,
     updateNote,
     deleteNote,
+    toggleNoteCompleted,
+    toggleNoteCompletedOptimistic,
     addNoteOptimistic,
     setCurrentNotes,
     clearCurrentNotes,

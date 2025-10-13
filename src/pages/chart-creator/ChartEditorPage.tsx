@@ -60,9 +60,11 @@ const ChartEditorPage: React.FC = () => {
     creating: creatingNote,
     updating: updatingNote,
     deleting: deletingNote,
+    toggling: togglingNote,
     createNote,
     updateNote,
     deleteNote,
+    toggleNoteCompleted,
     getChartNotes,
     clearCurrentNotes,
   } = useChartNotes();
@@ -973,6 +975,26 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
+  const handleToggleCompleted = async (noteId: string) => {
+    if (!chartId) return;
+
+    console.log('[ChartEditor] Toggling note completed:', { chartId, noteId });
+
+    try {
+      const result = await toggleNoteCompleted(noteId);
+
+      if (result.meta.requestStatus === 'fulfilled') {
+        console.log('[ChartEditor] Note completed status toggled successfully');
+      } else {
+        console.error('[ChartEditor] Failed to toggle note:', result);
+        showError(t('chartEditor.notes.toggleError', 'Failed to toggle note status'));
+      }
+    } catch (error) {
+      console.error('[ChartEditor] Error toggling note:', error);
+      showError(t('chartEditor.notes.toggleError', 'Failed to toggle note status'));
+    }
+  };
+
   // Load chart notes when chart is loaded
   useEffect(() => {
     if (chartId && mode === 'edit') {
@@ -1476,9 +1498,10 @@ const ChartEditorPage: React.FC = () => {
           onToggle={handleToggleNotesSidebar}
           notes={currentChartNotes}
           onAddNote={handleAddNote}
-          isLoading={creatingNote || updatingNote || deletingNote}
+          isLoading={creatingNote || updatingNote || deletingNote || togglingNote}
           onDeleteNote={handleDeleteNote}
           onUpdateNote={handleUpdateNote}
+          onToggleCompleted={handleToggleCompleted}
         />
       )}
     </div>

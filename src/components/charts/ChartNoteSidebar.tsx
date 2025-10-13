@@ -14,6 +14,7 @@ interface ChartNoteSidebarProps {
   onAddNote: (content: string) => void;
   onDeleteNote?: (noteId: string) => void;
   onUpdateNote?: (noteId: string, content: string) => void;
+  onToggleCompleted?: (noteId: string) => void;
   isLoading?: boolean;
 }
 
@@ -24,6 +25,7 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
   onAddNote,
   onDeleteNote,
   onUpdateNote,
+  onToggleCompleted,
   isLoading = false,
 }) => {
   const { user } = useAuth();
@@ -37,7 +39,6 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  console.log('notes123: ', notes);
   // Auto scroll to bottom when new notes added
   useEffect(() => {
     if (isOpen && messagesEndRef.current) {
@@ -118,35 +119,17 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
     setDeleteConfirmNoteId(null);
   };
 
-  const formatTimestamp = (timestamp: string) => {
+  const formatCreatedAt = (timestamp: string) => {
     const date = new Date(timestamp);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
+    // const now = new Date();
+    // const diff = now.getTime() - date.getTime();
+    // const seconds = Math.floor(diff / 1000);
+    // const minutes = Math.floor(seconds / 60);
+    // const hours = Math.floor(minutes / 60);
+    // const days = Math.floor(hours / 24);
 
-    if (days > 0) {
-      return Utils.getDate(date, 1);
-    } else if (hours > 0) {
-      return `${hours}h ago`;
-    } else if (minutes > 0) {
-      return `${minutes}m ago`;
-    } else {
-      return 'Just now';
-    }
+    return Utils.getDate(date, 4);
   };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   return (
     <>
       {/* Toggle Button - Always visible */}
@@ -247,7 +230,6 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
                   <>
                     {notes.map((note, index) => {
                       const isCurrentUser = note.author.id === user?.id;
-
                       return (
                         <motion.div
                           key={note.id}
@@ -259,16 +241,16 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
                           {/* Message Content */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-baseline gap-2 mb-1">
-                              <span className="font-semibold text-sm text-gray-900 dark:text-white">
-                                {note.author.name}
-                              </span>
+                              {/* <span className="font-semibold text-sm text-gray-900 dark:text-white">
+                                {note.author.firstName} {note.author.lastName}
+                              </span> */}
                               {isCurrentUser && (
                                 <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded">
                                   {t('you', 'You')}
                                 </span>
                               )}
                               <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {formatTimestamp(note.timestamp)}
+                                {formatCreatedAt(note.createdAt)}
                               </span>
                             </div>
 
@@ -300,10 +282,31 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
                             ) : (
                               // Display Mode
                               <div className="group relative">
-                                <div className="bg-white dark:bg-gray-800 rounded-lg px-3 py-2 shadow-sm border border-gray-200 dark:border-gray-700">
-                                  <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
-                                    {note.content}
-                                  </p>
+                                <div className="flex items-start gap-2">
+                                  {/* Checkbox for completed status */}
+                                  {onToggleCompleted && (
+                                    <input
+                                      type="checkbox"
+                                      checked={note.isCompleted}
+                                      onChange={() => onToggleCompleted(note.id)}
+                                      className="mt-3 w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                                      title={
+                                        note.isCompleted
+                                          ? t('mark_as_incomplete', 'Mark as incomplete')
+                                          : t('mark_as_complete', 'Mark as complete')
+                                      }
+                                    />
+                                  )}
+
+                                  <div
+                                    className={`flex-1 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 shadow-sm border border-gray-200 dark:border-gray-700 ${
+                                      note.isCompleted ? 'opacity-60 line-through' : ''
+                                    }`}
+                                  >
+                                    <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
+                                      {note.content}
+                                    </p>
+                                  </div>
                                 </div>
 
                                 {/* Edit/Delete Buttons - Only show for current user's notes (inside bubble top-right) */}
