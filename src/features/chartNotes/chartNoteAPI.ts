@@ -40,7 +40,6 @@ const transformChartNote = (note: {
 export const getChartNotes = async (chartId: string): Promise<ChartNote[]> => {
   const response = await axiosPrivate.get(`${API_BASE}/chart/${chartId}`);
   // Handle wrapped API response format
-  console.log('response getChartNotes: ', response);
   const data =
     response.data && typeof response.data === 'object' && 'data' in response.data
       ? response.data.data.data
