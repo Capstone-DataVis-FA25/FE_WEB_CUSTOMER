@@ -3,22 +3,29 @@ import * as d3 from 'd3';
 // Color configuration
 export type ColorConfig = Record<string, { light: string; dark: string }>;
 
-// Structured Chart Config (complete format)
-export interface StructuredChartConfig {
-  config: Record<string, unknown> & {
-    title: string;
-    xLabel: string;
-    yLabel: string;
-    xColumn: number;
-    width: number;
-    height: number;
-    showLegend: boolean;
-    showGrid: boolean;
-    showDataLabels: boolean;
-  };
+// CHART TYPE GENERATION
+
+export type MainChartConfig = LineChartConfig | BarChartConfig | AreaChartConfig;
+
+export interface LineChartConfig {
+  config: SubLineChartConfig;
   formatters: Partial<FormatterConfig>;
   seriesConfigs: SeriesConfig[];
-  chartType: 'line' | 'bar' | 'area';
+  chartType: 'line';
+}
+
+export interface BarChartConfig {
+  config: SubBarChartConfig;
+  formatters: Partial<FormatterConfig>;
+  seriesConfigs: SeriesConfig[];
+  chartType: 'bar';
+}
+
+export interface AreaChartConfig {
+  config: SubAreaChartConfig;
+  formatters: Partial<FormatterConfig>;
+  seriesConfigs: SeriesConfig[];
+  chartType: 'area';
 }
 
 // Curve options
@@ -75,83 +82,70 @@ export const getResponsiveDefaults = () => {
 export interface SeriesConfig {
   id: string;
   name: string;
-  dataColumn: string;
   color: string;
   visible: boolean;
-  lineWidth?: number;
-  pointRadius?: number;
-  lineStyle?: 'solid' | 'dashed' | 'dotted';
-  pointStyle?: 'circle' | 'square' | 'triangle' | 'diamond';
-  opacity?: number;
-  formatter?: 'inherit' | 'custom';
-  customFormatter?: string;
+  dataColumn: string;
 }
 
 // Base chart configuration interface (common properties)
 export interface BaseChartConfig {
-  width: number;
-  height: number;
-  margin: { top: number; right: number; bottom: number; left: number };
-  xAxisKey: string;
-  yAxisKeys: string[];
-  title: string;
-  xAxisLabel: string;
-  yAxisLabel: string;
-  showLegend: boolean;
-  showGrid: boolean;
-  animationDuration: number;
-  xAxisStart: 'auto' | 'zero';
-  yAxisStart: 'auto' | 'zero';
+  width?: number | 800;
+  height?: number | 600;
+  margin?: { top: number; right: number; bottom: number; left: number };
+  xAxisKey?: string;
+  yAxisKeys?: string[];
+  title: string | '';
+  xAxisLabel?: string | '';
+  yAxisLabel?: string | '';
+  showLegend?: boolean | false;
+  showGrid?: boolean | false;
+  animationDuration?: number | 0;
+  xAxisStart?: 'auto' | 'zero';
+  yAxisStart?: 'auto' | 'zero';
 
   // Styling configs
-  gridOpacity: number;
-  legendPosition: 'top' | 'bottom' | 'left' | 'right';
+  gridOpacity?: number;
+  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
 
   // Axis configs
-  xAxisRotation: number;
-  yAxisRotation: number;
-  showAxisLabels: boolean;
-  showAxisTicks: boolean;
+  xAxisRotation?: number;
+  yAxisRotation?: number;
+  showAxisLabels?: boolean;
+  showAxisTicks?: boolean;
 
   // Interaction configs
-  enableZoom: boolean;
-  enablePan: boolean;
-  zoomExtent: number;
-  showTooltip: boolean;
+  enableZoom?: boolean;
+  enablePan?: boolean;
+  zoomExtent?: number;
+  showTooltip?: boolean;
 
   // Visual configs
-  theme: 'light' | 'dark' | 'auto';
-  backgroundColor: string;
-  titleFontSize: number;
-  labelFontSize: number;
-  legendFontSize: number;
+  theme?: 'light' | 'dark' | 'auto';
+  backgroundColor?: string;
+  titleFontSize?: number;
+  labelFontSize?: number;
+  legendFontSize?: number;
 }
 
 // Line chart specific configuration
-export interface LineChartConfig extends BaseChartConfig {
+export interface SubLineChartConfig extends BaseChartConfig {
   disabledLines: string[];
-  showPoints: boolean;
-  showPointValues: boolean; // Show values on data points
-  curve: keyof typeof curveOptions;
-  lineWidth: number;
-  pointRadius: number;
+  showPoints?: boolean;
+  showPointValues?: boolean; // Show values on data points
+  curve?: keyof typeof curveOptions;
+  lineWidth?: number;
+  pointRadius?: number;
 }
 
 // Area chart specific configuration
-export interface AreaChartConfig extends BaseChartConfig {
-  disabledLines: string[];
-  showPoints: boolean;
-  showPointValues: boolean; // Show values on data points
-  showStroke: boolean;
-  curve: keyof typeof curveOptions;
-  lineWidth: number;
-  // pointRadius: number;
-  // opacity: number;
-  // stackedMode: boolean;
+export interface SubAreaChartConfig extends BaseChartConfig {
+  showStroke?: boolean;
+  curve?: keyof typeof curveOptions;
+  lineWidth?: number;
 }
 
 // Bar chart specific configuration
-export interface BarChartConfig extends BaseChartConfig {
+export interface SubBarChartConfig extends BaseChartConfig {
   disabledBars: string[];
   showPoints: boolean;
   showPointValues: boolean; // Show values on bars

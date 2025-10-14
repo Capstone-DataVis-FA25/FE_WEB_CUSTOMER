@@ -1,12 +1,11 @@
 interface LoadingSpinnerProps {
   title?: string;
   subtitle?: string;
-  /** When true the spinner will render full-screen background and min-h-screen; otherwise it's compact */
   fullScreen?: boolean;
 }
 
 function LoadingSpinner({
-  title = 'Processing your data...',
+  title = 'Process loading...',
   subtitle = 'Please wait while we analyze your file',
   fullScreen = false,
 }: LoadingSpinnerProps) {

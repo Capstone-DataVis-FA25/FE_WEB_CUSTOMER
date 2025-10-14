@@ -68,7 +68,7 @@ const DatasetDetailPage: React.FC = () => {
     getDatasetById,
     deleteDataset,
     updateDataset,
-    clearCurrent,
+    clearCurrent: clearCurrentDataset,
   } = useDataset();
 
   // Edit mode states
@@ -109,9 +109,9 @@ const DatasetDetailPage: React.FC = () => {
       getDatasetById(extractedId);
     }
     return () => {
-      clearCurrent();
+      clearCurrentDataset();
     };
-  }, [extractedId, getDatasetById, clearCurrent]);
+  }, [extractedId, getDatasetById, clearCurrentDataset]);
 
   // Initialize editable fields when dataset is loaded
   useEffect(() => {
@@ -636,6 +636,12 @@ const DatasetDetailPage: React.FC = () => {
     );
   }
 
+  // Clear dataset on unmount
+  useEffect(() => {
+    return () => {
+      clearCurrentDataset();
+    };
+  }, [clearCurrentDataset]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 dark:from-gray-900 dark:via-slate-900 dark:to-indigo-900 relative overflow-hidden">
       {/* Animated Background Elements */}

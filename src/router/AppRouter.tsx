@@ -3,10 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { allRoutes, type RouteConfig } from '@/config/routes';
 import CustomerLayout from '../components/layout/CustomerLayout';
 import { FadeIn } from '../theme/animation';
-import { ErrorBoundaryClass } from '@/components/error/ErrorBoundary';
 import { useAuth } from '@/features/auth/useAuth';
 import DebugContainer from '@/components/debug/DebugContainer';
-import { useTranslation } from 'react-i18next';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 // ================================
 // LAZY LOAD COMPONENTS
 // ================================
@@ -38,25 +37,12 @@ const componentMap = {
   DatasetDetailPage: lazy(() => import('../pages/dataset/DatasetDetailPage')),
   ChartGalleryPickerPage: lazy(() => import('../pages/chart-gallery/ChartGalleryPickerPage')),
   WorkspacePage: lazy(() => import('../pages/workspace/WorkspacePage')),
-  ChartCreatorPage: lazy(() => import('../pages/chart-creator/ChartCreatorPage')),
-  ChartEditorPage: lazy(() => import('../pages/chart-creator/ChartEditorPage')),
+  ChartEditorPage: lazy(() => import('../pages/chart-creator/ChartEditorWithProviders')),
 };
 
 // ================================
 // COMPONENTS
 // ================================
-
-const LoadingSpinner: React.FC = () => {
-  const { t } = useTranslation();
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <div className="flex flex-col items-center space-y-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-accent border-t-transparent"></div>
-        <span className="text-foreground text-lg font-medium">{t('loading')}</span>
-      </div>
-    </div>
-  );
-};
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -66,9 +52,13 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
 
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
+  // if (isLoading) {
+  //   return (
+  //     <LayoutWrapper route={route}>
+  //       <LoadingSpinner />
+  //     </LayoutWrapper>
+  //   );
+  // }
 
   // Kiểm tra nếu route được bảo vệ nhưng user chưa đăng nhập
   if (route.isProtected && !isAuthenticated) {
@@ -117,9 +107,9 @@ const RouteRenderer: React.FC<{ route: RouteConfig }> = ({ route }) => {
   return (
     <ProtectedRoute route={route}>
       <LayoutWrapper route={route}>
-        <Suspense fallback={<LoadingSpinner />}>
-          <Component />
-        </Suspense>
+        {/* <Suspense fallback={<LoadingSpinner />}> */}
+        <Component />
+        {/* </Suspense> */}
       </LayoutWrapper>
     </ProtectedRoute>
   );
