@@ -159,6 +159,32 @@ export const publicRoutes: RouteConfig[] = [
     },
   },
 
+  //terms of service and privacy policy
+  {
+    path: Routers.TERMS_OF_SERVICE,
+    name: 'terms-of-service',
+    component: 'TermsOfServicePage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Terms of Service',
+      description: 'Terms of Service',
+    },
+  },
+  {
+    path: Routers.PRIVACY_POLICY,
+    name: 'privacy-policy',
+    component: 'PrivacyPolicyPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Privacy Policy',
+      description: 'Privacy Policy',
+    },
+  },
+
   {
     path: Routers.CHART_GALLERY,
     name: 'chartgallery',

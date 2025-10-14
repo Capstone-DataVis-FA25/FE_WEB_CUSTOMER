@@ -50,6 +50,10 @@ const Routers = {
   WORKSPACE_CHARTS: '/workspace/charts',
   CHART_CREATOR: '/chart-creator',
   CHART_EDITOR: '/chart-editor',
+
+  // Privacy and Terms
+  TERMS_OF_SERVICE: '/terms-of-service',
+  PRIVACY_POLICY: '/privacy-policy',
 } as const;
 
 export default Routers;
