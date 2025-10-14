@@ -6,6 +6,7 @@ import { FadeIn } from '../theme/animation';
 import { useAuth } from '@/features/auth/useAuth';
 // import DebugContainer from '@/components/debug/DebugContainer';
 import { useTranslation } from 'react-i18next';
+import TermsOfServicePage from '@/pages/privacy-terms/TermsOfServicePage';
 // ================================
 // LAZY LOAD COMPONENTS
 // ================================
@@ -38,6 +39,9 @@ const componentMap = {
   ChartGalleryPickerPage: lazy(() => import('../pages/chart-gallery/ChartGalleryPickerPage')),
   WorkspacePage: lazy(() => import('../pages/workspace/WorkspacePage')),
   ChartEditorPage: lazy(() => import('../pages/chart-creator/ChartEditorPage')),
+  PieChartEditorDemo: lazy(() => import('../components/charts/page.example/PieChartEditorDemo')),
+  TermsOfServicePage: lazy(() => import('../pages/privacy-terms/TermsOfServicePage')),
+  PrivacyPolicyPage: lazy(() => import('../pages/privacy-terms/PrivacyPolicyPage')),
 };
 
 // ================================
