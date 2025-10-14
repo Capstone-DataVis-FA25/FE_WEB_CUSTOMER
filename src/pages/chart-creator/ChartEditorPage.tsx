@@ -10,16 +10,7 @@ import UnifiedChartEditor from '@/components/charts/UnifiedChartEditor';
 import { useDataset } from '@/features/dataset/useDataset';
 import { convertToChartData } from '@/utils/dataConverter';
 import { useCharts } from '@/features/charts/useCharts';
-import {
-  Database,
-  BarChart3,
-  ArrowLeft,
-  Save,
-  Calendar,
-  Clock,
-  RotateCcw,
-  Upload,
-} from 'lucide-react';
+import { Database, BarChart3, ArrowLeft, Save, Calendar, Clock, RotateCcw } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 // Chart data types are now handled in contexts
 import { useToast } from '@/hooks/useToast';
@@ -107,7 +98,6 @@ const ChartEditorPage: React.FC = () => {
     updateNote,
     deleteNote,
     getChartNotes,
-    clearCurrentNotes,
     loading: isNoteLoading,
   } = useChartNotes();
 
@@ -121,8 +111,6 @@ const ChartEditorPage: React.FC = () => {
 
   // Use datasetId from context, with local state for selection changes
   const [datasetId, setDatasetId] = useState<string>(contextDatasetId || '');
-
-  // Chart type, mode, chartId, and datasetId are now handled by the wrapper component and context
 
   // State for dataset selection modal
   const [showDatasetModal, setShowDatasetModal] = useState(false);
@@ -186,8 +174,6 @@ const ChartEditorPage: React.FC = () => {
       }
     }
   }, [currentDataset, datasetId]);
-
-  // hasChanges is now handled by ChartEditorContext
 
   // Thông báo rằng là chart chưa lưu -> người dùng lưu hoặc cancel
   useBeforeUnload({

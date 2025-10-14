@@ -1,11 +1,10 @@
-import React, { Suspense, lazy } from 'react';
+import React, { lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { allRoutes, type RouteConfig } from '@/config/routes';
 import CustomerLayout from '../components/layout/CustomerLayout';
 import { FadeIn } from '../theme/animation';
 import { useAuth } from '@/features/auth/useAuth';
 import DebugContainer from '@/components/debug/DebugContainer';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
 // ================================
 // LAZY LOAD COMPONENTS
 // ================================
