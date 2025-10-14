@@ -968,25 +968,7 @@ export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
             />
           </div>
 
-          {/* Line Chart Specific: Curve Type */}
-          {chartType === 'line' && curveOptions && (
-            <div>
-              <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                {t('chart_editor_curve_type')}
-              </Label>
-              <select
-                value={curveType}
-                onChange={e => onUpdateChartSpecific({ curve: e.target.value })}
-                className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                {Object.keys(curveOptions).map(curve => (
-                  <option key={curve} value={curve}>
-                    {curve.replace('curve', '')}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Curve type setting moved to CurveTypeSetting component */}
 
           {/* Bar Chart Specific: Bar Type */}
           {chartType === 'bar' && (

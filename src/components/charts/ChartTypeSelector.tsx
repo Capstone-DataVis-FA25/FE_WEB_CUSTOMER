@@ -25,7 +25,7 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
   className = '',
 }) => {
   const { t } = useTranslation();
-  const { currentChartType, setCurrentChartType } = useChartEditor();
+  const { currentChartType, setCurrentChartType, chartConfig } = useChartEditor();
 
   const chartTypeOptions: ChartTypeOption[] = useMemo(
     () => [

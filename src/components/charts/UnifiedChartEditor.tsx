@@ -1,6 +1,9 @@
 import React from 'react';
 import ChartTypeSelector from './ChartTypeSelector';
 import BasicSettingsSection from './BasicSettingsSection';
+import BasicChartSettingsSection from './BasicChartSettingsSection';
+import AxisConfigurationSection from './AxisConfigurationSection';
+import SeriesManagementSection from './SeriesManagementSection';
 
 export interface UnifiedChartEditorProps {}
 
@@ -17,6 +20,15 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = () => {
 
               {/* Basic Settings Section */}
               <BasicSettingsSection />
+
+              {/* Basic Chart Settings Section */}
+              <BasicChartSettingsSection />
+
+              {/* Axis Configuration Section */}
+              <AxisConfigurationSection />
+
+              {/* Series Management Section */}
+              <SeriesManagementSection />
             </div>
           </div>
         </div>

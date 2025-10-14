@@ -63,15 +63,15 @@ const defaultSubAreaConfig: SubAreaChartConfig = {
   lineWidth: 2,
 };
 
-// Tạo config default cho bar
+// Tạo config default cho bar (KHÔNG kế thừa từ line)
 const defaultSubBarConfig: SubBarChartConfig = {
-  ...defaultSubLineConfig,
+  ...defaultBaseChartConfig,
   disabledBars: [],
-  showPoints: false,
-  showPointValues: false,
   barType: 'grouped',
   barWidth: 24,
   barSpacing: 8,
+  showPoints: false,
+  showPointValues: false,
 };
 
 // Default formatter config
@@ -111,12 +111,17 @@ export const defaultBarChartConfig: BarChartConfig = {
 
 // Returns a consistent default StructuredChartConfig for given chart type and optional dataset name
 export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => {
+  const log = (cfg: MainChartConfig) => {
+    console.log('[getDefaultChartConfig] type ->', chartType);
+    console.log('[getDefaultChartConfig] result:', cfg);
+    return cfg;
+  };
   switch (chartType) {
     case ChartType.Line:
-      return defaultLineChartConfig;
+      return log(defaultLineChartConfig);
     case ChartType.Area:
-      return defaultAreaChartConfig;
+      return log(defaultAreaChartConfig);
     case ChartType.Bar:
-      return defaultBarChartConfig;
+      return log(defaultBarChartConfig);
   }
 };
