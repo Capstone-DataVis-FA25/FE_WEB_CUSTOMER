@@ -89,17 +89,17 @@ export interface SeriesConfig {
 
 // Base chart configuration interface (common properties)
 export interface BaseChartConfig {
-  width?: number | 800;
-  height?: number | 600;
+  width?: number;
+  height?: number;
   margin?: { top: number; right: number; bottom: number; left: number };
   xAxisKey?: string;
   yAxisKeys?: string[];
-  title: string | '';
-  xAxisLabel?: string | '';
-  yAxisLabel?: string | '';
-  showLegend?: boolean | false;
-  showGrid?: boolean | false;
-  animationDuration?: number | 0;
+  title: string;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  showLegend?: boolean;
+  showGrid?: boolean;
+  animationDuration?: number;
   xAxisStart?: 'auto' | 'zero';
   yAxisStart?: 'auto' | 'zero';
 

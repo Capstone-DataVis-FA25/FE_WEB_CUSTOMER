@@ -332,7 +332,7 @@
   "lineChart_editor_sizePresets": "Size Presets",
   "lineChart_editor_width": "Width",
   "lineChart_editor_height": "Height",
-  "lineChart_editor_title_chart": "Title",
+  "lineChart_editor_title_chart": "Chart Title",
   "lineChart_editor_xAxisLabel": "X Axis Label",
   "lineChart_editor_yAxisLabel": "Y Axis Label",
   "lineChart_editor_xAxisKey": "X Axis Key",

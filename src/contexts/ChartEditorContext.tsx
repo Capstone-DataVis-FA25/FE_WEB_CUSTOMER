@@ -4,6 +4,11 @@ import type { ChartDataPoint } from '@/components/charts/D3LineChart';
 import type { MainChartConfig } from '@/types/chart';
 import { ChartType } from '@/features/charts';
 
+// Deep partial utility type for nested optional properties
+type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
 interface ValidationErrors {
   name: boolean;
   description: boolean;
@@ -49,7 +54,7 @@ interface ChartEditorContextType {
   updateOriginals: () => void;
 
   // Config update method
-  handleConfigChange: (configChanges: Partial<MainChartConfig['config']>) => void;
+  handleConfigChange: (configChanges: DeepPartial<MainChartConfig>) => void;
 
   // Reset trigger for forcing re-renders
   resetTrigger: number;
@@ -179,10 +184,13 @@ export const ChartEditorProvider: React.FC<ChartEditorProviderProps> = ({
   }, [editableName, editableDescription, chartConfig, currentChartType]);
 
   // Handle config changes from chart editors
-  const handleConfigChange = useCallback((configChanges: Partial<MainChartConfig['config']>) => {
+  const handleConfigChange = useCallback((configChanges: DeepPartial<MainChartConfig>) => {
     if (typeof configChanges === 'object' && configChanges !== null) {
       setChartConfig(currentConfig => {
-        if (!currentConfig) return currentConfig;
+        if (!currentConfig) {
+          console.warn('⚠️ No current config available, skipping update');
+          return currentConfig;
+        }
 
         // Deep merge for nested objects like margin
         const mergeDeep = (target: any, source: any) => {
@@ -201,11 +209,54 @@ export const ChartEditorProvider: React.FC<ChartEditorProviderProps> = ({
           return result;
         };
 
-        return {
-          ...currentConfig,
-          config: mergeDeep(currentConfig.config, configChanges),
-        } as MainChartConfig;
+        // Merge the entire config object, not just the nested config field
+        const newConfig = mergeDeep(currentConfig, configChanges) as MainChartConfig;
+
+        // Find deep changes in nested objects
+        const findDeepChanges = (obj1: any, obj2: any, path = ''): string[] => {
+          const changes: string[] = [];
+
+          for (const key in obj2) {
+            const currentPath = path ? `${path}.${key}` : key;
+
+            if (obj1[key] === undefined) {
+              changes.push(currentPath);
+            } else if (
+              typeof obj2[key] === 'object' &&
+              obj2[key] !== null &&
+              !Array.isArray(obj2[key])
+            ) {
+              changes.push(...findDeepChanges(obj1[key] || {}, obj2[key], currentPath));
+            } else if (JSON.stringify(obj1[key]) !== JSON.stringify(obj2[key])) {
+              changes.push(currentPath);
+            }
+          }
+
+          return changes;
+        };
+
+        const changedFields = findDeepChanges(currentConfig, configChanges);
+
+        // Only log the 4 things you want
+        console.log('📊 Current:', currentConfig);
+        console.log('✅ New:', newConfig);
+        console.log('🔄 Fields changed:', changedFields);
+        if (changedFields.length > 0) {
+          changedFields.forEach(field => {
+            const getNestedValue = (obj: any, path: string) => {
+              return path.split('.').reduce((current, key) => current?.[key], obj);
+            };
+            console.log(`  - ${field}:`, {
+              from: getNestedValue(currentConfig, field),
+              to: getNestedValue(newConfig, field),
+            });
+          });
+        }
+
+        return newConfig;
       });
+    } else {
+      console.warn('⚠️ Invalid configChanges provided:', configChanges);
     }
   }, []);
 
