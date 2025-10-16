@@ -61,7 +61,8 @@ const convertArrayFormat = (
   options: ConversionOptions
 ): ChartDataPoint[] => {
   const {
-    headerTransform = HeaderTransforms.clean,
+    // headerTransform = HeaderTransforms.clean,
+    headerTransform = HeaderTransforms.original,
     skipEmptyRows = true,
     defaultValue = '',
     validateTypes = false,
@@ -109,7 +110,7 @@ const convertBackendFormat = (
   options: ConversionOptions
 ): ChartDataPoint[] => {
   const {
-    headerTransform = HeaderTransforms.clean,
+    headerTransform = HeaderTransforms.original,
     skipEmptyRows = true,
     defaultValue = '',
     validateTypes = false,

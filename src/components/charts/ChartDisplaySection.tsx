@@ -41,8 +41,11 @@ const ChartDisplaySection: React.FC = () => {
         light: series.color,
         dark: series.color,
       };
+      console.log(`🎨 Color mapping: "${columnName}" -> ${series.color}`);
     }
   });
+
+  console.log('🎨 Final colors object:', colors);
 
   const safeChartConfig = chartConfig?.config || null;
 
@@ -60,23 +63,6 @@ const ChartDisplaySection: React.FC = () => {
       );
     }
 
-    // Check if no series are selected
-    if (!seriesConfigs || seriesConfigs.length === 0) {
-      return (
-        <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-          <div className="text-center">
-            <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-gray-400 mb-2">
-              {t('chart_editor_no_series', 'No data series selected')}
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              {t('chart_editor_add_series_hint', 'Add a data series to display the chart')}
-            </p>
-          </div>
-        </div>
-      );
-    }
-
     // Convert IDs to names for chart keys
     const xAxisKeyName = Array.isArray(safeChartConfig.xAxisKey)
       ? getHeaderName(safeChartConfig.xAxisKey[0] || '')
@@ -86,6 +72,48 @@ const ChartDisplaySection: React.FC = () => {
     const yAxisKeysNames = seriesConfigs
       .filter((series: any) => series.visible !== false) // Only include visible series
       .map((series: any) => getHeaderName(series.dataColumn));
+
+    // Check if no series are selected OR no visible series
+    if (!seriesConfigs || seriesConfigs.length === 0 || yAxisKeysNames.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+          <div className="text-center">
+            <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-gray-400 mb-2">
+              {t('chart_editor_no_series', 'No data series selected')}
+            </p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">
+              {yAxisKeysNames.length === 0 && seriesConfigs.length > 0
+                ? t(
+                    'chart_editor_no_visible_series',
+                    'All series are hidden. Please make at least one series visible.'
+                  )
+                : t('chart_editor_add_series_hint', 'Add a data series to display the chart')}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Validate xAxisKey
+    if (!xAxisKeyName || xAxisKeyName === '') {
+      return (
+        <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+          <div className="text-center">
+            <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-gray-400 mb-2">
+              {t('chart_editor_no_xaxis', 'No X-Axis column selected')}
+            </p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">
+              {t(
+                'chart_editor_select_xaxis_hint',
+                'Please select an X-Axis column in Axis Configuration'
+              )}
+            </p>
+          </div>
+        </div>
+      );
+    }
 
     console.log('═══════════════════════════════════════════════════');
     console.log('� CHART DATA DEBUG - X & Y AXIS VALUES');

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '../ui/card';
 import { ChevronDown, ChevronUp, Sliders } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -7,20 +7,26 @@ import { useDataset } from '@/features/dataset/useDataset';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Checkbox } from '../ui/checkbox';
+import { useDebouncedUpdater } from '@/hooks/useDebounce';
 
 const AxisConfigurationSection: React.FC = () => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const { chartConfig, chartData, handleConfigChange } = useChartEditor();
+  const { chartConfig, handleConfigChange } = useChartEditor();
   const { currentDataset } = useDataset();
 
   // Local state for rotation inputs with immediate UI feedback
   const [xAxisRotation, setXAxisRotation] = useState(chartConfig?.config.xAxisRotation || 0);
   const [yAxisRotation, setYAxisRotation] = useState(chartConfig?.config.yAxisRotation || 0);
 
-  // Refs for debounce timers
-  const xRotationTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const yRotationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Debounced update handlers using custom hook
+  const debouncedUpdateXRotation = useDebouncedUpdater<number>(value =>
+    handleConfigChange({ config: { xAxisRotation: value } })
+  );
+
+  const debouncedUpdateYRotation = useDebouncedUpdater<number>(value =>
+    handleConfigChange({ config: { yAxisRotation: value } })
+  );
 
   // Sync local state with config changes from external sources
   useEffect(() => {
@@ -32,49 +38,22 @@ const AxisConfigurationSection: React.FC = () => {
     }
   }, [chartConfig?.config.xAxisRotation, chartConfig?.config.yAxisRotation]);
 
-  // Debounced update handlers
-  const handleXRotationChange = useCallback(
-    (value: number) => {
-      setXAxisRotation(value);
-      if (xRotationTimerRef.current) {
-        clearTimeout(xRotationTimerRef.current);
-      }
-      xRotationTimerRef.current = setTimeout(() => {
-        handleConfigChange({ config: { xAxisRotation: value } });
-      }, 500);
-    },
-    [handleConfigChange]
-  );
+  // Update handlers
+  const handleXRotationChange = (value: number) => {
+    setXAxisRotation(value);
+    debouncedUpdateXRotation(value);
+  };
 
-  const handleYRotationChange = useCallback(
-    (value: number) => {
-      setYAxisRotation(value);
-      if (yRotationTimerRef.current) {
-        clearTimeout(yRotationTimerRef.current);
-      }
-      yRotationTimerRef.current = setTimeout(() => {
-        handleConfigChange({ config: { yAxisRotation: value } });
-      }, 500);
-    },
-    [handleConfigChange]
-  );
-
-  // Cleanup timers on unmount
-  useEffect(() => {
-    return () => {
-      if (xRotationTimerRef.current) {
-        clearTimeout(xRotationTimerRef.current);
-      }
-      if (yRotationTimerRef.current) {
-        clearTimeout(yRotationTimerRef.current);
-      }
-    };
-  }, []);
+  const handleYRotationChange = (value: number) => {
+    setYAxisRotation(value);
+    debouncedUpdateYRotation(value);
+  };
 
   if (!chartConfig) return null;
 
   // Get headers with id and name for dropdown
   const dataHeaders = currentDataset?.headers || [];
+  const hasDataset = currentDataset && currentDataset.id;
 
   return (
     <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl select-none">
@@ -85,7 +64,7 @@ const AxisConfigurationSection: React.FC = () => {
         <div className="flex items-center justify-between w-full">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <Sliders className="h-5 w-5" />
-            {t('chart_editor_axis_configuration', 'Axis Config uration')}
+            {t('chart_editor_axis_configuration', 'Axis Configuration')}
           </h3>
           {isCollapsed ? (
             <ChevronDown className="h-5 w-5 text-gray-500" />
@@ -96,31 +75,57 @@ const AxisConfigurationSection: React.FC = () => {
       </CardHeader>
       {!isCollapsed && (
         <CardContent className="space-y-4">
-          {/* X-Axis Column Selection */}
-          <div>
-            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              X-Axis Column
-            </Label>
-            <select
-              value={chartConfig.config.xAxisKey}
-              onChange={e => handleConfigChange({ config: { xAxisKey: e.target.value } })}
-              className="mt-1 w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-            >
-              {dataHeaders.length > 0
-                ? // Use DataHeader ID as value, name as display text
-                  dataHeaders.map((header: any) => (
-                    <option key={header.id} value={header.id}>
-                      {header.name}
-                    </option>
-                  ))
-                : // Fallback to chartData keys if headers not available
-                  Object.keys(chartData[0] || {}).map(column => (
-                    <option key={column} value={column}>
-                      {column}
-                    </option>
-                  ))}
-            </select>
-          </div>
+          {/* Show warning if no dataset */}
+          {!hasDataset && (
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="w-5 h-5 text-yellow-600 dark:text-yellow-500"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
+                    {t('no_dataset_selected', 'No Dataset Selected')}
+                  </h4>
+                  <p className="mt-1 text-xs text-yellow-700 dark:text-yellow-300">
+                    {t(
+                      'please_select_dataset_first',
+                      'Please select a dataset first to configure axis columns.'
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* X-Axis Column Selection - Only show if dataset exists */}
+          {hasDataset && (
+            <div>
+              <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                X-Axis Column
+              </Label>
+              <select
+                value={chartConfig.config.xAxisKey}
+                onChange={e => handleConfigChange({ config: { xAxisKey: e.target.value } })}
+                className="mt-1 w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              >
+                {dataHeaders.map((header: any) => (
+                  <option key={header.id} value={header.id}>
+                    {header.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* X-Axis Start Configuration */}
           <div>

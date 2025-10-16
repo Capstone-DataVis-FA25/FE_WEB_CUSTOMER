@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Settings, ChevronUp, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -8,12 +8,8 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { useChartEditor } from '@/contexts/ChartEditorContext';
-import { sizePresets, type MainChartConfig } from '@/types/chart';
-
-// Deep partial utility type for nested optional properties
-type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-};
+import { sizePresets } from '@/types/chart';
+import { useDebouncedUpdater } from '@/hooks/useDebounce';
 
 interface BasicSettingsSectionProps {
   className?: string;
@@ -21,94 +17,48 @@ interface BasicSettingsSectionProps {
 
 const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({ className = '' }) => {
   const { t } = useTranslation();
-  const { chartConfig, handleConfigChange, validationErrors } = useChartEditor();
+  const { chartConfig, handleConfigChange } = useChartEditor();
 
-  if (!chartConfig) return null;
-
-  // Extract config with defaults to avoid ! everywhere
-  const config = chartConfig.config;
+  // ALL HOOKS MUST BE DECLARED BEFORE ANY EARLY RETURNS (Rules of Hooks)
   const [isCollapsed, setIsCollapsed] = useState(true);
 
-  // Local state for smooth typing
-  const [localWidth, setLocalWidth] = useState(config.width);
-  const [localHeight, setLocalHeight] = useState(config.height);
-  const [localTitle, setLocalTitle] = useState(config.title);
-  const [localMargin, setLocalMargin] = useState(config.margin);
+  // Extract config with safe defaults using optional chaining
+  const config = chartConfig?.config;
 
-  const handleUpdateConfig = (updates: DeepPartial<MainChartConfig>) => {
-    if (chartConfig) {
-      handleConfigChange(updates);
-    }
-  };
-
-  // Debounced update function
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const debouncedUpdateConfig = useCallback(
-    (updates: DeepPartial<MainChartConfig>) => {
-      // Clear existing timeout
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-
-      // Set new timeout
-      debounceTimeoutRef.current = setTimeout(() => {
-        handleUpdateConfig(updates);
-      }, 500); // Wait 500ms after user stops typing
-    },
-    [handleUpdateConfig]
+  // Local state for smooth typing - use safe defaults for when config is null
+  const [localWidth, setLocalWidth] = useState(config?.width ?? 800);
+  const [localHeight, setLocalHeight] = useState(config?.height ?? 600);
+  const [localTitle, setLocalTitle] = useState(config?.title ?? '');
+  const [localMargin, setLocalMargin] = useState(
+    config?.margin ?? { top: 20, right: 20, bottom: 20, left: 40 }
   );
 
-  // Debounced update functions for each field
-  const debouncedUpdateWidth = useCallback(
-    (width: number) => {
-      if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
-      debounceTimeoutRef.current = setTimeout(() => {
-        handleUpdateConfig({ config: { width } });
-      }, 500);
-    },
-    [handleUpdateConfig]
+  const debouncedUpdateWidth = useDebouncedUpdater<number>(width =>
+    handleConfigChange({ config: { width } })
+  );
+  const debouncedUpdateHeight = useDebouncedUpdater<number>(height =>
+    handleConfigChange({ config: { height } })
+  );
+  const debouncedUpdateTitle = useDebouncedUpdater<string>(title =>
+    handleConfigChange({ config: { title } })
+  );
+  const debouncedUpdateMargin = useDebouncedUpdater<typeof localMargin>(margin =>
+    handleConfigChange({ config: { margin } })
   );
 
-  const debouncedUpdateHeight = useCallback(
-    (height: number) => {
-      if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
-      debounceTimeoutRef.current = setTimeout(() => {
-        handleUpdateConfig({ config: { height } });
-      }, 500);
-    },
-    [handleUpdateConfig]
-  );
-
-  const debouncedUpdateTitle = useCallback(
-    (title: string) => {
-      if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
-      debounceTimeoutRef.current = setTimeout(() => {
-        handleUpdateConfig({ config: { title } });
-      }, 500);
-    },
-    [handleUpdateConfig]
-  );
-
-  const debouncedUpdateMargin = useCallback(
-    (margin: any) => {
-      if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
-      debounceTimeoutRef.current = setTimeout(() => {
-        handleUpdateConfig({ config: { margin } });
-      }, 500);
-    },
-    [handleUpdateConfig]
-  );
+  // Phải đặt phía sau các hook
+  // Nếu chartConfig null -> dừng lại và không chạy các hook
+  if (!chartConfig || !config) return null;
 
   const handleApplySizePreset = (presetKey: keyof typeof sizePresets) => {
     const preset = sizePresets[presetKey];
-    if (preset) {
+    if (preset && chartConfig) {
       // Update local state immediately for instant UI feedback
       setLocalWidth(preset.width);
       setLocalHeight(preset.height);
 
-      // Update config
-      handleUpdateConfig({
+      // Update config directly
+      handleConfigChange({
         config: {
           width: preset.width,
           height: preset.height,

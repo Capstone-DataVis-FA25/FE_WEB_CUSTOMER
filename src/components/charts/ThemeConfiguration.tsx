@@ -1,9 +1,10 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useTranslation } from 'react-i18next';
 import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useDebouncedUpdater } from '@/hooks/useDebounce';
 
 const ThemeConfiguration: React.FC = () => {
   const { t } = useTranslation();
@@ -19,11 +20,10 @@ const ThemeConfiguration: React.FC = () => {
           : config.backgroundColor) || '#ffffff'
   );
 
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const debouncedApply = useCallback((apply: () => void) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(apply, 500);
-  }, []);
+  // Debounced update handler using custom hook
+  const debouncedUpdateBackgroundColor = useDebouncedUpdater<string>(color =>
+    handleConfigChange({ config: { backgroundColor: color } })
+  );
 
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -62,7 +62,7 @@ const ThemeConfiguration: React.FC = () => {
               onChange={e => {
                 const v = e.target.value;
                 setLocalBackgroundColor(v);
-                debouncedApply(() => handleConfigChange({ config: { backgroundColor: v } }));
+                debouncedUpdateBackgroundColor(v);
               }}
               className="h-10 flex-1"
             />

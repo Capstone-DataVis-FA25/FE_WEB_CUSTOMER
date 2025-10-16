@@ -1,10 +1,11 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Label } from '../ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
 import { useChartEditor } from '@/contexts/ChartEditorContext';
 import { ChartType } from '@/features/charts';
+import { useDebouncedUpdater } from '@/hooks/useDebounce';
 
 const LineChartStyling: React.FC = () => {
   const { t } = useTranslation();
@@ -19,11 +20,14 @@ const LineChartStyling: React.FC = () => {
   const [localLineWidth, setLocalLineWidth] = useState(lineWidth);
   const [localPointRadius, setLocalPointRadius] = useState(pointRadius);
 
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const debouncedApply = useCallback((apply: () => void) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(apply, 500);
-  }, []);
+  // Debounced update handlers using custom hook
+  const debouncedUpdateLineWidth = useDebouncedUpdater<number>(value =>
+    handleConfigChange({ config: { lineWidth: value } })
+  );
+
+  const debouncedUpdatePointRadius = useDebouncedUpdater<number>(value =>
+    handleConfigChange({ config: { pointRadius: value } })
+  );
 
   return (
     <>
@@ -80,7 +84,7 @@ const LineChartStyling: React.FC = () => {
               onChange={e => {
                 const v = parseInt(e.target.value) || 2;
                 setLocalLineWidth(v);
-                debouncedApply(() => handleConfigChange({ config: { lineWidth: v } }));
+                debouncedUpdateLineWidth(v);
               }}
               className="mt-1"
             />
@@ -98,7 +102,7 @@ const LineChartStyling: React.FC = () => {
               onChange={e => {
                 const v = parseInt(e.target.value) || 4;
                 setLocalPointRadius(v);
-                debouncedApply(() => handleConfigChange({ config: { pointRadius: v } }));
+                debouncedUpdatePointRadius(v);
               }}
               className="mt-1"
             />

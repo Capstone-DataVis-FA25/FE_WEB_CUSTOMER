@@ -1,9 +1,10 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Label } from '../ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
 import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useDebouncedUpdater } from '@/hooks/useDebounce';
 
 const InteractiveOptions: React.FC = () => {
   const { t } = useTranslation();
@@ -13,11 +14,10 @@ const InteractiveOptions: React.FC = () => {
   const config = chartConfig.config;
   const [localZoomExtent, setLocalZoomExtent] = useState(config.zoomExtent);
 
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const debouncedApply = useCallback((apply: () => void) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(apply, 500);
-  }, []);
+  // Debounced update handler using custom hook
+  const debouncedUpdateZoomExtent = useDebouncedUpdater<number>(value =>
+    handleConfigChange({ config: { zoomExtent: value } })
+  );
 
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -85,7 +85,7 @@ const InteractiveOptions: React.FC = () => {
                 onChange={e => {
                   const v = parseFloat(e.target.value) || 8;
                   setLocalZoomExtent(v);
-                  debouncedApply(() => handleConfigChange({ config: { zoomExtent: v } }));
+                  debouncedUpdateZoomExtent(v);
                 }}
                 className="mt-1"
               />
