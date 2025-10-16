@@ -17,6 +17,7 @@ import { useDataset } from '@/features/dataset/useDataset';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
+import WarningPanel from './WarningPanel';
 
 // ColorPicker from ChartEditorShared
 const ColorPicker = ({
@@ -78,9 +79,6 @@ const SeriesManagementSection: React.FC = () => {
   const series: SeriesItem[] = Array.isArray(chartConfig.seriesConfigs)
     ? (chartConfig.seriesConfigs as SeriesItem[])
     : [];
-
-  console.log('🔍 SeriesManagementSection - series:', series);
-  console.log('🔍 SeriesManagementSection - chartConfig.seriesConfigs:', chartConfig.seriesConfigs);
 
   // DataHeaders from dataset (id, name)
   const dataHeaders = currentDataset?.headers || [];
@@ -161,7 +159,7 @@ const SeriesManagementSection: React.FC = () => {
   };
 
   return (
-    <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl select-none">
+    <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl select-none overflow-hidden rounded-lg">
       <CardHeader
         className="pb-3 cursor-pointer hover:bg-gray-700/10 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
         onClick={() => setIsCollapsed(!isCollapsed)}
@@ -179,184 +177,164 @@ const SeriesManagementSection: React.FC = () => {
         </div>
       </CardHeader>
       {!isCollapsed && (
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 mt-4">
           {/* Show warning if no dataset */}
           {!hasDataset && (
-            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="w-5 h-5 text-yellow-600 dark:text-yellow-500"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
-                    {t('no_dataset_selected', 'No Dataset Selected')}
-                  </h4>
-                  <p className="mt-1 text-xs text-yellow-700 dark:text-yellow-300">
-                    {t(
-                      'please_select_dataset_to_add_series',
-                      'Please select a dataset first to add and manage series.'
-                    )}
-                  </p>
-                </div>
-              </div>
-            </div>
+            <WarningPanel
+              title={t('no_dataset_selected', 'No Dataset Selected')}
+              message={t(
+                'please_select_dataset_to_add_series',
+                'Please select a dataset first to add and manage series.'
+              )}
+            />
           )}
 
-          {series.length === 0 ? (
-            <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-              {t('no_series', 'No series yet.')}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {series.map((seriesItem: SeriesItem, index: number) => (
-                <div
-                  key={seriesItem.id}
-                  className="group relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-white/80 via-white/60 to-white/40 dark:from-gray-800/80 dark:via-gray-800/60 dark:to-gray-800/40 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
-                >
-                  <div className="relative p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div
-                            className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-700 shadow-lg transition-transform duration-200 hover:scale-110"
-                            style={{
-                              backgroundColor: seriesItem.color,
-                              boxShadow: `0 0 0 2px ${seriesItem.color}40`,
-                            }}
-                          />
-                          {seriesItem.visible && (
+          {hasDataset &&
+            (series.length === 0 ? (
+              <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                {t('no_series', 'No series yet.')}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {series.map((seriesItem: SeriesItem, index: number) => (
+                  <div
+                    key={seriesItem.id}
+                    className="group relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-white/80 via-white/60 to-white/40 dark:from-gray-800/80 dark:via-gray-800/60 dark:to-gray-800/40 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                  >
+                    <div className="relative p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
                             <div
-                              className="absolute inset-0 rounded-full animate-ping opacity-20"
-                              style={{ backgroundColor: seriesItem.color }}
+                              className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-700 shadow-lg transition-transform duration-200 hover:scale-110"
+                              style={{
+                                backgroundColor: seriesItem.color,
+                                boxShadow: `0 0 0 2px ${seriesItem.color}40`,
+                              }}
                             />
-                          )}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-foreground/90 truncate">
-                            {seriesItem.name}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {t('chart_editor_series')} #{index + 1}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 bg-background/50 rounded-lg p-1 backdrop-blur-sm">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            onUpdateSeries(seriesItem.id, { visible: !seriesItem.visible })
-                          }
-                          className={`h-8 w-8 p-0 rounded-lg transition-all duration-200 ${
-                            seriesItem.visible
-                              ? 'text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20'
-                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
-                          }`}
-                        >
-                          {seriesItem.visible ? (
-                            <Eye className="w-4 h-4" />
-                          ) : (
-                            <EyeOff className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onMoveSeriesUp(seriesItem.id)}
-                          disabled={index === 0}
-                          className="h-8 w-8 p-0 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
-                        >
-                          <ArrowUp className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onMoveSeriesDown(seriesItem.id)}
-                          disabled={index === series.length - 1}
-                          className="h-8 w-8 p-0 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
-                        >
-                          <ArrowDown className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onRemoveSeries(seriesItem.id)}
-                          className="h-8 w-8 p-0 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                          {t('chart_editor_series_name', 'Series Name')}
-                        </Label>
-                        <div className="flex flex-col gap-1">
-                          <Input
-                            value={seriesItem.name}
-                            readOnly
-                            disabled
-                            className="text-sm h-9 border-0 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed"
-                            placeholder={t(
-                              'chart_editor_series_name_auto',
-                              'Auto generated from data column'
+                            {seriesItem.visible && (
+                              <div
+                                className="absolute inset-0 rounded-full animate-ping opacity-20"
+                                style={{ backgroundColor: seriesItem.color }}
+                              />
                             )}
-                          />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-foreground/90 truncate">
+                              {seriesItem.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {t('chart_editor_series')} #{index + 1}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 bg-background/50 rounded-lg p-1 backdrop-blur-sm">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              onUpdateSeries(seriesItem.id, { visible: !seriesItem.visible })
+                            }
+                            className={`h-8 w-8 p-0 rounded-lg transition-all duration-200 ${
+                              seriesItem.visible
+                                ? 'text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20'
+                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
+                            }`}
+                          >
+                            {seriesItem.visible ? (
+                              <Eye className="w-4 h-4" />
+                            ) : (
+                              <EyeOff className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onMoveSeriesUp(seriesItem.id)}
+                            disabled={index === 0}
+                            className="h-8 w-8 p-0 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+                          >
+                            <ArrowUp className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onMoveSeriesDown(seriesItem.id)}
+                            disabled={index === series.length - 1}
+                            className="h-8 w-8 p-0 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+                          >
+                            <ArrowDown className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onRemoveSeries(seriesItem.id)}
+                            className="h-8 w-8 p-0 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                          {t('chart_editor_data_column', 'Data Column')}
-                        </Label>
-                        <select
-                          value={seriesItem.dataColumn}
-                          onChange={e => {
-                            const newDataColumn = e.target.value;
-                            onUpdateSeries(seriesItem.id, {
-                              dataColumn: newDataColumn,
-                              name: getHeaderName(newDataColumn),
-                            });
-                          }}
-                          className="w-full p-2 text-sm border-0 rounded-lg bg-background/60 backdrop-blur-sm focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all duration-200 h-9"
-                        >
-                          {/* Current column - always show the current selection */}
-                          <option value={seriesItem.dataColumn}>
-                            {getHeaderName(seriesItem.dataColumn)}
-                          </option>
-                          {/* Available columns - show all except current */}
-                          {availableColumns
-                            .filter(col => col !== seriesItem.dataColumn)
-                            .map(column => (
-                              <option key={column} value={column}>
-                                {getHeaderName(column)}
-                              </option>
-                            ))}
-                        </select>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            {t('chart_editor_series_name', 'Series Name')}
+                          </Label>
+                          <div className="flex flex-col gap-1">
+                            <Input
+                              value={seriesItem.name}
+                              readOnly
+                              disabled
+                              className="text-sm h-9 border-0 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed"
+                              placeholder={t(
+                                'chart_editor_series_name_auto',
+                                'Auto generated from data column'
+                              )}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            {t('chart_editor_data_column', 'Data Column')}
+                          </Label>
+                          <select
+                            value={seriesItem.dataColumn}
+                            onChange={e => {
+                              const newDataColumn = e.target.value;
+                              onUpdateSeries(seriesItem.id, {
+                                dataColumn: newDataColumn,
+                                name: getHeaderName(newDataColumn),
+                              });
+                            }}
+                            className="w-full p-2 text-sm border-0 rounded-lg bg-background/60 backdrop-blur-sm focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all duration-200 h-9"
+                          >
+                            {/* Current column - always show the current selection */}
+                            <option value={seriesItem.dataColumn}>
+                              {getHeaderName(seriesItem.dataColumn)}
+                            </option>
+                            {/* Available columns - show all except current */}
+                            {availableColumns
+                              .filter(col => col !== seriesItem.dataColumn)
+                              .map(column => (
+                                <option key={column} value={column}>
+                                  {getHeaderName(column)}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
                       </div>
-                    </div>
-                    <div className="pt-2 border-t border-border/30">
-                      <ColorPicker
-                        label={t('chart_editor_series_color', 'Series Color')}
-                        value={seriesItem.color}
-                        onChange={color => onUpdateSeries(seriesItem.id, { color })}
-                      />
+                      <div className="pt-2 border-t border-border/30">
+                        <ColorPicker
+                          label={t('chart_editor_series_color', 'Series Color')}
+                          value={seriesItem.color}
+                          onChange={color => onUpdateSeries(seriesItem.id, { color })}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            ))}
           {/* Only show Add Series button if dataset is available */}
           {hasDataset && availableColumns.length > 0 && (
             <Button

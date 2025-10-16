@@ -17,7 +17,7 @@ const BasicChartSettingsSection: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   return (
-    <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl select-none">
+    <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl select-none overflow-hidden rounded-lg">
       <CardHeader
         className="pb-3 cursor-pointer hover:bg-gray-700/10 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
         onClick={() => setIsCollapsed(!isCollapsed)}
@@ -35,7 +35,7 @@ const BasicChartSettingsSection: React.FC = () => {
         </div>
       </CardHeader>
       {!isCollapsed && (
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 mt-4">
           {/* Axis Labels */}
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
