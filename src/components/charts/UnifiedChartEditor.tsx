@@ -4,6 +4,7 @@ import BasicSettingsSection from './BasicSettingsSection';
 import BasicChartSettingsSection from './BasicChartSettingsSection';
 import AxisConfigurationSection from './AxisConfigurationSection';
 import SeriesManagementSection from './SeriesManagementSection';
+import ChartDisplaySection from './ChartDisplaySection';
 
 export interface UnifiedChartEditorProps {}
 
@@ -31,6 +32,8 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = () => {
               <SeriesManagementSection />
             </div>
           </div>
+          {/* Right Side - Chart Display */}
+          <ChartDisplaySection />
         </div>
       </div>
     </div>

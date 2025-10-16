@@ -58,8 +58,8 @@ export const sizePresets = {
     label: 'Presentation',
   },
   mobile: { width: 350, height: 300, labelKey: 'size_preset_mobile', label: 'Mobile' },
-  tablet: { width: 768, height: 480, labelKey: 'size_preset_tablet', label: 'Tablet' },
-  responsive: { width: 0, height: 0, labelKey: 'size_preset_responsive', label: 'Responsive' },
+  // tablet: { width: 768, height: 480, labelKey: 'size_preset_tablet', label: 'Tablet' },
+  // responsive: { width: 0, height: 0, labelKey: 'size_preset_responsive', label: 'Responsive' },
 };
 
 // Common utility function to get responsive defaults
@@ -70,7 +70,7 @@ export const getResponsiveDefaults = () => {
 
   const screenWidth = window.innerWidth;
   const containerWidth = Math.min(screenWidth * 0.8, 1200);
-  const aspectRatio = 0.6; // 16:10 aspect ratio
+  const aspectRatio = 0.6;
 
   return {
     width: Math.max(containerWidth, 300),

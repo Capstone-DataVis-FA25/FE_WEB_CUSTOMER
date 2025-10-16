@@ -14,7 +14,7 @@ import DisplayOptionsSettings from './DisplayOptionsSettings';
 const BasicChartSettingsSection: React.FC = () => {
   const { t } = useTranslation();
   const { currentChartType } = useChartEditor();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   return (
     <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl select-none">

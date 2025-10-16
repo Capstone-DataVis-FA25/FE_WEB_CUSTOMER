@@ -871,8 +871,6 @@ export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
   onUpdateConfig,
   onUpdateChartSpecific,
   chartType,
-  curveType,
-  curveOptions,
   showPoints,
   lineWidth,
   pointRadius,
