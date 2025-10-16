@@ -90,9 +90,9 @@ export interface D3PieChartProps {
 const D3PieChart: React.FC<D3PieChartProps> = ({
   data,
   arrayData,
-  width = 600,
-  height = 600,
-  margin = { top: 20, right: 20, bottom: 20, left: 20 },
+  width = 1200,
+  height = 400,
+  margin = { top: 60, right: 60, bottom: 60, left: 60 },
   labelKey,
   valueKey,
   colors = defaultColorsChart,

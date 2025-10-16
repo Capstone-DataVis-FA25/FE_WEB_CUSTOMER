@@ -34,146 +34,28 @@ import { useBeforeUnload } from '@/hooks/useBeforeUnload';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal';
 import ToastContainer from '@/components/ui/toast-container';
 import ChartNoteSidebar from '@/components/charts/ChartNoteSidebar';
-import { useChartNotes, updateNoteLocally } from '@/features/chartNotes';
-import { useAppDispatch } from '@/store/hooks';
 import DatasetUploadModal from '@/components/dataset/DatasetUploadModal';
 import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
 import { getDefaultChartConfig } from '@/utils/chartDefaults';
 
 const ChartEditorPage: React.FC = () => {
-  const dispatch = useAppDispatch();
   const { t } = useTranslation();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { getDatasetById, createDataset, currentDataset, loading: isDatasetLoading } = useDataset();
+  const { getDatasetById, createDataset, currentDataset } = useDataset();
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
-  // const [dataset, setDataset] = useState<Dataset | undefined>(undefined);
   const [currentModalAction, setCurrentModalAction] = useState<'save' | 'reset' | null>(null);
-  const {
-    currentChart,
-    loading: isChartLoading,
-    creating,
-    getChartById,
-    updateChart,
-    clearCurrent,
-    createChart,
-  } = useCharts();
-
-  // Chart notes management with Redux
-  const {
-    currentChartNotes,
-    creating: creatingNote,
-    updating: updatingNote,
-    deleting: deletingNote,
-    toggling: togglingNote,
-    createNote,
-    updateNote,
-    deleteNote,
-    toggleNoteCompleted,
-    getChartNotes,
-    clearCurrentNotes,
-  } = useChartNotes();
+  const { currentChart, creating, getChartById, updateChart, clearCurrent, createChart } =
+    useCharts();
 
   // Chart notes sidebar state
   const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(false);
+
   // Handle notes sidebar
   const handleToggleNotesSidebar = () => {
-    const newState = !isNotesSidebarOpen;
-    setIsNotesSidebarOpen(newState);
-
-    // Load notes when opening sidebar
-    if (newState && chartId) {
-      console.log('[ChartEditor] Sidebar opened, loading notes for chart:', chartId);
-      getChartNotes(chartId).then(result => {
-        if (result.meta.requestStatus === 'fulfilled') {
-          console.log('[ChartEditor] Notes loaded successfully:', result.payload);
-        } else {
-          console.error('[ChartEditor] Failed to load notes:', result);
-        }
-      });
-    }
-  };
-
-  const handleAddNote = async (content: string) => {
-    if (!chartId) {
-      console.warn('[ChartEditor] Cannot create note: chartId is missing');
-      showError(t('chartEditor.notes.noChartId', 'Please save the chart first'));
-      return;
-    }
-
-    console.log('[ChartEditor] Creating note:', { chartId, content });
-
-    try {
-      const result = await createNote({ chartId, content });
-      console.log('result createNote: ', result);
-
-      if (result.meta.requestStatus === 'fulfilled') {
-        await getChartNotes(chartId);
-      } else {
-        showError(t('chartEditor.notes.createError', 'Failed to add note'));
-      }
-    } catch (error) {
-      showError(t('chartEditor.notes.createError', 'Failed to add note'));
-    }
-  };
-
-  const handleDeleteNote = async (noteId: string) => {
-    if (!chartId) return;
-
-    console.log('[ChartEditor] Deleting note:', { chartId, noteId });
-
-    try {
-      const result = await deleteNote(chartId, noteId);
-
-      if (result.meta.requestStatus === 'fulfilled') {
-        await getChartNotes(chartId);
-      } else {
-        showError(t('chartEditor.notes.deleteError', 'Failed to delete note'));
-      }
-    } catch (error) {
-      showError(t('chartEditor.notes.deleteError', 'Failed to delete note'));
-    }
-  };
-
-  const handleUpdateNote = async (noteId: string, content: string) => {
-    if (!chartId) return;
-
-    console.log('[ChartEditor] Updating note:', { chartId, noteId, content });
-
-    try {
-      // Optimistically update the note in Redux store
-      // This will immediately update the UI without waiting for server response
-      dispatch(updateNoteLocally({ chartId, noteId, content }));
-
-      const result = await updateNote(noteId, { content });
-
-      if (result.meta.requestStatus === 'fulfilled') {
-        await getChartNotes(chartId);
-      } else {
-        showError(t('chartEditor.notes.updateError', 'Failed to update note'));
-        await getChartNotes(chartId);
-      }
-    } catch (error) {
-      showError(t('chartEditor.notes.updateError', 'Failed to update note'));
-      await getChartNotes(chartId);
-    }
-  };
-
-  const handleToggleCompleted = async (noteId: string) => {
-    if (!chartId) return;
-    try {
-      const result = await toggleNoteCompleted(noteId);
-
-      if (result.meta.requestStatus === 'fulfilled') {
-        await getChartNotes(chartId);
-      } else {
-        showError(t('chartEditor.notes.toggleError', 'Failed to toggle note status'));
-      }
-    } catch (error) {
-      showError(t('chartEditor.notes.toggleError', 'Failed to toggle note status'));
-    }
+    setIsNotesSidebarOpen(!isNotesSidebarOpen);
   };
 
   // Unsaved changes modal state
@@ -942,23 +824,6 @@ const ChartEditorPage: React.FC = () => {
     modalConfirm.close();
   };
 
-  // Load chart notes when chart is loaded
-  useEffect(() => {
-    if (chartId && mode === 'edit') {
-      console.log('[ChartEditor] Loading notes for chart:', chartId);
-      getChartNotes(chartId).then(result => {
-        if (result.meta.requestStatus === 'fulfilled') {
-          console.log('[ChartEditor] Notes loaded successfully:', result.payload);
-        } else {
-          console.error('[ChartEditor] Failed to load notes:', result);
-        }
-      });
-    }
-    return () => {
-      clearCurrentNotes();
-    };
-  }, [chartId, mode, getChartNotes, clearCurrentNotes]);
-
   // Clear current chart when component unmounts to prevent stale data
   useEffect(() => {
     return () => {
@@ -1411,14 +1276,9 @@ const ChartEditorPage: React.FC = () => {
       {/* Chart Notes Sidebar - Only show in edit mode when chartId exists */}
       {mode === 'edit' && chartId && (
         <ChartNoteSidebar
+          chartId={chartId}
           isOpen={isNotesSidebarOpen}
           onToggle={handleToggleNotesSidebar}
-          notes={currentChartNotes}
-          onAddNote={handleAddNote}
-          isLoading={creatingNote || updatingNote || deletingNote || togglingNote}
-          onDeleteNote={handleDeleteNote}
-          onUpdateNote={handleUpdateNote}
-          onToggleCompleted={handleToggleCompleted}
         />
       )}
     </div>
