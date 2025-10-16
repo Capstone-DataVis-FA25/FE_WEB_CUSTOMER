@@ -41,11 +41,8 @@ const ChartDisplaySection: React.FC = () => {
         light: series.color,
         dark: series.color,
       };
-      console.log(`🎨 Color mapping: "${columnName}" -> ${series.color}`);
     }
   });
-
-  console.log('🎨 Final colors object:', colors);
 
   const safeChartConfig = chartConfig?.config || null;
 
