@@ -17,6 +17,67 @@ import { useDataset } from '@/features/dataset/useDataset';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
+import { filterHeadersByAxisType } from '@/utils/chartValidation';
+import { ChartType } from '@/features/charts/chartTypes';
+
+// Generate a random vibrant color that is visually distinct
+const generateRandomColor = (existingColors: string[] = []): string => {
+  // Predefined vibrant color palette
+  const colorPalette = [
+    '#f97316', // orange
+    '#ec4899', // pink
+    '#8b5cf6', // purple
+    '#06b6d4', // cyan
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#ef4444', // red
+    '#3b82f6', // blue
+    '#14b8a6', // teal
+    '#f43f5e', // rose
+    '#a855f7', // violet
+    '#84cc16', // lime
+    '#6366f1', // indigo
+    '#22c55e', // emerald
+    '#eab308', // yellow
+    '#d946ef', // fuchsia
+  ];
+
+  // Find colors not yet used
+  const unusedColors = colorPalette.filter(color => !existingColors.includes(color.toLowerCase()));
+
+  // If we have unused colors, pick one randomly
+  if (unusedColors.length > 0) {
+    return unusedColors[Math.floor(Math.random() * unusedColors.length)];
+  }
+
+  // If all palette colors are used, generate a random HSL color
+  const hue = Math.floor(Math.random() * 360);
+  const saturation = 65 + Math.floor(Math.random() * 25); // 65-90%
+  const lightness = 45 + Math.floor(Math.random() * 15); // 45-60%
+
+  // Convert HSL to hex
+  const h = hue / 360;
+  const s = saturation / 100;
+  const l = lightness / 100;
+
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+
+  const r = Math.round(hue2rgb(p, q, h + 1 / 3) * 255);
+  const g = Math.round(hue2rgb(p, q, h) * 255);
+  const b = Math.round(hue2rgb(p, q, h - 1 / 3) * 255);
+
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+};
 
 // ColorPicker from ChartEditorShared
 const ColorPicker = ({
@@ -64,6 +125,9 @@ const SeriesManagementSection: React.FC = () => {
   // Check if dataset is available
   const hasDataset = currentDataset && currentDataset.id;
 
+  // Get chart type from config (chartType is at root level of MainChartConfig)
+  const chartType = chartConfig.chartType || ChartType.Line;
+
   // Series array from config
   // Type for series items
   type SeriesItem = {
@@ -82,10 +146,15 @@ const SeriesManagementSection: React.FC = () => {
   console.log('🔍 SeriesManagementSection - series:', series);
   console.log('🔍 SeriesManagementSection - chartConfig.seriesConfigs:', chartConfig.seriesConfigs);
 
-  // DataHeaders from dataset (id, name)
+  // DataHeaders from dataset (id, name, type)
   const dataHeaders = currentDataset?.headers || [];
-  // Available columns: DataHeader IDs
-  const availableColumns = dataHeaders.map(h => h.id);
+
+  // Filter headers valid for Y-axis (series data) based on chart type
+  // For line/bar/area charts, Y-axis must be numeric
+  const validYAxisHeaders = filterHeadersByAxisType(dataHeaders, chartType, 'y');
+
+  // Available columns: Only headers that are valid for Y-axis (series)
+  const availableColumns = validYAxisHeaders.map(h => h.id);
 
   // Helper: get DataHeader name by ID
   const getHeaderName = (id: string) => dataHeaders.find(h => h.id === id)?.name || id;
@@ -109,16 +178,37 @@ const SeriesManagementSection: React.FC = () => {
     } as any);
   };
 
+  // Get columns already used by existing series
+  const usedColumns = series.map((s: SeriesItem) => s.dataColumn);
+
+  // Find columns that are not already used
+  const unusedColumns = availableColumns.filter(col => !usedColumns.includes(col));
+
+  // Check if user can add more series
+  const canAddMoreSeries = unusedColumns.length > 0;
+
   const onAddSeries = () => {
-    // Add new series with first available column
-    const firstCol = availableColumns[0];
+    // If no unused columns, don't add (this shouldn't happen if button is disabled, but safety check)
+    if (unusedColumns.length === 0) {
+      console.warn('⚠️ No unused columns available for new series');
+      return;
+    }
+
+    const firstUnusedCol = unusedColumns[0];
+
+    // Get existing colors to avoid duplicates
+    const existingColors = series.map((s: SeriesItem) => s.color.toLowerCase());
+
+    // Generate a random distinct color
+    const randomColor = generateRandomColor(existingColors);
+
     const newSeries = [
       ...series,
       {
         id: `series_${Date.now()}`,
-        name: getHeaderName(firstCol),
-        dataColumn: firstCol,
-        color: '#1976d2',
+        name: getHeaderName(firstUnusedCol),
+        dataColumn: firstUnusedCol,
+        color: randomColor,
         visible: true,
       },
     ];
@@ -205,6 +295,38 @@ const SeriesManagementSection: React.FC = () => {
                     {t(
                       'please_select_dataset_to_add_series',
                       'Please select a dataset first to add and manage series.'
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Show warning if no valid numeric columns */}
+          {hasDataset && validYAxisHeaders.length === 0 && (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="w-5 h-5 text-red-600 dark:text-red-500"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-red-800 dark:text-red-200">
+                    {t('no_valid_numeric_columns', 'No Valid Numeric Columns')}
+                  </h4>
+                  <p className="mt-1 text-xs text-red-700 dark:text-red-300">
+                    {t(
+                      'series_require_numeric_data',
+                      'Series data (Y-axis) must be numeric. Your dataset does not contain any numeric columns.'
                     )}
                   </p>
                 </div>
@@ -334,9 +456,17 @@ const SeriesManagementSection: React.FC = () => {
                           <option value={seriesItem.dataColumn}>
                             {getHeaderName(seriesItem.dataColumn)}
                           </option>
-                          {/* Available columns - show all except current */}
+                          {/* Available columns - exclude columns already used by OTHER series */}
                           {availableColumns
-                            .filter(col => col !== seriesItem.dataColumn)
+                            .filter(col => {
+                              // Keep the current column
+                              if (col === seriesItem.dataColumn) return false;
+                              // Exclude if already used by another series
+                              const isUsedByOtherSeries = series.some(
+                                (s: SeriesItem) => s.id !== seriesItem.id && s.dataColumn === col
+                              );
+                              return !isUsedByOtherSeries;
+                            })
                             .map(column => (
                               <option key={column} value={column}>
                                 {getHeaderName(column)}
@@ -359,19 +489,30 @@ const SeriesManagementSection: React.FC = () => {
           )}
           {/* Only show Add Series button if dataset is available */}
           {hasDataset && availableColumns.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onAddSeries}
-              className="w-full h-12 text-sm font-medium border-2 border-dashed border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/20 rounded-xl transition-all duration-300 hover:scale-[1.02] group"
-            >
-              <div className="flex items-center gap-2">
-                <div className="p-1 rounded-full bg-primary/20 group-hover:bg-primary/30 transition-colors duration-200">
-                  <Plus className="w-4 h-4 text-primary" />
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onAddSeries}
+                disabled={!canAddMoreSeries}
+                className="w-full h-12 text-sm font-medium border-2 border-dashed border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/20 rounded-xl transition-all duration-300 hover:scale-[1.02] group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="p-1 rounded-full bg-primary/20 group-hover:bg-primary/30 transition-colors duration-200">
+                    <Plus className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-primary">{t('chart_editor_add_series', 'Add Series')}</span>
                 </div>
-                <span className="text-primary">{t('chart_editor_add_series', 'Add Series')}</span>
-              </div>
-            </Button>
+              </Button>
+              {!canAddMoreSeries && (
+                <p className="text-xs text-center text-muted-foreground italic">
+                  {t(
+                    'chart_editor_all_columns_used',
+                    'All available columns are already used in series'
+                  )}
+                </p>
+              )}
+            </div>
           )}
         </CardContent>
       )}

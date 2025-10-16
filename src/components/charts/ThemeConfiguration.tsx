@@ -1,10 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Label } from '../ui/label';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
 import { useTranslation } from 'react-i18next';
 import { useChartEditor } from '@/contexts/ChartEditorContext';
-import { useDebouncedUpdater } from '@/hooks/useDebounce';
 
 const ThemeConfiguration: React.FC = () => {
   const { t } = useTranslation();
@@ -12,18 +9,28 @@ const ThemeConfiguration: React.FC = () => {
   if (!chartConfig) return null;
 
   const config = chartConfig.config;
-  const [localBackgroundColor, setLocalBackgroundColor] = useState(
-    config.backgroundColor === 'transparent'
-      ? '#ffffff'
-      : (config.backgroundColor?.length === 4
-          ? config.backgroundColor.replace(/^#(.)(.)(.)$/, '#$1$1$2$2$3$3')
-          : config.backgroundColor) || '#ffffff'
-  );
 
-  // Debounced update handler using custom hook
-  const debouncedUpdateBackgroundColor = useDebouncedUpdater<string>(color =>
-    handleConfigChange({ config: { backgroundColor: color } })
-  );
+  // Handle theme change and automatically set matching background color
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'auto') => {
+    let backgroundColor = '#000000'; // Default to dark
+
+    if (newTheme === 'light') {
+      backgroundColor = '#ffffff';
+    } else if (newTheme === 'dark') {
+      backgroundColor = '#000000';
+    } else if (newTheme === 'auto') {
+      // Check system preference
+      const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      backgroundColor = isDarkMode ? '#000000' : '#ffffff';
+    }
+
+    handleConfigChange({
+      config: {
+        theme: newTheme,
+        backgroundColor: backgroundColor,
+      },
+    });
+  };
 
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -31,55 +38,25 @@ const ThemeConfiguration: React.FC = () => {
         {t('chart_editor_theme_colors')}
       </h4>
 
-      <div className="grid grid-cols-2 gap-4 mb-2">
+      <div className="space-y-4">
         <div>
           <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
             {t('chart_editor_theme')}
           </Label>
           <select
             value={config.theme}
-            onChange={e =>
-              handleConfigChange({
-                config: { theme: e.target.value as 'light' | 'dark' | 'auto' },
-              })
-            }
+            onChange={e => handleThemeChange(e.target.value as 'light' | 'dark' | 'auto')}
             className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
             <option value="auto">{t('chart_editor_auto')}</option>
             <option value="light">{t('chart_editor_light')}</option>
             <option value="dark">{t('chart_editor_dark')}</option>
           </select>
-        </div>
-
-        <div>
-          <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-            {t('chart_editor_background_color')}
-          </Label>
-          <div className="flex gap-2 mt-1">
-            <Input
-              type="color"
-              value={localBackgroundColor}
-              onChange={e => {
-                const v = e.target.value;
-                setLocalBackgroundColor(v);
-                debouncedUpdateBackgroundColor(v);
-              }}
-              className="h-10 flex-1"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setLocalBackgroundColor('#ffffff');
-                handleConfigChange({ config: { backgroundColor: 'transparent' } });
-              }}
-              className="px-3 h-10 text-xs"
-              title={t('chart_editor_reset_to_transparent')}
-            >
-              {t('chart_editor_transparent')}
-            </Button>
-          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {config.theme === 'dark' && 'Background: Black (#000000)'}
+            {config.theme === 'light' && 'Background: White (#ffffff)'}
+            {config.theme === 'auto' && 'Background: Follows system preference'}
+          </p>
         </div>
       </div>
     </div>

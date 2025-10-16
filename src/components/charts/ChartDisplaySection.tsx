@@ -66,9 +66,24 @@ const ChartDisplaySection: React.FC = () => {
       : getHeaderName(safeChartConfig.xAxisKey || '');
 
     // Build yAxisKeys from seriesConfigs (only visible series)
-    const yAxisKeysNames = seriesConfigs
-      .filter((series: any) => series.visible !== false) // Only include visible series
-      .map((series: any) => getHeaderName(series.dataColumn));
+    console.log('🔍 [ChartDisplaySection] seriesConfigs:', seriesConfigs);
+    const visibleSeries = seriesConfigs.filter((series: any) => series.visible !== false);
+    console.log('🔍 [ChartDisplaySection] visibleSeries:', visibleSeries);
+
+    const yAxisKeysNames = visibleSeries.map((series: any) => {
+      const columnName = getHeaderName(series.dataColumn);
+      console.log(
+        `🔍 [ChartDisplaySection] Series "${series.name}" -> dataColumn ID: "${series.dataColumn}" -> columnName: "${columnName}"`
+      );
+      return columnName;
+    });
+
+    console.log('🔍 [ChartDisplaySection] Final yAxisKeysNames:', yAxisKeysNames);
+    console.log('🔍 [ChartDisplaySection] chartData sample (first 3 rows):', chartData.slice(0, 3));
+    console.log(
+      '🔍 [ChartDisplaySection] chartData keys:',
+      chartData.length > 0 ? Object.keys(chartData[0]) : 'No data'
+    );
 
     // Check if no series are selected OR no visible series
     if (!seriesConfigs || seriesConfigs.length === 0 || yAxisKeysNames.length === 0) {

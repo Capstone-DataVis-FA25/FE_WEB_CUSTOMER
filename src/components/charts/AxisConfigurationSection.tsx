@@ -8,6 +8,8 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Checkbox } from '../ui/checkbox';
 import { useDebouncedUpdater } from '@/hooks/useDebounce';
+import { filterHeadersByAxisType, getAxisRequirementDescription } from '@/utils/chartValidation';
+import { ChartType } from '@/features/charts/chartTypes';
 
 const AxisConfigurationSection: React.FC = () => {
   const { t } = useTranslation();
@@ -51,9 +53,18 @@ const AxisConfigurationSection: React.FC = () => {
 
   if (!chartConfig) return null;
 
+  // Get chart type from config (chartType is at root level of MainChartConfig)
+  const chartType = chartConfig.chartType || ChartType.Line;
+
   // Get headers with id and name for dropdown
   const dataHeaders = currentDataset?.headers || [];
   const hasDataset = currentDataset && currentDataset.id;
+
+  // Filter headers valid for X-axis based on chart type
+  const validXAxisHeaders = filterHeadersByAxisType(dataHeaders, chartType, 'x');
+
+  // Get requirement description for X-axis
+  const xAxisRequirement = getAxisRequirementDescription(chartType, 'x');
 
   return (
     <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl select-none">
@@ -118,12 +129,27 @@ const AxisConfigurationSection: React.FC = () => {
                 onChange={e => handleConfigChange({ config: { xAxisKey: e.target.value } })}
                 className="mt-1 w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
               >
-                {dataHeaders.map((header: any) => (
+                <option value="">
+                  {validXAxisHeaders.length === 0
+                    ? t('no_valid_columns', 'No valid columns available')
+                    : t('select_column', 'Select a column')}
+                </option>
+                {validXAxisHeaders.map((header: any) => (
                   <option key={header.id} value={header.id}>
-                    {header.name}
+                    {header.name} ({header.type})
                   </option>
                 ))}
               </select>
+              {/* Show requirement hint */}
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 italic">
+                💡 {xAxisRequirement}
+              </p>
+              {/* Warning if no valid columns */}
+              {validXAxisHeaders.length === 0 && (
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+                  ⚠️ {t('no_valid_xaxis_columns', 'No columns match the requirements for X-axis')}
+                </p>
+              )}
             </div>
           )}
 
