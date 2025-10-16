@@ -149,11 +149,6 @@ const ChartEditorPage: React.FC = () => {
           return;
         }
 
-        console.warn(
-          '❌ [Dataset] Conversion resulted in empty data - convertedData:',
-          convertedData
-        );
-
         // Fallback: if dataset has row data, convert it
         if (Array.isArray((currentDataset as any).rows)) {
           const headerNames = currentDataset.headers.map((h: any) => h.name);
@@ -204,6 +199,21 @@ const ChartEditorPage: React.FC = () => {
     }
   }, [mode, currentChartType]);
 
+  useEffect(() => {
+    if (mode === 'edit' && currentChart) {
+      // Populate fields from currentChart in edit mode
+      setEditableName('CHART ĐÂY NÈ');
+      setEditableDescription(currentChart.description || '');
+      // Set originals for change tracking
+      updateOriginals();
+      // Also set datasetId from currentChart if not already set
+      if (currentChart.datasetId) {
+        setDatasetId(currentChart.datasetId);
+      }
+      console.log('ĐANG TRONG CHẾ ĐỘ EDIT VÀ CHART ĐÃ LOAD XONG');
+    }
+  }, [mode, currentChart]);
+
   // Use validation context helpers for field save logic
   const handleNameSave = () => {
     saveNameField(editableName, () => setIsEditingName(false));
@@ -235,7 +245,6 @@ const ChartEditorPage: React.FC = () => {
         description: editableDescription.trim(),
         datasetId: datasetId || '', // Use empty string instead of null for optional field
         type: currentChartType,
-        // Cast MainChartConfig to the API expected shape. We ensure default includes required fields (e.g., margin)
         config: chartConfig as unknown as ChartRequest['config'],
       };
 
@@ -547,7 +556,7 @@ const ChartEditorPage: React.FC = () => {
   }, [clearCurrentChart, clearCurrentDataset]);
 
   // Loading state
-  if (isDatasetLoading || isChartLoading || isNoteLoading) {
+  if (isDatasetLoading || isChartLoading) {
     return (
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
         <div className="text-center">

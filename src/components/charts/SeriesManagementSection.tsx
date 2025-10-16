@@ -270,7 +270,7 @@ const SeriesManagementSection: React.FC = () => {
         </div>
       </CardHeader>
       {!isCollapsed && (
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 mt-3">
           {/* Show warning if no dataset */}
           {!hasDataset && (
             <WarningPanel
