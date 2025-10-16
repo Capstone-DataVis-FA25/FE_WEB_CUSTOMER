@@ -46,17 +46,35 @@ const ChartDisplaySection: React.FC = () => {
 
   const safeChartConfig = chartConfig?.config || null;
 
+  // Unified error panel for chart display
+  const ErrorPanel: React.FC<{ title: string; subtitle?: string; bordered?: boolean }> = ({
+    title,
+    subtitle,
+    bordered = false,
+  }) => (
+    <div
+      className={`flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-800 rounded-lg ${
+        bordered ? 'border-2 border-dashed border-gray-300 dark:border-gray-600' : ''
+      }`}
+    >
+      <div className="text-center">
+        <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <p className="text-gray-500 dark:text-gray-400 mb-2">{title}</p>
+        {subtitle && <p className="text-sm text-gray-400 dark:text-gray-500">{subtitle}</p>}
+      </div>
+    </div>
+  );
+
   const renderChart = () => {
     if (!safeChartConfig || !chartData || chartData.length === 0) {
       return (
-        <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <div className="text-center">
-            <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-gray-400">
-              {t('chart_editor_no_data', 'No data available. Please upload or enter data.')}
-            </p>
-          </div>
-        </div>
+        <ErrorPanel
+          title={t('chart_editor_no_data', 'No data available')}
+          subtitle={t(
+            'chart_editor_no_data_hint',
+            'Please upload data or select a dataset to display the chart.'
+          )}
+        />
       );
     }
 
@@ -64,6 +82,20 @@ const ChartDisplaySection: React.FC = () => {
     const xAxisKeyName = Array.isArray(safeChartConfig.xAxisKey)
       ? getHeaderName(safeChartConfig.xAxisKey[0] || '')
       : getHeaderName(safeChartConfig.xAxisKey || '');
+
+    // Validate xAxisKey first
+    if (!xAxisKeyName || xAxisKeyName === '') {
+      return (
+        <ErrorPanel
+          title={t('chart_editor_no_xaxis', 'No X-Axis column selected')}
+          subtitle={t(
+            'chart_editor_select_xaxis_hint',
+            'Please select an X-Axis column in Axis Configuration'
+          )}
+          bordered
+        />
+      );
+    }
 
     // Build yAxisKeys from seriesConfigs (only visible series)
     console.log('🔍 [ChartDisplaySection] seriesConfigs:', seriesConfigs);
@@ -85,45 +117,21 @@ const ChartDisplaySection: React.FC = () => {
       chartData.length > 0 ? Object.keys(chartData[0]) : 'No data'
     );
 
-    // Check if no series are selected OR no visible series
+    // Then check if no series are selected OR no visible series
     if (!seriesConfigs || seriesConfigs.length === 0 || yAxisKeysNames.length === 0) {
       return (
-        <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-          <div className="text-center">
-            <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-gray-400 mb-2">
-              {t('chart_editor_no_series', 'No data series selected')}
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              {yAxisKeysNames.length === 0 && seriesConfigs.length > 0
-                ? t(
-                    'chart_editor_no_visible_series',
-                    'All series are hidden. Please make at least one series visible.'
-                  )
-                : t('chart_editor_add_series_hint', 'Add a data series to display the chart')}
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    // Validate xAxisKey
-    if (!xAxisKeyName || xAxisKeyName === '') {
-      return (
-        <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-          <div className="text-center">
-            <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-gray-400 mb-2">
-              {t('chart_editor_no_xaxis', 'No X-Axis column selected')}
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              {t(
-                'chart_editor_select_xaxis_hint',
-                'Please select an X-Axis column in Axis Configuration'
-              )}
-            </p>
-          </div>
-        </div>
+        <ErrorPanel
+          title={t('chart_editor_no_series', 'No data series selected')}
+          subtitle={
+            yAxisKeysNames.length === 0 && seriesConfigs.length > 0
+              ? t(
+                  'chart_editor_no_visible_series',
+                  'All series are hidden. Please make at least one series visible.'
+                )
+              : t('chart_editor_add_series_hint', 'Add a data series to display the chart')
+          }
+          bordered
+        />
       );
     }
 

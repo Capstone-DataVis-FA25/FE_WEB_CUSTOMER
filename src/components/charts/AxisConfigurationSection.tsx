@@ -10,6 +10,7 @@ import { Checkbox } from '../ui/checkbox';
 import { useDebouncedUpdater } from '@/hooks/useDebounce';
 import { filterHeadersByAxisType, getAxisRequirementDescription } from '@/utils/chartValidation';
 import { ChartType } from '@/features/charts/chartTypes';
+import WarningPanel from './WarningPanel';
 
 const AxisConfigurationSection: React.FC = () => {
   const { t } = useTranslation();
@@ -67,7 +68,7 @@ const AxisConfigurationSection: React.FC = () => {
   const xAxisRequirement = getAxisRequirementDescription(chartType, 'x');
 
   return (
-    <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl select-none">
+    <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl select-none overflow-hidden rounded-lg">
       <CardHeader
         className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
         onClick={() => setIsCollapsed(!isCollapsed)}
@@ -85,36 +86,20 @@ const AxisConfigurationSection: React.FC = () => {
         </div>
       </CardHeader>
       {!isCollapsed && (
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 mt-4">
           {/* Show warning if no dataset */}
           {!hasDataset && (
-            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="w-5 h-5 text-yellow-600 dark:text-yellow-500"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
-                    {t('no_dataset_selected', 'No Dataset Selected')}
-                  </h4>
-                  <p className="mt-1 text-xs text-yellow-700 dark:text-yellow-300">
-                    {t(
-                      'please_select_dataset_first',
-                      'Please select a dataset first to configure axis columns.'
-                    )}
-                  </p>
-                </div>
-              </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-900 dark:text-gray-100 pb-2">
+                X-Axis Column
+              </Label>
+              <WarningPanel
+                title={t('no_dataset_selected', 'No Dataset Selected')}
+                message={t(
+                  'please_select_dataset_first',
+                  'Please select a dataset first to configure axis columns.'
+                )}
+              />
             </div>
           )}
 
@@ -127,7 +112,7 @@ const AxisConfigurationSection: React.FC = () => {
               <select
                 value={chartConfig.config.xAxisKey}
                 onChange={e => handleConfigChange({ config: { xAxisKey: e.target.value } })}
-                className="mt-1 w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                className="mt-1 w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
               >
                 <option value="">
                   {validXAxisHeaders.length === 0
