@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, BarChart3, Database, Search } from 'lucide-react';
+import { Plus, BarChart3, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import Routers from '@/router/routers';
 import { useDataset } from '@/features/dataset/useDataset';
@@ -437,26 +436,74 @@ const WorkspacePage: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-x-6 md:space-y-0">
                 <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Search datasets and charts..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="pl-12 h-12 text-lg border-2 border-gray-200 focus:border-blue-500 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm"
+                    className="h-12 text-lg border-2 border-gray-200 focus:border-blue-500 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm"
                   />
                 </div>
                 <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
-                  <Select value={chartTypeFilter} onValueChange={setChartTypeFilter}>
-                    <SelectTrigger className="w-full sm:w-[160px] h-12 border-2 border-gray-200 rounded-xl bg-white/80 backdrop-blur-sm">
-                      <SelectValue placeholder="Chart type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Charts</SelectItem>
-                      <SelectItem value="line">Line Chart</SelectItem>
-                      <SelectItem value="bar">Bar Chart</SelectItem>
-                      <SelectItem value="area">Area Chart</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="w-full sm:w-[160px] h-12 border-2 border-gray-600 hover:border-gray-500 rounded-xl backdrop-blur-sm px-3 text-left flex items-center justify-between shadow-sm hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <span className="truncate">
+                          {(() => {
+                            const labels: Record<string, string> = {
+                              all: 'All types',
+                              line: 'Line',
+                              bar: 'Bar',
+                              area: 'Area',
+                            };
+                            return labels[chartTypeFilter] || 'Filter by type';
+                          })()}
+                        </span>
+                        <svg
+                          className="ml-2 h-4 w-4 opacity-60"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M6 9l6 6 6-6"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="z-[99999] bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-1 w-[160px]">
+                      <DropdownMenuItem
+                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={() => setChartTypeFilter('all')}
+                      >
+                        All types
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={() => setChartTypeFilter('line')}
+                      >
+                        Line
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={() => setChartTypeFilter('bar')}
+                      >
+                        Bar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={() => setChartTypeFilter('area')}
+                      >
+                        Area
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </CardContent>

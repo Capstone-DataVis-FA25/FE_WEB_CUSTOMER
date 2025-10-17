@@ -142,9 +142,10 @@ const ChartCard: React.FC<ChartCardProps> = ({
 
   return (
     <Card
-      className="group relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 overflow-hidden"
+      className="group relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 overflow-hidden cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={() => onEdit(chart.id)}
     >
       {/* Gradient overlay on hover */}
       <div
@@ -177,7 +178,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
         </div>
 
         <div className="space-y-2">
-          <CardTitle className="text-lg leading-tight hover:text-emerald-600 transition-colors cursor-pointer group-hover:text-emerald-600">
+          <CardTitle className="text-lg leading-tight hover:text-emerald-600 transition-colors group-hover:text-emerald-600">
             {chart.name}
           </CardTitle>
           <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem] text-gray-700 dark:text-gray-300">
@@ -190,7 +191,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center space-x-1 text-muted-foreground">
             <Database className="h-3 w-3" />
-            <span className="font-medium">{t('chart_dataset', 'Dataset:')}:</span>
+            <span className="font-medium">{t('chart_dataset', 'Dataset')}:</span>
             <span className="text-gray-700 dark:text-gray-300">
               {chart.dataset?.name || chart.datasetName || `Dataset ${chart.datasetId}`}
             </span>
@@ -218,7 +219,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
             <Eye className="h-3 w-3" />
             View Chart
           </Button>
-          <Button
+          {/* <Button
             variant="ghost"
             size="sm"
             onClick={handleView}
@@ -229,7 +230,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
             }`}
           >
             <Edit3 className="h-3 w-3 mr-1" />{' '}
-          </Button>
+          </Button> */}
           <Button
             variant="ghost"
             size="sm"

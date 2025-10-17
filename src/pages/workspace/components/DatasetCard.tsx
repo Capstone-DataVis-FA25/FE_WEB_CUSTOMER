@@ -58,9 +58,10 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
 
   return (
     <Card
-      className="group relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 overflow-hidden"
+      className="group relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 overflow-hidden cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={handleView}
     >
       {/* Gradient overlay on hover */}
       <div
@@ -83,7 +84,7 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
         </div>
 
         <div className="space-y-2">
-          <CardTitle className="text-lg leading-tight hover:text-blue-600 transition-colors cursor-pointer group-hover:text-blue-600">
+          <CardTitle className="text-lg leading-tight hover:text-blue-600 transition-colors group-hover:text-blue-600">
             {dataset.name}
           </CardTitle>
           <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem] text-gray-700 dark:text-gray-300">
