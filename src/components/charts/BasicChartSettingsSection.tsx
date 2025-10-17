@@ -40,15 +40,6 @@ const BasicChartSettingsSection: React.FC = () => {
       </CardHeader>
       {!isCollapsed && (
         <CardContent className="space-y-4 mt-4">
-          {/* Axis Labels */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <Label className="sr-only">Axis Labels</Label>
-              {/* Split component */}
-              <AxisLabelsSettings />
-            </div>
-          </div>
-
           {/* Animation Duration */}
           <AnimationDurationSetting />
 

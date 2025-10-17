@@ -83,18 +83,18 @@ const WorkspacePage: React.FC = () => {
     totalItems: 0, // Will be updated when charts are loaded
   });
 
-  // Determine current tab based on URL
-  const getCurrentTab = () => {
-    if (location.pathname === Routers.WORKSPACE_DATASETS) {
-      return 'datasets';
-    } else if (location.pathname === Routers.WORKSPACE_CHARTS) {
-      return 'charts';
-    }
-    // Default to datasets for base workspace route
-    return 'datasets';
-  };
+  // Determine current tab based on navigation state; default to datasets
+  const [currentTab, setCurrentTab] = useState<'datasets' | 'charts'>(
+    (location.state as any)?.tab === 'charts' ? 'charts' : 'datasets'
+  );
 
-  const currentTab = getCurrentTab();
+  // Update currentTab if navigation state changes
+  useEffect(() => {
+    const nextTab = (location.state as any)?.tab;
+    if (nextTab === 'datasets' || nextTab === 'charts') {
+      setCurrentTab(nextTab);
+    }
+  }, [location.state]);
 
   // Sync pagination with URL - when URL changes, update pagination
   useEffect(() => {
@@ -207,22 +207,17 @@ const WorkspacePage: React.FC = () => {
     }
   }, [chartsError, showError, t, clearChartError]);
 
-  // Redirect from base workspace URL to datasets
-  useEffect(() => {
-    if (location.pathname === Routers.WORKSPACE) {
-      navigate(Routers.WORKSPACE_DATASETS, { replace: true });
-    }
-  }, [location.pathname, navigate]);
+  // No redirect; stay on /workspace and control tab via local state
 
-  // Handle tab change by navigating to appropriate URL
+  // Handle tab change by updating state (no route change)
   const handleTabChange = (value: string) => {
-    // Reset pagination to page 1 when switching tabs
-    if (value === 'datasets') {
-      datasetPagination.setPage(1);
-      navigate(Routers.WORKSPACE_DATASETS);
-    } else if (value === 'charts') {
-      chartPagination.setPage(1);
-      navigate(Routers.WORKSPACE_CHARTS);
+    if (value === 'datasets' || value === 'charts') {
+      if (value === 'datasets') {
+        datasetPagination.setPage(1);
+      } else {
+        chartPagination.setPage(1);
+      }
+      setCurrentTab(value);
     }
   };
 
