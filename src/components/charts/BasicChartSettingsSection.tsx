@@ -13,8 +13,12 @@ import DisplayOptionsSettings from './DisplayOptionsSettings';
 
 const BasicChartSettingsSection: React.FC = () => {
   const { t } = useTranslation();
-  const { currentChartType } = useChartEditor();
+  const { currentChartType, chartConfig } = useChartEditor();
   const [isCollapsed, setIsCollapsed] = useState(true);
+
+  // Phải đặt phía sau các hook
+  // Nếu chartConfig null -> dừng lại và không chạy các hook
+  if (!chartConfig || !chartConfig.config) return null;
 
   return (
     <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl select-none overflow-hidden rounded-lg">
@@ -36,15 +40,6 @@ const BasicChartSettingsSection: React.FC = () => {
       </CardHeader>
       {!isCollapsed && (
         <CardContent className="space-y-4 mt-4">
-          {/* Axis Labels */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <Label className="sr-only">Axis Labels</Label>
-              {/* Split component */}
-              <AxisLabelsSettings />
-            </div>
-          </div>
-
           {/* Animation Duration */}
           <AnimationDurationSetting />
 

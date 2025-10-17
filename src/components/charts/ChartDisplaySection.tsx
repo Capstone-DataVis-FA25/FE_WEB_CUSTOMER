@@ -123,63 +123,63 @@ const ChartDisplaySection: React.FC = () => {
       );
     }
 
-    console.log('═══════════════════════════════════════════════════');
-    console.log('� CHART DATA DEBUG - X & Y AXIS VALUES');
-    console.log('═══════════════════════════════════════════════════');
+    // console.log('═══════════════════════════════════════════════════');
+    // console.log('� CHART DATA DEBUG - X & Y AXIS VALUES');
+    // console.log('═══════════════════════════════════════════════════');
 
-    console.log('\n�🗺️ ID to Name Mapping:');
-    console.log('  - xAxisKey (ID):', safeChartConfig.xAxisKey);
-    console.log('  - xAxisKey (Name):', xAxisKeyName);
-    console.log('  - Available keys in chartData:', Object.keys(chartData[0] || {}));
+    // console.log('\n�🗺️ ID to Name Mapping:');
+    // console.log('  - xAxisKey (ID):', safeChartConfig.xAxisKey);
+    // console.log('  - xAxisKey (Name):', xAxisKeyName);
+    // console.log('  - Available keys in chartData:', Object.keys(chartData[0] || {}));
 
-    console.log('\n📈 Series Configuration:');
-    seriesConfigs.forEach((series: any, index: number) => {
-      console.log(`  Series ${index + 1}:`);
-      console.log(`    - ID: ${series.id}`);
-      console.log(`    - Name: ${series.name}`);
-      console.log(`    - DataColumn (ID): ${series.dataColumn}`);
-      console.log(`    - DataColumn (Name): ${getHeaderName(series.dataColumn)}`);
-      console.log(`    - Color: ${series.color}`);
-      console.log(`    - Visible: ${series.visible}`);
-    });
+    // console.log('\n📈 Series Configuration:');
+    // seriesConfigs.forEach((series: any, index: number) => {
+    //   console.log(`  Series ${index + 1}:`);
+    //   console.log(`    - ID: ${series.id}`);
+    //   console.log(`    - Name: ${series.name}`);
+    //   console.log(`    - DataColumn (ID): ${series.dataColumn}`);
+    //   console.log(`    - DataColumn (Name): ${getHeaderName(series.dataColumn)}`);
+    //   console.log(`    - Color: ${series.color}`);
+    //   console.log(`    - Visible: ${series.visible}`);
+    // });
 
-    console.log('\n🎯 Final Y-Axis Keys (Names):', yAxisKeysNames);
+    // console.log('\n🎯 Final Y-Axis Keys (Names):', yAxisKeysNames);
 
-    console.log('\n📋 Sample Data Values (First 3 Rows):');
-    chartData.slice(0, 3).forEach((row: any, rowIndex: number) => {
-      console.log(`  Row ${rowIndex + 1}:`);
-      console.log(`    - X-Axis [${xAxisKeyName}]:`, row[xAxisKeyName]);
-      yAxisKeysNames.forEach((yKey: string) => {
-        console.log(`    - Y-Axis [${yKey}]:`, row[yKey]);
-      });
-    });
+    // console.log('\n📋 Sample Data Values (First 3 Rows):');
+    // chartData.slice(0, 3).forEach((row: any, rowIndex: number) => {
+    //   console.log(`  Row ${rowIndex + 1}:`);
+    //   console.log(`    - X-Axis [${xAxisKeyName}]:`, row[xAxisKeyName]);
+    //   yAxisKeysNames.forEach((yKey: string) => {
+    //     console.log(`    - Y-Axis [${yKey}]:`, row[yKey]);
+    //   });
+    // });
 
-    if (chartData[0]) {
-      console.log(`  - X value type: ${typeof chartData[0][xAxisKeyName]}`);
-      yAxisKeysNames.forEach((yKey: string) => {
-        console.log(`  - Y value [${yKey}] type: ${typeof chartData[0][yKey]}`);
-      });
-    }
+    // if (chartData[0]) {
+    //   console.log(`  - X value type: ${typeof chartData[0][xAxisKeyName]}`);
+    //   yAxisKeysNames.forEach((yKey: string) => {
+    //     console.log(`  - Y value [${yKey}] type: ${typeof chartData[0][yKey]}`);
+    //   });
+    // }
 
-    console.log('\n⚠️ Missing/Undefined Values Check:');
-    let hasIssues = false;
-    chartData.forEach((row: any, rowIndex: number) => {
-      if (row[xAxisKeyName] === undefined || row[xAxisKeyName] === null) {
-        console.warn(`  ⚠️ Row ${rowIndex + 1}: X-Axis [${xAxisKeyName}] is ${row[xAxisKeyName]}`);
-        hasIssues = true;
-      }
-      yAxisKeysNames.forEach((yKey: string) => {
-        if (row[yKey] === undefined || row[yKey] === null) {
-          console.warn(`  ⚠️ Row ${rowIndex + 1}: Y-Axis [${yKey}] is ${row[yKey]}`);
-          hasIssues = true;
-        }
-      });
-    });
-    if (!hasIssues) {
-      console.log('  ✅ No missing/undefined values found!');
-    }
+    // console.log('\n⚠️ Missing/Undefined Values Check:');
+    // let hasIssues = false;
+    // chartData.forEach((row: any, rowIndex: number) => {
+    //   if (row[xAxisKeyName] === undefined || row[xAxisKeyName] === null) {
+    //     console.warn(`  ⚠️ Row ${rowIndex + 1}: X-Axis [${xAxisKeyName}] is ${row[xAxisKeyName]}`);
+    //     hasIssues = true;
+    //   }
+    //   yAxisKeysNames.forEach((yKey: string) => {
+    //     if (row[yKey] === undefined || row[yKey] === null) {
+    //       console.warn(`  ⚠️ Row ${rowIndex + 1}: Y-Axis [${yKey}] is ${row[yKey]}`);
+    //       hasIssues = true;
+    //     }
+    //   });
+    // });
+    // if (!hasIssues) {
+    //   console.log('  ✅ No missing/undefined values found!');
+    // }
 
-    console.log('═══════════════════════════════════════════════════\n');
+    // console.log('═══════════════════════════════════════════════════\n');
 
     // Common props that are safe for all chart types
     const safeCommonProps = {

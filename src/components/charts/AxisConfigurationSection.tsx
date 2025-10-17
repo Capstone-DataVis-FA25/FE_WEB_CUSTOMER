@@ -11,6 +11,7 @@ import { useDebouncedUpdater } from '@/hooks/useDebounce';
 import { filterHeadersByAxisType, getAxisRequirementDescription } from '@/utils/chartValidation';
 import { ChartType } from '@/features/charts/chartTypes';
 import WarningPanel from './WarningPanel';
+import AxisLabelsSettings from './AxisLabelsSettings';
 
 const AxisConfigurationSection: React.FC = () => {
   const { t } = useTranslation();
@@ -87,6 +88,13 @@ const AxisConfigurationSection: React.FC = () => {
       </CardHeader>
       {!isCollapsed && (
         <CardContent className="space-y-4 mt-4">
+          {/* Axis Labels at top */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <Label className="sr-only">Axis Labels</Label>
+              <AxisLabelsSettings />
+            </div>
+          </div>
           {/* Show warning if no dataset */}
           {!hasDataset && (
             <div>
@@ -110,11 +118,15 @@ const AxisConfigurationSection: React.FC = () => {
                 X-Axis Column
               </Label>
               <select
-                value={chartConfig.config.xAxisKey}
-                onChange={e => handleConfigChange({ config: { xAxisKey: e.target.value } })}
+                value={chartConfig.config.xAxisKey || 'placeholder'}
+                onChange={e => {
+                  if (e.target.value !== 'placeholder') {
+                    handleConfigChange({ config: { xAxisKey: e.target.value } });
+                  }
+                }}
                 className="mt-1 w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
               >
-                <option value="">
+                <option value="placeholder" disabled>
                   {validXAxisHeaders.length === 0
                     ? t('no_valid_columns', 'No valid columns available')
                     : t('select_column', 'Select a column')}

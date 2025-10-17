@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Bell,
   Menu,
@@ -48,8 +49,7 @@ const Header: React.FC<HeaderProps> = ({
   // Navigation items
   const navItems = [
     { name: t('navigation_home'), href: '/' },
-    ...(isAuthenticated ? [{ name: 'Datasets', href: '/workspace/datasets' }] : []),
-    ...(isAuthenticated ? [{ name: 'Charts', href: '/workspace/charts' }] : []),
+    ...(isAuthenticated ? [{ name: 'Workspace', href: '/workspace' }] : []),
     { name: t('navigation_about'), href: '/about-us' },
   ];
 
@@ -89,34 +89,40 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <SlideInDown className="flex items-center space-x-2">
-              <div className="w-10 h-10  rounded-xl flex items-center justify-center">
-                <img
-                  src="https://res.cloudinary.com/dfvy81evi/image/upload/v1754983215/only_logo-removebg-preview_ncdidg.png"
-                  alt="Logo"
-                  className="rounded-sm"
-                />
-              </div>
-              <div className="hidden sm:block">
-                <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  DataVis
-                </span>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                  {t('common_platform')}
-                </p>
-              </div>
+              <Link
+                to={isAuthenticated ? '/workspace' : '/'}
+                className="flex items-center space-x-2 group"
+                aria-label="Go to home"
+              >
+                <div className="w-10 h-10  rounded-xl flex items-center justify-center">
+                  <img
+                    src="https://res.cloudinary.com/dfvy81evi/image/upload/v1754983215/only_logo-removebg-preview_ncdidg.png"
+                    alt="Logo"
+                    className="rounded-sm"
+                  />
+                </div>
+                <div className="hidden sm:block">
+                  <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent group-hover:opacity-90">
+                    DataVis
+                  </span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                    {t('common_platform')}
+                  </p>
+                </div>
+              </Link>
             </SlideInDown>
 
             {/* Navigation - Desktop */}
             <nav className="hidden lg:flex items-center space-x-8">
               {navItems.map((item, index) => (
                 <FadeIn key={item.name} delay={index * 0.1}>
-                  <a
-                    href={item.href}
+                  <Link
+                    to={item.href}
                     className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 font-medium relative group px-3 py-2 rounded-lg hover:bg-blue-50/50 dark:hover:bg-blue-900/20"
                   >
                     {item.name}
                     <span className="absolute inset-x-0 -bottom-1 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200 rounded-full" />
-                  </a>
+                  </Link>
                 </FadeIn>
               ))}
 
@@ -144,12 +150,12 @@ const Header: React.FC<HeaderProps> = ({
                       <div className="grid grid-cols-2 gap-1 px-2">
                         {resourcesItems.map((item, index) => (
                           <FadeIn key={item.name} delay={index * 0.05}>
-                            <a
-                              href={item.href}
+                            <Link
+                              to={item.href}
                               className="block px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 rounded-xl font-medium"
                             >
                               {item.name}
-                            </a>
+                            </Link>
                           </FadeIn>
                         ))}
                       </div>
@@ -213,20 +219,20 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* Navigation Links */}
                         <div className="px-2 py-1 space-y-1">
-                          <a
-                            href="/profile"
+                          <Link
+                            to="/profile"
                             className="flex items-center px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 rounded-xl group"
                           >
                             <UserCircle className="w-4 h-4 mr-3 text-blue-500 group-hover:scale-110 transition-transform duration-200" />
                             <span className="font-medium">{t('navigation_profile')}</span>
-                          </a>
-                          <a
-                            href="/profile/settings"
+                          </Link>
+                          <Link
+                            to="/profile/settings"
                             className="flex items-center px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200 rounded-xl group"
                           >
                             <Settings className="w-4 h-4 mr-3 text-purple-500 group-hover:rotate-90 transition-transform duration-200" />
                             <span className="font-medium">{t('navigation_settings')}</span>
-                          </a>
+                          </Link>
                         </div>
 
                         {/* Divider */}
@@ -315,12 +321,12 @@ const Header: React.FC<HeaderProps> = ({
                 {/* Navigation Items */}
                 {navItems.map((item, index) => (
                   <FadeIn key={item.name} delay={index * 0.05}>
-                    <a
-                      href={item.href}
+                    <Link
+                      to={item.href}
                       className="block px-3 py-3 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 font-medium"
                     >
                       {item.name}
-                    </a>
+                    </Link>
                   </FadeIn>
                 ))}
 
@@ -333,12 +339,12 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="grid grid-cols-2 gap-1">
                       {resourcesItems.map((item, index) => (
                         <FadeIn key={item.name} delay={index * 0.05}>
-                          <a
-                            href={item.href}
+                          <Link
+                            to={item.href}
                             className="block px-3 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200 font-medium"
                           >
                             {item.name}
-                          </a>
+                          </Link>
                         </FadeIn>
                       ))}
                     </div>

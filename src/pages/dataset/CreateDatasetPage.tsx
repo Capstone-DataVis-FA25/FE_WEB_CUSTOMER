@@ -239,7 +239,7 @@ function CreateDatasetPageContent() {
         const created = result.payload as any; // dataset object
         if (created && created.id) {
           // Use React Router navigation instead of window.location.href
-          navigate('/workspace/datasets');
+          navigate('/workspace', { state: { tab: 'datasets' } });
         }
 
         // Reset state after successful upload

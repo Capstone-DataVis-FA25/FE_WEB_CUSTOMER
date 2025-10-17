@@ -39,10 +39,15 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
       }
 
       getDatasets();
-    } else {
-      console.log('DatasetSelectionDialog closed');
     }
   }, [open, getDatasets, currentDatasetId]);
+
+  // Separate effect to log when dialog closes
+  useEffect(() => {
+    if (!open) {
+      console.log('DatasetSelectionDialog closed');
+    }
+  }, [open]);
 
   const handleConfirm = () => {
     if (selectedDatasetId) {
