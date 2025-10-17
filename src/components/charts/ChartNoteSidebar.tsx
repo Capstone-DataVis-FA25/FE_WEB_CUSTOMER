@@ -37,7 +37,6 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  console.log('notes123: ', notes);
   // Auto scroll to bottom when new notes added
   useEffect(() => {
     if (isOpen && messagesEndRef.current) {

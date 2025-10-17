@@ -110,11 +110,15 @@ const AxisConfigurationSection: React.FC = () => {
                 X-Axis Column
               </Label>
               <select
-                value={chartConfig.config.xAxisKey}
-                onChange={e => handleConfigChange({ config: { xAxisKey: e.target.value } })}
+                value={chartConfig.config.xAxisKey || 'placeholder'}
+                onChange={e => {
+                  if (e.target.value !== 'placeholder') {
+                    handleConfigChange({ config: { xAxisKey: e.target.value } });
+                  }
+                }}
                 className="mt-1 w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
               >
-                <option value="">
+                <option value="placeholder" disabled>
                   {validXAxisHeaders.length === 0
                     ? t('no_valid_columns', 'No valid columns available')
                     : t('select_column', 'Select a column')}

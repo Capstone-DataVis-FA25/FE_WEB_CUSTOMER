@@ -144,8 +144,8 @@ const SeriesManagementSection: React.FC = () => {
     ? (chartConfig.seriesConfigs as SeriesItem[])
     : [];
 
-  console.log('🔍 SeriesManagementSection - series:', series);
-  console.log('🔍 SeriesManagementSection - chartConfig.seriesConfigs:', chartConfig.seriesConfigs);
+  // console.log('🔍 SeriesManagementSection - series:', series);
+  // console.log('🔍 SeriesManagementSection - chartConfig.seriesConfigs:', chartConfig.seriesConfigs);
 
   // DataHeaders from dataset (id, name, type)
   const dataHeaders = currentDataset?.headers || [];

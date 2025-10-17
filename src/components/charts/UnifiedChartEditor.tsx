@@ -5,10 +5,12 @@ import BasicChartSettingsSection from './BasicChartSettingsSection';
 import AxisConfigurationSection from './AxisConfigurationSection';
 import SeriesManagementSection from './SeriesManagementSection';
 import ChartDisplaySection from './ChartDisplaySection';
+import { useChartEditor } from '@/contexts/ChartEditorContext';
 
 export interface UnifiedChartEditorProps {}
 
 const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = () => {
+  const { mode } = useChartEditor();
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
       <div className="w-full px-2">
@@ -17,7 +19,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = () => {
           <div className="lg:col-span-2 space-y-6">
             <div className="space-y-4">
               {/* Chart Type Selector */}
-              <ChartTypeSelector />
+              {mode === 'create' && <ChartTypeSelector />}
 
               {/* Basic Settings Section */}
               <BasicSettingsSection />

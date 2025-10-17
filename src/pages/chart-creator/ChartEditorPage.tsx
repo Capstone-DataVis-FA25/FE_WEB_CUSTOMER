@@ -30,6 +30,7 @@ import type { ChartRequest } from '@/features/charts';
 // ChartType is imported in ChartEditorWithProviders
 import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
 import { useChartEditor, useFieldSave } from '@/contexts/ChartEditorContext';
+import type { MainChartConfig } from '@/types/chart';
 
 const ChartEditorPage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -115,19 +116,88 @@ const ChartEditorPage: React.FC = () => {
   // State for dataset selection modal
   const [showDatasetModal, setShowDatasetModal] = useState(false);
 
-  // Load dataset if we have a datasetId - DONE
+  // State to track if originals have been set for current chart
+  const [originalsSet, setOriginalsSet] = useState(false);
+
+  // Load chart and dataset data
   useEffect(() => {
     const loadData = async () => {
-      if (mode === 'create' && datasetId) {
-        await getDatasetById(datasetId).unwrap();
-      }
-      if (mode === 'edit' && chartId) {
+      // Edit mode: Load chart first, then dataset
+      if (mode === 'edit' && chartId && !currentChart) {
         await getChartById(chartId);
-        getChartNotes(chartId);
+      }
+
+      // Load for both mode
+      // Edit mode: Load dataset after chart is loaded (datasetId will be set from chart in the next effect)
+      // Create mode: Load dataset directly
+      if (datasetId && !currentDataset) {
+        await getDatasetById(datasetId).unwrap();
       }
     };
     loadData();
-  }, [datasetId, chartId, mode, getDatasetById, getChartById, getChartNotes]);
+  }, [datasetId, chartId, mode, getDatasetById, getChartById, currentChart, currentDataset]);
+
+  // Initialize for create mode
+  useEffect(() => {
+    if (mode === 'create') {
+      const chartTypeName = currentChartType.charAt(0).toUpperCase() + currentChartType.slice(1);
+
+      // Initialize with default values for create mode
+      setEditableName(`${chartTypeName} Chart`);
+      setEditableDescription(`Chart created from ${chartTypeName.toLowerCase()} template`);
+
+      // Create default chart configuration using helper function
+      // Only initialize config once - don't recreate when dataset changes
+      const defaultConfig = getDefaultChartConfig(currentChartType);
+
+      setChartConfig(defaultConfig);
+
+      // For create mode, we don't need to set originals as there are no changes to track yet
+      // The context will handle this automatically
+    }
+  }, [mode, currentChartType]);
+
+  //Initialize for edit mode
+  useEffect(() => {
+    if (mode === 'edit' && currentChart) {
+      // Populate fields from currentChart in edit mode
+      setEditableName(currentChart.name || '');
+      setEditableDescription(currentChart.description || '');
+
+      setChartConfig(currentChart.config as MainChartConfig);
+
+      // Also set datasetId from currentChart if not already set
+      if (currentChart.datasetId) {
+        setDatasetId(currentChart.datasetId);
+      }
+
+      // Reset originals flag when new chart loads
+      setOriginalsSet(false);
+    }
+  }, [mode, currentChart]);
+
+  // Set originals after form fields are populated in edit mode (run only once per chart)
+  useEffect(() => {
+    if (
+      mode === 'edit' &&
+      currentChart &&
+      editableName &&
+      editableDescription &&
+      chartConfig &&
+      !originalsSet
+    ) {
+      updateOriginals();
+      setOriginalsSet(true);
+    }
+  }, [
+    mode,
+    currentChart,
+    editableName,
+    editableDescription,
+    chartConfig,
+    updateOriginals,
+    originalsSet,
+  ]);
 
   // Effect to convert dataset to chart data when dataset is loaded
   useEffect(() => {
@@ -178,41 +248,6 @@ const ChartEditorPage: React.FC = () => {
       'You have unsaved changes to your chart. Are you sure you want to leave?'
     ),
   });
-
-  // Initialize for create mode
-  useEffect(() => {
-    if (mode === 'create') {
-      const chartTypeName = currentChartType.charAt(0).toUpperCase() + currentChartType.slice(1);
-
-      // Initialize with default values for create mode
-      setEditableName(`${chartTypeName} Chart`);
-      setEditableDescription(`Chart created from ${chartTypeName.toLowerCase()} template`);
-
-      // Create default chart configuration using helper function
-      // Only initialize config once - don't recreate when dataset changes
-      const defaultConfig = getDefaultChartConfig(currentChartType);
-
-      setChartConfig(defaultConfig);
-
-      // For create mode, we don't need to set originals as there are no changes to track yet
-      // The context will handle this automatically
-    }
-  }, [mode, currentChartType]);
-
-  useEffect(() => {
-    if (mode === 'edit' && currentChart) {
-      // Populate fields from currentChart in edit mode
-      setEditableName('CHART ĐÂY NÈ');
-      setEditableDescription(currentChart.description || '');
-      // Set originals for change tracking
-      updateOriginals();
-      // Also set datasetId from currentChart if not already set
-      if (currentChart.datasetId) {
-        setDatasetId(currentChart.datasetId);
-      }
-      console.log('ĐANG TRONG CHẾ ĐỘ EDIT VÀ CHART ĐÃ LOAD XONG');
-    }
-  }, [mode, currentChart]);
 
   // Use validation context helpers for field save logic
   const handleNameSave = () => {
