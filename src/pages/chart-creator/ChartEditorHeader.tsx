@@ -41,24 +41,19 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
   const { currentChart, creating } = useCharts();
   const {
     mode,
-    // name
     isEditingName,
     setIsEditingName,
     editableName,
     setEditableName,
     originalName,
-    // name save handled outside via field-save hook
-    // description
     isEditingDescription,
     setIsEditingDescription,
     editableDescription,
     setEditableDescription,
     originalDescription,
-    // validation
     validationErrors,
     validateField,
     clearValidationError,
-    // state
     hasChanges,
     isFormValid,
     currentChartType,
@@ -131,9 +126,9 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <div className="flex items-center gap-2">
-                  {currentChart ? (
+                  {currentChart || mode === 'create' ? (
                     <>
-                      {isEditingName && mode === 'edit' ? (
+                      {isEditingName && (mode === 'edit' || mode === 'create') ? (
                         <div className="flex flex-col gap-1">
                           <Input
                             value={editableName}
@@ -174,12 +169,12 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                       ) : (
                         <h1
                           className={`text-xl font-bold text-gray-900 dark:text-white ${
-                            mode === 'edit'
+                            mode === 'edit' || mode === 'create'
                               ? 'cursor-pointer hover:text-blue-600 transition-colors'
                               : 'cursor-default'
                           }`}
                           onClick={() => {
-                            if (mode === 'edit') {
+                            if (mode === 'edit' || mode === 'create') {
                               setIsEditingName(true);
                               if (!editableName.trim()) {
                                 validateField('name', editableName);
@@ -187,7 +182,9 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                             }
                           }}
                         >
-                          {editableName || currentChart.name}
+                          {editableName ||
+                            currentChart?.name ||
+                            t('chart_name_placeholder', 'Untitled Chart')}
                         </h1>
                       )}
                     </>
@@ -214,13 +211,13 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                 </div>
               </div>
               <div className="flex flex-col gap-2 mt-1">
-                {currentChart && (
+                {(currentChart || mode === 'create') && (
                   <div className="flex items-center gap-1">
                     <Database className="w-3 h-3" />
                     <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                       {t('description', 'Description')}:
                     </span>
-                    {isEditingDescription && mode === 'edit' ? (
+                    {isEditingDescription && (mode === 'edit' || mode === 'create') ? (
                       <div className="flex flex-col gap-1">
                         <Input
                           value={editableDescription}
@@ -261,12 +258,12 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                     ) : (
                       <span
                         className={`text-xs text-gray-700 dark:text-gray-300 ${
-                          mode === 'edit'
+                          mode === 'edit' || mode === 'create'
                             ? 'cursor-pointer hover:text-blue-600 transition-colors'
                             : 'cursor-default'
                         }`}
                         onClick={() => {
-                          if (mode === 'edit') {
+                          if (mode === 'edit' || mode === 'create') {
                             setIsEditingDescription(true);
                             if (!editableDescription.trim()) {
                               validateField('description', editableDescription);
@@ -276,8 +273,8 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                         style={{ fontWeight: '500', fontSize: '14px' }}
                       >
                         {editableDescription ||
-                          currentChart.description ||
-                          'Click to add description...'}
+                          currentChart?.description ||
+                          t('chart_description_placeholder', 'Click to add description...')}
                       </span>
                     )}
                   </div>

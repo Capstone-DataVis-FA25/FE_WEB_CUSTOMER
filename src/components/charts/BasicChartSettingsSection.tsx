@@ -1,15 +1,15 @@
-import { ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
+import { ChevronDown, TrendingUp } from 'lucide-react';
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader } from '../ui/card';
-import { Label } from '../ui/label';
 import AnimationDurationSetting from './AnimationDurationSetting';
-import AxisLabelsSettings from './AxisLabelsSettings';
 import CurveTypeSetting from './CurveTypeSetting';
 import { useChartEditor } from '@/contexts/ChartEditorContext';
 import { ChartType } from '@/features/charts';
 import BarTypeSettings from './BarTypeSettings';
 import DisplayOptionsSettings from './DisplayOptionsSettings';
+import { dominoContainerVariants, dominoItemVariants } from '@/theme/animation/animation.config';
 
 const BasicChartSettingsSection: React.FC = () => {
   const { t } = useTranslation();
@@ -31,30 +31,51 @@ const BasicChartSettingsSection: React.FC = () => {
             <TrendingUp className="h-5 w-5" />
             {t('chart_editor_chart_settings', 'Chart Settings')}
           </h3>
-          {isCollapsed ? (
+          <motion.div
+            animate={{ rotate: isCollapsed ? 0 : 180 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+          >
             <ChevronDown className="h-5 w-5 text-gray-500" />
-          ) : (
-            <ChevronUp className="h-5 w-5 text-gray-500" />
-          )}
+          </motion.div>
         </div>
       </CardHeader>
-      {!isCollapsed && (
-        <CardContent className="space-y-4 mt-4">
-          {/* Animation Duration */}
-          <AnimationDurationSetting />
+      <AnimatePresence mode="wait">
+        {!isCollapsed && (
+          <motion.div
+            key="chart-settings-content"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={dominoContainerVariants}
+          >
+            <CardContent className="space-y-4 mt-4">
+              {/* Animation Duration */}
+              <motion.div variants={dominoItemVariants}>
+                <AnimationDurationSetting />
+              </motion.div>
 
-          {/* Curve Type */}
-          {(currentChartType === ChartType.Line || currentChartType === ChartType.Area) && (
-            <CurveTypeSetting />
-          )}
+              {/* Curve Type */}
+              {(currentChartType === ChartType.Line || currentChartType === ChartType.Area) && (
+                <motion.div variants={dominoItemVariants}>
+                  <CurveTypeSetting />
+                </motion.div>
+              )}
 
-          {/* Bar Type */}
-          {currentChartType === ChartType.Bar && <BarTypeSettings />}
+              {/* Bar Type */}
+              {currentChartType === ChartType.Bar && (
+                <motion.div variants={dominoItemVariants}>
+                  <BarTypeSettings />
+                </motion.div>
+              )}
 
-          {/* Display Options */}
-          <DisplayOptionsSettings />
-        </CardContent>
-      )}
+              {/* Display Options */}
+              <motion.div variants={dominoItemVariants}>
+                <DisplayOptionsSettings />
+              </motion.div>
+            </CardContent>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Card>
   );
 };
