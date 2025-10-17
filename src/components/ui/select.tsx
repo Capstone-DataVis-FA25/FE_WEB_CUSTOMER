@@ -104,39 +104,19 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
 SelectTrigger.displayName = 'SelectTrigger';
 
 const SelectContent: React.FC<SelectContentProps> = ({ children }) => {
-  const { open, triggerRef, contentRef } = React.useContext(SelectContext);
-  const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 });
-
-  React.useEffect(() => {
-    if (open && triggerRef?.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      });
-    }
-  }, [open, triggerRef]);
+  const { open, contentRef } = React.useContext(SelectContext);
 
   if (!open) return null;
 
-  const content = (
+  return (
     <div
       ref={contentRef}
       data-select-content
-      className="fixed z-[99999] mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-2xl max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95"
-      style={{
-        top: position.top,
-        left: position.left,
-        width: position.width,
-        zIndex: 99999,
-      }}
+      className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95"
     >
       <div className="p-1 space-y-1">{children}</div>
     </div>
   );
-
-  return ReactDOM.createPortal(content, document.body);
 };
 
 const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
