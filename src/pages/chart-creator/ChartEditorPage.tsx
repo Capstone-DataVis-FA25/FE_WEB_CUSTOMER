@@ -202,7 +202,6 @@ const ChartEditorPage: React.FC = () => {
   useEffect(() => {
     if (mode === 'edit' && currentChart) {
       // Populate fields from currentChart in edit mode
-      setEditableName('CHART ĐÂY NÈ');
       setEditableDescription(currentChart.description || '');
       // Set originals for change tracking
       updateOriginals();
@@ -210,7 +209,6 @@ const ChartEditorPage: React.FC = () => {
       if (currentChart.datasetId) {
         setDatasetId(currentChart.datasetId);
       }
-      console.log('ĐANG TRONG CHẾ ĐỘ EDIT VÀ CHART ĐÃ LOAD XONG');
     }
   }, [mode, currentChart]);
 
