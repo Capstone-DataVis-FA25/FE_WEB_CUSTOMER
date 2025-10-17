@@ -275,15 +275,6 @@ const ChartEditorPage: React.FC = () => {
     }
   }, [mode, currentChart]);
 
-  // Use validation context helpers for field save logic
-  const handleNameSave = () => {
-    saveNameField(editableName, () => setIsEditingName(false));
-  };
-
-  const handleDescriptionSave = () => {
-    saveDescriptionField(editableDescription, () => setIsEditingDescription(false));
-  };
-
   // Handle create new chart
   const handleCreateChart = async () => {
     try {
