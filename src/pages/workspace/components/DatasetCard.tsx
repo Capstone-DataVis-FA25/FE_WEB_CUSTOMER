@@ -33,7 +33,10 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
 
-  const handleView = () => {
+  const handleView = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation(); // Prevent card click
+    }
     if (onView) {
       onView(dataset);
     }
@@ -42,7 +45,8 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
     });
   };
 
-  const handleCreateChart = () => {
+  const handleCreateChart = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
     // Điều hướng sang trang chart gallery kèm dataset_id
     if (dataset.id) {
       navigate(Routers.CHART_GALLERY, {
@@ -54,6 +58,16 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
     } else {
       navigate(Routers.CHART_GALLERY);
     }
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    // Add share functionality here if needed
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    onDelete(dataset);
   };
 
   return (
@@ -145,7 +159,7 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {}}
+            onClick={handleShare}
             className={`px-2 transition-all duration-200 ${
               isHovered
                 ? 'opacity-100 bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400'
@@ -157,7 +171,7 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onDelete(dataset)}
+            onClick={handleDelete}
             disabled={isDeleting}
             className={`px-2 transition-all duration-200 disabled:opacity-50 ${
               isHovered

@@ -141,8 +141,27 @@ export const ChartEditorProvider: React.FC<ChartEditorProviderProps> = ({
       if (!chartConfig && !originalConfig) return false;
       // If one is null and other isn't, there's a change
       if (!chartConfig || !originalConfig) return true;
-      // Compare JSON strings
-      return JSON.stringify(chartConfig) !== JSON.stringify(originalConfig);
+
+      // Sort object keys recursively to ensure consistent comparison
+      const sortObjectKeys = (obj: any): any => {
+        if (obj === null || typeof obj !== 'object') return obj;
+        if (Array.isArray(obj)) return obj.map(sortObjectKeys);
+
+        return Object.keys(obj)
+          .sort()
+          .reduce((result: any, key) => {
+            result[key] = sortObjectKeys(obj[key]);
+            return result;
+          }, {});
+      };
+
+      const sortedCurrent = sortObjectKeys(chartConfig);
+      const sortedOriginal = sortObjectKeys(originalConfig);
+
+      const currentConfigStr = JSON.stringify(sortedCurrent);
+      const originalConfigStr = JSON.stringify(sortedOriginal);
+
+      return currentConfigStr !== originalConfigStr;
     })();
 
     return nameChanged || descriptionChanged || chartTypeChanged || configChanged;

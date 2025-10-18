@@ -125,17 +125,24 @@ const ChartCard: React.FC<ChartCardProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
-  const handleView = () => {
+  const handleView = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
     if (onView) {
       onView(chart);
     }
     onEdit(chart.id);
   };
 
-  const handleShare = () => {
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
     if (onShare) {
       onShare(chart);
     }
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    onDelete(chart);
   };
 
   const { t } = useTranslation();
@@ -213,7 +220,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onEdit(chart.id)}
+            onClick={handleView}
             className="flex-1 group-hover:border-emerald-500 group-hover:text-emerald-600 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-900/20 transition-all duration-200"
           >
             <Eye className="h-3 w-3" />
@@ -246,7 +253,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onDelete(chart)}
+            onClick={handleDelete}
             disabled={isDeleting}
             className={`px-2 transition-all duration-200 disabled:opacity-50 ${
               isHovered

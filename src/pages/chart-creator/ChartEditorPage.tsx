@@ -26,7 +26,7 @@ import { useAppDispatch } from '@/store/hooks';
 import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
 import { getDefaultChartConfig } from '@/utils/chartDefaults';
 // MainChartConfig now handled by contexts
-import type { ChartRequest } from '@/features/charts';
+import type { ChartRequest, ChartType } from '@/features/charts';
 // ChartType is imported in ChartEditorWithProviders
 import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
 import { useChartEditor, useFieldSave } from '@/contexts/ChartEditorContext';
@@ -50,7 +50,7 @@ const ChartEditorPage: React.FC = () => {
     chartConfig,
     setChartConfig,
     currentChartType,
-    // setCurrentChartType, // Available for future use by UnifiedChartEditor
+    setCurrentChartType,
     editableName,
     setEditableName,
     editableDescription,
@@ -166,6 +166,8 @@ const ChartEditorPage: React.FC = () => {
 
       setChartConfig(currentChart.config as MainChartConfig);
 
+      setCurrentChartType(currentChart.type as ChartType);
+
       // Also set datasetId from currentChart if not already set
       if (currentChart.datasetId) {
         setDatasetId(currentChart.datasetId);
@@ -184,6 +186,7 @@ const ChartEditorPage: React.FC = () => {
       editableName &&
       editableDescription &&
       chartConfig &&
+      currentChartType &&
       !originalsSet
     ) {
       updateOriginals();
@@ -195,6 +198,7 @@ const ChartEditorPage: React.FC = () => {
     editableName,
     editableDescription,
     chartConfig,
+    currentChartType,
     updateOriginals,
     originalsSet,
   ]);
@@ -287,15 +291,9 @@ const ChartEditorPage: React.FC = () => {
 
       showSuccess(t('chart_create_success', 'Chart created successfully'));
 
-      // Navigate to edit mode with the new chartId
-      // Keep only chartId and datasetId in URL (type is stored in database)
-      const urlParams = new URLSearchParams();
-      urlParams.set('chartId', result.id);
-      if (datasetId) {
-        urlParams.set('datasetId', datasetId);
-      }
-
-      navigate(`${location.pathname}?${urlParams.toString()}`, {
+      // Navigate to edit mode with only the chartId
+      // The datasetId is stored in the chart and will be loaded automatically
+      navigate(`${location.pathname}?chartId=${result.id}`, {
         replace: true,
       });
     } catch (error: unknown) {
