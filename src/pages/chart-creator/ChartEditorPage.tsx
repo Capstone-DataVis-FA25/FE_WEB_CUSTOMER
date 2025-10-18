@@ -30,6 +30,7 @@ import type { ChartRequest } from '@/features/charts';
 // ChartType is imported in ChartEditorWithProviders
 import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
 import { useChartEditor, useFieldSave } from '@/contexts/ChartEditorContext';
+import type { MainChartConfig } from '@/types/chart';
 
 const ChartEditorPage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -115,37 +116,88 @@ const ChartEditorPage: React.FC = () => {
   // State for dataset selection modal
   const [showDatasetModal, setShowDatasetModal] = useState(false);
 
-  // Load dataset if we have a datasetId - DONE
+  // State to track if originals have been set for current chart
+  const [originalsSet, setOriginalsSet] = useState(false);
+
+  // Load chart and dataset data
   useEffect(() => {
     const loadData = async () => {
-      try {
-        if (mode === 'create' && datasetId) {
-          console.log('useEffect: Loading dataset with ID:', datasetId);
-          const result = await getDatasetById(datasetId).unwrap();
-          console.log('useEffect: Dataset loaded successfully:', result);
-        }
-        if (mode === 'edit' && chartId) {
-          console.log('useEffect: Loading chart with ID:', chartId);
-          await getChartById(chartId);
-          getChartNotes(chartId);
-          console.log('useEffect: Chart loaded successfully');
-        }
-      } catch (error) {
-        console.error('useEffect: Error loading data:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        if (mode === 'create' && datasetId) {
-          showError(`Failed to load dataset: ${errorMessage}`);
-        } else if (mode === 'edit' && chartId) {
-          showError(`Failed to load chart: ${errorMessage}`);
-        }
+      // Edit mode: Load chart first, then dataset
+      if (mode === 'edit' && chartId && !currentChart) {
+        await getChartById(chartId);
+      }
+
+      // Load for both mode
+      // Edit mode: Load dataset after chart is loaded (datasetId will be set from chart in the next effect)
+      // Create mode: Load dataset directly
+      if (datasetId && !currentDataset) {
+        await getDatasetById(datasetId).unwrap();
       }
     };
+    loadData();
+  }, [datasetId, chartId, mode, getDatasetById, getChartById, currentChart, currentDataset]);
 
-    // Only run if we have the required IDs
-    if ((mode === 'create' && datasetId) || (mode === 'edit' && chartId)) {
-      loadData();
+  // Initialize for create mode
+  useEffect(() => {
+    if (mode === 'create') {
+      const chartTypeName = currentChartType.charAt(0).toUpperCase() + currentChartType.slice(1);
+
+      // Initialize with default values for create mode
+      setEditableName(`${chartTypeName} Chart`);
+      setEditableDescription(`Chart created from ${chartTypeName.toLowerCase()} template`);
+
+      // Create default chart configuration using helper function
+      // Only initialize config once - don't recreate when dataset changes
+      const defaultConfig = getDefaultChartConfig(currentChartType);
+
+      setChartConfig(defaultConfig);
+
+      // For create mode, we don't need to set originals as there are no changes to track yet
+      // The context will handle this automatically
     }
-  }, [datasetId, chartId, mode, getDatasetById, getChartById, getChartNotes, showError]);
+  }, [mode, currentChartType]);
+
+  //Initialize for edit mode
+  useEffect(() => {
+    if (mode === 'edit' && currentChart) {
+      // Populate fields from currentChart in edit mode
+      setEditableName(currentChart.name || '');
+      setEditableDescription(currentChart.description || '');
+
+      setChartConfig(currentChart.config as MainChartConfig);
+
+      // Also set datasetId from currentChart if not already set
+      if (currentChart.datasetId) {
+        setDatasetId(currentChart.datasetId);
+      }
+
+      // Reset originals flag when new chart loads
+      setOriginalsSet(false);
+    }
+  }, [mode, currentChart]);
+
+  // Set originals after form fields are populated in edit mode (run only once per chart)
+  useEffect(() => {
+    if (
+      mode === 'edit' &&
+      currentChart &&
+      editableName &&
+      editableDescription &&
+      chartConfig &&
+      !originalsSet
+    ) {
+      updateOriginals();
+      setOriginalsSet(true);
+    }
+  }, [
+    mode,
+    currentChart,
+    editableName,
+    editableDescription,
+    chartConfig,
+    updateOriginals,
+    originalsSet,
+  ]);
 
   // Effect to convert dataset to chart data when dataset is loaded
   useEffect(() => {
@@ -196,41 +248,6 @@ const ChartEditorPage: React.FC = () => {
       'You have unsaved changes to your chart. Are you sure you want to leave?'
     ),
   });
-
-  // Initialize for create mode
-  useEffect(() => {
-    if (mode === 'create') {
-      const chartTypeName = currentChartType.charAt(0).toUpperCase() + currentChartType.slice(1);
-
-      // Initialize with default values for create mode
-      setEditableName(`${chartTypeName} Chart`);
-      setEditableDescription(`Chart created from ${chartTypeName.toLowerCase()} template`);
-
-      // Create default chart configuration using helper function
-      // Only initialize config once - don't recreate when dataset changes
-      const defaultConfig = getDefaultChartConfig(currentChartType);
-
-      setChartConfig(defaultConfig);
-
-      // For create mode, we don't need to set originals as there are no changes to track yet
-      // The context will handle this automatically
-    }
-  }, [mode, currentChartType]);
-
-  useEffect(() => {
-    if (mode === 'edit' && currentChart) {
-      // Populate fields from currentChart in edit mode
-      setEditableName('CHART ĐÂY NÈ');
-      setEditableDescription(currentChart.description || '');
-      // Set originals for change tracking
-      updateOriginals();
-      // Also set datasetId from currentChart if not already set
-      if (currentChart.datasetId) {
-        setDatasetId(currentChart.datasetId);
-      }
-      console.log('ĐANG TRONG CHẾ ĐỘ EDIT VÀ CHART ĐÃ LOAD XONG');
-    }
-  }, [mode, currentChart]);
 
   // Use validation context helpers for field save logic
   const handleNameSave = () => {
@@ -327,25 +344,13 @@ const ChartEditorPage: React.FC = () => {
 
   // Handle dataset selection from modal
   const handleDatasetSelected = async (datasetId: string) => {
+    // Set datasetID
+    setDatasetId(datasetId);
+    setShowDatasetModal(false);
     try {
-      // Validate datasetId
-      if (!datasetId || datasetId.trim() === '') {
-        showError('Invalid dataset selected');
-        return;
-      }
-
-      // Set datasetID first - this will trigger the useEffect to load the dataset
-      setDatasetId(datasetId);
-      setShowDatasetModal(false);
-
-      // Show success message immediately since useEffect will handle the loading
       showSuccess('Dataset selected successfully');
     } catch (error) {
-      console.error('Error selecting dataset:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      showError(`Failed to select dataset: ${errorMessage}`);
-      // Reset datasetId on error
-      setDatasetId('');
+      showError('Failed to load selected dataset');
     }
   };
 
@@ -618,7 +623,7 @@ const ChartEditorPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     {currentChart ? (
                       <>
-                        {isEditingName ? (
+                        {isEditingName && mode === 'edit' ? (
                           <div className="flex flex-col gap-1">
                             <Input
                               value={editableName}
@@ -662,12 +667,18 @@ const ChartEditorPage: React.FC = () => {
                           </div>
                         ) : (
                           <h1
-                            className="text-xl font-bold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 transition-colors"
+                            className={`text-xl font-bold text-gray-900 dark:text-white ${
+                              mode === 'edit'
+                                ? 'cursor-pointer hover:text-blue-600 transition-colors'
+                                : 'cursor-default'
+                            }`}
                             onClick={() => {
-                              setIsEditingName(true);
-                              // Trigger validation if field is empty
-                              if (!editableName.trim()) {
-                                validateField('name', editableName);
+                              if (mode === 'edit') {
+                                setIsEditingName(true);
+                                // Trigger validation if field is empty
+                                if (!editableName.trim()) {
+                                  validateField('name', editableName);
+                                }
                               }
                             }}
                           >
@@ -676,72 +687,9 @@ const ChartEditorPage: React.FC = () => {
                         )}
                       </>
                     ) : (
-                      <>
-                        {isEditingName ? (
-                          <div className="flex flex-col gap-1">
-                            <Input
-                              value={editableName}
-                              onChange={e => {
-                                setEditableName(e.target.value);
-                                // Clear validation error when user types
-                                if (e.target.value.trim()) {
-                                  clearValidationError('name');
-                                } else {
-                                  // Show validation error immediately when field becomes empty
-                                  validateField('name', e.target.value);
-                                }
-                              }}
-                              className={`w-100 text-xl font-bold bg-transparent border-dashed px-2 py-1 ${
-                                validationErrors.name
-                                  ? '!border-red-500 focus:border-red-500 ring-1 ring-red-500'
-                                  : 'border-gray-300'
-                              }`}
-                              onBlur={() => setIsEditingName(false)}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') {
-                                  setIsEditingName(false);
-                                } else if (e.key === 'Escape') {
-                                  // Only allow escape if name is not empty or we have a default value
-                                  if (editableName.trim() || mode === 'create') {
-                                    if (mode === 'create') {
-                                      // Reset to default value in create mode
-                                      const chartTypeName =
-                                        currentChartType.charAt(0).toUpperCase() +
-                                        currentChartType.slice(1);
-                                      setEditableName(`${chartTypeName} Chart`);
-                                    } else {
-                                      setEditableName(originalName); // Restore original value
-                                    }
-                                    clearValidationError('name');
-                                    setIsEditingName(false);
-                                  }
-                                  // If name is empty, do nothing (prevent escape)
-                                }
-                              }}
-                              autoFocus
-                              placeholder={t('chart_name_required', 'Chart name is required')}
-                            />
-                            {validationErrors.name && (
-                              <span className="text-red-500 text-xs ml-2">
-                                {t('field_required', 'This field is required')}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <h1
-                            className="text-xl font-bold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 transition-colors"
-                            onClick={() => {
-                              setIsEditingName(true);
-                              // Trigger validation if field is empty
-                              if (!editableName.trim()) {
-                                validateField('name', editableName);
-                              }
-                            }}
-                          >
-                            {editableName || t('chart_editor_title_main', 'Chart Editor')}
-                          </h1>
-                        )}
-                      </>
+                      <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                        {t('chart_editor_title_main', 'Chart Editor')}
+                      </h1>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -761,13 +709,13 @@ const ChartEditorPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 mt-1">
-                  {(currentChart || mode === 'create') && (
+                  {currentChart && (
                     <div className="flex items-center gap-1">
                       <Database className="w-3 h-3" />
                       <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                         {t('description', 'Description')}:
                       </span>
-                      {isEditingDescription ? (
+                      {isEditingDescription && mode === 'edit' ? (
                         <div className="flex flex-col gap-1">
                           <Input
                             value={editableDescription}
@@ -786,34 +734,14 @@ const ChartEditorPage: React.FC = () => {
                                 ? '!border-red-500 focus:border-red-500 ring-1 ring-red-500'
                                 : 'border-gray-300'
                             }`}
-                            onBlur={() => {
-                              if (mode === 'edit') {
-                                handleDescriptionSave();
-                              } else {
-                                setIsEditingDescription(false);
-                              }
-                            }}
+                            onBlur={handleDescriptionSave}
                             onKeyDown={e => {
                               if (e.key === 'Enter' && e.ctrlKey) {
-                                if (mode === 'edit') {
-                                  handleDescriptionSave();
-                                } else {
-                                  setIsEditingDescription(false);
-                                }
+                                handleDescriptionSave();
                               } else if (e.key === 'Escape') {
-                                // Only allow escape if description is not empty or we have a default value
-                                if (editableDescription.trim() || mode === 'create') {
-                                  if (mode === 'create') {
-                                    // Reset to default value in create mode
-                                    const chartTypeName =
-                                      currentChartType.charAt(0).toUpperCase() +
-                                      currentChartType.slice(1);
-                                    setEditableDescription(
-                                      `Chart created from ${chartTypeName.toLowerCase()} template`
-                                    );
-                                  } else {
-                                    setEditableDescription(originalDescription); // Restore original value
-                                  }
+                                // Only allow escape if description is not empty
+                                if (editableDescription.trim()) {
+                                  setEditableDescription(originalDescription); // Restore original value
                                   clearValidationError('description');
                                   setIsEditingDescription(false);
                                 }
@@ -831,18 +759,24 @@ const ChartEditorPage: React.FC = () => {
                         </div>
                       ) : (
                         <span
-                          className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 transition-colors"
+                          className={`text-xs text-gray-700 dark:text-gray-300 ${
+                            mode === 'edit'
+                              ? 'cursor-pointer hover:text-blue-600 transition-colors'
+                              : 'cursor-default'
+                          }`}
                           onClick={() => {
-                            setIsEditingDescription(true);
-                            // Trigger validation if field is empty
-                            if (!editableDescription.trim()) {
-                              validateField('description', editableDescription);
+                            if (mode === 'edit') {
+                              setIsEditingDescription(true);
+                              // Trigger validation if field is empty
+                              if (!editableDescription.trim()) {
+                                validateField('description', editableDescription);
+                              }
                             }
                           }}
                           style={{ fontWeight: '500', fontSize: '14px' }}
                         >
                           {editableDescription ||
-                            (currentChart && currentChart.description) ||
+                            currentChart.description ||
                             'Click to add description...'}
                         </span>
                       )}
