@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,13 @@ const FontSizeConfiguration: React.FC = () => {
   const [localTitleFontSize, setLocalTitleFontSize] = useState(config.titleFontSize);
   const [localLabelFontSize, setLocalLabelFontSize] = useState(config.labelFontSize);
   const [localLegendFontSize, setLocalLegendFontSize] = useState(config.legendFontSize);
+
+  // Sync local state with chartConfig when it changes (for edit mode)
+  useEffect(() => {
+    setLocalTitleFontSize(config.titleFontSize);
+    setLocalLabelFontSize(config.labelFontSize);
+    setLocalLegendFontSize(config.legendFontSize);
+  }, [config?.titleFontSize, config?.labelFontSize, config?.legendFontSize]);
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const debouncedApply = useCallback((apply: () => void) => {

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,11 @@ const ChartConfiguration: React.FC = () => {
 
   const config = chartConfig.config;
   const [localGridOpacity, setLocalGridOpacity] = useState(config.gridOpacity);
+
+  // Sync local state with chartConfig when it changes (for edit mode)
+  useEffect(() => {
+    setLocalGridOpacity(config.gridOpacity);
+  }, [config?.gridOpacity]);
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const debouncedApply = useCallback((apply: () => void) => {

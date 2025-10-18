@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +16,13 @@ const BarTypeSettings: React.FC = () => {
   const [localBarType, setLocalBarType] = useState<'grouped' | 'stacked'>(cfg.barType ?? 'grouped');
   const [localBarWidth, setLocalBarWidth] = useState<number>(cfg.barWidth ?? 24);
   const [localBarSpacing, setLocalBarSpacing] = useState<number>(cfg.barSpacing ?? 8);
+
+  // Sync local state with chartConfig when it changes (for edit mode)
+  useEffect(() => {
+    setLocalBarType(cfg.barType ?? 'grouped');
+    setLocalBarWidth(cfg.barWidth ?? 24);
+    setLocalBarSpacing(cfg.barSpacing ?? 8);
+  }, [cfg?.barType, cfg?.barWidth, cfg?.barSpacing]);
 
   return (
     <div className="space-y-3">

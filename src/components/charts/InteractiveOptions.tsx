@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from '../ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '../ui/input';
@@ -13,6 +13,11 @@ const InteractiveOptions: React.FC = () => {
 
   const config = chartConfig.config;
   const [localZoomExtent, setLocalZoomExtent] = useState(config.zoomExtent);
+
+  // Sync local state with chartConfig when it changes (for edit mode)
+  useEffect(() => {
+    setLocalZoomExtent(config.zoomExtent);
+  }, [config?.zoomExtent]);
 
   // Debounced update handler using custom hook
   const debouncedUpdateZoomExtent = useDebouncedUpdater<number>(value =>

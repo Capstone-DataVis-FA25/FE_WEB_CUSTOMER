@@ -376,13 +376,24 @@ const ChartEditorPage: React.FC = () => {
       // Show unsaved changes modal
       setPendingNavigation(() => () => {
         clearCurrentChart();
-        navigate('/workspace/charts');
+        // Edit mode: navigate back to workspace with charts tab
+        navigate('/workspace', { state: { tab: 'charts' } });
       });
       setShowUnsavedModal(true);
     } else {
-      // No changes, navigate directly
+      // No changes, navigate directly based on mode and datasetId
       clearCurrentChart();
-      navigate('/workspace/charts');
+
+      if (mode === 'edit') {
+        // Edit mode: navigate back to workspace with charts tab
+        navigate('/workspace', { state: { tab: 'charts' } });
+      } else if (mode === 'create' && datasetId) {
+        // Create mode with datasetId: navigate back to chart gallery with that dataset
+        navigate('/chart-gallery', { state: { datasetId } });
+      } else {
+        // Create mode without datasetId: navigate back to workspace (default datasets tab)
+        navigate('/chart-gallery');
+      }
     }
   };
 

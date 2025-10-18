@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '../ui/select';
 import { useChartEditor } from '@/contexts/ChartEditorContext';
 import { ChartType } from '@/features/charts';
+import { getDefaultChartConfig } from '@/utils/chartDefaults';
+import type { MainChartConfig } from '@/types/chart';
 
 interface ChartTypeOption {
   value: ChartType;
@@ -25,7 +27,7 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
   className = '',
 }) => {
   const { t } = useTranslation();
-  const { currentChartType, setCurrentChartType, chartConfig } = useChartEditor();
+  const { currentChartType, setCurrentChartType, chartConfig, setChartConfig } = useChartEditor();
 
   const chartTypeOptions: ChartTypeOption[] = useMemo(
     () => [
@@ -53,8 +55,78 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
     [chartTypeOptions, currentChartType]
   );
 
+  // Universal deep merge function that works with any config structure
+  const deepMergeConfigs = (currentConfig: any, newDefaultConfig: any): any => {
+    // Handle null/undefined cases
+    if (!currentConfig) return newDefaultConfig;
+    if (!newDefaultConfig) return currentConfig;
+
+    // Handle primitive types and arrays
+    if (typeof currentConfig !== 'object' || Array.isArray(currentConfig)) {
+      return currentConfig;
+    }
+    if (typeof newDefaultConfig !== 'object' || Array.isArray(newDefaultConfig)) {
+      return newDefaultConfig;
+    }
+
+    const result: any = {};
+
+    // Get all unique keys from both objects
+    const allKeys = new Set([...Object.keys(currentConfig), ...Object.keys(newDefaultConfig)]);
+
+    for (const key of allKeys) {
+      const currentValue = currentConfig[key];
+      const newValue = newDefaultConfig[key];
+
+      // If both configs have this key, it's a common field - preserve current value
+      if (currentConfig.hasOwnProperty(key) && newDefaultConfig.hasOwnProperty(key)) {
+        if (
+          typeof currentValue === 'object' &&
+          typeof newValue === 'object' &&
+          currentValue !== null &&
+          newValue !== null &&
+          !Array.isArray(currentValue) &&
+          !Array.isArray(newValue)
+        ) {
+          // Recursively merge nested objects
+          result[key] = deepMergeConfigs(currentValue, newValue);
+        } else {
+          // Use current value (preserves user's settings for common fields)
+          result[key] = currentValue;
+        }
+      } else if (currentConfig.hasOwnProperty(key)) {
+        // Only current config has this key - preserve it (might be user data like series)
+        result[key] = currentValue;
+      } else {
+        // Only new config has this key - use new default
+        result[key] = newValue;
+      }
+    }
+
+    return result;
+  };
+
+  // Smart function to merge configs while preserving common fields
+  const mergeConfigs = (
+    currentConfig: MainChartConfig,
+    newChartType: ChartType
+  ): MainChartConfig => {
+    const newDefaultConfig = getDefaultChartConfig(newChartType);
+
+    // Use universal deep merge that works with any structure
+    return deepMergeConfigs(currentConfig, newDefaultConfig);
+  };
+
   const handleChartTypeChange = (value: string) => {
-    setCurrentChartType(value as ChartType);
+    const newChartType = value as ChartType;
+
+    // If we have an existing config, merge it with the new chart type defaults
+    if (chartConfig) {
+      const mergedConfig = mergeConfigs(chartConfig, newChartType);
+      setChartConfig(mergedConfig);
+    }
+
+    setCurrentChartType(newChartType);
   };
 
   const renderSelectedValue = () => {

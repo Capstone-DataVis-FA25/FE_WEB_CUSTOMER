@@ -26,11 +26,9 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = () => {
           >
             <div className="space-y-4">
               {/* Chart Type Selector */}
-              {mode === 'create' && (
-                <motion.div variants={listItemVariants}>
-                  <ChartTypeSelector />
-                </motion.div>
-              )}
+              <motion.div variants={listItemVariants}>
+                <ChartTypeSelector />
+              </motion.div>
 
               {/* Basic Settings Section */}
               <motion.div variants={listItemVariants}>

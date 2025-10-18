@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,11 @@ const AnimationDurationSetting: React.FC = () => {
   const [localAnimationDuration, setLocalAnimationDuration] = useState(
     chartConfig.config.animationDuration
   );
+
+  // Sync local state with chartConfig when it changes (for edit mode)
+  useEffect(() => {
+    setLocalAnimationDuration(chartConfig.config.animationDuration);
+  }, [chartConfig?.config.animationDuration]);
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const debouncedApply = useCallback((apply: () => void) => {

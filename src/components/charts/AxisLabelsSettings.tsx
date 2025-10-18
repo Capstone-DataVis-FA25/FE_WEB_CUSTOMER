@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,12 @@ const AxisLabelsSettings: React.FC = () => {
   const { xAxisLabel, yAxisLabel } = chartConfig.config;
   const [localXAxisLabel, setLocalXAxisLabel] = useState(xAxisLabel);
   const [localYAxisLabel, setLocalYAxisLabel] = useState(yAxisLabel);
+
+  // Sync local state with chartConfig when it changes (for edit mode)
+  useEffect(() => {
+    setLocalXAxisLabel(xAxisLabel);
+    setLocalYAxisLabel(yAxisLabel);
+  }, [xAxisLabel, yAxisLabel]);
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const debouncedApply = useCallback((apply: () => void) => {

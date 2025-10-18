@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from '../ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '../ui/input';
@@ -19,6 +19,12 @@ const LineChartStyling: React.FC = () => {
 
   const [localLineWidth, setLocalLineWidth] = useState(lineWidth);
   const [localPointRadius, setLocalPointRadius] = useState(pointRadius);
+
+  // Sync local state with chartConfig when it changes (for edit mode)
+  useEffect(() => {
+    setLocalLineWidth(lineWidth);
+    setLocalPointRadius(pointRadius);
+  }, [lineWidth, pointRadius]);
 
   // Debounced update handlers using custom hook
   const debouncedUpdateLineWidth = useDebouncedUpdater<number>(value =>

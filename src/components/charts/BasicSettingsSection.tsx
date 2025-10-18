@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -46,6 +46,16 @@ const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({ className =
   const debouncedUpdateMargin = useDebouncedUpdater<typeof localMargin>(margin =>
     handleConfigChange({ config: { margin } })
   );
+
+  // Sync local state with chartConfig when it changes (for edit mode)
+  useEffect(() => {
+    if (config) {
+      setLocalWidth(config.width ?? 800);
+      setLocalHeight(config.height ?? 600);
+      setLocalTitle(config.title ?? '');
+      setLocalMargin(config.margin ?? { top: 20, right: 20, bottom: 20, left: 40 });
+    }
+  }, [config?.width, config?.height, config?.title, config?.margin]);
 
   // Phải đặt phía sau các hook
   // Nếu chartConfig null -> dừng lại và không chạy các hook

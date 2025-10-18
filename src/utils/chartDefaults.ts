@@ -112,8 +112,8 @@ export const defaultBarChartConfig: BarChartConfig = {
 // Returns a consistent default StructuredChartConfig for given chart type and optional dataset name
 export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => {
   const log = (cfg: MainChartConfig) => {
-    console.log('[getDefaultChartConfig] type ->', chartType);
-    console.log('[getDefaultChartConfig] result:', cfg);
+    // console.log('[getDefaultChartConfig] type ->', chartType);
+    // console.log('[getDefaultChartConfig] result:', cfg);
     return cfg;
   };
   switch (chartType) {
