@@ -12,7 +12,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import { useDataset } from '@/features/dataset/useDataset';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -119,7 +119,8 @@ const ColorPicker = ({
 const SeriesManagementSection: React.FC = () => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const { chartConfig, handleConfigChange } = useChartEditor();
+  const { chartConfig } = useChartEditorRead();
+  const { handleConfigChange } = useChartEditorActions();
   const { currentDataset } = useDataset();
 
   if (!chartConfig) return null;

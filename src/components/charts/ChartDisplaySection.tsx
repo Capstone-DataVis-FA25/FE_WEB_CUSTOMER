@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../ui/card';
-import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useChartEditorRead } from '@/features/chartEditor';
 import { useDataset } from '@/features/dataset/useDataset';
 import D3LineChart from '@/components/charts/D3LineChart';
 import D3BarChart from '@/components/charts/D3BarChart';
@@ -12,7 +12,7 @@ import { curveOptions } from '@/types/chart';
 
 const ChartDisplaySection: React.FC = () => {
   const { t } = useTranslation();
-  const { chartData, chartConfig, currentChartType: chartType } = useChartEditor();
+  const { chartData, chartConfig, currentChartType: chartType } = useChartEditorRead();
   const { currentDataset } = useDataset();
 
   // Extract formatters, seriesConfigs, and colors from chartConfig
@@ -428,4 +428,4 @@ const ChartDisplaySection: React.FC = () => {
   );
 };
 
-export default ChartDisplaySection;
+export default React.memo(ChartDisplaySection);

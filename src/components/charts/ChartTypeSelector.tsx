@@ -6,7 +6,7 @@ import type { LucideIcon } from 'lucide-react';
 
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '../ui/select';
-import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useChartEditor } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
 import { getDefaultChartConfig } from '@/utils/chartDefaults';
 import type { MainChartConfig } from '@/types/chart';
@@ -190,4 +190,4 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
   );
 };
 
-export default ChartTypeSelector;
+export default React.memo(ChartTypeSelector);

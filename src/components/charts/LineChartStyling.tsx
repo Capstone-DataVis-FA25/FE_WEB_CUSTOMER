@@ -3,13 +3,14 @@ import { Label } from '../ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
-import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
 import { useDebouncedUpdater } from '@/hooks/useDebounce';
 
 const LineChartStyling: React.FC = () => {
   const { t } = useTranslation();
-  const { chartConfig, handleConfigChange, currentChartType } = useChartEditor();
+  const { chartConfig, currentChartType } = useChartEditorRead();
+  const { handleConfigChange } = useChartEditorActions();
   if (!chartConfig || currentChartType !== ChartType.Line) return null;
 
   const config = chartConfig.config;

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardHeader, CardContent } from '../ui/card';
 import { ChevronDown, Sliders } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import { useDataset } from '@/features/dataset/useDataset';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -18,7 +18,8 @@ import { dominoContainerVariants, dominoItemVariants } from '@/theme/animation/a
 const AxisConfigurationSection: React.FC = () => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const { chartConfig, handleConfigChange } = useChartEditor();
+  const { chartConfig } = useChartEditorRead();
+  const { handleConfigChange } = useChartEditorActions();
   const { currentDataset } = useDataset();
 
   // Local state for rotation inputs with immediate UI feedback

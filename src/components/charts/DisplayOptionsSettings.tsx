@@ -1,5 +1,5 @@
 import React from 'react';
-import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useChartEditorRead } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
 import DisplayCheckboxes from './DisplayCheckboxes';
 import LineChartStyling from './LineChartStyling';
@@ -9,7 +9,7 @@ import ThemeConfiguration from './ThemeConfiguration';
 import FontSizeConfiguration from './FontSizeConfiguration';
 
 const DisplayOptionsSettings: React.FC = () => {
-  const { currentChartType } = useChartEditor();
+  const { currentChartType } = useChartEditorRead();
 
   return (
     <div>

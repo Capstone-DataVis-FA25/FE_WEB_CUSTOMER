@@ -2,11 +2,12 @@ import React from 'react';
 import { Label } from '../ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useTranslation } from 'react-i18next';
-import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 
 const DisplayCheckboxes: React.FC = () => {
   const { t } = useTranslation();
-  const { chartConfig, handleConfigChange } = useChartEditor();
+  const { chartConfig } = useChartEditorRead();
+  const { handleConfigChange } = useChartEditorActions();
   if (!chartConfig) return null;
 
   const config = chartConfig.config;

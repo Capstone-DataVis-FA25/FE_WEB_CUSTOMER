@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
-import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
 
 const BarTypeSettings: React.FC = () => {
   const { t } = useTranslation();
-  const { chartConfig, handleConfigChange, currentChartType } = useChartEditor();
+  const { chartConfig, currentChartType } = useChartEditorRead();
+  const { handleConfigChange } = useChartEditorActions();
   if (!chartConfig) return null;
   if (currentChartType !== ChartType.Bar) return null;
 

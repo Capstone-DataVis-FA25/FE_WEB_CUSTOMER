@@ -3,12 +3,13 @@ import { Label } from '../ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
-import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import { useDebouncedUpdater } from '@/hooks/useDebounce';
 
 const InteractiveOptions: React.FC = () => {
   const { t } = useTranslation();
-  const { chartConfig, handleConfigChange } = useChartEditor();
+  const { chartConfig } = useChartEditorRead();
+  const { handleConfigChange } = useChartEditorActions();
   if (!chartConfig) return null;
 
   const config = chartConfig.config;

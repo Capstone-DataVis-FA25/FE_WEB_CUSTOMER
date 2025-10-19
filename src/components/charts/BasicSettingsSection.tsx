@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
-import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import { sizePresets } from '@/types/chart';
 import { useDebouncedUpdater } from '@/hooks/useDebounce';
 import { dominoContainerVariants, dominoItemVariants } from '@/theme/animation/animation.config';
@@ -18,7 +18,8 @@ interface BasicSettingsSectionProps {
 
 const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({ className = '' }) => {
   const { t } = useTranslation();
-  const { chartConfig, handleConfigChange } = useChartEditor();
+  const { chartConfig } = useChartEditorRead();
+  const { handleConfigChange } = useChartEditorActions();
 
   // ALL HOOKS MUST BE DECLARED BEFORE ANY EARLY RETURNS (Rules of Hooks)
   const [isCollapsed, setIsCollapsed] = useState(true);

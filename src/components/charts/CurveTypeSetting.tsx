@@ -1,13 +1,14 @@
 import React from 'react';
 import { Label } from '../ui/label';
 import { useTranslation } from 'react-i18next';
-import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
 import { curveOptions } from '@/types/chart';
 
 const CurveTypeSetting: React.FC = () => {
   const { t } = useTranslation();
-  const { chartConfig, handleConfigChange, currentChartType } = useChartEditor();
+  const { chartConfig, currentChartType } = useChartEditorRead();
+  const { handleConfigChange } = useChartEditorActions();
 
   if (!chartConfig) return null;
   // Only render for line charts (other chart types will move later)

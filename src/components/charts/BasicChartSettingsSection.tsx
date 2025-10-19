@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import AnimationDurationSetting from './AnimationDurationSetting';
 import CurveTypeSetting from './CurveTypeSetting';
-import { useChartEditor } from '@/contexts/ChartEditorContext';
+import { useChartEditor } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
 import BarTypeSettings from './BarTypeSettings';
 import DisplayOptionsSettings from './DisplayOptionsSettings';
