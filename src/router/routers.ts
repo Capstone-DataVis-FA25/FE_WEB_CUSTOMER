@@ -43,7 +43,6 @@ const Routers = {
   BAR_CHART_EDITOR_DEMO: '/demo/bar-chart-editor',
   AREA_CHART_DEMO: '/chart/area-chart',
   AREA_CHART_EDITOR_DEMO: '/demo/area-chart-editor',
-  PIE_CHART_EDITOR_DEMO: '/demo/pie-chart-editor',
 
   //Workspace routes
   WORKSPACE: '/workspace',
