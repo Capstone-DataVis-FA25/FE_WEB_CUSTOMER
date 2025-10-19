@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Header from '../header/Header';
 import Footer from '../footer/Footer';
 import { PageTransition, LoadingSpinner } from '../../theme/animation';
+import SimpleChatBox from '../ui/SimpleChatBox';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/useAuth';
 
@@ -59,6 +60,9 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
           {children ? children : <Outlet />}
         </PageTransition>
       </main>
+
+      {/* Chatbox */}
+      <SimpleChatBox />
 
       {/* Footer */}
       {!isFullScreen && <Footer />}
