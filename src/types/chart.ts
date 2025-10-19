@@ -5,7 +5,22 @@ export type ColorConfig = Record<string, { light: string; dark: string }>;
 
 // CHART TYPE GENERATION
 
-export type MainChartConfig = LineChartConfig | BarChartConfig | AreaChartConfig;
+export type MainChartConfig =
+  | LineChartConfig
+  | BarChartConfig
+  | AreaChartConfig
+  | ScatterChartConfig;
+// Scatter chart specific configuration
+export interface SubScatterChartConfig extends BaseChartConfig {
+  pointRadius?: number;
+}
+
+export interface ScatterChartConfig {
+  config: SubScatterChartConfig;
+  formatters: Partial<FormatterConfig>;
+  seriesConfigs: SeriesConfig[];
+  chartType: 'scatter';
+}
 
 export interface LineChartConfig {
   config: SubLineChartConfig;

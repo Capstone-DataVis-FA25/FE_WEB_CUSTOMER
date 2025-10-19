@@ -6,9 +6,11 @@ import { useDataset } from '@/features/dataset/useDataset';
 import D3LineChart from '@/components/charts/D3LineChart';
 import D3BarChart from '@/components/charts/D3BarChart';
 import D3AreaChart from '@/components/charts/D3AreaChart';
+import D3ScatterChart from '@/components/charts/D3ScatterChart';
 import { TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { curveOptions } from '@/types/chart';
+import { convertChartDataToArray } from '@/utils/dataConverter';
 
 const ChartDisplaySection: React.FC = () => {
   const { t } = useTranslation();
@@ -322,6 +324,27 @@ const ChartDisplaySection: React.FC = () => {
             }
           />
         );
+      }
+
+      case 'scatter': {
+        // For scatter, use the first visible series as Y key
+        const yKey = (yAxisKeysNames as string[])[0];
+        const arrayData = convertChartDataToArray(chartData);
+        const scatterProps = {
+          arrayData,
+          width: safeChartConfig.width,
+          height: safeChartConfig.height,
+          margin: safeChartConfig.margin,
+          xAxisKey: xAxisKeyName,
+          yAxisKey: yKey,
+          title: safeChartConfig.title,
+          xAxisLabel: safeChartConfig.xAxisLabel,
+          yAxisLabel: safeChartConfig.yAxisLabel,
+          showGrid: safeChartConfig.showGrid,
+          showLegend: safeChartConfig.showLegend,
+          backgroundColor: safeChartConfig.backgroundColor,
+        };
+        return <D3ScatterChart {...scatterProps} />;
       }
 
       case 'bar': {

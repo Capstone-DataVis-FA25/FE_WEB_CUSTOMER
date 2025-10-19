@@ -32,6 +32,7 @@ import ChartTab from './components/ChartTab';
 import ToastContainer from '@/components/ui/toast-container';
 import useToast from '@/hooks/useToast';
 import { usePagination } from '@/hooks/usePagination';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 const WorkspacePage: React.FC = () => {
   const { t } = useTranslation();
@@ -374,15 +375,7 @@ const WorkspacePage: React.FC = () => {
       {isInitialLoading ? (
         // Loading screen while fetching both datasets and charts
         <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center space-y-6">
-            <div className="w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-300">
-                Loading Workspace
-              </h2>
-              <p className="text-gray-500 dark:text-gray-400">Fetching datasets and charts...</p>
-            </div>
-          </div>
+          <LoadingSpinner />
         </div>
       ) : (
         // Main workspace content

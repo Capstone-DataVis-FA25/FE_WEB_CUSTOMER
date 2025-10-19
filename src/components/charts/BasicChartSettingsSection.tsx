@@ -9,7 +9,6 @@ import { useChartEditor } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
 import BarTypeSettings from './BarTypeSettings';
 import DisplayOptionsSettings from './DisplayOptionsSettings';
-import { dominoContainerVariants, dominoItemVariants } from '@/theme/animation/animation.config';
 
 const BasicChartSettingsSection: React.FC = () => {
   const { t } = useTranslation();
@@ -43,35 +42,35 @@ const BasicChartSettingsSection: React.FC = () => {
         {!isCollapsed && (
           <motion.div
             key="chart-settings-content"
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={dominoContainerVariants}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
           >
             <CardContent className="space-y-4 mt-4">
               {/* Animation Duration */}
-              <motion.div variants={dominoItemVariants}>
+              <div>
                 <AnimationDurationSetting />
-              </motion.div>
+              </div>
 
               {/* Curve Type */}
               {(currentChartType === ChartType.Line || currentChartType === ChartType.Area) && (
-                <motion.div variants={dominoItemVariants}>
+                <div>
                   <CurveTypeSetting />
-                </motion.div>
+                </div>
               )}
 
               {/* Bar Type */}
               {currentChartType === ChartType.Bar && (
-                <motion.div variants={dominoItemVariants}>
+                <div>
                   <BarTypeSettings />
-                </motion.div>
+                </div>
               )}
 
               {/* Display Options */}
-              <motion.div variants={dominoItemVariants}>
+              <div>
                 <DisplayOptionsSettings />
-              </motion.div>
+              </div>
             </CardContent>
           </motion.div>
         )}

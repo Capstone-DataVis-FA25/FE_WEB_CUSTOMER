@@ -32,6 +32,7 @@ export enum ChartType {
   Line = 'line',
   Bar = 'bar',
   Area = 'area',
+  Scatter = 'scatter',
 }
 
 // Chart configuration interfaces

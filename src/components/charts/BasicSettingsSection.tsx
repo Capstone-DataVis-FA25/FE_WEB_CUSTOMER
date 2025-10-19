@@ -10,7 +10,6 @@ import { Button } from '../ui/button';
 import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import { sizePresets } from '@/types/chart';
 import { useDebouncedUpdater } from '@/hooks/useDebounce';
-import { dominoContainerVariants, dominoItemVariants } from '@/theme/animation/animation.config';
 
 interface BasicSettingsSectionProps {
   className?: string;
@@ -114,14 +113,14 @@ const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({ className =
           {!isCollapsed && (
             <motion.div
               key="basic-settings-content"
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={dominoContainerVariants}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
             >
               <CardContent className="space-y-4 mt-4">
                 {/* Size Presets */}
-                <motion.div variants={dominoItemVariants}>
+                <div>
                   <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {t('lineChart_editor_sizePresets', 'Size Presets')}
                   </Label>
@@ -144,10 +143,10 @@ const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({ className =
                       </Button>
                     ))}
                   </div>
-                </motion.div>
+                </div>
 
                 {/* Custom Width and Height */}
-                <motion.div variants={dominoItemVariants}>
+                <div>
                   <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {t('lineChart_editor_customSize', 'Custom Size')}
                   </Label>
@@ -199,10 +198,10 @@ const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({ className =
                       {(localWidth / localHeight).toFixed(2)}:1
                     </p>
                   </div>
-                </motion.div>
+                </div>
 
                 {/* Padding Configuration */}
-                <motion.div variants={dominoItemVariants}>
+                <div>
                   <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {t('lineChart_editor_padding', 'Padding')}
                   </Label>
@@ -311,10 +310,10 @@ const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({ className =
                       </div>
                     </div>
                   </div>
-                </motion.div>
+                </div>
 
                 {/* Chart Title */}
-                <motion.div variants={dominoItemVariants}>
+                <div>
                   <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {t('lineChart_editor_title_chart', 'Chart Title')}
                   </Label>
@@ -329,7 +328,7 @@ const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({ className =
                       className="mt-1"
                     />
                   </div>
-                </motion.div>
+                </div>
               </CardContent>
             </motion.div>
           )}

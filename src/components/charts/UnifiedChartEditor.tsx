@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import ChartTypeSelector from './ChartTypeSelector';
 import BasicSettingsSection from './BasicSettingsSection';
 import BasicChartSettingsSection from './BasicChartSettingsSection';
@@ -7,7 +6,6 @@ import AxisConfigurationSection from './AxisConfigurationSection';
 import SeriesManagementSection from './SeriesManagementSection';
 import ChartDisplaySection from './ChartDisplaySection';
 import { useChartEditorRead } from '@/features/chartEditor';
-import { containerVariants, listItemVariants } from '@/theme/animation/animation.config';
 
 export interface UnifiedChartEditorProps {}
 
@@ -18,39 +16,24 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = () => {
       <div className="w-full px-2">
         <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
           {/* Left Sidebar - Chart Settings */}
-          <motion.div
-            className="lg:col-span-2 space-y-6"
-            initial="hidden"
-            animate="visible"
-            variants={containerVariants}
-          >
+          <div className="lg:col-span-2 space-y-6">
             <div className="space-y-4">
               {/* Chart Type Selector */}
-              <motion.div variants={listItemVariants}>
-                <ChartTypeSelector />
-              </motion.div>
+              <ChartTypeSelector />
 
               {/* Basic Settings Section */}
-              <motion.div variants={listItemVariants}>
-                <BasicSettingsSection />
-              </motion.div>
+              <BasicSettingsSection />
 
               {/* Basic Chart Settings Section */}
-              <motion.div variants={listItemVariants}>
-                <BasicChartSettingsSection />
-              </motion.div>
+              <BasicChartSettingsSection />
 
               {/* Axis Configuration Section */}
-              <motion.div variants={listItemVariants}>
-                <AxisConfigurationSection />
-              </motion.div>
+              <AxisConfigurationSection />
 
               {/* Series Management Section */}
-              <motion.div variants={listItemVariants}>
-                <SeriesManagementSection />
-              </motion.div>
+              <SeriesManagementSection />
             </div>
-          </motion.div>
+          </div>
           {/* Right Side - Chart Display */}
           <ChartDisplaySection />
         </div>

@@ -20,32 +20,14 @@ import { Button } from '../ui/button';
 import { filterHeadersByAxisType } from '@/utils/chartValidation';
 import { ChartType } from '@/features/charts/chartTypes';
 import WarningPanel from './WarningPanel';
-import { dominoContainerVariants, dominoItemVariants } from '@/theme/animation/animation.config';
+import colors from '@/theme/colors';
 
 // Generate a random vibrant color that is visually distinct
 const generateRandomColor = (existingColors: string[] = []): string => {
-  // Predefined vibrant color palette
-  const colorPalette = [
-    '#f97316', // orange
-    '#ec4899', // pink
-    '#8b5cf6', // purple
-    '#06b6d4', // cyan
-    '#10b981', // green
-    '#f59e0b', // amber
-    '#ef4444', // red
-    '#3b82f6', // blue
-    '#14b8a6', // teal
-    '#f43f5e', // rose
-    '#a855f7', // violet
-    '#84cc16', // lime
-    '#6366f1', // indigo
-    '#22c55e', // emerald
-    '#eab308', // yellow
-    '#d946ef', // fuchsia
-  ];
-
   // Find colors not yet used
-  const unusedColors = colorPalette.filter(color => !existingColors.includes(color.toLowerCase()));
+  const unusedColors = colors.randomSeriesColor.filter(
+    color => !existingColors.includes(color.toLowerCase())
+  );
 
   // If we have unused colors, pick one randomly
   if (unusedColors.length > 0) {
@@ -276,14 +258,14 @@ const SeriesManagementSection: React.FC = () => {
         {!isCollapsed && (
           <motion.div
             key="series-management-content"
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={dominoContainerVariants}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
           >
             <CardContent className="space-y-4 mt-3">
               {/* Show warning if no dataset */}
-              <motion.div variants={dominoItemVariants}>
+              <div>
                 {!hasDataset && (
                   <WarningPanel
                     title={t('no_dataset_selected', 'No Dataset Selected')}
@@ -293,10 +275,10 @@ const SeriesManagementSection: React.FC = () => {
                     )}
                   />
                 )}
-              </motion.div>
+              </div>
 
               {/* Show warning if no valid numeric columns */}
-              <motion.div variants={dominoItemVariants}>
+              <div>
                 {hasDataset && validYAxisHeaders.length === 0 && (
                   <WarningPanel
                     title={t('no_valid_numeric_columns', 'No Valid Numeric Columns')}
@@ -306,9 +288,9 @@ const SeriesManagementSection: React.FC = () => {
                     )}
                   />
                 )}
-              </motion.div>
+              </div>
 
-              <motion.div variants={dominoItemVariants}>
+              <div>
                 {series.length > 0 && (
                   <div className="space-y-4">
                     {series.map((seriesItem: SeriesItem, index: number) => (
@@ -459,10 +441,10 @@ const SeriesManagementSection: React.FC = () => {
                     ))}
                   </div>
                 )}
-              </motion.div>
+              </div>
 
               {/* Only show Add Series button if dataset is available */}
-              <motion.div variants={dominoItemVariants}>
+              <div>
                 {hasDataset && availableColumns.length > 0 && (
                   <div className="space-y-2">
                     <Button
@@ -491,7 +473,7 @@ const SeriesManagementSection: React.FC = () => {
                     )}
                   </div>
                 )}
-              </motion.div>
+              </div>
             </CardContent>
           </motion.div>
         )}

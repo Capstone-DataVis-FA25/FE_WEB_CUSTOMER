@@ -1,22 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 
 import UnifiedChartEditor from '@/components/charts/UnifiedChartEditor';
 import { useDataset } from '@/features/dataset/useDataset';
 import { convertToChartData } from '@/utils/dataConverter';
 import { useCharts } from '@/features/charts/useCharts';
-import { Database, BarChart3, ArrowLeft, Save, Calendar, Clock, RotateCcw } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 // Chart data types are now handled in contexts
 import { useToast } from '@/hooks/useToast';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
-import Utils from '@/utils/Utils';
 import { useBeforeUnload } from '@/hooks/useBeforeUnload';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal';
 import ToastContainer from '@/components/ui/toast-container';
@@ -29,8 +24,9 @@ import { getDefaultChartConfig } from '@/utils/chartDefaults';
 import type { ChartRequest, ChartType } from '@/features/charts';
 // ChartType is imported in ChartEditorWithProviders
 import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
-import { useChartEditor, useFieldSave } from '@/features/chartEditor';
+import { useChartEditor } from '@/features/chartEditor';
 import type { MainChartConfig } from '@/types/chart';
+import ChartEditorHeader from './ChartEditorHeader';
 
 const ChartEditorPage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -55,25 +51,10 @@ const ChartEditorPage: React.FC = () => {
     setEditableName,
     editableDescription,
     setEditableDescription,
-    isEditingName,
-    setIsEditingName,
-    isEditingDescription,
-    setIsEditingDescription,
-    originalName,
-    originalDescription,
     hasChanges,
     resetToOriginal,
     updateOriginals,
-    validationErrors,
-    isFormValid,
-    validateField,
-    clearValidationError,
-    // handleConfigChange, // Available for UnifiedChartEditor when needed
   } = useChartEditor();
-
-  // Field save helpers
-  const saveNameField = useFieldSave('name');
-  const saveDescriptionField = useFieldSave('description');
 
   // Helper to set originals from external data (for future use)
   // const setOriginalValues = useSetChartEditorOriginals();
@@ -82,7 +63,6 @@ const ChartEditorPage: React.FC = () => {
   const {
     currentChart,
     loading: isChartLoading,
-    creating,
     getChartById,
     updateChart,
     clearCurrent: clearCurrentChart,
@@ -99,7 +79,6 @@ const ChartEditorPage: React.FC = () => {
     updateNote,
     deleteNote,
     getChartNotes,
-    loading: isNoteLoading,
   } = useChartNotes();
 
   // Chart notes sidebar state
@@ -269,15 +248,6 @@ const ChartEditorPage: React.FC = () => {
       'You have unsaved changes to your chart. Are you sure you want to leave?'
     ),
   });
-
-  // Use validation context helpers for field save logic
-  const handleNameSave = () => {
-    saveNameField(editableName, () => setIsEditingName(false));
-  };
-
-  const handleDescriptionSave = () => {
-    saveDescriptionField(editableDescription, () => setIsEditingDescription(false));
-  };
 
   // Handle create new chart
   const handleCreateChart = async () => {
@@ -575,39 +545,6 @@ const ChartEditorPage: React.FC = () => {
   //   setCurrentChartType(newType);
   // };
 
-  const chartInfo = useMemo(() => {
-    switch (currentChartType) {
-      case 'line':
-        return {
-          name: t('chart_type_line', 'Line Chart'),
-          icon: '📈',
-          color: 'bg-blue-500',
-          description: t('chart_type_line_desc', 'Perfect for showing trends over time'),
-        };
-      case 'bar':
-        return {
-          name: t('chart_type_bar', 'Bar Chart'),
-          icon: '📊',
-          color: 'bg-green-500',
-          description: t('chart_type_bar_desc', 'Great for comparing values across categories'),
-        };
-      case 'area':
-        return {
-          name: t('chart_type_area', 'Area Chart'),
-          icon: '📉',
-          color: 'bg-purple-500',
-          description: t('chart_type_area_desc', 'Ideal for showing data volume over time'),
-        };
-      default:
-        return {
-          name: t('chart_type_default', 'Chart'),
-          icon: '📊',
-          color: 'bg-gray-500',
-          description: t('chart_type_default_desc', 'Interactive chart visualization'),
-        };
-    }
-  }, [currentChartType, t]);
-
   // Clear current chart on unmount
   useEffect(() => {
     return () => {
@@ -630,273 +567,12 @@ const ChartEditorPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex flex-col">
       {/* Header Section */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex-shrink-0"
-      >
-        <div className="w-full px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 ${chartInfo.color} rounded-lg flex items-center justify-center text-white text-lg shadow-lg`}
-              >
-                {chartInfo.icon}
-              </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <div className="flex items-center gap-2">
-                    {currentChart ? (
-                      <>
-                        {isEditingName && mode === 'edit' ? (
-                          <div className="flex flex-col gap-1">
-                            <Input
-                              value={editableName}
-                              onChange={e => {
-                                setEditableName(e.target.value);
-                                // Clear validation error when user types
-                                if (e.target.value.trim()) {
-                                  clearValidationError('name');
-                                } else {
-                                  // Show validation error immediately when field becomes empty
-                                  validateField('name', e.target.value);
-                                }
-                              }}
-                              className={`w-100 text-xl font-bold bg-transparent border-dashed px-2 py-1 ${
-                                validationErrors.name
-                                  ? '!border-red-500 focus:border-red-500 ring-1 ring-red-500'
-                                  : 'border-gray-300'
-                              }`}
-                              onBlur={handleNameSave}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') {
-                                  handleNameSave();
-                                } else if (e.key === 'Escape') {
-                                  // Only allow escape if name is not empty
-                                  if (editableName.trim()) {
-                                    setEditableName(originalName); // Restore original value
-                                    clearValidationError('name');
-                                    setIsEditingName(false);
-                                  }
-                                  // If name is empty, do nothing (prevent escape)
-                                }
-                              }}
-                              autoFocus
-                              placeholder={t('chart_name_required', 'Chart name is required')}
-                            />
-                            {validationErrors.name && (
-                              <span className="text-red-500 text-xs ml-2">
-                                {t('field_required', 'This field is required')}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <h1
-                            className={`text-xl font-bold text-gray-900 dark:text-white ${
-                              mode === 'edit'
-                                ? 'cursor-pointer hover:text-blue-600 transition-colors'
-                                : 'cursor-default'
-                            }`}
-                            onClick={() => {
-                              if (mode === 'edit') {
-                                setIsEditingName(true);
-                                // Trigger validation if field is empty
-                                if (!editableName.trim()) {
-                                  validateField('name', editableName);
-                                }
-                              }
-                            }}
-                          >
-                            {editableName || currentChart.name}
-                          </h1>
-                        )}
-                      </>
-                    ) : (
-                      <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                        {t('chart_editor_title_main', 'Chart Editor')}
-                      </h1>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                      <BarChart3 className="w-3 h-3" />
-                      {chartInfo.name}
-                    </Badge>
-                    {hasChanges && mode === 'edit' && (
-                      <Badge
-                        variant="outline"
-                        className="flex items-center gap-1 text-xs border-orange-300 text-orange-600 bg-orange-50 dark:border-orange-600 dark:text-orange-400 dark:bg-orange-900/20"
-                      >
-                        <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
-                        {t('dataset_unsavedChangesIndicator', 'Unsaved changes')}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 mt-1">
-                  {currentChart && (
-                    <div className="flex items-center gap-1">
-                      <Database className="w-3 h-3" />
-                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                        {t('description', 'Description')}:
-                      </span>
-                      {isEditingDescription && mode === 'edit' ? (
-                        <div className="flex flex-col gap-1">
-                          <Input
-                            value={editableDescription}
-                            onChange={e => {
-                              setEditableDescription(e.target.value);
-                              // Clear validation error when user types
-                              if (e.target.value.trim()) {
-                                clearValidationError('description');
-                              } else {
-                                // Show validation error immediately when field becomes empty
-                                validateField('description', e.target.value);
-                              }
-                            }}
-                            className={`w-200 text-xl font-bold bg-transparent border-dashed px-2 py-1 ${
-                              validationErrors.description
-                                ? '!border-red-500 focus:border-red-500 ring-1 ring-red-500'
-                                : 'border-gray-300'
-                            }`}
-                            onBlur={handleDescriptionSave}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter' && e.ctrlKey) {
-                                handleDescriptionSave();
-                              } else if (e.key === 'Escape') {
-                                // Only allow escape if description is not empty
-                                if (editableDescription.trim()) {
-                                  setEditableDescription(originalDescription); // Restore original value
-                                  clearValidationError('description');
-                                  setIsEditingDescription(false);
-                                }
-                                // If description is empty, do nothing (prevent escape)
-                              }
-                            }}
-                            placeholder={t('description_required', 'Description is required')}
-                            autoFocus
-                          />
-                          {validationErrors.description && (
-                            <span className="text-red-500 text-xs">
-                              {t('field_required', 'This field is required')}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span
-                          className={`text-xs text-gray-700 dark:text-gray-300 ${
-                            mode === 'edit'
-                              ? 'cursor-pointer hover:text-blue-600 transition-colors'
-                              : 'cursor-default'
-                          }`}
-                          onClick={() => {
-                            if (mode === 'edit') {
-                              setIsEditingDescription(true);
-                              // Trigger validation if field is empty
-                              if (!editableDescription.trim()) {
-                                validateField('description', editableDescription);
-                              }
-                            }
-                          }}
-                          style={{ fontWeight: '500', fontSize: '14px' }}
-                        >
-                          {editableDescription ||
-                            currentChart.description ||
-                            'Click to add description...'}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {currentChart && (
-                    <div className="flex items-center gap-4">
-                      {currentChart.createdAt && (
-                        <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                          <Calendar className="w-3 h-3 text-gray-700 dark:text-gray-300" />
-                          <span className="font-medium">{t('chart_created', 'Created')}:</span>
-                          <span className="text-gray-700 dark:text-gray-300">
-                            {Utils.getDate(currentChart.createdAt, 18)}
-                          </span>
-                        </div>
-                      )}
-
-                      {currentChart.updatedAt && (
-                        <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                          <Clock className="w-3 h-3 text-gray-700 dark:text-gray-300" />
-                          <span className="font-medium">{t('chart_updated', 'Updated')}:</span>
-                          <span className="text-gray-700 dark:text-gray-300">
-                            {Utils.getDate(currentChart.updatedAt, 18)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {mode === 'create' && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDatasetModal(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <Database className="w-4 h-4" />
-                    Select Dataset
-                  </Button>
-                </>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleBack}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                {t('common_back', 'Back')}
-              </Button>
-              <div className="flex items-center gap-2">
-                {mode === 'edit' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleReset}
-                    disabled={!hasChanges}
-                    className="flex items-center gap-2"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    {t('common_reset', 'Reset')}
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  onClick={() => handleSave()}
-                  disabled={mode === 'create' ? creating || !isFormValid : !hasChanges}
-                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {creating ? (
-                    <>
-                      <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      {t('chart_create_creating', 'Creating...')}
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      {mode === 'create'
-                        ? t('chart_create_save', 'Create Chart')
-                        : t('common_save', 'Save')}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
+      <ChartEditorHeader
+        onReset={handleReset}
+        onSave={handleSave}
+        onBack={handleBack}
+        onOpenDatasetModal={() => setShowDatasetModal(true)}
+      />
 
       {/* Main Content - Full Width Chart Area */}
       <div className="flex-1 bg-gray-900">

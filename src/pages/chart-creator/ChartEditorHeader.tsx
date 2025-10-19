@@ -1,7 +1,16 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Database, BarChart3, ArrowLeft, Save, RotateCcw, Calendar, Clock } from 'lucide-react';
+import {
+  Database,
+  BarChart3,
+  ArrowLeft,
+  Save,
+  RotateCcw,
+  Calendar,
+  Clock,
+  Pencil,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,13 +23,6 @@ interface ChartInfo {
   name: string;
   icon: string;
   color: string; // tailwind class
-}
-
-interface CurrentChartLike {
-  name?: string;
-  description?: string;
-  createdAt?: string | number | Date;
-  updatedAt?: string | number | Date;
 }
 
 interface ChartEditorHeaderProps {
@@ -167,25 +169,30 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                           )}
                         </div>
                       ) : (
-                        <h1
-                          className={`text-xl font-bold text-gray-900 dark:text-white ${
-                            mode === 'edit' || mode === 'create'
-                              ? 'cursor-pointer hover:text-blue-600 transition-colors'
-                              : 'cursor-default'
-                          }`}
-                          onClick={() => {
-                            if (mode === 'edit' || mode === 'create') {
-                              setIsEditingName(true);
-                              if (!editableName.trim()) {
-                                validateField('name', editableName);
+                        <div className="flex items-center gap-2 group">
+                          <h1
+                            className={`text-xl font-bold text-gray-900 dark:text-white ${
+                              mode === 'edit' || mode === 'create'
+                                ? 'cursor-pointer hover:text-blue-600 transition-colors'
+                                : 'cursor-default'
+                            }`}
+                            onClick={() => {
+                              if (mode === 'edit' || mode === 'create') {
+                                setIsEditingName(true);
+                                if (!editableName.trim()) {
+                                  validateField('name', editableName);
+                                }
                               }
-                            }
-                          }}
-                        >
-                          {editableName ||
-                            currentChart?.name ||
-                            t('chart_name_placeholder', 'Untitled Chart')}
-                        </h1>
+                            }}
+                          >
+                            {editableName ||
+                              currentChart?.name ||
+                              t('chart_name_placeholder', 'Untitled Chart')}
+                          </h1>
+                          {(mode === 'edit' || mode === 'create') && (
+                            <Pencil className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" />
+                          )}
+                        </div>
                       )}
                     </>
                   ) : (
@@ -256,26 +263,31 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                         )}
                       </div>
                     ) : (
-                      <span
-                        className={`text-xs text-gray-700 dark:text-gray-300 ${
-                          mode === 'edit' || mode === 'create'
-                            ? 'cursor-pointer hover:text-blue-600 transition-colors'
-                            : 'cursor-default'
-                        }`}
-                        onClick={() => {
-                          if (mode === 'edit' || mode === 'create') {
-                            setIsEditingDescription(true);
-                            if (!editableDescription.trim()) {
-                              validateField('description', editableDescription);
+                      <div className="flex items-center gap-2 group">
+                        <span
+                          className={`text-xs text-gray-700 dark:text-gray-300 ${
+                            mode === 'edit' || mode === 'create'
+                              ? 'cursor-pointer hover:text-blue-600 transition-colors'
+                              : 'cursor-default'
+                          }`}
+                          onClick={() => {
+                            if (mode === 'edit' || mode === 'create') {
+                              setIsEditingDescription(true);
+                              if (!editableDescription.trim()) {
+                                validateField('description', editableDescription);
+                              }
                             }
-                          }
-                        }}
-                        style={{ fontWeight: '500', fontSize: '14px' }}
-                      >
-                        {editableDescription ||
-                          currentChart?.description ||
-                          t('chart_description_placeholder', 'Click to add description...')}
-                      </span>
+                          }}
+                          style={{ fontWeight: '500', fontSize: '14px' }}
+                        >
+                          {editableDescription ||
+                            currentChart?.description ||
+                            t('chart_description_placeholder', 'Click to add description...')}
+                        </span>
+                        {(mode === 'edit' || mode === 'create') && (
+                          <Pencil className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" />
+                        )}
+                      </div>
                     )}
                   </div>
                 )}

@@ -13,7 +13,6 @@ import { filterHeadersByAxisType, getAxisRequirementDescription } from '@/utils/
 import { ChartType } from '@/features/charts/chartTypes';
 import WarningPanel from './WarningPanel';
 import AxisLabelsSettings from './AxisLabelsSettings';
-import { dominoContainerVariants, dominoItemVariants } from '@/theme/animation/animation.config';
 
 const AxisConfigurationSection: React.FC = () => {
   const { t } = useTranslation();
@@ -94,24 +93,24 @@ const AxisConfigurationSection: React.FC = () => {
         {!isCollapsed && (
           <motion.div
             key="axis-config-content"
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={dominoContainerVariants}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
           >
             <CardContent className="space-y-4 mt-4">
               {/* Axis Labels at top */}
-              <motion.div variants={dominoItemVariants}>
+              <div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
                     <Label className="sr-only">Axis Labels</Label>
                     <AxisLabelsSettings />
                   </div>
                 </div>
-              </motion.div>
+              </div>
               {/* Show warning if no dataset */}
               {!hasDataset && (
-                <motion.div variants={dominoItemVariants}>
+                <div>
                   <div>
                     <Label className="text-sm font-medium text-gray-900 dark:text-gray-100 pb-2">
                       X-Axis Column
@@ -124,7 +123,7 @@ const AxisConfigurationSection: React.FC = () => {
                       )}
                     />
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {/* X-Axis Column Selection - Only show if dataset exists */}

@@ -1,3 +1,4 @@
+// ...existing code...
 import { ChartType } from '@/features/charts/chartTypes';
 import type {
   AreaChartConfig,
@@ -10,6 +11,8 @@ import type {
   SubAreaChartConfig,
   SubBarChartConfig,
   SubLineChartConfig,
+  SubScatterChartConfig,
+  ScatterChartConfig,
 } from '@/types/chart';
 
 // Default Sub configs
@@ -74,6 +77,14 @@ const defaultSubBarConfig: SubBarChartConfig = {
   showPointValues: false,
 };
 
+// Scatter config block (after all dependencies)
+const defaultSubScatterConfig: SubScatterChartConfig = {
+  ...defaultBaseChartConfig,
+  pointRadius: 5,
+  showGrid: true,
+  showLegend: false,
+};
+
 // Default formatter config
 const defaultFormatterConfig: Partial<FormatterConfig> = {
   useYFormatter: false,
@@ -109,6 +120,13 @@ export const defaultBarChartConfig: BarChartConfig = {
   chartType: 'bar',
 };
 
+export const defaultScatterChartConfig: ScatterChartConfig = {
+  config: defaultSubScatterConfig,
+  formatters: defaultFormatterConfig,
+  seriesConfigs: defaultSeriesConfigs,
+  chartType: 'scatter',
+};
+
 // Returns a consistent default StructuredChartConfig for given chart type and optional dataset name
 export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => {
   const log = (cfg: MainChartConfig) => {
@@ -123,5 +141,7 @@ export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => 
       return log(defaultAreaChartConfig);
     case ChartType.Bar:
       return log(defaultBarChartConfig);
+    case ChartType.Scatter:
+      return log(defaultScatterChartConfig);
   }
 };
