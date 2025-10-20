@@ -7,7 +7,7 @@ import type {
   FormatterConfig,
   LineChartConfig,
   MainChartConfig,
-  SeriesConfig,
+  AxisConfig,
   SubAreaChartConfig,
   SubBarChartConfig,
   SubLineChartConfig,
@@ -20,11 +20,7 @@ const defaultBaseChartConfig: BaseChartConfig = {
   width: 800,
   height: 400,
   margin: { top: 40, right: 40, bottom: 40, left: 40 },
-  xAxisKey: '',
-  yAxisKeys: [],
   title: '',
-  xAxisLabel: '',
-  yAxisLabel: '',
   showLegend: true,
   showGrid: true,
   animationDuration: 400,
@@ -95,35 +91,35 @@ const defaultFormatterConfig: Partial<FormatterConfig> = {
   customXFormatter: '',
 };
 
-// Default series configs (empty)
-const defaultSeriesConfigs: SeriesConfig[] = [];
+// Default axis configs (empty) - updated to match new type
+const defaultAxisConfigs: AxisConfig = {};
 
 // Default config cho từng loại chart
 export const defaultLineChartConfig: LineChartConfig = {
   config: defaultSubLineConfig,
   formatters: defaultFormatterConfig,
-  seriesConfigs: defaultSeriesConfigs,
+  axisConfigs: defaultAxisConfigs,
   chartType: 'line',
 };
 
 export const defaultAreaChartConfig: AreaChartConfig = {
   config: defaultSubAreaConfig,
   formatters: defaultFormatterConfig,
-  seriesConfigs: defaultSeriesConfigs,
+  axisConfigs: defaultAxisConfigs,
   chartType: 'area',
 };
 
 export const defaultBarChartConfig: BarChartConfig = {
   config: defaultSubBarConfig,
   formatters: defaultFormatterConfig,
-  seriesConfigs: defaultSeriesConfigs,
+  axisConfigs: defaultAxisConfigs,
   chartType: 'bar',
 };
 
 export const defaultScatterChartConfig: ScatterChartConfig = {
   config: defaultSubScatterConfig,
   formatters: defaultFormatterConfig,
-  seriesConfigs: defaultSeriesConfigs,
+  axisConfigs: defaultAxisConfigs,
   chartType: 'scatter',
 };
 

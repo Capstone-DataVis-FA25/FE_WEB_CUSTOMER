@@ -18,28 +18,28 @@ export interface SubScatterChartConfig extends BaseChartConfig {
 export interface ScatterChartConfig {
   config: SubScatterChartConfig;
   formatters: Partial<FormatterConfig>;
-  seriesConfigs: SeriesConfig[];
+  axisConfigs: AxisConfig;
   chartType: 'scatter';
 }
 
 export interface LineChartConfig {
   config: SubLineChartConfig;
   formatters: Partial<FormatterConfig>;
-  seriesConfigs: SeriesConfig[];
+  axisConfigs: AxisConfig;
   chartType: 'line';
 }
 
 export interface BarChartConfig {
   config: SubBarChartConfig;
   formatters: Partial<FormatterConfig>;
-  seriesConfigs: SeriesConfig[];
+  axisConfigs: AxisConfig;
   chartType: 'bar';
 }
 
 export interface AreaChartConfig {
   config: SubAreaChartConfig;
   formatters: Partial<FormatterConfig>;
-  seriesConfigs: SeriesConfig[];
+  axisConfigs: AxisConfig;
   chartType: 'area';
 }
 
@@ -93,6 +93,13 @@ export const getResponsiveDefaults = () => {
   };
 };
 
+export interface AxisConfig {
+  xAxisKey?: string;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  seriesConfigs?: SeriesConfig[];
+}
+
 // Series configuration interface for Data Series management
 export interface SeriesConfig {
   id: string;
@@ -107,11 +114,11 @@ export interface BaseChartConfig {
   width?: number;
   height?: number;
   margin?: { top: number; right: number; bottom: number; left: number };
-  xAxisKey?: string;
-  yAxisKeys?: string[];
+  // xAxisKey?: string;
+  // yAxisKeys?: string[];
   title: string;
-  xAxisLabel?: string;
-  yAxisLabel?: string;
+  // xAxisLabel?: string;
+  // yAxisLabel?: string;
   showLegend?: boolean;
   showGrid?: boolean;
   animationDuration?: number;

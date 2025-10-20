@@ -1,5 +1,21 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
+
+// Default color scheme matching LineChart
+const defaultColorsChart: Record<string, { light: string; dark: string }> = {
+  color1: { light: '#3b82f6', dark: '#60a5fa' },
+  color2: { light: '#ef4444', dark: '#f87171' },
+  color3: { light: '#10b981', dark: '#34d399' },
+  color4: { light: '#f59e0b', dark: '#fbbf24' },
+  color5: { light: '#8b5cf6', dark: '#a78bfa' },
+  color6: { light: '#ec4899', dark: '#f472b6' },
+  color7: { light: '#06b6d4', dark: '#22d3ee' },
+  color8: { light: '#84cc16', dark: '#a3e635' },
+};
+
+export interface ScatterDataPoint {
+  [key: string]: number | string;
+}
 
 export interface D3ScatterChartProps {
   arrayData?: (string | number)[][];
@@ -8,221 +24,534 @@ export interface D3ScatterChartProps {
   margin?: { top: number; right: number; bottom: number; left: number };
   xAxisKey: string;
   yAxisKey: string;
-  colorKey?: string;
+  colorKey?: string; // Key for color grouping
+  sizeKey?: string; // Key for bubble size
+  colors?: Record<string, { light: string; dark: string }>;
+
+  // Styling props
   pointRadius?: number;
+  minPointRadius?: number;
+  maxPointRadius?: number;
+  pointOpacity?: number;
+
+  // Title and labels
   title?: string;
   xAxisLabel?: string;
   yAxisLabel?: string;
+
+  // Display options
   showGrid?: boolean;
   showLegend?: boolean;
-  colors?: Record<string, string>;
+  showTooltip?: boolean;
+  showAxisLabels?: boolean;
+  showAxisTicks?: boolean;
+
+  // Grid styling
+  gridOpacity?: number;
+
+  // Legend options
+  legendFontSize?: number;
+
+  // Axis configuration
+  xAxisStart?: 'auto' | 'zero';
+  yAxisStart?: 'auto' | 'zero';
+  xAxisRotation?: number;
+
+  // Formatters
+  yAxisFormatter?: (value: number) => string;
+  xAxisFormatter?: (value: number) => string;
+
+  // Font sizes
+  fontSize?: { axis: number; label: number; title: number };
+  titleFontSize?: number;
+  labelFontSize?: number;
+
+  // Theme and background
+  theme?: 'light' | 'dark' | 'auto';
   backgroundColor?: string;
+
+  // Animation
+  animationDuration?: number;
+
+  // Regression line
+  showRegressionLine?: boolean;
+  regressionLineColor?: string;
+  regressionLineWidth?: number;
 }
 
-export interface ScatterDataPoint {
-  [key: string]: number | string;
-}
-
+// Convert array data to scatter data format
 function convertArrayToScatterData(arrayData: (string | number)[][]): ScatterDataPoint[] {
-  if (!arrayData || arrayData.length < 2) return [];
+  if (!arrayData || arrayData.length === 0) {
+    return [];
+  }
+
+  if (arrayData.length < 2) {
+    console.warn('Array data must have at least 2 rows (headers + data)');
+    return [];
+  }
+
   const headers = arrayData[0] as string[];
-  return arrayData.slice(1).map(row => {
-    const point: ScatterDataPoint = {};
-    headers.forEach((header, i) => {
-      point[header] = row[i];
+  const dataRows = arrayData.slice(1);
+
+  if (headers.length === 0) {
+    console.warn('No headers found in first row');
+    return [];
+  }
+
+  const scatterData: ScatterDataPoint[] = dataRows.map((row, rowIndex) => {
+    const dataPoint: ScatterDataPoint = {};
+    headers.forEach((header, headerIndex) => {
+      const value = row[headerIndex];
+
+      // Handle undefined/null/N/A values
+      if (value === undefined || value === null || value === 'N/A' || value === '') {
+        console.warn(
+          `Missing/invalid value at row ${rowIndex + 1}, column ${headerIndex} (${header}):`,
+          value
+        );
+        if (headerIndex === 0) {
+          dataPoint[header] = `Row ${rowIndex + 1}`;
+        } else {
+          dataPoint[header] = 0;
+        }
+        return;
+      }
+
+      // Try to convert to number if it's a numeric string
+      if (typeof value === 'string') {
+        const cleanedValue = value.replace(/[,\s]/g, '');
+        const numValue = parseFloat(cleanedValue);
+        if (!isNaN(numValue)) {
+          dataPoint[header] = numValue;
+        } else {
+          dataPoint[header] = value;
+        }
+      } else {
+        dataPoint[header] = value;
+      }
     });
-    return point;
+
+    return dataPoint;
   });
+
+  return scatterData;
 }
 
 const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   arrayData,
   width = 800,
-  height = 500,
-  margin = { top: 40, right: 40, bottom: 60, left: 60 },
+  height = 600,
+  margin = { top: 20, right: 40, bottom: 60, left: 60 },
   xAxisKey,
   yAxisKey,
   colorKey,
+  sizeKey,
+  colors = defaultColorsChart,
+
+  // Styling props
   pointRadius = 5,
+  minPointRadius = 3,
+  maxPointRadius = 15,
+  pointOpacity = 0.7,
+
+  // Title and labels
   title,
   xAxisLabel,
   yAxisLabel,
+
+  // Display options
   showGrid = true,
-  showLegend = false,
-  colors = {},
+  showLegend = true,
+  showTooltip = true,
+  showAxisLabels = true,
+  showAxisTicks = true,
+
+  // Grid styling
+  gridOpacity = 0.3,
+
+  // Legend options
+  legendFontSize = 11,
+
+  // Axis configuration
+  xAxisStart = 'auto',
+  yAxisStart = 'auto',
+  xAxisRotation = 0,
+
+  // Formatters
+  yAxisFormatter,
+  xAxisFormatter,
+
+  // Font sizes
+  fontSize = { axis: 12, label: 14, title: 16 },
+  titleFontSize = 16,
+  labelFontSize = 12,
+
+  // Theme and background
+  theme = 'auto',
   backgroundColor = 'transparent',
+
+  // Animation
+  animationDuration = 1000,
+
+  // Regression line
+  showRegressionLine = false,
+  regressionLineColor,
+  regressionLineWidth = 2,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [dimensions, setDimensions] = useState({ width, height });
 
-  const data = React.useMemo(() => convertArrayToScatterData(arrayData || []), [arrayData]);
+  // Process data
+  const processedData = React.useMemo(
+    () => convertArrayToScatterData(arrayData || []),
+    [arrayData]
+  );
 
+  // Get theme-specific colors
+  const themeColors = React.useMemo(() => {
+    const colorEntries = Object.entries(colors);
+    return colorEntries.reduce(
+      (acc, [key, value]) => {
+        if (typeof value === 'object' && 'light' in value) {
+          acc[key] = isDarkMode ? value.dark : value.light;
+        } else {
+          acc[key] = value as string;
+        }
+        return acc;
+      },
+      {} as Record<string, string>
+    );
+  }, [colors, isDarkMode]);
+
+  // Detect theme changes
   useEffect(() => {
-    if (!svgRef.current || !data.length) {
-      d3.select(svgRef.current).selectAll('*').remove();
+    if (theme === 'auto') {
+      const checkTheme = () => {
+        const isDark = document.documentElement.classList.contains('dark');
+        setIsDarkMode(isDark);
+      };
+
+      checkTheme();
+      const observer = new MutationObserver(checkTheme);
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class'],
+      });
+
+      return () => observer.disconnect();
+    } else {
+      setIsDarkMode(theme === 'dark');
+    }
+  }, [theme]);
+
+  // Handle responsive dimensions
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const resizeObserver = new ResizeObserver(entries => {
+      const entry = entries[0];
+      if (entry) {
+        setDimensions({
+          width: entry.contentRect.width || width,
+          height: entry.contentRect.height || height,
+        });
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect();
+  }, [width, height]);
+
+  // Helper: Calculate linear regression
+  const calculateLinearRegression = (xVals: number[], yVals: number[]) => {
+    const n = xVals.length;
+    const sumX = d3.sum(xVals);
+    const sumY = d3.sum(yVals);
+    const sumXY = d3.sum(xVals.map((x, i) => x * yVals[i]));
+    const sumXX = d3.sum(xVals.map(x => x * x));
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    return { slope, intercept };
+  };
+
+  // Main chart rendering
+  useEffect(() => {
+    if (!processedData || processedData.length === 0 || !svgRef.current || !xAxisKey || !yAxisKey) {
       return;
     }
+
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
 
-    // Background
+    const chartWidth = dimensions.width;
+    const chartHeight = dimensions.height;
+    const innerWidth = chartWidth - margin.left - margin.right;
+    const innerHeight = chartHeight - margin.top - margin.bottom;
+
+    if (innerWidth <= 0 || innerHeight <= 0) return;
+
+    // Set background
     svg
       .append('rect')
-      .attr('width', width)
-      .attr('height', height)
+      .attr('width', chartWidth)
+      .attr('height', chartHeight)
       .attr('fill', backgroundColor)
       .attr('rx', 8);
 
-    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-    const innerWidth = width - margin.left - margin.right;
-    const innerHeight = height - margin.top - margin.bottom;
+    const chartGroup = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
-    // X scale
-    const xValues = data.map(d => +d[xAxisKey]);
-    const xScale = d3
-      .scaleLinear()
-      .domain(d3.extent(xValues) as [number, number])
-      .nice()
-      .range([0, innerWidth]);
+    // Create scales
+    const xValues = processedData.map(d => +d[xAxisKey]).filter(v => !isNaN(v));
+    const yValues = processedData.map(d => +d[yAxisKey]).filter(v => !isNaN(v));
 
-    // Y scale
-    const yValues = data.map(d => +d[yAxisKey]);
-    const yScale = d3
-      .scaleLinear()
-      .domain(d3.extent(yValues) as [number, number])
-      .nice()
-      .range([innerHeight, 0]);
+    if (xValues.length === 0 || yValues.length === 0) return;
+
+    const xExtent = d3.extent(xValues) as [number, number];
+    const yExtent = d3.extent(yValues) as [number, number];
+
+    // Apply axis start config
+    const xDomain: [number, number] = [
+      xAxisStart === 'zero' ? 0 : xAxisStart === 'auto' ? xExtent[0] : xExtent[0],
+      xExtent[1],
+    ];
+    const yDomain: [number, number] = [
+      yAxisStart === 'zero' ? 0 : yAxisStart === 'auto' ? yExtent[0] : yExtent[0],
+      yExtent[1],
+    ];
+
+    const xScale = d3.scaleLinear().domain(xDomain).nice().range([0, innerWidth]);
+    const yScale = d3.scaleLinear().domain(yDomain).nice().range([innerHeight, 0]);
 
     // Color scale
     let colorScale: d3.ScaleOrdinal<string, string> | undefined;
     if (colorKey) {
-      const unique = Array.from(new Set(data.map(d => d[colorKey] as string)));
-      colorScale = d3
-        .scaleOrdinal<string>()
-        .domain(unique)
-        .range(unique.map((k, i) => colors[k] || d3.schemeCategory10[i % 10]));
+      const uniqueCategories = Array.from(new Set(processedData.map(d => String(d[colorKey]))));
+      const categoryColors = uniqueCategories.map(
+        (cat, i) => themeColors[cat] || d3.schemeCategory10[i % 10]
+      );
+      colorScale = d3.scaleOrdinal<string>().domain(uniqueCategories).range(categoryColors);
+    }
+
+    // Size scale
+    let sizeScale: d3.ScaleLinear<number, number> | undefined;
+    if (sizeKey) {
+      const sizeValues = processedData.map(d => +d[sizeKey]).filter(v => !isNaN(v));
+      sizeScale = d3
+        .scaleLinear()
+        .domain(d3.extent(sizeValues) as [number, number])
+        .range([minPointRadius, maxPointRadius]);
     }
 
     // Grid lines
+    const gridColor = isDarkMode ? '#374151' : '#e5e7eb';
+    const textColor = isDarkMode ? '#e5e7eb' : '#374151';
+
     if (showGrid) {
-      g.selectAll('.grid-line-x')
+      chartGroup
+        .selectAll('.grid-line-x')
         .data(xScale.ticks())
         .enter()
         .append('line')
         .attr('class', 'grid-line-x')
-        .attr('x1', d => xScale(d))
-        .attr('x2', d => xScale(d))
+        .attr('x1', (d: d3.NumberValue) => xScale(+d))
+        .attr('x2', (d: d3.NumberValue) => xScale(+d))
         .attr('y1', 0)
         .attr('y2', innerHeight)
-        .attr('stroke', '#e5e7eb')
+        .attr('stroke', gridColor)
         .attr('stroke-width', 1)
-        .attr('opacity', 0.5);
-      g.selectAll('.grid-line-y')
+        .attr('opacity', gridOpacity);
+
+      chartGroup
+        .selectAll('.grid-line-y')
         .data(yScale.ticks())
         .enter()
         .append('line')
         .attr('class', 'grid-line-y')
         .attr('x1', 0)
         .attr('x2', innerWidth)
-        .attr('y1', d => yScale(d))
-        .attr('y2', d => yScale(d))
-        .attr('stroke', '#e5e7eb')
+        .attr('y1', (d: d3.NumberValue) => yScale(+d))
+        .attr('y2', (d: d3.NumberValue) => yScale(+d))
+        .attr('stroke', gridColor)
         .attr('stroke-width', 1)
-        .attr('opacity', 0.5);
+        .attr('opacity', gridOpacity);
     }
 
     // X Axis
-    const xAxis = d3.axisBottom(xScale).ticks(8);
-    const xAxisGroup = g.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis);
-    xAxisGroup.selectAll('text').attr('font-size', 12);
+    if (showAxisTicks) {
+      const xAxis = d3.axisBottom(xScale).ticks(8);
+      if (xAxisFormatter) {
+        xAxis.tickFormat(d => xAxisFormatter(+d));
+      }
+      const xAxisGroup = chartGroup
+        .append('g')
+        .attr('transform', `translate(0,${innerHeight})`)
+        .call(xAxis);
+      xAxisGroup
+        .selectAll('text')
+        .attr('fill', textColor)
+        .attr('font-size', fontSize.axis || 12)
+        .attr('transform', `rotate(${xAxisRotation})`)
+        .style('text-anchor', xAxisRotation !== 0 ? 'end' : 'middle');
 
-    // Y Axis
-    const yAxis = d3.axisLeft(yScale).ticks(8);
-    const yAxisGroup = g.append('g').call(yAxis);
-    yAxisGroup.selectAll('text').attr('font-size', 12);
+      // Y Axis
+      const yAxis = d3.axisLeft(yScale).ticks(8);
+      if (yAxisFormatter) {
+        yAxis.tickFormat(d => yAxisFormatter(+d));
+      }
+      const yAxisGroup = chartGroup.append('g').call(yAxis);
+      yAxisGroup
+        .selectAll('text')
+        .attr('fill', textColor)
+        .attr('font-size', fontSize.axis || 12);
+    }
 
     // Axis labels
-    if (xAxisLabel) {
-      g.append('text')
-        .attr('x', innerWidth / 2)
-        .attr('y', innerHeight + 40)
-        .attr('text-anchor', 'middle')
-        .attr('fill', '#374151')
-        .style('font-size', '14px')
-        .text(xAxisLabel);
-    }
-    if (yAxisLabel) {
-      g.append('text')
-        .attr('transform', 'rotate(-90)')
-        .attr('x', -innerHeight / 2)
-        .attr('y', -45)
-        .attr('text-anchor', 'middle')
-        .attr('fill', '#374151')
-        .style('font-size', '14px')
-        .text(yAxisLabel);
+    if (showAxisLabels) {
+      if (xAxisLabel) {
+        chartGroup
+          .append('text')
+          .attr('x', innerWidth / 2)
+          .attr('y', innerHeight + margin.bottom - 10)
+          .attr('text-anchor', 'middle')
+          .attr('fill', textColor)
+          .style('font-size', `${labelFontSize || 14}px`)
+          .style('font-weight', '500')
+          .text(xAxisLabel);
+      }
+      if (yAxisLabel) {
+        chartGroup
+          .append('text')
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -innerHeight / 2)
+          .attr('y', -margin.left + 15)
+          .attr('text-anchor', 'middle')
+          .attr('fill', textColor)
+          .style('font-size', `${labelFontSize || 14}px`)
+          .style('font-weight', '500')
+          .text(yAxisLabel);
+      }
     }
 
     // Title
     if (title) {
       svg
         .append('text')
-        .attr('x', width / 2)
-        .attr('y', margin.top / 2)
+        .attr('x', chartWidth / 2)
+        .attr('y', margin.top / 2 + 5)
         .attr('text-anchor', 'middle')
-        .attr('fill', '#111827')
-        .style('font-size', '18px')
+        .attr('fill', textColor)
+        .style('font-size', `${titleFontSize || 18}px`)
         .style('font-weight', 'bold')
         .text(title);
     }
 
-    // Draw points
-    g.selectAll('.scatter-point')
-      .data(data)
+    // Draw points with animation
+    chartGroup
+      .selectAll('.scatter-point')
+      .data(processedData)
       .enter()
       .append('circle')
       .attr('class', 'scatter-point')
-      .attr('cx', d => xScale(+d[xAxisKey]))
-      .attr('cy', d => yScale(+d[yAxisKey]))
-      .attr('r', pointRadius)
-      .attr('fill', d => (colorKey && colorScale ? colorScale(d[colorKey] as string) : '#3b82f6'))
-      .attr('opacity', 0.8);
+      .attr('cx', (d: ScatterDataPoint) => xScale(+d[xAxisKey]))
+      .attr('cy', (d: ScatterDataPoint) => yScale(+d[yAxisKey]))
+      .attr('r', 0)
+      .attr('fill', (d: ScatterDataPoint) =>
+        colorKey && colorScale
+          ? colorScale(String(d[colorKey]))
+          : themeColors['default'] || '#3b82f6'
+      )
+      .attr('opacity', pointOpacity)
+      .style('cursor', showTooltip ? 'pointer' : 'default')
+      .transition()
+      .duration(animationDuration)
+      .attr('r', (d: ScatterDataPoint) =>
+        sizeKey && sizeScale ? sizeScale(+d[sizeKey]) : pointRadius
+      );
 
     // Legend
     if (showLegend && colorKey && colorScale) {
-      const legend = svg.append('g').attr('class', 'legend');
-      const unique = colorScale.domain();
-      unique.forEach((val, i) => {
-        legend
+      const legendGroup = svg.append('g').attr('class', 'legend');
+      const categories = colorScale.domain();
+
+      categories.forEach((category, i) => {
+        const legendX = chartWidth - margin.right - 150;
+        const legendY = margin.top + 20 + i * 24;
+
+        legendGroup
           .append('circle')
-          .attr('cx', width - margin.right - 20)
-          .attr('cy', margin.top + i * 24)
-          .attr('r', 7)
-          .attr('fill', colorScale(val));
-        legend
+          .attr('cx', legendX)
+          .attr('cy', legendY)
+          .attr('r', 6)
+          .attr('fill', colorScale(category));
+
+        legendGroup
           .append('text')
-          .attr('x', width - margin.right)
-          .attr('y', margin.top + i * 24 + 5)
-          .attr('font-size', 13)
-          .attr('fill', '#374151')
-          .text(val);
+          .attr('x', legendX + 12)
+          .attr('y', legendY + 4)
+          .attr('font-size', legendFontSize)
+          .attr('fill', textColor)
+          .text(category);
       });
     }
+
+    // Regression line
+    if (showRegressionLine && xValues.length > 1) {
+      const regression = calculateLinearRegression(xValues, yValues);
+      const regressionColor = regressionLineColor || (isDarkMode ? '#ef4444' : '#dc2626');
+
+      chartGroup
+        .append('line')
+        .attr('class', 'regression-line')
+        .attr('x1', xScale(xDomain[0]))
+        .attr('y1', yScale(regression.slope * xDomain[0] + regression.intercept))
+        .attr('x2', xScale(xDomain[1]))
+        .attr('y2', yScale(regression.slope * xDomain[1] + regression.intercept))
+        .attr('stroke', regressionColor)
+        .attr('stroke-width', regressionLineWidth)
+        .attr('stroke-dasharray', '5,5')
+        .attr('opacity', 0.7);
+    }
   }, [
-    arrayData,
-    width,
-    height,
+    processedData,
+    dimensions,
     margin,
     xAxisKey,
     yAxisKey,
     colorKey,
+    sizeKey,
     pointRadius,
+    minPointRadius,
+    maxPointRadius,
+    pointOpacity,
     title,
     xAxisLabel,
     yAxisLabel,
     showGrid,
     showLegend,
-    colors,
+    showTooltip,
+    showAxisLabels,
+    showAxisTicks,
+    gridOpacity,
+    legendFontSize,
+    xAxisStart,
+    yAxisStart,
+    xAxisRotation,
+    yAxisFormatter,
+    xAxisFormatter,
+    fontSize,
+    titleFontSize,
+    labelFontSize,
     backgroundColor,
+    animationDuration,
+    showRegressionLine,
+    regressionLineColor,
+    regressionLineWidth,
+    themeColors,
+    isDarkMode,
   ]);
 
   return (

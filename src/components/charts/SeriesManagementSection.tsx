@@ -123,13 +123,13 @@ const SeriesManagementSection: React.FC = () => {
     visible: boolean;
   };
 
-  // Safely get series array from config - should be at chartConfig.seriesConfigs (root level)
-  const series: SeriesItem[] = Array.isArray(chartConfig.seriesConfigs)
-    ? (chartConfig.seriesConfigs as SeriesItem[])
+  // Safely get series array from config - should be at chartConfig.axisConfigs (root level)
+  const series: SeriesItem[] = Array.isArray(chartConfig.axisConfigs)
+    ? (chartConfig.axisConfigs as SeriesItem[])
     : [];
 
   // console.log('🔍 SeriesManagementSection - series:', series);
-  // console.log('🔍 SeriesManagementSection - chartConfig.seriesConfigs:', chartConfig.seriesConfigs);
+  // console.log('🔍 SeriesManagementSection - chartConfig.axisConfigs:', chartConfig.axisConfigs);
 
   // DataHeaders from dataset (id, name, type)
   const dataHeaders = currentDataset?.headers || [];
@@ -157,9 +157,9 @@ const SeriesManagementSection: React.FC = () => {
           }
         : s
     );
-    // Update at root level: seriesConfigs
+    // Update at root level: axisConfigs
     handleConfigChange({
-      seriesConfigs: newSeries,
+      axisConfigs: newSeries,
     } as any);
   };
 
@@ -197,17 +197,17 @@ const SeriesManagementSection: React.FC = () => {
         visible: true,
       },
     ];
-    // Update at root level: seriesConfigs
+    // Update at root level: axisConfigs
     handleConfigChange({
-      seriesConfigs: newSeries,
+      axisConfigs: newSeries,
     } as any);
   };
 
   const onRemoveSeries = (seriesId: string) => {
     const newSeries = series.filter((s: SeriesItem) => s.id !== seriesId);
-    // Update at root level: seriesConfigs
+    // Update at root level: axisConfigs
     handleConfigChange({
-      seriesConfigs: newSeries,
+      axisConfigs: newSeries,
     } as any);
   };
 
@@ -216,9 +216,9 @@ const SeriesManagementSection: React.FC = () => {
     if (idx > 0) {
       const newSeries = [...series];
       [newSeries[idx - 1], newSeries[idx]] = [newSeries[idx], newSeries[idx - 1]];
-      // Update at root level: seriesConfigs
+      // Update at root level: axisConfigs
       handleConfigChange({
-        seriesConfigs: newSeries,
+        axisConfigs: newSeries,
       } as any);
     }
   };
@@ -228,9 +228,9 @@ const SeriesManagementSection: React.FC = () => {
     if (idx < series.length - 1) {
       const newSeries = [...series];
       [newSeries[idx], newSeries[idx + 1]] = [newSeries[idx + 1], newSeries[idx]];
-      // Update at root level: seriesConfigs
+      // Update at root level: axisConfigs
       handleConfigChange({
-        seriesConfigs: newSeries,
+        axisConfigs: newSeries,
       } as any);
     }
   };

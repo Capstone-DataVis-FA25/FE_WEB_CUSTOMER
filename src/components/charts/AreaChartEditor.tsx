@@ -197,7 +197,7 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
   };
 
   // Series management state
-  const [seriesConfigs, setSeriesConfigs] = useState<SeriesConfig[]>(() =>
+  const [axisConfigs, setaxisConfigs] = useState<SeriesConfig[]>(() =>
     config.yAxisKeys.map((key, index) => {
       const colorKeys = Object.keys(defaultColors);
       const colorIndex = index % colorKeys.length;
@@ -419,11 +419,11 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
   // Helper to get available columns for series management
   const getAvailableColumns = () =>
     Object.keys(data[0] || {}).filter(
-      k => k !== config.xAxisKey && !seriesConfigs.some(s => s.dataColumn === k)
+      k => k !== config.xAxisKey && !axisConfigs.some(s => s.dataColumn === k)
     );
 
   const updateSeriesConfig = (seriesId: string, updates: Partial<SeriesConfig>) => {
-    setSeriesConfigs(prev => {
+    setaxisConfigs(prev => {
       const oldSeries = prev.find(s => s.id === seriesId);
 
       // Auto-sync name with dataColumn when dataColumn changes
@@ -468,9 +468,9 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
 
   const addSeries = () => {
     const available = getAvailableColumns();
-    const newKey = available.length > 0 ? available[0] : `series${seriesConfigs.length + 1}`;
+    const newKey = available.length > 0 ? available[0] : `series${axisConfigs.length + 1}`;
     // Add a new series config - name automatically matches dataColumn
-    setSeriesConfigs(prev => {
+    setaxisConfigs(prev => {
       const newSeries: SeriesConfig = {
         id: `series-${Date.now()}`,
         name: newKey, // Name matches data column
@@ -500,14 +500,14 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
   };
 
   const removeSeries = (seriesId: string) => {
-    const s = seriesConfigs.find(x => x.id === seriesId);
-    if (!s || seriesConfigs.length <= 1) return;
+    const s = axisConfigs.find(x => x.id === seriesId);
+    if (!s || axisConfigs.length <= 1) return;
 
     const newColors = { ...colors };
     delete newColors[s.dataColumn];
     updateColors(newColors);
 
-    setSeriesConfigs(prev => {
+    setaxisConfigs(prev => {
       const updated = prev.filter(x => x.id !== seriesId);
       updateConfig({
         yAxisKeys: updated.map(s => s.dataColumn),
@@ -549,7 +549,7 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
         config,
         colors,
         formatters,
-        seriesConfigs: seriesConfigs.map(series => ({
+        axisConfigs: axisConfigs.map(series => ({
           ...series,
           // Don't export the id since it will be regenerated on import
           id: undefined,
@@ -596,7 +596,7 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
       updateFormatters(defaultFormatters);
 
       // Reset series configs
-      const resetSeriesConfigs = resetConfig.yAxisKeys.map((key, index) => {
+      const resetaxisConfigs = resetConfig.yAxisKeys.map((key, index) => {
         const colorKeys = Object.keys(defaultColors);
         const colorIndex = index % colorKeys.length;
         const selectedColorKey = colorKeys[colorIndex];
@@ -611,7 +611,7 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
         };
       });
 
-      setSeriesConfigs(resetSeriesConfigs);
+      setaxisConfigs(resetaxisConfigs);
 
       showSuccess(t('areaChart_editor_resetToDefault'));
     } catch (error) {
@@ -644,14 +644,14 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
           updateFormatters(importData.formatters);
 
           // Handle series configurations
-          if (importData.seriesConfigs && Array.isArray(importData.seriesConfigs)) {
-            const newSeriesConfigs = importData.seriesConfigs.map(
+          if (importData.axisConfigs && Array.isArray(importData.axisConfigs)) {
+            const newaxisConfigs = importData.axisConfigs.map(
               (series: SeriesConfig, index: number) => ({
                 ...series,
                 id: `series-${Date.now()}-${index}`, // Regenerate IDs
               })
             );
-            setSeriesConfigs(newSeriesConfigs);
+            setaxisConfigs(newaxisConfigs);
           }
 
           showSuccess(t('areaChart_editor_configImported'));
@@ -1002,30 +1002,30 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
                   <CardContent className="space-y-4">
                     {/* Series Management using shared component */}
                     <SeriesManagement
-                      series={seriesConfigs}
+                      series={axisConfigs}
                       onUpdateSeries={updateSeriesConfig}
                       onAddSeries={addSeries}
                       onRemoveSeries={removeSeries}
                       onMoveSeriesUp={(seriesId: string) => {
-                        const index = seriesConfigs.findIndex(s => s.id === seriesId);
+                        const index = axisConfigs.findIndex(s => s.id === seriesId);
                         if (index > 0) {
-                          const newSeries = [...seriesConfigs];
+                          const newSeries = [...axisConfigs];
                           [newSeries[index], newSeries[index - 1]] = [
                             newSeries[index - 1],
                             newSeries[index],
                           ];
-                          setSeriesConfigs(newSeries);
+                          setaxisConfigs(newSeries);
                         }
                       }}
                       onMoveSeriesDown={(seriesId: string) => {
-                        const index = seriesConfigs.findIndex(s => s.id === seriesId);
-                        if (index < seriesConfigs.length - 1) {
-                          const newSeries = [...seriesConfigs];
+                        const index = axisConfigs.findIndex(s => s.id === seriesId);
+                        if (index < axisConfigs.length - 1) {
+                          const newSeries = [...axisConfigs];
                           [newSeries[index], newSeries[index + 1]] = [
                             newSeries[index + 1],
                             newSeries[index],
                           ];
-                          setSeriesConfigs(newSeries);
+                          setaxisConfigs(newSeries);
                         }
                       }}
                       availableColumns={getAvailableColumns()}

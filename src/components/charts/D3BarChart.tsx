@@ -42,8 +42,8 @@ export interface D3BarChartProps {
   colors?: Record<string, { light: string; dark: string }>;
   seriesNames?: Record<string, string>; // Add series names mapping (match LineChart)
   xAxisNames?: Record<string, string>; // Map X-axis values from ID to display name
-  // Individual series configurations (similar to LineChart seriesConfigs)
-  seriesConfigs?: Record<
+  // Individual series configurations (similar to LineChart axisConfigs)
+  axisConfigs?: Record<
     string,
     {
       barWidth?: number;
@@ -127,7 +127,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   colors = defaultColorsChart,
   seriesNames = {}, // Series names mapping (match LineChart)
   xAxisNames = {}, // X-axis names mapping from ID to display name
-  seriesConfigs = {}, // Individual series configurations (match LineChart)
+  axisConfigs = {}, // Individual series configurations (match LineChart)
   title,
   yAxisLabel,
   xAxisLabel,
@@ -495,7 +495,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     if (barType === 'grouped') {
       yAxisKeys.forEach((key, keyIndex) => {
         // Get individual series configurations (matching LineChart approach)
-        const seriesConfig = seriesConfigs[key] || {};
+        const seriesConfig = axisConfigs[key] || {};
         const seriesBarWidth = seriesConfig.barWidth ?? barWidth;
         const seriesOpacity = seriesConfig.opacity ?? 1;
 
@@ -1220,7 +1220,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     colors,
     seriesNames, // Add missing legend dependency
     xAxisNames, // Add missing legend dependency
-    seriesConfigs, // Add missing legend dependency
+    axisConfigs, // Add missing legend dependency
     showLegend,
     showGrid,
     animationDuration,

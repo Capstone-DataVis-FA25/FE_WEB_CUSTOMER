@@ -17,7 +17,7 @@ const ChartDisplaySection: React.FC = () => {
   const { chartData, chartConfig, currentChartType: chartType } = useChartEditorRead();
   const { currentDataset } = useDataset();
 
-  // Extract formatters, seriesConfigs, and colors from chartConfig
+  // Extract formatters, axisConfigs, and colors from chartConfig
   const formatters = chartConfig?.formatters || {
     useYFormatter: false,
     useXFormatter: false,
@@ -25,7 +25,7 @@ const ChartDisplaySection: React.FC = () => {
     xFormatterType: 'number' as const,
   };
 
-  const seriesConfigs = chartConfig?.seriesConfigs || [];
+  const axisConfigs = chartConfig?.axisConfigs || {};
 
   // Helper: Map DataHeader ID to name
   const dataHeaders = currentDataset?.headers || [];
@@ -34,9 +34,9 @@ const ChartDisplaySection: React.FC = () => {
     return header ? header.name : id;
   };
 
-  // Build colors from seriesConfigs (using names, not IDs)
+  // Build colors from axisConfigs.seriesConfigs (using names, not IDs)
   const colors: any = {};
-  seriesConfigs.forEach((series: any) => {
+  (axisConfigs.seriesConfigs || []).forEach((series: any) => {
     if (series.dataColumn && series.color) {
       const columnName = getHeaderName(series.dataColumn);
       colors[columnName] = {
@@ -81,9 +81,9 @@ const ChartDisplaySection: React.FC = () => {
     }
 
     // Convert IDs to names for chart keys
-    const xAxisKeyName = Array.isArray(safeChartConfig.xAxisKey)
-      ? getHeaderName(safeChartConfig.xAxisKey[0] || '')
-      : getHeaderName(safeChartConfig.xAxisKey || '');
+    const xAxisKeyName = Array.isArray(axisConfigs.xAxisKey)
+      ? getHeaderName(axisConfigs.xAxisKey[0] || '')
+      : getHeaderName(axisConfigs.xAxisKey || '');
 
     // Validate xAxisKey first
     if (!xAxisKeyName || xAxisKeyName === '') {
@@ -99,8 +99,10 @@ const ChartDisplaySection: React.FC = () => {
       );
     }
 
-    // Build yAxisKeys from seriesConfigs (only visible series)
-    const visibleSeries = seriesConfigs.filter((series: any) => series.visible !== false);
+    // Build yAxisKeys from axisConfigs (only visible series)
+    const visibleSeries = (axisConfigs.seriesConfigs || []).filter(
+      (series: any) => series.visible !== false
+    );
 
     const yAxisKeysNames = visibleSeries.map((series: any) => {
       const columnName = getHeaderName(series.dataColumn);
@@ -108,12 +110,19 @@ const ChartDisplaySection: React.FC = () => {
     });
 
     // Then check if no series are selected OR no visible series
-    if (!seriesConfigs || seriesConfigs.length === 0 || yAxisKeysNames.length === 0) {
+    if (
+      !axisConfigs ||
+      !axisConfigs.seriesConfigs ||
+      axisConfigs.seriesConfigs.length === 0 ||
+      yAxisKeysNames.length === 0
+    ) {
       return (
         <ErrorPanel
           title={t('chart_editor_no_series', 'No data series selected')}
           subtitle={
-            yAxisKeysNames.length === 0 && seriesConfigs.length > 0
+            yAxisKeysNames.length === 0 &&
+            axisConfigs.seriesConfigs &&
+            axisConfigs.seriesConfigs.length > 0
               ? t(
                   'chart_editor_no_visible_series',
                   'All series are hidden. Please make at least one series visible.'
@@ -135,7 +144,7 @@ const ChartDisplaySection: React.FC = () => {
     // console.log('  - Available keys in chartData:', Object.keys(chartData[0] || {}));
 
     // console.log('\n📈 Series Configuration:');
-    // seriesConfigs.forEach((series: any, index: number) => {
+    // axisConfigs.forEach((series: any, index: number) => {
     //   console.log(`  Series ${index + 1}:`);
     //   console.log(`    - ID: ${series.id}`);
     //   console.log(`    - Name: ${series.name}`);
@@ -206,11 +215,14 @@ const ChartDisplaySection: React.FC = () => {
       yAxisKeys: yAxisKeysNames as string[],
       colors: colors,
       seriesNames: Object.fromEntries(
-        seriesConfigs.map((series: any) => [getHeaderName(series.dataColumn), series.name])
+        (axisConfigs.seriesConfigs || []).map((series: any) => [
+          getHeaderName(series.dataColumn),
+          series.name,
+        ])
       ),
       title: safeChartConfig.title,
-      xAxisLabel: safeChartConfig.xAxisLabel,
-      yAxisLabel: safeChartConfig.yAxisLabel,
+      xAxisLabel: axisConfigs.xAxisLabel,
+      yAxisLabel: axisConfigs.yAxisLabel,
       showLegend: safeChartConfig.showLegend,
       showGrid: safeChartConfig.showGrid,
       animationDuration: safeChartConfig.animationDuration,
@@ -327,9 +339,15 @@ const ChartDisplaySection: React.FC = () => {
       }
 
       case 'scatter': {
+        const scatterConfig = safeChartConfig as any;
+
         // For scatter, use the first visible series as Y key
         const yKey = (yAxisKeysNames as string[])[0];
+
+        // Convert chartData to array format with ALL columns (including potential colorKey/sizeKey)
         const arrayData = convertChartDataToArray(chartData);
+
+        // Scatter-specific configuration
         const scatterProps = {
           arrayData,
           width: safeChartConfig.width,
@@ -337,13 +355,65 @@ const ChartDisplaySection: React.FC = () => {
           margin: safeChartConfig.margin,
           xAxisKey: xAxisKeyName,
           yAxisKey: yKey,
+
+          // Optional: colorKey for grouping by category
+          colorKey: scatterConfig.colorKey, // Should be a column name from dataset
+
+          // Optional: sizeKey for bubble chart effect
+          sizeKey: scatterConfig.sizeKey, // Should be a column name from dataset
+
+          // Colors
+          colors: colors,
+
+          // Title and labels
           title: safeChartConfig.title,
-          xAxisLabel: safeChartConfig.xAxisLabel,
-          yAxisLabel: safeChartConfig.yAxisLabel,
+          xAxisLabel: axisConfigs.xAxisLabel,
+          yAxisLabel: axisConfigs.yAxisLabel,
+
+          // Display options
           showGrid: safeChartConfig.showGrid,
           showLegend: safeChartConfig.showLegend,
+          showTooltip: scatterConfig.showTooltip,
+          showAxisLabels: scatterConfig.showAxisLabels,
+          showAxisTicks: scatterConfig.showAxisTicks,
+
+          // Styling
+          pointRadius: scatterConfig.pointRadius || 5,
+          minPointRadius: scatterConfig.minPointRadius || 3,
+          maxPointRadius: scatterConfig.maxPointRadius || 15,
+          pointOpacity: scatterConfig.pointOpacity || 0.7,
+
+          // Grid and legend
+          gridOpacity: scatterConfig.gridOpacity,
+          legendFontSize: scatterConfig.legendFontSize,
+
+          // Axis configuration
+          xAxisStart: scatterConfig.xAxisStart,
+          yAxisStart: scatterConfig.yAxisStart,
+          xAxisRotation: scatterConfig.xAxisRotation,
+
+          // Formatters
+          yAxisFormatter: safeCommonProps.yAxisFormatter,
+          xAxisFormatter: safeCommonProps.xAxisFormatter,
+
+          // Font sizes
+          fontSize: safeCommonProps.fontSize,
+          titleFontSize: scatterConfig.titleFontSize,
+          labelFontSize: scatterConfig.labelFontSize,
+
+          // Theme
+          theme: scatterConfig.theme,
           backgroundColor: safeChartConfig.backgroundColor,
+
+          // Animation
+          animationDuration: safeChartConfig.animationDuration,
+
+          // Regression line
+          showRegressionLine: scatterConfig.showRegressionLine,
+          regressionLineColor: scatterConfig.regressionLineColor,
+          regressionLineWidth: scatterConfig.regressionLineWidth,
         };
+
         return <D3ScatterChart {...scatterProps} />;
       }
 
@@ -397,8 +467,8 @@ const ChartDisplaySection: React.FC = () => {
           yAxisKeys: yAxisKeysNames as string[],
           colors: colors,
           title: safeChartConfig.title,
-          xAxisLabel: safeChartConfig.xAxisLabel,
-          yAxisLabel: safeChartConfig.yAxisLabel,
+          xAxisLabel: axisConfigs.xAxisLabel,
+          yAxisLabel: axisConfigs.yAxisLabel,
           showLegend: safeChartConfig.showLegend,
           showGrid: safeChartConfig.showGrid,
           animationDuration: safeChartConfig.animationDuration,
