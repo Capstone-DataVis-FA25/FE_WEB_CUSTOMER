@@ -10,7 +10,7 @@ const AxisLabelsSettings: React.FC = () => {
   const { handleConfigChange } = useChartEditorActions();
   if (!chartConfig) return null;
 
-  const { xAxisLabel, yAxisLabel } = chartConfig.config;
+  const { xAxisLabel, yAxisLabel } = chartConfig.axisConfigs;
   const [localXAxisLabel, setLocalXAxisLabel] = useState(xAxisLabel);
   const [localYAxisLabel, setLocalYAxisLabel] = useState(yAxisLabel);
 
@@ -37,7 +37,14 @@ const AxisLabelsSettings: React.FC = () => {
           onChange={e => {
             const v = e.target.value;
             setLocalXAxisLabel(v);
-            debouncedApply(() => handleConfigChange({ config: { xAxisLabel: v } }));
+            debouncedApply(() =>
+              handleConfigChange({
+                axisConfigs: {
+                  ...chartConfig.axisConfigs,
+                  xAxisLabel: v,
+                },
+              })
+            );
           }}
           placeholder={t('x_axis_label_placeholder', 'X-axis label (optional)')}
           className="mt-1"
@@ -52,7 +59,14 @@ const AxisLabelsSettings: React.FC = () => {
           onChange={e => {
             const v = e.target.value;
             setLocalYAxisLabel(v);
-            debouncedApply(() => handleConfigChange({ config: { yAxisLabel: v } }));
+            debouncedApply(() =>
+              handleConfigChange({
+                axisConfigs: {
+                  ...chartConfig.axisConfigs,
+                  yAxisLabel: v,
+                },
+              })
+            );
           }}
           placeholder={t('y_axis_label_placeholder', 'Y-axis label (optional)')}
           className="mt-1"

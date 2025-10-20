@@ -24,6 +24,8 @@ import { getDefaultChartConfig } from '@/utils/chartDefaults';
 import type { ChartRequest, ChartType } from '@/features/charts';
 // ChartType is imported in ChartEditorWithProviders
 import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
+import { clearCurrentChart } from '@/features/charts';
+import { clearCurrentChartNotes } from '@/features/chartNotes/chartNoteSlice';
 import { useChartEditor } from '@/features/chartEditor';
 import type { MainChartConfig } from '@/types/chart';
 import ChartEditorHeader from './ChartEditorHeader';
@@ -92,153 +94,113 @@ const ChartEditorPage: React.FC = () => {
   // Use datasetId from context, with local state for selection changes
   const [datasetId, setDatasetId] = useState<string>(contextDatasetId || '');
 
-  // Sync local datasetId with Redux-provided datasetId (from URL or location.state)
-  useEffect(() => {
-    if (contextDatasetId && contextDatasetId !== datasetId) {
-      setDatasetId(contextDatasetId);
-    }
-  }, [contextDatasetId]);
-
   // State for dataset selection modal
   const [showDatasetModal, setShowDatasetModal] = useState(false);
 
-  // State to track if originals have been set for current chart
-  const [originalsSet, setOriginalsSet] = useState(false);
-
-  // Load chart and dataset data
+  //Run once on mount
   useEffect(() => {
-    const loadData = async () => {
-      // Edit mode: Load chart first, then dataset
-      if (mode === 'edit' && chartId && !currentChart) {
-        await getChartById(chartId);
-      }
+    clearCurrentChart();
+    clearCurrentDataset();
+    clearCurrentChartNotes();
+  }, []);
 
-      // Load for both mode
-      // Edit mode: Load dataset after chart is loaded (datasetId will be set from chart in the next effect)
-      // Create mode: Load dataset directly
-      if (datasetId && !currentDataset) {
-        await getDatasetById(datasetId).unwrap();
-      }
-    };
-    loadData();
-  }, [datasetId, chartId, mode, getDatasetById, getChartById, currentChart, currentDataset]);
-
-  // Ensure chart is fetched immediately after switching to edit mode via navigation
+  // ============================================================
+  // EFFECT 1: Sync datasetId with context (simple sync)
+  // ============================================================
   useEffect(() => {
-    if (mode === 'edit' && chartId) {
+    setDatasetId(contextDatasetId || '');
+  }, [contextDatasetId]);
+
+  // ============================================================
+  // EFFECT 2: Load chart in edit mode (independent)
+  // ============================================================
+  useEffect(() => {
+    console.log('🎯 Mode:', mode, 'ChartId:', chartId);
+
+    if (mode === 'edit' && chartId && !isChartLoading && !currentChart) {
+      console.log('📡 Fetching chart by ID:', chartId);
       getChartById(chartId);
     }
-  }, [mode, chartId, getChartById]);
+  }, [mode, chartId]);
 
-  // Initialize for create mode (only once per session or when config not present)
-  useEffect(() => {
-    if (mode === 'create') {
-      const chartTypeName = currentChartType.charAt(0).toUpperCase() + currentChartType.slice(1);
-
-      // Initialize name/description only if empty to avoid overwriting user's edits
-      if (!editableName) {
-        setEditableName(`${chartTypeName} Chart`);
-      }
-      if (!editableDescription) {
-        setEditableDescription(`Chart created from ${chartTypeName.toLowerCase()} template`);
-      }
-
-      // Initialize config ONLY when it's not set yet; do not overwrite on type changes
-      if (!chartConfig) {
-        const defaultConfig = getDefaultChartConfig(currentChartType);
-        setChartConfig(defaultConfig);
-      }
-    }
-  }, [mode, currentChartType, chartConfig, editableName, editableDescription]);
-
-  //Initialize for edit mode
+  // ============================================================
+  // EFFECT 3: Initialize form fields when chart loads (edit mode)
+  // ============================================================
   useEffect(() => {
     if (mode === 'edit' && currentChart) {
-      // Populate fields from currentChart in edit mode
       setEditableName(currentChart.name || '');
       setEditableDescription(currentChart.description || '');
-
       setChartConfig(currentChart.config as MainChartConfig);
-
       setCurrentChartType(currentChart.type as ChartType);
-
-      // Also set datasetId from currentChart if not already set
-      if (currentChart.datasetId) {
+      // Set datasetId from chart so effect 5 can fetch it
+      if (currentChart.datasetId && currentChart.datasetId !== datasetId) {
         setDatasetId(currentChart.datasetId);
-        // Load the dataset to populate chart data
-        getDatasetById(currentChart.datasetId);
       }
-
-      // Reset originals flag when new chart loads
-      setOriginalsSet(false);
-    }
-  }, [mode, currentChart, setDatasetId, getDatasetById]);
-
-  // Set originals after form fields are populated in edit mode (run only once per chart)
-  useEffect(() => {
-    if (
-      mode === 'edit' &&
-      currentChart &&
-      editableName &&
-      editableDescription &&
-      chartConfig &&
-      currentChartType &&
-      !originalsSet
-    ) {
+      // Set originals right after populating
       updateOriginals();
-      setOriginalsSet(true);
     }
-  }, [
-    mode,
-    currentChart,
-    editableName,
-    editableDescription,
-    chartConfig,
-    currentChartType,
-    updateOriginals,
-    originalsSet,
-  ]);
+  }, [mode, currentChart?.id]); // Only depend on chart ID change, not chart object
 
-  // Effect to convert dataset to chart data when dataset is loaded
+  // ============================================================
+  // EFFECT 4: Initialize form fields in create mode (independent)
+  // ============================================================
   useEffect(() => {
-    if (currentDataset && currentDataset.headers && currentDataset.headers.length > 0) {
-      try {
-        const validHeaders = currentDataset.headers.map((h: any) => ({
-          id: h.id || '',
-          datasetId: h.datasetId || '',
-          name: h.name,
-          type: h.type,
-          index: h.index,
-          data: h.data as (string | number)[],
-        }));
-
-        const convertedData = convertToChartData(validHeaders);
-
-        if (convertedData.length > 0) {
-          setChartData(convertedData);
-          return;
-        }
-
-        // Fallback: if dataset has row data, convert it
-        if (Array.isArray((currentDataset as any).rows)) {
-          const headerNames = currentDataset.headers.map((h: any) => h.name);
-          const rows = (currentDataset as any).rows;
-          const arrayFormat = [headerNames, ...rows];
-          const convertedData = convertToChartData(arrayFormat);
-
-          if (convertedData.length > 0) {
-            setChartData(convertedData);
-            return;
-          }
-        }
-
-        setChartData([]);
-      } catch (error) {
-        console.error('⚠️ [Dataset] Error processing dataset:', error);
-        setChartData([]);
+    if (mode === 'create') {
+      // Only initialize if not already set
+      if (!chartConfig) {
+        const chartTypeName = currentChartType.charAt(0).toUpperCase() + currentChartType.slice(1);
+        setEditableName(`${chartTypeName} Chart`);
+        setEditableDescription(`Chart created from ${chartTypeName.toLowerCase()} template`);
+        setChartConfig(getDefaultChartConfig(currentChartType));
       }
     }
-  }, [currentDataset, datasetId]);
+  }, [mode, currentChartType]); // Only on mode or chart type change
+
+  // ============================================================
+  // EFFECT 5: Load dataset based on datasetId (independent)
+  // ============================================================
+  useEffect(() => {
+    if (!datasetId) {
+      setChartData([]);
+      return;
+    }
+
+    getDatasetById(datasetId);
+  }, [datasetId, getDatasetById]); // Depend on getDatasetById too
+
+  // ============================================================
+  // EFFECT 6: Convert dataset to chart data (independent)
+  // ============================================================
+  useEffect(() => {
+    if (!currentDataset?.headers?.length) {
+      setChartData([]);
+      return;
+    }
+
+    try {
+      const validHeaders = currentDataset.headers.map((h: any) => ({
+        id: h.id || '',
+        datasetId: h.datasetId || '',
+        name: h.name,
+        type: h.type,
+        index: h.index,
+        data: h.data as (string | number)[],
+      }));
+
+      let convertedData = convertToChartData(validHeaders);
+
+      if (!convertedData.length && Array.isArray((currentDataset as any).rows)) {
+        const headerNames = currentDataset.headers.map((h: any) => h.name);
+        const arrayFormat = [headerNames, ...(currentDataset as any).rows];
+        convertedData = convertToChartData(arrayFormat);
+      }
+
+      setChartData(convertedData);
+    } catch (error) {
+      console.error('⚠️ [Dataset] Error processing dataset:', error);
+      setChartData([]);
+    }
+  }, [currentDataset]); // Only depend on currentDataset
 
   // Thông báo rằng là chart chưa lưu -> người dùng lưu hoặc cancel
   useBeforeUnload({
@@ -532,24 +494,18 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
-  // Clear current chart when component unmounts to prevent stale data
-  useEffect(() => {
-    return () => {
-      clearCurrentChart();
-    };
-  }, [clearCurrentChart]);
-
   // Handle chart type change (now handled by context)
   // const handleChartTypeChange = (type: string) => {
   //   const newType = type as ChartType;
   //   setCurrentChartType(newType);
   // };
 
-  // Clear current chart on unmount
+  // Clear Redux entities on unmount
   useEffect(() => {
     return () => {
       clearCurrentChart();
       clearCurrentDataset();
+      clearCurrentChartNotes();
     };
   }, [clearCurrentChart, clearCurrentDataset]);
 

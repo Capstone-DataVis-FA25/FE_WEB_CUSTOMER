@@ -22,27 +22,27 @@ const AxisConfigurationSection: React.FC = () => {
   const { currentDataset } = useDataset();
 
   // Local state for rotation inputs with immediate UI feedback
-  const [xAxisRotation, setXAxisRotation] = useState(chartConfig?.config.xAxisRotation || 0);
-  const [yAxisRotation, setYAxisRotation] = useState(chartConfig?.config.yAxisRotation || 0);
+  const [xAxisRotation, setXAxisRotation] = useState<number>(0);
+  const [yAxisRotation, setYAxisRotation] = useState<number>(0);
 
   // Debounced update handlers using custom hook
   const debouncedUpdateXRotation = useDebouncedUpdater<number>(value =>
-    handleConfigChange({ config: { xAxisRotation: value } })
+    handleConfigChange({ axisConfigs: { ...chartConfig.axisConfigs, xAxisRotation: value } })
   );
 
   const debouncedUpdateYRotation = useDebouncedUpdater<number>(value =>
-    handleConfigChange({ config: { yAxisRotation: value } })
+    handleConfigChange({ axisConfigs: { ...chartConfig.axisConfigs, yAxisRotation: value } })
   );
 
   // Sync local state with config changes from external sources
   useEffect(() => {
-    if (chartConfig?.config.xAxisRotation !== undefined) {
-      setXAxisRotation(chartConfig.config.xAxisRotation);
+    if (chartConfig?.axisConfigs?.xAxisRotation !== undefined) {
+      setXAxisRotation(chartConfig.axisConfigs.xAxisRotation);
     }
-    if (chartConfig?.config.yAxisRotation !== undefined) {
-      setYAxisRotation(chartConfig.config.yAxisRotation);
+    if (chartConfig?.axisConfigs?.yAxisRotation !== undefined) {
+      setYAxisRotation(chartConfig.axisConfigs.yAxisRotation);
     }
-  }, [chartConfig?.config.xAxisRotation, chartConfig?.config.yAxisRotation]);
+  }, [chartConfig?.axisConfigs?.xAxisRotation, chartConfig?.axisConfigs?.yAxisRotation]);
 
   // Update handlers
   const handleXRotationChange = (value: number) => {
@@ -136,7 +136,12 @@ const AxisConfigurationSection: React.FC = () => {
                     value={chartConfig.axisConfigs.xAxisKey || 'placeholder'}
                     onChange={e => {
                       if (e.target.value !== 'placeholder') {
-                        handleConfigChange({ axisConfigs: { xAxisKey: e.target.value } });
+                        handleConfigChange({
+                          axisConfigs: {
+                            ...chartConfig.axisConfigs,
+                            xAxisKey: e.target.value,
+                          },
+                        });
                       }
                     }}
                     className="mt-1 w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
@@ -173,14 +178,13 @@ const AxisConfigurationSection: React.FC = () => {
                 </Label>
                 <div className="space-y-2 mt-2">
                   <select
-                    value={
-                      typeof chartConfig.config.xAxisStart === 'number'
-                        ? 'auto'
-                        : chartConfig.config.xAxisStart
-                    }
+                    value={chartConfig.axisConfigs?.xAxisStart || 'auto'}
                     onChange={e => {
                       handleConfigChange({
-                        config: { xAxisStart: e.target.value as 'auto' | 'zero' },
+                        axisConfigs: {
+                          ...chartConfig.axisConfigs,
+                          xAxisStart: e.target.value as 'auto' | 'zero',
+                        },
                       });
                     }}
                     className="w-full h-9 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
@@ -200,14 +204,13 @@ const AxisConfigurationSection: React.FC = () => {
                 </Label>
                 <div className="space-y-2 mt-2">
                   <select
-                    value={
-                      typeof chartConfig.config.yAxisStart === 'number'
-                        ? 'auto'
-                        : chartConfig.config.yAxisStart
-                    }
+                    value={chartConfig.axisConfigs?.yAxisStart || 'auto'}
                     onChange={e => {
                       handleConfigChange({
-                        config: { yAxisStart: e.target.value as 'auto' | 'zero' },
+                        axisConfigs: {
+                          ...chartConfig.axisConfigs,
+                          yAxisStart: e.target.value as 'auto' | 'zero',
+                        },
                       });
                     }}
                     className="w-full h-9 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
@@ -226,21 +229,21 @@ const AxisConfigurationSection: React.FC = () => {
                   <div className="flex justify-between">
                     <span className="font-medium">{t('x_axis_start', 'X-Axis Start')}:</span>
                     <span className="font-mono bg-white dark:bg-gray-700 px-2 py-1 rounded">
-                      {chartConfig.config.xAxisStart === 'auto'
+                      {chartConfig.axisConfigs?.xAxisStart === 'auto'
                         ? 'Auto (min data)'
-                        : chartConfig.config.xAxisStart === 'zero'
+                        : chartConfig.axisConfigs?.xAxisStart === 'zero'
                           ? 'From 0'
-                          : `From ${chartConfig.config.xAxisStart}`}
+                          : `From ${chartConfig.axisConfigs?.xAxisStart}`}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">{t('y_axis_start', 'Y-Axis Start')}:</span>
                     <span className="font-mono bg-white dark:bg-gray-700 px-2 py-1 rounded">
-                      {chartConfig.config.yAxisStart === 'auto'
+                      {chartConfig.axisConfigs?.yAxisStart === 'auto'
                         ? 'Auto (min data)'
-                        : chartConfig.config.yAxisStart === 'zero'
+                        : chartConfig.axisConfigs?.yAxisStart === 'zero'
                           ? 'From 0'
-                          : `From ${chartConfig.config.yAxisStart}`}
+                          : `From ${chartConfig.axisConfigs?.yAxisStart}`}
                     </span>
                   </div>
                   <div className="text-center mt-2 pt-2 border-t border-blue-300 dark:border-blue-600">
@@ -262,9 +265,14 @@ const AxisConfigurationSection: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="showAxisLabels"
-                      checked={chartConfig.config.showAxisLabels}
+                      checked={!!chartConfig.axisConfigs?.showAxisLabels}
                       onCheckedChange={checked =>
-                        handleConfigChange({ config: { showAxisLabels: !!checked } })
+                        handleConfigChange({
+                          axisConfigs: {
+                            ...chartConfig.axisConfigs,
+                            showAxisLabels: !!checked,
+                          },
+                        })
                       }
                     />
                     <Label
@@ -279,9 +287,14 @@ const AxisConfigurationSection: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="showAxisTicks"
-                      checked={chartConfig.config.showAxisTicks}
+                      checked={!!chartConfig.axisConfigs?.showAxisTicks}
                       onCheckedChange={checked =>
-                        handleConfigChange({ config: { showAxisTicks: !!checked } })
+                        handleConfigChange({
+                          axisConfigs: {
+                            ...chartConfig.axisConfigs,
+                            showAxisTicks: !!checked,
+                          },
+                        })
                       }
                     />
                     <Label

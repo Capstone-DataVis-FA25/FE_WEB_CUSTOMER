@@ -311,14 +311,14 @@ const ChartDisplaySection: React.FC = () => {
             curve={curveOptions[lineConfig.curve as keyof typeof curveOptions]}
             lineWidth={lineConfig.lineWidth}
             pointRadius={lineConfig.pointRadius}
-            xAxisStart={lineConfig.xAxisStart}
-            yAxisStart={lineConfig.yAxisStart}
+            xAxisStart={axisConfigs.xAxisStart}
+            yAxisStart={axisConfigs.yAxisStart}
             gridOpacity={lineConfig.gridOpacity}
             legendPosition={lineConfig.legendPosition}
-            xAxisRotation={lineConfig.xAxisRotation}
-            yAxisRotation={lineConfig.yAxisRotation}
-            showAxisLabels={lineConfig.showAxisLabels}
-            showAxisTicks={lineConfig.showAxisTicks}
+            xAxisRotation={axisConfigs.xAxisRotation}
+            yAxisRotation={axisConfigs.yAxisRotation}
+            showAxisLabels={axisConfigs.showAxisLabels}
+            showAxisTicks={axisConfigs.showAxisTicks}
             enableZoom={lineConfig.enableZoom}
             enablePan={lineConfig.enablePan}
             zoomExtent={lineConfig.zoomExtent}
@@ -374,8 +374,8 @@ const ChartDisplaySection: React.FC = () => {
           showGrid: safeChartConfig.showGrid,
           showLegend: safeChartConfig.showLegend,
           showTooltip: scatterConfig.showTooltip,
-          showAxisLabels: scatterConfig.showAxisLabels,
-          showAxisTicks: scatterConfig.showAxisTicks,
+          showAxisLabels: axisConfigs.showAxisLabels,
+          showAxisTicks: axisConfigs.showAxisTicks,
 
           // Styling
           pointRadius: scatterConfig.pointRadius || 5,
@@ -388,9 +388,9 @@ const ChartDisplaySection: React.FC = () => {
           legendFontSize: scatterConfig.legendFontSize,
 
           // Axis configuration
-          xAxisStart: scatterConfig.xAxisStart,
-          yAxisStart: scatterConfig.yAxisStart,
-          xAxisRotation: scatterConfig.xAxisRotation,
+          xAxisStart: axisConfigs.xAxisStart,
+          yAxisStart: axisConfigs.yAxisStart,
+          xAxisRotation: axisConfigs.xAxisRotation,
 
           // Formatters
           yAxisFormatter: safeCommonProps.yAxisFormatter,
@@ -431,12 +431,12 @@ const ChartDisplaySection: React.FC = () => {
             showGrid={safeChartConfig.showGrid}
             gridOpacity={barConfig.gridOpacity}
             legendPosition={barConfig.legendPosition}
-            xAxisRotation={barConfig.xAxisRotation}
-            yAxisRotation={barConfig.yAxisRotation}
-            showAxisLabels={barConfig.showAxisLabels}
-            showAxisTicks={barConfig.showAxisTicks}
-            yAxisStart={barConfig.yAxisStart}
-            xAxisStart={barConfig.xAxisStart}
+            xAxisRotation={axisConfigs.xAxisRotation}
+            yAxisRotation={axisConfigs.yAxisRotation}
+            showAxisLabels={axisConfigs.showAxisLabels}
+            showAxisTicks={axisConfigs.showAxisTicks}
+            yAxisStart={axisConfigs.yAxisStart}
+            xAxisStart={axisConfigs.xAxisStart}
             theme={barConfig.theme}
             backgroundColor={barConfig.backgroundColor}
             showTooltip={barConfig.showTooltip}
@@ -484,10 +484,10 @@ const ChartDisplaySection: React.FC = () => {
           backgroundColor: areaConfig.backgroundColor,
           gridOpacity: areaConfig.gridOpacity,
           legendPosition: areaConfig.legendPosition,
-          xAxisRotation: areaConfig.xAxisRotation,
-          yAxisRotation: areaConfig.yAxisRotation,
-          showAxisLabels: areaConfig.showAxisLabels,
-          showAxisTicks: areaConfig.showAxisTicks,
+          xAxisRotation: axisConfigs.xAxisRotation,
+          yAxisRotation: axisConfigs.yAxisRotation,
+          showAxisLabels: axisConfigs.showAxisLabels,
+          showAxisTicks: axisConfigs.showAxisTicks,
           titleFontSize: areaConfig.titleFontSize,
           labelFontSize: areaConfig.labelFontSize,
           legendFontSize: areaConfig.legendFontSize,

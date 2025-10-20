@@ -123,9 +123,9 @@ const SeriesManagementSection: React.FC = () => {
     visible: boolean;
   };
 
-  // Safely get series array from config - should be at chartConfig.axisConfigs (root level)
-  const series: SeriesItem[] = Array.isArray(chartConfig.axisConfigs)
-    ? (chartConfig.axisConfigs as SeriesItem[])
+  // Safely get series array from config - should be at chartConfig.axisConfigs.seriesConfigs
+  const series: SeriesItem[] = Array.isArray(chartConfig.axisConfigs?.seriesConfigs)
+    ? (chartConfig.axisConfigs.seriesConfigs as SeriesItem[])
     : [];
 
   // console.log('🔍 SeriesManagementSection - series:', series);
@@ -159,7 +159,10 @@ const SeriesManagementSection: React.FC = () => {
     );
     // Update at root level: axisConfigs
     handleConfigChange({
-      axisConfigs: newSeries,
+      axisConfigs: {
+        ...chartConfig.axisConfigs,
+        seriesConfigs: newSeries,
+      },
     } as any);
   };
 
@@ -199,7 +202,10 @@ const SeriesManagementSection: React.FC = () => {
     ];
     // Update at root level: axisConfigs
     handleConfigChange({
-      axisConfigs: newSeries,
+      axisConfigs: {
+        ...chartConfig.axisConfigs,
+        seriesConfigs: newSeries,
+      },
     } as any);
   };
 
@@ -207,7 +213,10 @@ const SeriesManagementSection: React.FC = () => {
     const newSeries = series.filter((s: SeriesItem) => s.id !== seriesId);
     // Update at root level: axisConfigs
     handleConfigChange({
-      axisConfigs: newSeries,
+      axisConfigs: {
+        ...chartConfig.axisConfigs,
+        seriesConfigs: newSeries,
+      },
     } as any);
   };
 
@@ -218,7 +227,10 @@ const SeriesManagementSection: React.FC = () => {
       [newSeries[idx - 1], newSeries[idx]] = [newSeries[idx], newSeries[idx - 1]];
       // Update at root level: axisConfigs
       handleConfigChange({
-        axisConfigs: newSeries,
+        axisConfigs: {
+          ...chartConfig.axisConfigs,
+          seriesConfigs: newSeries,
+        },
       } as any);
     }
   };
@@ -230,7 +242,10 @@ const SeriesManagementSection: React.FC = () => {
       [newSeries[idx], newSeries[idx + 1]] = [newSeries[idx + 1], newSeries[idx]];
       // Update at root level: axisConfigs
       handleConfigChange({
-        axisConfigs: newSeries,
+        axisConfigs: {
+          ...chartConfig.axisConfigs,
+          seriesConfigs: newSeries,
+        },
       } as any);
     }
   };

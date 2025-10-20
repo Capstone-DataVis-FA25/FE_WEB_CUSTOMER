@@ -97,6 +97,12 @@ export interface AxisConfig {
   xAxisKey?: string;
   xAxisLabel?: string;
   yAxisLabel?: string;
+  xAxisStart?: 'auto' | 'zero';
+  yAxisStart?: 'auto' | 'zero';
+  xAxisRotation?: number;
+  yAxisRotation?: number;
+  showAxisLabels?: boolean;
+  showAxisTicks?: boolean;
   seriesConfigs?: SeriesConfig[];
 }
 
@@ -122,18 +128,12 @@ export interface BaseChartConfig {
   showLegend?: boolean;
   showGrid?: boolean;
   animationDuration?: number;
-  xAxisStart?: 'auto' | 'zero';
-  yAxisStart?: 'auto' | 'zero';
 
   // Styling configs
   gridOpacity?: number;
   legendPosition?: 'top' | 'bottom' | 'left' | 'right';
 
   // Axis configs
-  xAxisRotation?: number;
-  yAxisRotation?: number;
-  showAxisLabels?: boolean;
-  showAxisTicks?: boolean;
 
   // Interaction configs
   enableZoom?: boolean;

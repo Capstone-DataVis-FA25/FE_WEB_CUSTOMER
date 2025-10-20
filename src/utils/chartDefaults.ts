@@ -24,14 +24,8 @@ const defaultBaseChartConfig: BaseChartConfig = {
   showLegend: true,
   showGrid: true,
   animationDuration: 400,
-  xAxisStart: 'auto',
-  yAxisStart: 'auto',
   gridOpacity: 0.2,
   legendPosition: 'top',
-  xAxisRotation: 0,
-  yAxisRotation: 0,
-  showAxisLabels: true,
-  showAxisTicks: true,
   enableZoom: false,
   enablePan: false,
   zoomExtent: 100,
@@ -91,8 +85,19 @@ const defaultFormatterConfig: Partial<FormatterConfig> = {
   customXFormatter: '',
 };
 
-// Default axis configs (empty) - updated to match new type
-const defaultAxisConfigs: AxisConfig = {};
+// Default axis configs - updated to match new type
+const defaultAxisConfigs: AxisConfig = {
+  xAxisKey: undefined,
+  xAxisLabel: '',
+  yAxisLabel: '',
+  xAxisStart: 'auto',
+  yAxisStart: 'auto',
+  xAxisRotation: 0,
+  yAxisRotation: 0,
+  showAxisLabels: true,
+  showAxisTicks: true,
+  seriesConfigs: [],
+};
 
 // Default config cho từng loại chart
 export const defaultLineChartConfig: LineChartConfig = {

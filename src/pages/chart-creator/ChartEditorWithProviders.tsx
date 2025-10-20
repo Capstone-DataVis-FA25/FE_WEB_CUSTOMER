@@ -1,9 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { ChartType } from '@/features/charts';
 import { useAppDispatch } from '@/store/hooks';
 import { initializeEditor } from '@/features/chartEditor';
 import ChartEditorPage from './ChartEditorPage';
+import { clearCurrentChart } from '@/features/charts';
+import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
+import { clearCurrentChartNotes } from '@/features/chartNotes/chartNoteSlice';
 
 const ChartEditorWithProviders: React.FC = () => {
   const location = useLocation();
@@ -16,7 +19,7 @@ const ChartEditorWithProviders: React.FC = () => {
 
   // Get chart ID and dataset ID from URL parameters
   const chartId = searchParams.get('chartId') || undefined;
-  const datasetId = searchParams.get('datasetId') || locationState?.datasetId || undefined;
+  const datasetId = searchParams.get('datasetId') || undefined;
 
   // Determine mode based on URL parameters:
   // - If chartId exists: edit mode
@@ -26,8 +29,8 @@ const ChartEditorWithProviders: React.FC = () => {
   // Get initial chart type with stable default
   const initialChartType = typeFromState || ChartType.Line;
 
-  // Initialize Redux state when component mounts or params change
-  useEffect(() => {
+  // Initialize Redux state from URL BEFORE first paint to avoid race on cold load
+  useLayoutEffect(() => {
     dispatch(
       initializeEditor({
         mode,
