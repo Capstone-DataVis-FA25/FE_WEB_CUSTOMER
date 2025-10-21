@@ -1,36 +1,46 @@
+import { memo, useCallback, useMemo } from 'react';
 import CustomExcel from '../excel/CustomExcel';
 import type { DataHeader, ParsedDataResult } from '@/utils/dataProcessors';
 import { useDataset } from '@/contexts/DatasetContext';
+import { ExcelUIProvider } from '@/contexts/ExcelUIContext';
 
-function DataViewerContent() {
-  const { currentParsedData, setCurrentParsedData, transformationColumn, setOriginalParsedData } =
-    useDataset();
+const DataViewerContent = memo(function DataViewerContent() {
+  const { currentParsedData, setCurrentParsedData } = useDataset();
 
-  const handleDataChange = (data: string[][], columns: DataHeader[]) => {
-    // Update the current working data with user modifications
-    const updatedData: ParsedDataResult = {
-      headers: columns,
-      data: data,
-    };
-    setCurrentParsedData(updatedData);
+  const handleDataChange = useCallback(
+    (data: string[][], columns: DataHeader[]) => {
+      // Update the current working data with user modifications
+      const updatedData: ParsedDataResult = {
+        headers: columns,
+        data: data,
+      };
+      setCurrentParsedData(updatedData);
+    },
+    [setCurrentParsedData]
+  );
 
-    // If no transformation is active, also update originalParsedData to keep them in sync
-    if (!transformationColumn) {
-      setOriginalParsedData(updatedData);
-    }
-  };
+  // Memoize initial data to prevent unnecessary re-renders
+  // Use deep comparison to prevent re-renders when data is identical
+  const initialData = useMemo(
+    () => (currentParsedData ? currentParsedData.data : []),
+    [currentParsedData?.data, currentParsedData?.headers] // More specific dependencies
+  );
 
-  const initialData = currentParsedData ? currentParsedData.data : [];
-  const initialColumns = currentParsedData ? currentParsedData.headers : [];
+  const initialColumns = useMemo(
+    () => (currentParsedData ? currentParsedData.headers : []),
+    [currentParsedData?.headers] // Only depend on headers, not the whole object
+  );
 
   return (
-    <CustomExcel
-      initialData={initialData}
-      initialColumns={initialColumns}
-      onDataChange={handleDataChange}
-      mode="edit" // can be toggled to 'view' where needed
-    />
+    <ExcelUIProvider>
+      <CustomExcel
+        initialData={initialData}
+        initialColumns={initialColumns}
+        onDataChange={handleDataChange}
+        mode="edit" // can be toggled to 'view' where needed
+      />
+    </ExcelUIProvider>
   );
-}
+});
 
 export default DataViewerContent;
