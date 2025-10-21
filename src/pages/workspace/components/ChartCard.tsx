@@ -1,15 +1,5 @@
 import React, { useState } from 'react';
-import {
-  BarChart3,
-  LineChart,
-  AreaChart,
-  Database,
-  Eye,
-  Edit3,
-  Share,
-  Trash2,
-  Clock,
-} from 'lucide-react';
+import { BarChart3, LineChart, AreaChart, Database, Eye, Share, Trash2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -114,26 +104,34 @@ const ChartCard: React.FC<ChartCardProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
-  const handleView = () => {
+  const handleView = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
     if (onView) {
       onView(chart);
     }
     onEdit(chart.id);
   };
 
-  const handleShare = () => {
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
     if (onShare) {
       onShare(chart);
     }
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    onDelete(chart);
   };
 
   const { t } = useTranslation();
 
   return (
     <Card
-      className="group relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 overflow-hidden"
+      className="group relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 overflow-hidden cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={() => onEdit(chart.id)}
     >
       {/* Gradient overlay on hover */}
       <div
@@ -166,7 +164,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
         </div>
 
         <div className="space-y-2">
-          <CardTitle className="text-lg leading-tight hover:text-emerald-600 transition-colors cursor-pointer group-hover:text-emerald-600">
+          <CardTitle className="text-lg leading-tight hover:text-emerald-600 transition-colors group-hover:text-emerald-600">
             {chart.name}
           </CardTitle>
           <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem] text-gray-700 dark:text-gray-300">
@@ -179,7 +177,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center space-x-1 text-muted-foreground">
             <Database className="h-3 w-3" />
-            <span className="font-medium">{t('chart_dataset', 'Dataset:')}:</span>
+            <span className="font-medium">{t('chart_dataset', 'Dataset')}:</span>
             <span className="text-gray-700 dark:text-gray-300">
               {chart.dataset?.name || chart.datasetName || `Dataset ${chart.datasetId}`}
             </span>
@@ -201,13 +199,13 @@ const ChartCard: React.FC<ChartCardProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onEdit(chart.id)}
+            onClick={handleView}
             className="flex-1 group-hover:border-emerald-500 group-hover:text-emerald-600 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-900/20 transition-all duration-200"
           >
             <Eye className="h-3 w-3" />
             View Chart
           </Button>
-          <Button
+          {/* <Button
             variant="ghost"
             size="sm"
             onClick={handleView}
@@ -218,7 +216,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
             }`}
           >
             <Edit3 className="h-3 w-3 mr-1" />{' '}
-          </Button>
+          </Button> */}
           <Button
             variant="ghost"
             size="sm"
@@ -234,7 +232,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onDelete(chart)}
+            onClick={handleDelete}
             disabled={isDeleting}
             className={`px-2 transition-all duration-200 disabled:opacity-50 ${
               isHovered

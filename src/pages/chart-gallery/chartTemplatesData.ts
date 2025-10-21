@@ -1,0 +1,158 @@
+// src/pages/chart-gallery/chartTemplatesData.ts
+import type { ChartCategory } from '@/types/chart-gallery-types';
+
+const chartTemplatesData: ChartCategory[] = [
+  {
+    id: 'All',
+    name: 'All',
+    templates: [],
+  },
+  {
+    id: 'basic',
+    name: 'Basic',
+    templates: [
+      {
+        id: 'line-basic',
+        name: 'Line Chart',
+        description: 'Basic line chart',
+        type: 'line',
+        category: 'basic',
+        configuration: { type: 'line' },
+      },
+      {
+        id: 'bar-basic',
+        name: 'Bar Chart',
+        description: 'Basic bar chart',
+        type: 'bar',
+        category: 'basic',
+        configuration: { type: 'bar' },
+      },
+      {
+        id: 'area-basic',
+        name: 'Area Chart',
+        description: 'Basic area chart',
+        type: 'area',
+        category: 'basic',
+        configuration: { type: 'area' },
+      },
+      {
+        id: 'pie-basic',
+        name: 'Pie Chart',
+        description: 'Basic pie chart',
+        type: 'pie',
+        category: 'basic',
+        configuration: { type: 'pie' },
+      },
+      {
+        id: 'donut-basic',
+        name: 'Donut Chart',
+        description: 'Basic donut chart',
+        type: 'donut',
+        category: 'basic',
+        configuration: { type: 'donut' },
+      },
+      {
+        id: 'column-basic',
+        name: 'Column Chart',
+        description: 'Basic column chart',
+        type: 'column',
+        category: 'basic',
+        configuration: { type: 'column' },
+      },
+    ],
+  },
+  {
+    id: 'advanced',
+    name: 'Advanced',
+    templates: [
+      {
+        id: 'scatter-advanced',
+        name: 'Scatter Chart',
+        description: 'Advanced scatter chart',
+        type: 'scatter',
+        category: 'advanced',
+        configuration: { type: 'scatter' },
+      },
+      {
+        id: 'heatmap-advanced',
+        name: 'Heatmap',
+        description: 'Specialized heatmap chart',
+        type: 'heatmap',
+        category: 'advanced',
+        configuration: { type: 'heatmap' },
+      },
+      {
+        id: 'radar-advanced',
+        name: 'Radar Chart',
+        description: 'Advanced radar chart',
+        type: 'radar',
+        category: 'advanced',
+        configuration: { type: 'radar' },
+      },
+      {
+        id: 'bubble-advanced',
+        name: 'Bubble Chart',
+        description: 'Advanced bubble chart',
+        type: 'bubble',
+        category: 'advanced',
+        configuration: { type: 'bubble' },
+      },
+      {
+        id: 'treemap-advanced',
+        name: 'Treemap',
+        description: 'Advanced treemap chart',
+        type: 'treemap',
+        category: 'advanced',
+        configuration: { type: 'treemap' },
+      },
+    ],
+  },
+  {
+    id: 'specialized',
+    name: 'Specialized',
+    templates: [
+      {
+        id: 'map-specialized',
+        name: 'Map',
+        description: 'Specialized map chart',
+        type: 'map',
+        category: 'specialized',
+        configuration: { type: 'map' },
+      },
+      {
+        id: 'sankey-specialized',
+        name: 'Sankey',
+        description: 'Advanced sankey chart',
+        type: 'sankey',
+        category: 'specialized',
+        configuration: { type: 'sankey' },
+      },
+      {
+        id: 'gauge-specialized',
+        name: 'Gauge',
+        description: 'Specialized gauge chart',
+        type: 'gauge',
+        category: 'specialized',
+        configuration: { type: 'gauge' },
+      },
+      {
+        id: 'funnel-specialized',
+        name: 'Funnel',
+        description: 'Specialized funnel chart',
+        type: 'funnel',
+        category: 'specialized',
+        configuration: { type: 'funnel' },
+      },
+      {
+        id: 'waterfall-specialized',
+        name: 'Waterfall',
+        description: 'Specialized waterfall chart',
+        type: 'waterfall',
+        category: 'specialized',
+        configuration: { type: 'waterfall' },
+      },
+    ],
+  },
+];
+
+export default chartTemplatesData;

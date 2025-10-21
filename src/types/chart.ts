@@ -3,22 +3,44 @@
 // Color configuration
 export type ColorConfig = Record<string, { light: string; dark: string }>;
 
-// Structured Chart Config (complete format)
-export interface StructuredChartConfig {
-  config: Record<string, unknown> & {
-    title: string;
-    xLabel: string;
-    yLabel: string;
-    xColumn: number;
-    width: number;
-    height: number;
-    showLegend: boolean;
-    showGrid: boolean;
-    showDataLabels: boolean;
-  };
+// CHART TYPE GENERATION
+
+export type MainChartConfig =
+  | LineChartConfig
+  | BarChartConfig
+  | AreaChartConfig
+  | ScatterChartConfig;
+// Scatter chart specific configuration
+export interface SubScatterChartConfig extends BaseChartConfig {
+  pointRadius?: number;
+}
+
+export interface ScatterChartConfig {
+  config: SubScatterChartConfig;
   formatters: Partial<FormatterConfig>;
-  seriesConfigs: SeriesConfig[];
-  chartType: 'line' | 'bar' | 'area';
+  axisConfigs: AxisConfig;
+  chartType: 'scatter';
+}
+
+export interface LineChartConfig {
+  config: SubLineChartConfig;
+  formatters: Partial<FormatterConfig>;
+  axisConfigs: AxisConfig;
+  chartType: 'line';
+}
+
+export interface BarChartConfig {
+  config: SubBarChartConfig;
+  formatters: Partial<FormatterConfig>;
+  axisConfigs: AxisConfig;
+  chartType: 'bar';
+}
+
+export interface AreaChartConfig {
+  config: SubAreaChartConfig;
+  formatters: Partial<FormatterConfig>;
+  axisConfigs: AxisConfig;
+  chartType: 'area';
 }
 
 // Curve options
@@ -51,8 +73,8 @@ export const sizePresets = {
     label: 'Presentation',
   },
   mobile: { width: 350, height: 300, labelKey: 'size_preset_mobile', label: 'Mobile' },
-  tablet: { width: 768, height: 480, labelKey: 'size_preset_tablet', label: 'Tablet' },
-  responsive: { width: 0, height: 0, labelKey: 'size_preset_responsive', label: 'Responsive' },
+  // tablet: { width: 768, height: 480, labelKey: 'size_preset_tablet', label: 'Tablet' },
+  // responsive: { width: 0, height: 0, labelKey: 'size_preset_responsive', label: 'Responsive' },
 };
 
 // Common utility function to get responsive defaults
@@ -63,7 +85,7 @@ export const getResponsiveDefaults = () => {
 
   const screenWidth = window.innerWidth;
   const containerWidth = Math.min(screenWidth * 0.8, 1200);
-  const aspectRatio = 0.6; // 16:10 aspect ratio
+  const aspectRatio = 0.6;
 
   return {
     width: Math.max(containerWidth, 300),
@@ -71,95 +93,91 @@ export const getResponsiveDefaults = () => {
   };
 };
 
+export interface AxisConfig {
+  xAxisKey?: string;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  xAxisStart?: 'auto' | 'zero';
+  yAxisStart?: 'auto' | 'zero';
+  xAxisRotation?: number;
+  yAxisRotation?: number;
+  showAxisLabels?: boolean;
+  showAxisTicks?: boolean;
+  seriesConfigs?: SeriesConfig[];
+}
+
 // Series configuration interface for Data Series management
 export interface SeriesConfig {
   id: string;
   name: string;
-  dataColumn: string;
   color: string;
   visible: boolean;
-  lineWidth?: number;
-  pointRadius?: number;
-  lineStyle?: 'solid' | 'dashed' | 'dotted';
-  pointStyle?: 'circle' | 'square' | 'triangle' | 'diamond';
-  opacity?: number;
-  formatter?: 'inherit' | 'custom';
-  customFormatter?: string;
+  dataColumn: string;
 }
 
 // Base chart configuration interface (common properties)
 export interface BaseChartConfig {
-  width: number;
-  height: number;
-  margin: { top: number; right: number; bottom: number; left: number };
-  xAxisKey: string;
-  yAxisKeys: string[];
+  width?: number;
+  height?: number;
+  margin?: { top: number; right: number; bottom: number; left: number };
+  // xAxisKey?: string;
+  // yAxisKeys?: string[];
   title: string;
-  xAxisLabel: string;
-  yAxisLabel: string;
-  showLegend: boolean;
-  showGrid: boolean;
-  animationDuration: number;
-  xAxisStart: 'auto' | 'zero';
-  yAxisStart: 'auto' | 'zero';
+  // xAxisLabel?: string;
+  // yAxisLabel?: string;
+  showLegend?: boolean;
+  showGrid?: boolean;
+  animationDuration?: number;
 
   // Styling configs
-  gridOpacity: number;
-  legendPosition: 'top' | 'bottom' | 'left' | 'right';
+  gridOpacity?: number;
+  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
 
   // Axis configs
-  xAxisRotation: number;
-  yAxisRotation: number;
-  showAxisLabels: boolean;
-  showAxisTicks: boolean;
 
   // Interaction configs
-  enableZoom: boolean;
-  enablePan: boolean;
-  zoomExtent: number;
-  showTooltip: boolean;
+  enableZoom?: boolean;
+  enablePan?: boolean;
+  zoomExtent?: number;
+  showTooltip?: boolean;
 
   // Visual configs
-  theme: 'light' | 'dark' | 'auto';
-  backgroundColor: string;
-  titleFontSize: number;
-  labelFontSize: number;
-  legendFontSize: number;
+  theme?: 'light' | 'dark' | 'auto';
+  backgroundColor?: string;
+  titleFontSize?: number;
+  labelFontSize?: number;
+  legendFontSize?: number;
 }
 
 // Line chart specific configuration
-export interface LineChartConfig extends BaseChartConfig {
+export interface SubLineChartConfig extends BaseChartConfig {
   disabledLines: string[];
-  showPoints: boolean;
-  showPointValues: boolean; // Show values on data points
-  curve: keyof typeof curveOptions;
-  lineWidth: number;
-  pointRadius: number;
+  showPoints?: boolean;
+  showPointValues?: boolean; // Show values on data points
+  curve?: keyof typeof curveOptions;
+  lineWidth?: number;
+  pointRadius?: number;
 }
 
 // Area chart specific configuration
-export interface AreaChartConfig extends BaseChartConfig {
-  disabledLines: string[];
-  showPoints: boolean;
-  showPointValues: boolean; // Show values on data points
-  showStroke: boolean;
-  curve: keyof typeof curveOptions;
-  lineWidth: number;
-  pointRadius: number;
-  opacity: number;
-  stackedMode: boolean;
+export interface SubAreaChartConfig extends BaseChartConfig {
+  showStroke?: boolean;
+  curve?: keyof typeof curveOptions;
+  lineWidth?: number;
 }
 
 // Bar chart specific configuration
-export interface BarChartConfig extends BaseChartConfig {
+export interface SubBarChartConfig extends BaseChartConfig {
   disabledBars: string[];
+  showPoints: boolean;
+  showPointValues: boolean; // Show values on bars
   barType: 'grouped' | 'stacked';
   barWidth: number;
   barSpacing: number;
 }
 
 // For backward compatibility, keep ChartConfig as LineChartConfig
-export type ChartConfig = LineChartConfig;
+export type ChartConfig = LineChartConfig | BarChartConfig | AreaChartConfig;
 
 // Formatter configuration
 export interface FormatterConfig {

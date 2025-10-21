@@ -2,22 +2,22 @@ import type { ChartConfig, SeriesConfig } from '@/types/chart';
 
 /**
  * Helper function to check if a column is available for a specific series
- * @param seriesConfigs - Array of series configurations
+ * @param axisConfigs - Array of series configurations
  * @param config - Chart configuration
  * @param column  - Column name to check
  * @param seriesId - Series ID
  * @returns - True if the column is available for the series, false otherwise
  */
 export const isColumnAvailableForSeries = (
-  seriesConfigs: SeriesConfig[],
+  axisConfigs: SeriesConfig[],
   config: ChartConfig,
   column: string,
   seriesId: string
 ) => {
   const isNotXAxis = column !== config.xAxisKey;
-  const currentSeries = seriesConfigs.find(s => s.id === seriesId);
+  const currentSeries = axisConfigs.find(s => s.id === seriesId);
   const isCurrentColumn = currentSeries?.dataColumn === column;
-  const isUsedByOther = seriesConfigs.some(s => s.id !== seriesId && s.dataColumn === column);
+  const isUsedByOther = axisConfigs.some(s => s.id !== seriesId && s.dataColumn === column);
 
   return isNotXAxis && (isCurrentColumn || !isUsedByOther);
 };
