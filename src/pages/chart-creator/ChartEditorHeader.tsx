@@ -84,6 +84,13 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
           icon: '📉',
           color: 'bg-purple-500',
         };
+      case ChartType.Scatter:
+      case 'scatter':
+        return {
+          name: t('chart_type_scatter', 'Scatter Chart'),
+          icon: '⚪️',
+          color: 'bg-indigo-500',
+        };
       default:
         return {
           name: t('chart_type_default', 'Chart'),

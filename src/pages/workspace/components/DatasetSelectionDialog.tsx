@@ -17,7 +17,7 @@ import type { Dataset } from '@/features/dataset/datasetAPI';
 interface DatasetSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectDataset: (datasetId: string) => void;
+  onSelectDataset: (datasetId: string, datasetName: string) => void;
   currentDatasetId?: string; // ID của dataset hiện tại đang được sử dụng
 }
 
@@ -29,29 +29,32 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
 }) => {
   const { datasets, loading, getDatasets } = useDataset();
   const [selectedDatasetId, setSelectedDatasetId] = useState<string>('');
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
-  // Set initial selection based on current dataset when dialog opens
+  // ✅ OPTIMIZATION: Only fetch if not loaded yet OR datasets is empty
+  // This prevents unnecessary API calls on every modal open
   useEffect(() => {
     if (open) {
-      // Pre-select current dataset if available
-      if (currentDatasetId) {
-        setSelectedDatasetId(currentDatasetId);
+      // Always sync selectedDatasetId to currentDatasetId when dialog opens
+      setSelectedDatasetId(currentDatasetId || '');
+
+      // Only fetch if:
+      // 1. Never loaded before AND datasets is empty
+      // Check both conditions together to prevent re-fetch on datasets.length change
+      if (!hasLoadedOnce && datasets.length === 0) {
+        getDatasets();
+        setHasLoadedOnce(true);
       }
-
-      getDatasets();
+    } else {
+      // When dialog closes, clear selection to prevent stale state
+      setSelectedDatasetId('');
     }
-  }, [open, getDatasets, currentDatasetId]);
-
-  // Separate effect to log when dialog closes
-  useEffect(() => {
-    if (!open) {
-      console.log('DatasetSelectionDialog closed');
-    }
-  }, [open]);
+  }, [open, currentDatasetId, datasets.length, getDatasets, hasLoadedOnce]);
 
   const handleConfirm = () => {
     if (selectedDatasetId) {
-      onSelectDataset(selectedDatasetId);
+      const selectedDataset = datasets.find(ds => ds.id === selectedDatasetId);
+      onSelectDataset(selectedDatasetId, selectedDataset?.name || '');
       onOpenChange(false);
       setSelectedDatasetId('');
     }
@@ -59,14 +62,17 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
 
   const handleCancel = () => {
     onOpenChange(false);
-    // Reset về current dataset khi cancel
     setSelectedDatasetId(currentDatasetId || '');
   };
 
   const handleSkip = () => {
-    onSelectDataset(''); // Pass empty string to indicate skip
+    onSelectDataset('', ''); // Pass empty string to indicate skip
     onOpenChange(false);
     setSelectedDatasetId('');
+  };
+
+  const handleRefresh = () => {
+    getDatasets();
   };
 
   return (
@@ -76,10 +82,36 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
         aria-describedby="dataset-selection-description"
       >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
-            <Database className="w-6 h-6 text-blue-600" />
-            Select a Dataset
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+              <Database className="w-6 h-6 text-blue-600" />
+              Select a Dataset
+            </DialogTitle>
+            {/* ✅ OPTIMIZATION 2: Manual refresh button */}
+            {!loading && datasets.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRefresh}
+                className="text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="Refresh datasets list"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 mr-1"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Refresh
+              </Button>
+            )}
+          </div>
           <DialogDescription id="dataset-selection-description" className="text-muted-foreground">
             {currentDatasetId ? (
               <>
@@ -131,7 +163,7 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
                     id={dataset.id}
                     name="dataset"
                     value={dataset.id}
-                    checked={selectedDatasetId === dataset.id}
+                    checked={(selectedDatasetId || currentDatasetId) === dataset.id}
                     onChange={e => setSelectedDatasetId(e.target.value)}
                     className="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />

@@ -4,9 +4,6 @@ import { ChartType } from '@/features/charts';
 import { useAppDispatch } from '@/store/hooks';
 import { initializeEditor } from '@/features/chartEditor';
 import ChartEditorPage from './ChartEditorPage';
-import { clearCurrentChart } from '@/features/charts';
-import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
-import { clearCurrentChartNotes } from '@/features/chartNotes/chartNoteSlice';
 
 const ChartEditorWithProviders: React.FC = () => {
   const location = useLocation();
@@ -41,7 +38,7 @@ const ChartEditorWithProviders: React.FC = () => {
     );
   }, [dispatch, mode, chartId, datasetId, initialChartType]);
 
-  return <ChartEditorPage />;
+  return <ChartEditorPage key={mode} />;
 };
 
 export default ChartEditorWithProviders;

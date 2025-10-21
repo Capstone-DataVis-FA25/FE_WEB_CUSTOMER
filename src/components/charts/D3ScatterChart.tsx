@@ -201,7 +201,18 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [dimensions, setDimensions] = useState({ width, height });
+  // Chart dimensions always follow props (for interactive control)
+  const dimensions = { width, height };
+
+  // Responsive font sizes (match LineChart)
+  const responsiveFontSize = React.useMemo(
+    () => ({
+      axis: fontSize.axis,
+      label: labelFontSize,
+      title: titleFontSize,
+    }),
+    [fontSize.axis, labelFontSize, titleFontSize]
+  );
 
   // Process data
   const processedData = React.useMemo(
@@ -246,23 +257,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     }
   }, [theme]);
 
-  // Handle responsive dimensions
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const resizeObserver = new ResizeObserver(entries => {
-      const entry = entries[0];
-      if (entry) {
-        setDimensions({
-          width: entry.contentRect.width || width,
-          height: entry.contentRect.height || height,
-        });
-      }
-    });
-
-    resizeObserver.observe(containerRef.current);
-    return () => resizeObserver.disconnect();
-  }, [width, height]);
+  // Remove ResizeObserver: chart size strictly follows props
 
   // Helper: Calculate linear regression
   const calculateLinearRegression = (xVals: number[], yVals: number[]) => {
@@ -278,7 +273,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     return { slope, intercept };
   };
 
-  // Main chart rendering
+  // Main chart rendering with tooltip and legend
   useEffect(() => {
     if (!processedData || processedData.length === 0 || !svgRef.current || !xAxisKey || !yAxisKey) {
       return;
@@ -294,6 +289,24 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
 
     if (innerWidth <= 0 || innerHeight <= 0) return;
 
+    // Create scales
+    const xValues = processedData.map(d => +d[xAxisKey]).filter(v => !isNaN(v));
+    const yValues = processedData.map(d => +d[yAxisKey]).filter(v => !isNaN(v));
+
+    // If no valid numeric data, show warning in chart area
+    if (xValues.length === 0 || yValues.length === 0) {
+      svg
+        .append('text')
+        .attr('x', chartWidth / 2)
+        .attr('y', chartHeight / 2)
+        .attr('text-anchor', 'middle')
+        .attr('fill', isDarkMode ? '#e5e7eb' : '#374151')
+        .style('font-size', '18px')
+        .style('font-weight', 'bold')
+        .text('No numeric data for selected X/Y axis');
+      return;
+    }
+
     // Set background
     svg
       .append('rect')
@@ -303,12 +316,6 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
       .attr('rx', 8);
 
     const chartGroup = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-
-    // Create scales
-    const xValues = processedData.map(d => +d[xAxisKey]).filter(v => !isNaN(v));
-    const yValues = processedData.map(d => +d[yAxisKey]).filter(v => !isNaN(v));
-
-    if (xValues.length === 0 || yValues.length === 0) return;
 
     const xExtent = d3.extent(xValues) as [number, number];
     const yExtent = d3.extent(yValues) as [number, number];
@@ -409,29 +416,29 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
         .attr('font-size', fontSize.axis || 12);
     }
 
-    // Axis labels
+    // Axis labels (match LineChart)
     if (showAxisLabels) {
       if (xAxisLabel) {
         chartGroup
           .append('text')
           .attr('x', innerWidth / 2)
-          .attr('y', innerHeight + margin.bottom - 10)
+          .attr('y', innerHeight + (dimensions.width < 768 ? 40 : 50))
           .attr('text-anchor', 'middle')
           .attr('fill', textColor)
-          .style('font-size', `${labelFontSize || 14}px`)
-          .style('font-weight', '500')
+          .style('font-size', `${responsiveFontSize.label}px`)
+          .style('font-weight', '600')
           .text(xAxisLabel);
       }
       if (yAxisLabel) {
         chartGroup
           .append('text')
-          .attr('transform', 'rotate(-90)')
+          .attr('transform', `rotate(-90)`)
           .attr('x', -innerHeight / 2)
-          .attr('y', -margin.left + 15)
+          .attr('y', dimensions.width < 768 ? -55 : -65)
           .attr('text-anchor', 'middle')
           .attr('fill', textColor)
-          .style('font-size', `${labelFontSize || 14}px`)
-          .style('font-weight', '500')
+          .style('font-size', `${responsiveFontSize.label}px`)
+          .style('font-weight', '600')
           .text(yAxisLabel);
       }
     }
@@ -449,7 +456,10 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
         .text(title);
     }
 
-    // Draw points with animation
+    // Tooltip group
+    const tooltipGroup = svg.append('g').attr('class', 'scatter-tooltip-group');
+
+    // Draw points with animation and tooltip
     chartGroup
       .selectAll('.scatter-point')
       .data(processedData)
@@ -466,34 +476,101 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
       )
       .attr('opacity', pointOpacity)
       .style('cursor', showTooltip ? 'pointer' : 'default')
+      .on('mouseover', function (event, d) {
+        if (!showTooltip) return;
+        // Remove any existing tooltip
+        tooltipGroup.selectAll('*').remove();
+        // Tooltip content
+        const tooltipContent =
+          `${xAxisKey}: ${d[xAxisKey]}\n${yAxisKey}: ${d[yAxisKey]}` +
+          (colorKey ? `\n${colorKey}: ${d[colorKey]}` : '') +
+          (sizeKey ? `\n${sizeKey}: ${d[sizeKey]}` : '');
+        // Position
+        const mouse = d3.pointer(event, svg.node());
+        tooltipGroup
+          .append('rect')
+          .attr('x', mouse[0] + 10)
+          .attr('y', mouse[1] - 10)
+          .attr('width', 180)
+          .attr('height', 60)
+          .attr('fill', isDarkMode ? '#222' : '#fff')
+          .attr('stroke', isDarkMode ? '#eee' : '#333')
+          .attr('rx', 8)
+          .attr('opacity', 0.95);
+        tooltipGroup
+          .append('text')
+          .attr('x', mouse[0] + 20)
+          .attr('y', mouse[1] + 10)
+          .attr('fill', isDarkMode ? '#fff' : '#222')
+          .style('font-size', '14px')
+          .style('font-family', 'monospace')
+          .text(tooltipContent)
+          .call(text => {
+            const lines = tooltipContent.split('\n');
+            lines.forEach((line, i) => {
+              text
+                .append('tspan')
+                .attr('x', mouse[0] + 20)
+                .attr('y', mouse[1] + 10 + i * 18)
+                .text(line);
+            });
+          });
+      })
+      .on('mouseout', function () {
+        tooltipGroup.selectAll('*').remove();
+      })
       .transition()
       .duration(animationDuration)
       .attr('r', (d: ScatterDataPoint) =>
         sizeKey && sizeScale ? sizeScale(+d[sizeKey]) : pointRadius
       );
 
-    // Legend
+    // Legend (match LineChart glassmorphism, responsive)
     if (showLegend && colorKey && colorScale) {
-      const legendGroup = svg.append('g').attr('class', 'legend');
       const categories = colorScale.domain();
-
+      // Responsive legend sizing
+      const legendItemHeight = 28;
+      const legendItemSpacing = 6;
+      const legendPadding = 12;
+      const legendWidth = dimensions.width < 640 ? 100 : 120;
+      const legendHeight =
+        categories.length * legendItemHeight +
+        (categories.length - 1) * legendItemSpacing +
+        2 * legendPadding;
+      // Position legend bottom right (like LineChart)
+      const legendX = dimensions.width - margin.right - legendWidth - 16;
+      const legendY = dimensions.height - legendHeight - 16;
+      // Glassmorphism background
+      const legendGroup = svg.append('g').attr('class', 'legend-group');
+      legendGroup
+        .append('rect')
+        .attr('x', legendX)
+        .attr('y', legendY)
+        .attr('width', legendWidth + 2 * legendPadding)
+        .attr('height', legendHeight)
+        .attr('fill', isDarkMode ? 'rgba(55,65,81,0.8)' : 'rgba(248,250,252,0.9)')
+        .attr('stroke', isDarkMode ? 'rgba(107,114,128,0.3)' : 'rgba(209,213,219,0.3)')
+        .attr('stroke-width', 1)
+        .attr('rx', dimensions.width < 640 ? 8 : 12)
+        .attr('ry', dimensions.width < 640 ? 8 : 12)
+        .style('filter', 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))')
+        .style('backdrop-filter', 'blur(10px)');
+      // Legend items
       categories.forEach((category, i) => {
-        const legendX = chartWidth - margin.right - 150;
-        const legendY = margin.top + 20 + i * 24;
-
+        const itemY = legendY + legendPadding + i * (legendItemHeight + legendItemSpacing);
         legendGroup
           .append('circle')
-          .attr('cx', legendX)
-          .attr('cy', legendY)
-          .attr('r', 6)
+          .attr('cx', legendX + legendPadding + 10)
+          .attr('cy', itemY + legendItemHeight / 2)
+          .attr('r', 7)
           .attr('fill', colorScale(category));
-
         legendGroup
           .append('text')
-          .attr('x', legendX + 12)
-          .attr('y', legendY + 4)
+          .attr('x', legendX + legendPadding + 28)
+          .attr('y', itemY + legendItemHeight / 2 + 4)
           .attr('font-size', legendFontSize)
           .attr('fill', textColor)
+          .style('font-weight', 'bold')
           .text(category);
       });
     }
@@ -554,9 +631,21 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     isDarkMode,
   ]);
 
+  // NOTE: To ensure the scatter chart is always as large as LineChart, BarChart, and AreaChart,
+  // make sure the parent container does NOT restrict width/height. This div uses 100% width/height.
+  // If the chart appears small, check parent CSS/layout.
   return (
-    <div ref={containerRef} className="w-full">
-      <svg ref={svgRef} width={width} height={height} />
+    <div
+      ref={containerRef}
+      className="w-full h-full"
+      style={{ width: width, height: height, minWidth: width, minHeight: height }}
+    >
+      <svg
+        ref={svgRef}
+        width={dimensions.width}
+        height={dimensions.height}
+        style={{ display: 'block', width: '100%', height: '100%' }}
+      />
     </div>
   );
 };

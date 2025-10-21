@@ -24,7 +24,6 @@ import { getDefaultChartConfig } from '@/utils/chartDefaults';
 import type { ChartRequest, ChartType } from '@/features/charts';
 // ChartType is imported in ChartEditorWithProviders
 import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
-import { clearCurrentChart } from '@/features/charts';
 import { clearCurrentChartNotes } from '@/features/chartNotes/chartNoteSlice';
 import { useChartEditor } from '@/features/chartEditor';
 import type { MainChartConfig } from '@/types/chart';
@@ -98,7 +97,11 @@ const ChartEditorPage: React.FC = () => {
   const [showDatasetModal, setShowDatasetModal] = useState(false);
 
   //Run once on mount
+  // useEffect #1: Clear current chart, dataset, notes on mount
   useEffect(() => {
+    console.log(
+      'useEffect #1: mount - clearCurrentChart, clearCurrentDataset, clearCurrentChartNotes'
+    );
     clearCurrentChart();
     clearCurrentDataset();
     clearCurrentChartNotes();
@@ -107,18 +110,25 @@ const ChartEditorPage: React.FC = () => {
   // ============================================================
   // EFFECT 1: Sync datasetId with context (simple sync)
   // ============================================================
+  // useEffect #2: Sync datasetId with context
   useEffect(() => {
+    console.log('useEffect #2: contextDatasetId changed', contextDatasetId);
     setDatasetId(contextDatasetId || '');
   }, [contextDatasetId]);
 
   // ============================================================
   // EFFECT 2: Load chart in edit mode (independent)
   // ============================================================
+  // useEffect #3: Load chart in edit mode
   useEffect(() => {
-    console.log('🎯 Mode:', mode, 'ChartId:', chartId);
-
+    console.log('useEffect #3: mode or chartId changed', {
+      mode,
+      chartId,
+      isChartLoading,
+      currentChart,
+    });
     if (mode === 'edit' && chartId && !isChartLoading && !currentChart) {
-      console.log('📡 Fetching chart by ID:', chartId);
+      console.log('useEffect #3: getChartById', chartId);
       getChartById(chartId);
     }
   }, [mode, chartId]);
@@ -126,7 +136,9 @@ const ChartEditorPage: React.FC = () => {
   // ============================================================
   // EFFECT 3: Initialize form fields when chart loads (edit mode)
   // ============================================================
+  // useEffect #4: Initialize form fields when chart loads (edit mode)
   useEffect(() => {
+    console.log('useEffect #4: mode or currentChart?.id changed', { mode, currentChart });
     if (mode === 'edit' && currentChart) {
       setEditableName(currentChart.name || '');
       setEditableDescription(currentChart.description || '');
@@ -144,13 +156,14 @@ const ChartEditorPage: React.FC = () => {
   // ============================================================
   // EFFECT 4: Initialize form fields in create mode (independent)
   // ============================================================
+  // useEffect #5: Initialize form fields in create mode
   useEffect(() => {
+    console.log('useEffect #5: mode or currentChartType changed', { mode, currentChartType });
     if (mode === 'create') {
       // Only initialize if not already set
       if (!chartConfig) {
-        const chartTypeName = currentChartType.charAt(0).toUpperCase() + currentChartType.slice(1);
-        setEditableName(`${chartTypeName} Chart`);
-        setEditableDescription(`Chart created from ${chartTypeName.toLowerCase()} template`);
+        setEditableName('New Chart'.trim());
+        setEditableDescription('Chart created from template');
         setChartConfig(getDefaultChartConfig(currentChartType));
       }
     }
@@ -159,7 +172,9 @@ const ChartEditorPage: React.FC = () => {
   // ============================================================
   // EFFECT 5: Load dataset based on datasetId (independent)
   // ============================================================
+  // useEffect #6: Load dataset based on datasetId
   useEffect(() => {
+    console.log('useEffect #6: datasetId changed', datasetId);
     if (!datasetId) {
       setChartData([]);
       return;
@@ -507,7 +522,7 @@ const ChartEditorPage: React.FC = () => {
       clearCurrentDataset();
       clearCurrentChartNotes();
     };
-  }, [clearCurrentChart, clearCurrentDataset]);
+  }, []);
 
   // Loading state
   if (isDatasetLoading || isChartLoading) {

@@ -58,6 +58,17 @@ export const CHART_VALIDATION_RULES: Record<
       description: 'Y-axis must be numeric values',
     },
   },
+  [ChartType.Scatter]: {
+    xAxis: {
+      allowedTypes: ['number', 'date', 'string', 'text'],
+      description:
+        'X-axis can be number (continuous), date/time (timeline), or string (categorical)',
+    },
+    yAxis: {
+      allowedTypes: ['number'],
+      description: 'Y-axis must be numeric values',
+    },
+  },
 };
 
 /**

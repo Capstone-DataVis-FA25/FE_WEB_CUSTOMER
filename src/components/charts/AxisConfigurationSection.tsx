@@ -27,11 +27,11 @@ const AxisConfigurationSection: React.FC = () => {
 
   // Debounced update handlers using custom hook
   const debouncedUpdateXRotation = useDebouncedUpdater<number>(value =>
-    handleConfigChange({ axisConfigs: { ...chartConfig.axisConfigs, xAxisRotation: value } })
+    handleConfigChange({ axisConfigs: { ...chartConfig?.axisConfigs, xAxisRotation: value } })
   );
 
   const debouncedUpdateYRotation = useDebouncedUpdater<number>(value =>
-    handleConfigChange({ axisConfigs: { ...chartConfig.axisConfigs, yAxisRotation: value } })
+    handleConfigChange({ axisConfigs: { ...chartConfig?.axisConfigs, yAxisRotation: value } })
   );
 
   // Sync local state with config changes from external sources
