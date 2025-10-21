@@ -193,7 +193,7 @@ const ChartEditorPage: React.FC = () => {
     }
   }, [mode, chartId]);
 
-  // ============================================================
+  // =============w===============================================
   // EFFECT 3: Initialize form fields when chart loads (edit mode)
   // ============================================================
   // useEffect #4: Initialize form fields when chart loads (edit mode)

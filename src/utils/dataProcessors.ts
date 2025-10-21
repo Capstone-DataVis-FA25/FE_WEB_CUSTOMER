@@ -261,43 +261,6 @@ export const isValidFileType = (file: File): boolean => {
 };
 
 /**
- * Transforms data from wide format to long format (melt operation)
- * @param data - 2D array of data with headers in first row
- * @param transformationColumn - Column name to use as identifier
- * @returns Transformed data in long format
- */
-export const transformWideToLong = (data: string[][], transformationColumn: string): string[][] => {
-  if (!data || data.length === 0) return data;
-
-  const headers = data[0];
-  const columnIndex = headers?.indexOf(transformationColumn);
-  if (columnIndex === undefined || columnIndex < 0) return data;
-
-  // Store indexes and column names for all columns except the transformation column
-  const otherColumnIndexes = headers
-    .map((col, idx) => ({ col, idx }))
-    .filter(({ idx }) => idx !== columnIndex);
-
-  // Create new headers: [selectedColumn, 'variable', 'value']
-  const transformed: string[][] = [];
-  transformed.push([transformationColumn, 'variable', 'value']);
-
-  // Process each data row
-  for (let i = 1; i < data.length; i += 1) {
-    const row = data[i] || [];
-    const idValue = (row[columnIndex] ?? '').toString();
-
-    // Loop over only the "other" columns we prepared
-    for (const { col, idx } of otherColumnIndexes) {
-      const cellValue = (row[idx] ?? '').toString();
-      transformed.push([idValue, col, cellValue]);
-    }
-  }
-
-  return transformed;
-};
-
-/**
  * Read text content from Excel files (.xls, .xlsx)
  * @param file - Excel file to read
  * @returns Promise that resolves to text content in CSV format
