@@ -70,3 +70,16 @@ export const deleteChartNoteThunk = createAsyncThunk(
     }
   }
 );
+
+// Toggle chart note completed status
+export const toggleChartNoteCompletedThunk = createAsyncThunk(
+  'chartNotes/toggleChartNoteCompleted',
+  async ({ noteId }: { noteId: string }, { rejectWithValue }) => {
+    try {
+      return await chartNoteAPI.toggleChartNoteCompleted(noteId);
+    } catch (error) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue(err.response?.data?.message || 'Failed to toggle note status');
+    }
+  }
+);

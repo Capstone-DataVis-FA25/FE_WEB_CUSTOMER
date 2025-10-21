@@ -308,7 +308,7 @@ const ChartDisplaySection: React.FC = () => {
             disabledLines={lineConfig.disabledLines}
             showPoints={lineConfig.showPoints}
             showPointValues={lineConfig.showPointValues}
-            curve={curveOptions[lineConfig.curve as keyof typeof curveOptions]}
+            curve={curveOptions[lineConfig.curve as keyof typeof curveOptions] ?? undefined}
             lineWidth={lineConfig.lineWidth}
             pointRadius={lineConfig.pointRadius}
             xAxisStart={axisConfigs.xAxisStart}

@@ -76,14 +76,74 @@ const ChartEditorPage: React.FC = () => {
     creating: creatingNote,
     updating: updatingNote,
     deleting: deletingNote,
+    toggling: togglingNote,
     createNote,
     updateNote,
     deleteNote,
+    toggleNoteCompleted,
     getChartNotes,
   } = useChartNotes();
 
   // Chart notes sidebar state
   const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(false);
+  // Handle notes sidebar
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!chartId) return;
+
+    console.log('[ChartEditor] Deleting note:', { chartId, noteId });
+
+    try {
+      const result = await deleteNote(chartId, noteId);
+
+      if (result.meta.requestStatus === 'fulfilled') {
+        await getChartNotes(chartId);
+      } else {
+        showError(t('chartEditor.notes.deleteError', 'Failed to delete note'));
+      }
+    } catch (error) {
+      showError(t('chartEditor.notes.deleteError', 'Failed to delete note'));
+    }
+  };
+
+  const handleUpdateNote = async (noteId: string, content: string) => {
+    if (!chartId) return;
+
+    console.log('[ChartEditor] Updating note:', { chartId, noteId, content });
+
+    try {
+      // Optimistically update the note in Redux store
+      // This will immediately update the UI without waiting for server response
+      dispatch(updateNoteLocally({ chartId, noteId, content }));
+
+      const result = await updateNote(noteId, { content });
+
+      if (result.meta.requestStatus === 'fulfilled') {
+        await getChartNotes(chartId);
+      } else {
+        showError(t('chartEditor.notes.updateError', 'Failed to update note'));
+        await getChartNotes(chartId);
+      }
+    } catch (error) {
+      showError(t('chartEditor.notes.updateError', 'Failed to update note'));
+      await getChartNotes(chartId);
+    }
+  };
+
+  const handleToggleCompleted = async (noteId: string) => {
+    if (!chartId) return;
+    try {
+      const result = await toggleNoteCompleted(noteId);
+
+      if (result.meta.requestStatus === 'fulfilled') {
+        await getChartNotes(chartId);
+      } else {
+        showError(t('chartEditor.notes.toggleError', 'Failed to toggle note status'));
+      }
+    } catch (error) {
+      showError(t('chartEditor.notes.toggleError', 'Failed to toggle note status'));
+    }
+  };
 
   // Unsaved changes modal state
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
@@ -458,57 +518,6 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
-  const handleDeleteNote = async (noteId: string) => {
-    if (!chartId) return;
-
-    console.log('[ChartEditor] Deleting note:', { chartId, noteId });
-
-    try {
-      const result = await deleteNote(chartId, noteId);
-
-      if (result.meta.requestStatus === 'fulfilled') {
-        // Refresh notes list after deleting
-        await getChartNotes(chartId);
-      } else {
-        console.error('[ChartEditor] Failed to delete note:', result);
-        showError(t('chartEditor.notes.deleteError', 'Failed to delete note'));
-      }
-    } catch (error) {
-      console.error('[ChartEditor] Error deleting note:', error);
-      showError(t('chartEditor.notes.deleteError', 'Failed to delete note'));
-    }
-  };
-
-  const handleUpdateNote = async (noteId: string, content: string) => {
-    if (!chartId) return;
-
-    console.log('[ChartEditor] Updating note:', { chartId, noteId, content });
-
-    try {
-      // Optimistically update the note in Redux store
-      // This will immediately update the UI without waiting for server response
-      dispatch(updateNoteLocally({ chartId, noteId, content }));
-
-      const result = await updateNote(noteId, { content });
-
-      if (result.meta.requestStatus === 'fulfilled') {
-        console.log('[ChartEditor] Note updated successfully');
-        // The UI already shows the updated content due to optimistic update
-        // No need to refresh notes list
-      } else {
-        console.error('[ChartEditor] Failed to update note:', result);
-        showError(t('chartEditor.notes.updateError', 'Failed to update note'));
-        // If update failed, refresh to get the original note back
-        await getChartNotes(chartId);
-      }
-    } catch (error) {
-      console.error('[ChartEditor] Error updating note:', error);
-      showError(t('chartEditor.notes.updateError', 'Failed to update note'));
-      // If update failed, refresh to get the original note back
-      await getChartNotes(chartId);
-    }
-  };
-
   // Handle chart type change (now handled by context)
   // const handleChartTypeChange = (type: string) => {
   //   const newType = type as ChartType;
@@ -621,9 +630,10 @@ const ChartEditorPage: React.FC = () => {
           onToggle={handleToggleNotesSidebar}
           notes={currentChartNotes}
           onAddNote={handleAddNote}
-          isLoading={creatingNote || updatingNote || deletingNote}
+          isLoading={creatingNote || updatingNote || deletingNote || togglingNote}
           onDeleteNote={handleDeleteNote}
           onUpdateNote={handleUpdateNote}
+          onToggleCompleted={handleToggleCompleted}
         />
       )}
     </div>

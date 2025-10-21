@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
-import {
-  BarChart3,
-  LineChart,
-  AreaChart,
-  Database,
-  Calendar,
-  Eye,
-  Edit3,
-  Share,
-  Trash2,
-  Clock,
-} from 'lucide-react';
+import { BarChart3, LineChart, AreaChart, Database, Eye, Share, Trash2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { Chart as BaseChart } from '@/features/chart/chartAPI';
+// Minimal BaseChart type to decouple from missing chartAPI module
+type BaseChart = {
+  id: string;
+  name: string;
+  description?: string;
+  type: string;
+  datasetId?: string;
+  dataset?: { name?: string } | null;
+  updatedAt: string;
+};
 import Utils from '@/utils/Utils';
 import { useTranslation } from 'react-i18next';
 
@@ -94,26 +92,7 @@ const getChartColor = (type: string) => {
   }
 };
 
-// Format date helper
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - date.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 1) {
-    return 'today';
-  } else if (diffDays === 2) {
-    return 'a day ago';
-  } else if (diffDays <= 30) {
-    return `${diffDays} days ago`;
-  } else if (diffDays <= 60) {
-    return 'a month ago';
-  } else {
-    const diffMonths = Math.floor(diffDays / 30);
-    return `${diffMonths} months ago`;
-  }
-};
+// Removed unused formatDate helper
 
 const ChartCard: React.FC<ChartCardProps> = ({
   chart,

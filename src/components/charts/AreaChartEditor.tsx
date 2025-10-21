@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import * as d3 from 'd3';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -73,6 +74,19 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
 }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
+
+  // Map curve option keys to actual d3 curve factories
+  const curveFactoryMap: Record<keyof typeof curveOptions, d3.CurveFactory> = {
+    curveLinear: d3.curveLinear,
+    curveMonotoneX: d3.curveMonotoneX,
+    curveMonotoneY: d3.curveMonotoneY,
+    curveBasis: d3.curveBasis,
+    curveCardinal: d3.curveCardinal,
+    curveCatmullRom: d3.curveCatmullRom,
+    curveStep: d3.curveStep,
+    curveStepBefore: d3.curveStepBefore,
+    curveStepAfter: d3.curveStepAfter,
+  };
 
   // Convert arrayData to ChartDataPoint[] if provided, or use sample data
   const processedInitialData = useMemo((): ChartDataPoint[] => {
@@ -1219,7 +1233,13 @@ const AreaChartEditor: React.FC<AreaChartEditorProps> = ({
                     showPoints={config.showPoints}
                     showStroke={config.showStroke}
                     animationDuration={config.animationDuration}
+<<<<<<< HEAD
                     curve={curveOptions[config.curve]}
+=======
+                    curve={curveFactoryMap[config.curve]}
+                    opacity={config.opacity}
+                    stackedMode={config.stackedMode}
+>>>>>>> c64628c7ef8d6666f44b814420d05ef5bb66aaed
                     yAxisFormatter={getYAxisFormatter}
                     xAxisFormatter={getXAxisFormatter}
                     fontSize={getResponsiveFontSize(config)}

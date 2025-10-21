@@ -39,14 +39,14 @@ const DataTransformationSelector: React.FC<DataTransformationSelectorProps> = ({
               }}
             >
               <SelectTrigger disabled={disabled} className="truncate">
-                <SelectValue placeholder="Select column" className="truncate" />
+                <SelectValue placeholder="Select column" />
               </SelectTrigger>
               <SelectContent>
                 {/* Show reset option only after a column is chosen */}
                 {value ? <SelectItem value="">Do not stack</SelectItem> : null}
                 {headers && headers.length > 0 ? (
                   headers.map((h, idx) => (
-                    <SelectItem key={`${h}-${idx}`} value={h} className="truncate">
+                    <SelectItem key={`${h}-${idx}`} value={h}>
                       <span className="truncate" title={h || `Column ${idx + 1}`}>
                         {h || `Column ${idx + 1}`}
                       </span>

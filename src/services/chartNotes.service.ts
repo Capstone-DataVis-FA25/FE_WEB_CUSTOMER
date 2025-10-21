@@ -1,5 +1,5 @@
 import { axiosPrivate } from './axios';
-import { AxiosResponse } from 'axios';
+import type { AxiosResponse } from 'axios';
 
 // Types/Interfaces
 export interface ChartNoteAuthor {
@@ -14,10 +14,7 @@ export interface ChartNote {
   content: string;
   chartId: string;
   authorId: string;
-  timestamp: string;
   createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
   author: ChartNoteAuthor;
 }
 

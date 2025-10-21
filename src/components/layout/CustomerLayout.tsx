@@ -2,11 +2,11 @@ import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Header from '../header/Header';
 import Footer from '../footer/Footer';
-import { PageTransition } from '../../theme/animation';
 
 // import { useTranslation } from 'react-i18next';
+import { PageTransition } from '../../theme/animation';
+import SimpleChatBox from '../ui/SimpleChatBox';
 import { useAuth } from '@/features/auth/useAuth';
-// import LoadingSpinner from '../ui/LoadingSpinner';
 
 interface CustomerLayoutProps {
   children?: React.ReactNode;
@@ -62,6 +62,9 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
           {children ? children : <Outlet />}
         </PageTransition>
       </main>
+
+      {/* Chatbox */}
+      <SimpleChatBox />
 
       {/* Footer */}
       {!isFullScreen && <Footer />}
