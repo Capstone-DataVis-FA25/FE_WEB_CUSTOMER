@@ -159,6 +159,32 @@ export const publicRoutes: RouteConfig[] = [
     },
   },
 
+  //terms of service and privacy policy
+
+  {
+    path: Routers.TERMS_OF_SERVICE,
+    name: 'terms-of-service',
+    component: 'TermsOfServicePage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Terms of Service',
+      description: 'Terms of Service',
+    },
+  },
+  {
+    path: Routers.PRIVACY_POLICY,
+    name: 'privacy-policy',
+    component: 'PrivacyPolicyPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Privacy Policy',
+      description: 'Privacy Policy',
+    },
+  },
   {
     path: Routers.CHART_GALLERY,
     name: 'chartgallery',
@@ -530,6 +556,19 @@ export const protectedRoutes: RouteConfig[] = [
     meta: {
       title: 'Area Chart Editor',
       description: 'Edit area charts with advanced customization options',
+    },
+  },
+  {
+    path: Routers.PIE_CHART_EDITOR_DEMO,
+    name: 'pie-chart-editor',
+    component: 'PieChartEditorDemo',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Pie Chart Editor',
+      description: 'Edit pie charts with advanced customization options',
     },
   },
 ];

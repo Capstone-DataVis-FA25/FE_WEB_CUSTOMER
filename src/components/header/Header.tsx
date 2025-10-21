@@ -62,6 +62,8 @@ const Header: React.FC<HeaderProps> = ({
     { name: 'Community', href: '/resources/community' },
     { name: 'Forum', href: '/resources/forum' },
     { name: 'Careers', href: '/resources/careers' },
+    { name: 'Privacy Policy', href: '/privacy-policy' },
+    { name: 'Terms Service', href: '/terms-of-service' },
   ];
 
   // Close dropdown when clicking outside
@@ -144,7 +146,7 @@ const Header: React.FC<HeaderProps> = ({
                   {/* Resources Dropdown Menu */}
                   {isResourcesDropdownOpen && (
                     <SlideInDown
-                      className="absolute left-0 mt-2 w-48 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-2 z-50 ring-1 ring-black/5 dark:ring-white/5"
+                      className="absolute left-0 mt-2 w-60 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-2 z-50 ring-1 ring-black/5 dark:ring-white/5"
                       onMouseLeave={() => setIsResourcesDropdownOpen(false)}
                     >
                       <div className="grid grid-cols-2 gap-1 px-2">

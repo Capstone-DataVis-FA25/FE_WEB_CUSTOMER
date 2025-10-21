@@ -7,7 +7,16 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Pagination from '@/components/ui/pagination';
 import ChartCard from './ChartCard';
 import DatasetSelectionDialog from './DatasetSelectionDialog';
-import type { Chart as BaseChart } from '@/features/charts/chartTypes';
+// Minimal BaseChart type to avoid dependency on missing '@/features/charts/chartTypes'
+type BaseChart = {
+  id: string;
+  name: string;
+  description?: string;
+  type: string;
+  datasetId?: string;
+  dataset?: { name?: string } | null;
+  updatedAt: string;
+};
 import type { UsePaginationReturn } from '@/hooks/usePagination';
 
 // Extended Chart type for UI with additional optional fields
@@ -28,7 +37,7 @@ interface ChartTabProps {
   searchTerm: string;
   onCreateChart: (datasetId?: string) => void;
   onHandleOpenModalSelectedDataset: (open: boolean) => void;
-  onDeleteChart: (chart: Chart) => void;
+  onDeleteChart: (chart: Chart) => void | Promise<void>;
   onEditChart: (chartId: string) => void;
   deletingChartId: string | null;
   pagination: UsePaginationReturn;

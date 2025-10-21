@@ -1,4 +1,4 @@
-import * as d3 from 'd3';
+// Removed direct d3 import to avoid hard dependency during type-check
 
 // Color configuration
 export type ColorConfig = Record<string, { light: string; dark: string }>;
@@ -45,16 +45,16 @@ export interface AreaChartConfig {
 
 // Curve options
 export const curveOptions = {
-  curveLinear: d3.curveLinear,
-  curveMonotoneX: d3.curveMonotoneX,
-  curveMonotoneY: d3.curveMonotoneY,
-  curveBasis: d3.curveBasis,
-  curveCardinal: d3.curveCardinal,
-  curveCatmullRom: d3.curveCatmullRom,
-  curveStep: d3.curveStep,
-  curveStepBefore: d3.curveStepBefore,
-  curveStepAfter: d3.curveStepAfter,
-};
+  curveLinear: 'curveLinear',
+  curveMonotoneX: 'curveMonotoneX',
+  curveMonotoneY: 'curveMonotoneY',
+  curveBasis: 'curveBasis',
+  curveCardinal: 'curveCardinal',
+  curveCatmullRom: 'curveCatmullRom',
+  curveStep: 'curveStep',
+  curveStepBefore: 'curveStepBefore',
+  curveStepAfter: 'curveStepAfter',
+} as const;
 
 // Common chart size presets (unified for all chart types)
 export const sizePresets = {

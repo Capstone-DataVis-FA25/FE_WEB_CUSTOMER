@@ -74,7 +74,7 @@ function DelimiterSelector({
       {/* Dropdown Menu */}
       {isOpen && (
         <div className="absolute z-10 w-full mt-1 border border-gray-200 dark:border-gray-600 shadow-lg rounded-lg overflow-hidden">
-          {DELIMITER_OPTIONS.map((option, index) => (
+          {DELIMITER_OPTIONS.map(option => (
             <button
               key={option.value}
               type="button"

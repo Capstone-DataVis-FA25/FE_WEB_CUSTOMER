@@ -63,6 +63,9 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
         </PageTransition>
       </main>
 
+      {/* Chatbox */}
+      <SimpleChatBox />
+
       {/* Footer */}
       {!isFullScreen && <Footer />}
     </div>

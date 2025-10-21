@@ -5,6 +5,9 @@ import CustomerLayout from '../components/layout/CustomerLayout';
 import { FadeIn } from '../theme/animation';
 import { useAuth } from '@/features/auth/useAuth';
 import DebugContainer from '@/components/debug/DebugContainer';
+// import DebugContainer from '@/components/debug/DebugContainer';
+import { useTranslation } from 'react-i18next';
+import TermsOfServicePage from '@/pages/privacy-terms/TermsOfServicePage';
 // ================================
 // LAZY LOAD COMPONENTS
 // ================================
@@ -37,6 +40,9 @@ const componentMap = {
   ChartGalleryPickerPage: lazy(() => import('../pages/chart-gallery/ChartGalleryPickerPage')),
   WorkspacePage: lazy(() => import('../pages/workspace/WorkspacePage')),
   ChartEditorPage: lazy(() => import('../pages/chart-creator/ChartEditorWithProviders')),
+  PieChartEditorDemo: lazy(() => import('../components/charts/page.example/PieChartEditorDemo')),
+  TermsOfServicePage: lazy(() => import('../pages/privacy-terms/TermsOfServicePage')),
+  PrivacyPolicyPage: lazy(() => import('../pages/privacy-terms/PrivacyPolicyPage')),
 };
 
 // ================================
@@ -130,7 +136,7 @@ const AppRouter: React.FC = () => {
         {/* Catch all route */}
         <Route path="*" element={<Navigate to="/404" replace />} />
       </Routes>
-      <DebugContainer />
+      {/* <DebugContainer /> */}
     </BrowserRouter>
   );
 };
