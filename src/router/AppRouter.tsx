@@ -4,7 +4,6 @@ import { allRoutes, type RouteConfig } from '@/config/routes';
 import CustomerLayout from '../components/layout/CustomerLayout';
 import { FadeIn } from '../theme/animation';
 import { useAuth } from '@/features/auth/useAuth';
-
 // ================================
 // LAZY LOAD COMPONENTS
 // ================================

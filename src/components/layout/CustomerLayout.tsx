@@ -4,8 +4,10 @@ import Header from '../header/Header';
 import Footer from '../footer/Footer';
 
 // import { useTranslation } from 'react-i18next';
-import { PageTransition } from '../../theme/animation';
 import SimpleChatBox from '../ui/SimpleChatBox';
+import { PageTransition } from '../../theme/animation';
+
+// import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/useAuth';
 
 interface CustomerLayoutProps {
