@@ -104,6 +104,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     tryConvert,
     tryConvertColumn,
     validateDuplicateColumns,
+    dateFormat,
   } = useDataset();
   // Temporary edits per cell; applied on blur/enter only
   const [tempEdits, setTempEdits] = useState<Record<string, string>>({});
@@ -277,7 +278,15 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
 
     // Validate against current column type and update parseErrors map
     const colType = columns[c]?.type ?? 'text';
-    const conv = tryConvert(colType, c, r, finalVal);
+    // Use the same date format as the context for consistent validation
+    const conv = tryConvert(
+      colType,
+      c,
+      r,
+      finalVal,
+      undefined,
+      colType === 'date' ? dateFormat : undefined
+    );
     const existing = validationErrors.excelErrors?.parseErrors || {};
     const next: Record<number, number[]> = { ...existing };
     const r1 = r + 1;
