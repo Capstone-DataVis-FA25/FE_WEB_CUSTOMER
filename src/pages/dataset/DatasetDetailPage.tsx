@@ -4,7 +4,16 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SlideInUp } from '@/theme/animation';
-import { ArrowLeft, Trash2, Database, BarChart3, Settings, Save, RotateCcw } from 'lucide-react';
+import {
+  ArrowLeft,
+  Trash2,
+  Database,
+  BarChart3,
+  Settings,
+  Save,
+  RotateCcw,
+  Download,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -945,6 +954,51 @@ const DatasetDetailPage: React.FC = () => {
                                   </code>
                                 </span>
                               </div>
+                            </div>
+                            {/* Export CSV button */}
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  // build CSV and trigger download
+                                  try {
+                                    if (!headerRow || headerRow.length === 0) return;
+                                    const delimiter = ',';
+                                    const escapeCell = (v: string | number | null) => {
+                                      const s = v == null ? '' : String(v);
+                                      return '"' + s.replace(/"/g, '""') + '"';
+                                    };
+                                    const headerLine = headerRow
+                                      .map(h => escapeCell(h.name))
+                                      .join(delimiter);
+                                    const lines = bodyRows.map(r =>
+                                      r.map(c => escapeCell(c)).join(delimiter)
+                                    );
+                                    const csv = [headerLine, ...lines].join('\n');
+                                    const blob = new Blob([csv], {
+                                      type: 'text/csv;charset=utf-8;',
+                                    });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    const safeName = (currentDataset?.name || 'dataset').replace(
+                                      /[^a-z0-9-_\.]/gi,
+                                      '_'
+                                    );
+                                    a.download = `${safeName}.csv`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                  } catch (err) {
+                                    console.error('Export CSV failed', err);
+                                  }
+                                }}
+                                className="ml-3"
+                              >
+                                <Download className="w-4 h-4 mr-2" />
+                                Export CSV
+                              </Button>
                             </div>
                             {/* Mobile format info */}
                             <div className="md:hidden mt-2 grid grid-cols-1 gap-1 text-[11px] text-gray-600 dark:text-gray-400">
