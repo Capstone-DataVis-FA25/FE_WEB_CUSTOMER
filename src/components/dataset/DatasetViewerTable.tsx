@@ -1,5 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { FileText, FileDigit, Calendar } from 'lucide-react';
+// removed DropdownMenu imports — replaced with simple toggle button for showing type
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -46,12 +47,6 @@ const typeIcon = (type: ColumnMeta['type']) => {
       return <FileText size={14} />;
   }
 };
-
-const COLUMN_TYPES = [
-  { label: 'Text', value: 'text', icon: <FileText size={14} /> },
-  { label: 'Number', value: 'number', icon: <FileDigit size={14} /> },
-  { label: 'Date', value: 'date', icon: <Calendar size={14} /> },
-];
 
 /**
  * Lightweight read‑only dataset viewer (no context, no editing).
@@ -154,19 +149,18 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
                               {typeIcon(col.type)}
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            {COLUMN_TYPES.map(t => {
-                              return (
-                                <DropdownMenuItem
-                                  key={t.value}
-                                  // make it non-interactive but styleable
-                                  onSelect={(e: Event) => e.preventDefault()}
-                                  className={`gap-2 cursor-default text-gray-700 dark:text-gray-200 pointer-events-none`}
-                                >
-                                  {t.icon} {t.label}
-                                </DropdownMenuItem>
-                              );
-                            })}
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem
+                              onSelect={(e: Event) => e.preventDefault()}
+                              className={`gap-2 cursor-default text-gray-700 dark:text-gray-200 pointer-events-none`}
+                            >
+                              {typeIcon(col.type)}{' '}
+                              {col.type === 'number'
+                                ? 'Number'
+                                : col.type === 'date'
+                                  ? 'Date'
+                                  : 'Text'}
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
