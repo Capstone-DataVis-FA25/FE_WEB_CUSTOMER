@@ -1,3 +1,6 @@
+import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import DataViewer from '@/components/dataset/DataViewer';
 import FileUpload from '@/components/dataset/FileUpload';
 import SampleDataUpload from '@/components/dataset/SampleDataUpload';
@@ -7,6 +10,7 @@ import { useToastContext } from '@/components/providers/ToastProvider';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
+import { FormProvider, useForm } from '@/contexts/FormContext';
 import { useAppDispatch } from '@/store/hooks';
 import { createDatasetThunk } from '@/features/dataset/datasetThunk';
 import { SlideInUp } from '@/theme/animation';
@@ -24,9 +28,6 @@ import {
   readExcelAsText,
   validateFileSize,
 } from '@/utils/dataProcessors';
-import { useCallback, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 
 type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view';
 
@@ -37,7 +38,10 @@ function CreateDatasetPageContent() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  // Get states from context
+  // Get form states from FormContext
+  const { datasetName, description } = useForm();
+
+  // Get dataset states from DatasetContext
   const {
     originalTextContent,
     setOriginalTextContent,
@@ -47,8 +51,6 @@ function CreateDatasetPageContent() {
     setIsJsonFormat,
     setSelectedDelimiter,
     resetState,
-    datasetName,
-    description,
     parsedValues,
     numberFormat,
     dateFormat,
@@ -99,10 +101,15 @@ function CreateDatasetPageContent() {
         const result = await processFileContent(file, { delimiter: detectedDelimiter });
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Set up 3-layer data structure
+        // Set up 3-layer data structure - batch updates to prevent extra re-renders
+        console.log('📊 Setting originalParsedData');
         setOriginalParsedData(result); // Layer 2: Original parsed data
-        setCurrentParsedData({ ...result }); // Layer 3: Current working copy
+        console.log('📊 Setting currentParsedData');
+        setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
         console.log('Processed result:', result);
+
+        // Batch the remaining state updates
+        console.log('📊 Batching remaining state updates');
         setPreviousViewMode(viewMode);
         setViewMode('view');
       } catch (error) {
@@ -110,6 +117,7 @@ function CreateDatasetPageContent() {
           error instanceof Error ? error.message : t('dataset_fileReadErrorMessage');
         showError(t('dataset_fileReadError'), t(errorMessage));
       } finally {
+        console.log('📊 Setting isProcessing to false');
         setIsProcessing(false);
       }
     },
@@ -343,7 +351,7 @@ function CreateDatasetPageContent() {
 
           // Set up 3-layer data structure
           setOriginalParsedData(result); // Layer 2: Original parsed data
-          setCurrentParsedData({ ...result }); // Layer 3: Current working copy
+          setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
         } else {
           // Parse as regular CSV/text data
           const detectedDelimiter = detectDelimiter(content);
@@ -352,7 +360,7 @@ function CreateDatasetPageContent() {
 
           // Set up 3-layer data structure
           setOriginalParsedData(result); // Layer 2: Original parsed data
-          setCurrentParsedData({ ...result }); // Layer 3: Current working copy
+          setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
         }
 
         setPreviousViewMode(viewMode);
@@ -394,11 +402,11 @@ function CreateDatasetPageContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {isProcessing ? (
-        <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
-          <div className="text-center">
-            <LoadingSpinner />
-          </div>
-        </div>
+        <LoadingSpinner
+          fullScreen={true}
+          title="Processing your file..."
+          subtitle="Please wait while we analyze and parse your data"
+        />
       ) : viewMode === 'view' ? (
         // Data Viewer - Full Width
         <div className="py-8">
@@ -463,9 +471,11 @@ function CreateDatasetPageContent() {
 // Main component with provider wrapper
 function CreateDatasetPage() {
   return (
-    <DatasetProvider>
-      <CreateDatasetPageContent />
-    </DatasetProvider>
+    <FormProvider>
+      <DatasetProvider>
+        <CreateDatasetPageContent />
+      </DatasetProvider>
+    </FormProvider>
   );
 }
 

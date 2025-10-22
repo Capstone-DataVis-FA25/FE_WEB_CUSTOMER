@@ -1,12 +1,12 @@
+import { memo, useCallback, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useDataset, type DateFormat, type NumberFormat } from '@/contexts/DatasetContext';
+import { useForm } from '@/contexts/FormContext';
 import { useAppSelector } from '@/store/hooks';
 import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
-// import { transformWideToLong } from '@/utils/dataProcessors';
 import { Settings, Upload } from 'lucide-react';
-import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 // import { useToastContext } from '../providers/ToastProvider';
 import { DateFormatSelector } from './DateFormatSelector';
@@ -18,42 +18,41 @@ interface DataViewerOptionsProps {
   onChangeData?: () => void;
 }
 
-function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
+const DataViewerOptions = memo(function DataViewerOptions({
+  onUpload,
+  onChangeData,
+}: DataViewerOptionsProps) {
   const { t } = useTranslation();
-  // const { showError } = useToastContext();
   const { creating: isUploading } = useAppSelector(state => state.dataset);
 
-  // Get states from context
+  // Get form states from FormContext
   const {
     datasetName,
     setDatasetName,
-    validationErrors,
-    setValidationError,
     description,
     setDescription,
-    // selectedDelimiter,
-    // setSelectedDelimiter,
+    validationErrors: formValidationErrors,
+    setValidationError: setFormValidationError,
+    hasValidationErrors: hasFormValidationErrors,
+  } = useForm();
+
+  // Get dataset states from DatasetContext
+  const {
     numberFormat,
     setNumberFormat,
     dateFormat,
     setDateFormat,
-    // originalParsedData,
-    // setOriginalParsedData,
-    // setCurrentParsedData,
-    // isJsonFormat,
-    // transformationColumn,
-    // setTransformationColumn,
-    // originalTextContent,
-    hasValidationErrors,
+    hasValidationErrors: hasDatasetValidationErrors,
   } = useDataset();
 
   // Initialize dataset name error on mount and when name changes (centralized)
   useEffect(() => {
     const isEmpty = !datasetName.trim();
-    setValidationError('datasetName', 'empty', isEmpty);
-  }, [datasetName, setValidationError]);
+    setFormValidationError('datasetName', 'empty', isEmpty);
+  }, [datasetName, setFormValidationError]);
 
   // Handle delimiter change - reparse the original content with new delimiter
+  // Note: This function is commented out in the UI, keeping for future use
   // const handleDelimiterChange = useCallback(
   //   (delimiter: string) => {
   //     // No-op if user reselects the same delimiter
@@ -89,13 +88,19 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
     setNumberFormat(format);
   };
 
-  const handleDateFormatChange = (format: DateFormat) => {
-    // No-op if user reselects the same date format
-    if (format === dateFormat) return;
-    setDateFormat(format);
-  };
+  const handleDateFormatChange = useCallback(
+    (format: DateFormat) => {
+      // No-op if user reselects the same date format
+      if (format === dateFormat) return;
+      setDateFormat(format);
+    },
+    [dateFormat, setDateFormat]
+  );
 
-  // Note: transformation UI is currently disabled; remove unused handler to satisfy type checks.
+  // Memoize expensive validation check - combine both form and dataset validation
+  const hasErrors = useMemo(() => {
+    return hasFormValidationErrors() || hasDatasetValidationErrors();
+  }, [hasFormValidationErrors, hasDatasetValidationErrors]);
 
   return (
     <div className="w-full flex-shrink-0">
@@ -126,7 +131,7 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
               disabled={isUploading}
             />
             <div className="flex justify-between items-center mt-1">
-              {validationErrors.datasetName?.empty && (
+              {formValidationErrors.datasetName?.empty && (
                 <p className="text-sm text-red-600 dark:text-red-400">
                   Please enter a name before creating the dataset
                 </p>
@@ -187,19 +192,11 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
             disabled={isUploading}
           />
 
-          {/* Data Transformation Selector */}
-          {/* <DataTransformationSelector
-            headers={originalParsedData?.headers.map(h => h.name) || []}
-            value={transformationColumn ?? ''}
-            onChange={handleTransformationColumnChange}
-            disabled={isUploading || !originalParsedData}
-          /> */}
-
           {/* Action Buttons */}
           <div className="space-y-3 pt-4">
             <Button
               onClick={onUpload}
-              disabled={isUploading || hasValidationErrors()}
+              disabled={isUploading || hasErrors}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isUploading ? (
@@ -229,6 +226,6 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
       </Card>
     </div>
   );
-}
+});
 
 export default DataViewerOptions;

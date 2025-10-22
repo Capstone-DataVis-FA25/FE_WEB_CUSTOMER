@@ -88,9 +88,6 @@ interface ValidationErrors {
     separatorsEqual?: boolean;
     missingDecimalSeparator?: boolean;
   };
-  datasetName?: {
-    empty?: boolean;
-  };
   excelErrors?: { parseErrors: ExcelErrorMap };
   duplicateColumns?: {
     duplicateNames: string[];
@@ -122,11 +119,8 @@ interface DatasetState {
   selectedDelimiter: string;
   numberFormat: NumberFormat;
   dateFormat: DateFormat;
-  transformationColumn?: string | null;
 
-  // Form states
-  datasetName: string;
-  description: string;
+  // Form states removed - now handled by FormContext
 
   // Error states
   validationErrors: ValidationErrors;
@@ -146,11 +140,8 @@ interface DatasetContextType extends DatasetState {
   setSelectedDelimiter: (delimiter: string) => void;
   setNumberFormat: (format: NumberFormat) => void;
   setDateFormat: (format: DateFormat) => void;
-  setTransformationColumn: (column: string | null) => void;
 
-  // Form actions
-  setDatasetName: (name: string) => void;
-  setDescription: (description: string) => void;
+  // Form actions removed - now handled by FormContext
 
   // Error actions
   setValidationError: (category: keyof ValidationErrors, field: string, value: boolean) => void;
@@ -211,9 +202,6 @@ const initialState: DatasetState = {
     decimalSeparator: '.',
   },
   dateFormat: 'DD/MM/YYYY',
-  transformationColumn: null,
-  datasetName: '',
-  description: '',
   validationErrors: { excelErrors: { parseErrors: {} } },
   parsedValues: {},
 };
@@ -226,51 +214,43 @@ interface DatasetProviderProps {
 export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) => {
   const [state, setState] = useState<DatasetState>(initialState);
 
-  // Data actions
-  const setOriginalTextContent = (content: string) => {
+  // Data actions - Memoized with useCallback to prevent re-renders
+  const setOriginalTextContent = useCallback((content: string) => {
     setState(prev => ({ ...prev, originalTextContent: content }));
-  };
+  }, []);
 
-  const setOriginalParsedData = (data: ParsedDataResult | null) => {
-    setState(prev => ({ ...prev, originalParsedData: data }));
-  };
-
-  const setCurrentParsedData = (data: ParsedDataResult | null) => {
-    setState(prev => {
-      const newState = { ...prev, currentParsedData: data };
-      return newState;
+  const setOriginalParsedData = useCallback((data: ParsedDataResult | null) => {
+    console.log('🔧 DatasetContext: setOriginalParsedData called', {
+      dataLength: data?.data?.length,
     });
-  };
+    setState(prev => ({ ...prev, originalParsedData: data }));
+  }, []);
 
-  const setIsJsonFormat = (isJson: boolean) => {
+  const setCurrentParsedData = useCallback((data: ParsedDataResult | null) => {
+    console.log('🔧 DatasetContext: setCurrentParsedData called', {
+      dataLength: data?.data?.length,
+    });
+    setState(prev => ({ ...prev, currentParsedData: data }));
+  }, []);
+
+  const setIsJsonFormat = useCallback((isJson: boolean) => {
     setState(prev => ({ ...prev, isJsonFormat: isJson }));
-  };
+  }, []);
 
-  // Configuration actions
-  const setSelectedDelimiter = (delimiter: string) => {
+  // Configuration actions - Memoized with useCallback
+  const setSelectedDelimiter = useCallback((delimiter: string) => {
     setState(prev => ({ ...prev, selectedDelimiter: delimiter }));
-  };
+  }, []);
 
-  const setNumberFormat = (format: NumberFormat) => {
+  const setNumberFormat = useCallback((format: NumberFormat) => {
     setState(prev => ({ ...prev, numberFormat: format }));
-  };
+  }, []);
 
-  const setDateFormat = (format: DateFormat) => {
+  const setDateFormat = useCallback((format: DateFormat) => {
     setState(prev => ({ ...prev, dateFormat: format }));
-  };
+  }, []);
 
-  const setTransformationColumn = (column: string | null) => {
-    setState(prev => ({ ...prev, transformationColumn: column }));
-  };
-
-  // Form actions
-  const setDatasetName = (name: string) => {
-    setState(prev => ({ ...prev, datasetName: name }));
-  };
-
-  const setDescription = (description: string) => {
-    setState(prev => ({ ...prev, description: description }));
-  };
+  // Form actions removed - now handled by FormContext
 
   // Error actions
   const setValidationError = useCallback(
@@ -410,194 +390,209 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
   }, []);
 
   // Utility actions
-  const resetState = () => {
+  const resetState = useCallback(() => {
     setState(initialState);
-  };
+  }, []);
 
   //Try converting data
-  // Updated tryConvert function with NumberFormat support
-  const tryConvert = (
-    type: DataHeader['type'],
-    colIndex: number,
-    rowIndex: number,
-    raw: string,
-    numberFormat?: NumberFormat,
-    dateFormat?: DateFormat
-  ): ConvertResult => {
-    const original = raw;
-    const v = raw.trim();
+  // Updated tryConvert function with NumberFormat support - Memoized with useCallback
+  const tryConvert = useCallback(
+    (
+      type: DataHeader['type'],
+      colIndex: number,
+      rowIndex: number,
+      raw: string,
+      numberFormat?: NumberFormat,
+      dateFormat?: DateFormat
+    ): ConvertResult => {
+      const original = raw;
+      const v = raw.trim();
 
-    if (v === '') return { ok: true, value: '', changed: false };
-    if (type === 'text') return { ok: true, value: original, changed: false };
+      if (v === '') return { ok: true, value: '', changed: false };
+      if (type === 'text') return { ok: true, value: original, changed: false };
 
-    if (type === 'number') {
-      const { thousandsSeparator, decimalSeparator } = numberFormat || state.numberFormat;
+      if (type === 'number') {
+        const { thousandsSeparator, decimalSeparator } = numberFormat || state.numberFormat;
 
-      // Build regex dynamically
-      const escThousand = thousandsSeparator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const escDecimal = decimalSeparator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Build regex dynamically
+        const escThousand = thousandsSeparator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escDecimal = decimalSeparator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-      // Pattern: optional sign, digits in groups of 1–3 separated by thousand sep, optional decimal part
-      const pattern = new RegExp(`^[-+]?\\d{1,3}(?:${escThousand}\\d{3})*(?:${escDecimal}\\d+)?$`);
+        // Pattern: optional sign, digits in groups of 1–3 separated by thousand sep, optional decimal part
+        const pattern = new RegExp(
+          `^[-+]?\\d{1,3}(?:${escThousand}\\d{3})*(?:${escDecimal}\\d+)?$`
+        );
 
-      if (!pattern.test(v)) {
-        // Store undefined for invalid number
+        if (!pattern.test(v)) {
+          // Store undefined for invalid number
+          updateParsedValue(colIndex, rowIndex, undefined);
+          return { ok: false, value: original, changed: false };
+        }
+
+        // Convert: remove thousands, replace decimal with dot
+        let cleaned = v.replace(new RegExp(escThousand, 'g'), '');
+        cleaned = cleaned.replace(new RegExp(escDecimal, 'g'), '.');
+
+        const parsedNumber = parseFloat(cleaned);
+        if (isNaN(parsedNumber)) {
+          // Store undefined for invalid number
+          updateParsedValue(colIndex, rowIndex, undefined);
+          return { ok: false, value: original, changed: false };
+        }
+
+        // Store parsed number
+        updateParsedValue(colIndex, rowIndex, parsedNumber);
+
+        return {
+          ok: true,
+          value: String(parsedNumber),
+          changed: cleaned !== original,
+        };
+      }
+
+      if (type === 'date') {
+        const fmt = dateFormat || 'YYYY-MM-DD';
+        const parser = dateParsers[fmt];
+        if (parser) {
+          const match = v.match(parser.regex); // <- use match instead of exec
+          if (match) {
+            const iso = parser.parse(match);
+            // Store parsed date as string
+            updateParsedValue(colIndex, rowIndex, iso);
+            return { ok: true, value: iso, changed: iso !== original };
+          }
+        }
+        // Store undefined for invalid date
         updateParsedValue(colIndex, rowIndex, undefined);
         return { ok: false, value: original, changed: false };
       }
 
-      // Convert: remove thousands, replace decimal with dot
-      let cleaned = v.replace(new RegExp(escThousand, 'g'), '');
-      cleaned = cleaned.replace(new RegExp(escDecimal, 'g'), '.');
+      return { ok: true, value: original, changed: false };
+    },
+    [state.numberFormat, state.dateFormat, updateParsedValue]
+  );
 
-      const parsedNumber = parseFloat(cleaned);
-      if (isNaN(parsedNumber)) {
-        // Store undefined for invalid number
-        updateParsedValue(colIndex, rowIndex, undefined);
-        return { ok: false, value: original, changed: false };
+  const tryConvertColumn = useCallback(
+    (
+      colIndex: number,
+      targetType: DataHeader['type'],
+      numberFormat?: NumberFormat,
+      dateFormat?: DateFormat
+    ): { nextData: string[][]; nextColumns: DataHeader[] } => {
+      const currentNumberFormat = numberFormat || state.numberFormat;
+      const currentDateFormat = dateFormat || state.dateFormat;
+
+      // Clear parsed values if changing to text type
+      if (targetType === 'text') {
+        clearParsedValuesForColumn(colIndex);
       }
 
-      // Store parsed number
-      updateParsedValue(colIndex, rowIndex, parsedNumber);
+      // if (targetType === 'number') {
+      //   console.log(
+      //     'tryConvertColumn run with colIndex',
+      //     colIndex,
+      //     'and targetType',
+      //     targetType,
+      //     'and thousandsSeparator',
+      //     currentNumberFormat.thousandsSeparator,
+      //     'and decimalSeparator',
+      //     currentNumberFormat.decimalSeparator
+      //   );
+      // } else if (targetType === 'date') {
+      //   console.log(
+      //     'tryConvertColumn run with colIndex',
+      //     colIndex,
+      //     'and targetType',
+      //     targetType,
+      //     'and format',
+      //     currentDateFormat
+      //   );
+      // }
+      const data = state.currentParsedData?.data || [];
+      const columns = state.currentParsedData?.headers || [];
 
-      return {
-        ok: true,
-        value: String(parsedNumber),
-        changed: cleaned !== original,
-      };
-    }
+      const invalidRows: number[] = [];
 
-    if (type === 'date') {
-      const fmt = dateFormat || 'YYYY-MM-DD';
-      const parser = dateParsers[fmt];
-      if (parser) {
-        const match = v.match(parser.regex); // <- use match instead of exec
-        if (match) {
-          const iso = parser.parse(match);
-          // Store parsed date as string
-          updateParsedValue(colIndex, rowIndex, iso);
-          return { ok: true, value: iso, changed: iso !== original };
+      // Just validation – don’t replace values
+      for (let ri = 0; ri < data.length; ri++) {
+        const raw = data[ri][colIndex] ?? '';
+        let result: ConvertResult = { ok: true, value: '', changed: false };
+        if (targetType === 'number') {
+          result = tryConvert(targetType, colIndex, ri, raw, currentNumberFormat, undefined);
+        } else if (targetType === 'date') {
+          result = tryConvert(targetType, colIndex, ri, raw, undefined, currentDateFormat);
+        }
+
+        if (!result.ok) {
+          invalidRows.push(ri + 1); // 1-based row number
         }
       }
-      // Store undefined for invalid date
-      updateParsedValue(colIndex, rowIndex, undefined);
-      return { ok: false, value: original, changed: false };
-    }
 
-    return { ok: true, value: original, changed: false };
-  };
+      // --- Update Excel error map ---
+      const existing = state.validationErrors.excelErrors?.parseErrors || {};
+      const next: Record<number, number[]> = { ...existing };
 
-  const tryConvertColumn = (
-    colIndex: number,
-    targetType: DataHeader['type'],
-    numberFormat?: NumberFormat,
-    dateFormat?: DateFormat
-  ): { nextData: string[][]; nextColumns: DataHeader[] } => {
-    const currentNumberFormat = numberFormat || state.numberFormat;
-    const currentDateFormat = dateFormat || state.dateFormat;
-
-    // Clear parsed values if changing to text type
-    if (targetType === 'text') {
-      clearParsedValuesForColumn(colIndex);
-    }
-
-    // if (targetType === 'number') {
-    //   console.log(
-    //     'tryConvertColumn run with colIndex',
-    //     colIndex,
-    //     'and targetType',
-    //     targetType,
-    //     'and thousandsSeparator',
-    //     currentNumberFormat.thousandsSeparator,
-    //     'and decimalSeparator',
-    //     currentNumberFormat.decimalSeparator
-    //   );
-    // } else if (targetType === 'date') {
-    //   console.log(
-    //     'tryConvertColumn run with colIndex',
-    //     colIndex,
-    //     'and targetType',
-    //     targetType,
-    //     'and format',
-    //     currentDateFormat
-    //   );
-    // }
-    const data = state.currentParsedData?.data || [];
-    const columns = state.currentParsedData?.headers || [];
-
-    const invalidRows: number[] = [];
-
-    // Just validation – don’t replace values
-    for (let ri = 0; ri < data.length; ri++) {
-      const raw = data[ri][colIndex] ?? '';
-      let result: ConvertResult = { ok: true, value: '', changed: false };
-      if (targetType === 'number') {
-        result = tryConvert(targetType, colIndex, ri, raw, currentNumberFormat, undefined);
-      } else if (targetType === 'date') {
-        result = tryConvert(targetType, colIndex, ri, raw, undefined, currentDateFormat);
-      }
-
-      if (!result.ok) {
-        invalidRows.push(ri + 1); // 1-based row number
-      }
-    }
-
-    // --- Update Excel error map ---
-    const existing = state.validationErrors.excelErrors?.parseErrors || {};
-    const next: Record<number, number[]> = { ...existing };
-
-    // Clear old errors for this column
-    Object.keys(next).forEach(rowKey => {
-      const rowNum = Number(rowKey);
-      next[rowNum] = (next[rowNum] || []).filter(colIdx => colIdx !== colIndex);
-      if (next[rowNum].length === 0) delete next[rowNum];
-    });
-
-    // Add new errors
-    if (invalidRows.length) {
-      invalidRows.forEach(r => {
-        const currentCols = next[r] ? [...next[r]] : [];
-        if (!currentCols.includes(colIndex)) currentCols.push(colIndex);
-        next[r] = currentCols;
+      // Clear old errors for this column
+      Object.keys(next).forEach(rowKey => {
+        const rowNum = Number(rowKey);
+        next[rowNum] = (next[rowNum] || []).filter(colIdx => colIdx !== colIndex);
+        if (next[rowNum].length === 0) delete next[rowNum];
       });
-    }
 
-    setExcelErrors({ parseErrors: next });
-
-    // Data is unchanged
-    const nextData = data;
-
-    // Only update column type
-    const nextColumns = columns.map((col, i) =>
-      i === colIndex ? { ...col, type: targetType } : col
-    );
-
-    return { nextData, nextColumns };
-  };
-
-  const revalidateColumnsOfType = (
-    targetType: DataHeader['type'],
-    format: NumberFormat | DateFormat
-  ) => {
-    if (!state.currentParsedData) return;
-    let formatToUse = format;
-    if (targetType === 'number' && !format) {
-      formatToUse = state.numberFormat;
-    } else if (targetType === 'date' && !format) {
-      formatToUse = state.dateFormat;
-    }
-
-    for (let i = 0; i < (state.currentParsedData.headers?.length || 0); i++) {
-      const colType = state.currentParsedData.headers[i]?.type;
-      if (colType !== targetType) continue;
-
-      if (targetType === 'number') {
-        tryConvertColumn(i, 'number', formatToUse as NumberFormat);
-      } else if (targetType === 'date') {
-        tryConvertColumn(i, 'date', undefined, formatToUse as DateFormat);
+      // Add new errors
+      if (invalidRows.length) {
+        invalidRows.forEach(r => {
+          const currentCols = next[r] ? [...next[r]] : [];
+          if (!currentCols.includes(colIndex)) currentCols.push(colIndex);
+          next[r] = currentCols;
+        });
       }
-    }
-  };
+
+      setExcelErrors({ parseErrors: next });
+
+      // Data is unchanged
+      const nextData = data;
+
+      // Only update column type
+      const nextColumns = columns.map((col, i) =>
+        i === colIndex ? { ...col, type: targetType } : col
+      );
+
+      return { nextData, nextColumns };
+    },
+    [
+      state.currentParsedData,
+      state.numberFormat,
+      state.dateFormat,
+      tryConvert,
+      setExcelErrors,
+      clearParsedValuesForColumn,
+    ]
+  );
+
+  const revalidateColumnsOfType = useCallback(
+    (targetType: DataHeader['type'], format: NumberFormat | DateFormat) => {
+      if (!state.currentParsedData) return;
+      let formatToUse = format;
+      if (targetType === 'number' && !format) {
+        formatToUse = state.numberFormat;
+      } else if (targetType === 'date' && !format) {
+        formatToUse = state.dateFormat;
+      }
+
+      for (let i = 0; i < (state.currentParsedData.headers?.length || 0); i++) {
+        const colType = state.currentParsedData.headers[i]?.type;
+        if (colType !== targetType) continue;
+
+        if (targetType === 'number') {
+          tryConvertColumn(i, 'number', formatToUse as NumberFormat);
+        } else if (targetType === 'date') {
+          tryConvertColumn(i, 'date', undefined, formatToUse as DateFormat);
+        }
+      }
+    },
+    [state.currentParsedData, state.numberFormat, state.dateFormat, tryConvertColumn]
+  );
 
   const contextValue: DatasetContextType = {
     ...state,
@@ -608,9 +603,6 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
     setSelectedDelimiter,
     setNumberFormat,
     setDateFormat,
-    setTransformationColumn,
-    setDatasetName,
-    setDescription,
     setValidationError,
     clearValidationErrors,
     hasValidationErrors,

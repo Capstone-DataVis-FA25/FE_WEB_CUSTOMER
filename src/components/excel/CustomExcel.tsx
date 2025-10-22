@@ -3,6 +3,8 @@
 import type React from 'react';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
+import { useExcelUI } from '@/contexts/ExcelUIContext';
+import ExcelRow from './ExcelRow';
 import { Button } from '@/components/ui/button';
 import * as XLSX from 'xlsx';
 import saveAs from 'file-saver';
@@ -79,20 +81,20 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // Track one-time initialization so prop identity changes (triggered by onDataChange upstream) do not reset edited state
   const initializedRef = useRef(false);
 
-  const [sortConfig, setSortConfig] = useState<{
-    column: number;
-    direction: 'asc' | 'desc';
-  } | null>(null);
-
-  const [selectedRow, setSelectedRow] = useState<number | null>(null);
-  const [selectedColumn, setSelectedColumn] = useState<number | null>(null);
-
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  // New states for validation UX
-  // We only need the setter; the value is not read
-  const [, setTouchedCells] = useState<Set<string>>(new Set());
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  // UI state from context (doesn't cause parent re-renders)
+  const {
+    selectedRow,
+    setSelectedRow,
+    selectedColumn,
+    setSelectedColumn,
+    setTouchedCells,
+    infoMessage,
+    setInfoMessage,
+    sortConfig,
+    setSortConfig,
+  } = useExcelUI();
   const {
     setExcelErrors,
     validationErrors,
@@ -101,8 +103,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     validateDuplicateColumns,
     dateFormat,
   } = useDataset();
-  // Temporary edits per cell; applied on blur/enter only
-  const [tempEdits, setTempEdits] = useState<Record<string, string>>({});
+  // Temporary edits are now managed by ExcelUIContext
 
   // Large dataset heuristics
   const LARGE_ROW_THRESHOLD = 2000;
@@ -119,6 +120,13 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
 
   // Always reset state when initialData, initialColumns, or mode changes
   useEffect(() => {
+    console.log('🔄 CustomExcel useEffect - props changed:', {
+      initialDataLength: initialData.length,
+      initialColumnsLength: initialColumns.length,
+      mode,
+      initialized: initializedRef.current,
+    });
+
     const initCols = (initialColumns.length ? initialColumns : DEFAULT_COLS).map(c => ({
       ...c,
       width: c.width || DEFAULT_WIDTH,
@@ -129,35 +137,74 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     setColumns(initCols);
     setData(initData);
     setFilters(Array(initCols.length).fill(''));
-    initializedRef.current = true;
-  }, [initialColumns, initialData, mode]);
 
-  useEffect(() => {
-    if (historyEnabled && history.length === 0 && columns.length > 0 && data.length > 0) {
-      const first: HistoryEntry = { data: deepClone(data), columns: deepClone(columns) };
+    // Initialize history immediately to prevent extra re-render
+    if (historyEnabled) {
+      const first: HistoryEntry = { data: deepClone(initData), columns: deepClone(initCols) };
       setHistory([first]);
       setHistoryIndex(0);
     }
-  }, [columns, data, history.length, historyEnabled]);
 
-  // Validate duplicate columns whenever columns change
-  useEffect(() => {
-    if (columns.length > 0) {
-      validateDuplicateColumns(columns);
+    // Validate duplicate columns immediately to prevent extra re-render
+    if (initCols.length > 0) {
+      validateDuplicateColumns(initCols);
     }
-  }, [columns, validateDuplicateColumns]);
+
+    initializedRef.current = true;
+  }, [initialColumns, initialData, mode, historyEnabled, validateDuplicateColumns]);
+
+  // History initialization moved to main useEffect to prevent extra re-renders
+
+  // Duplicate column validation moved to main useEffect to prevent extra re-renders
 
   const commit = useCallback(
-    (nextData: string[][], nextCols: DataHeader[], skipHistory = false) => {
-      setData(nextData);
-      setColumns(nextCols);
-      if (historyEnabled && !skipHistory) {
+    (
+      nextData: string[][],
+      nextCols: DataHeader[],
+      skipHistory = false,
+      changes: {
+        dataChanged?: boolean;
+        columnsChanged?: boolean;
+        validationOnly?: boolean;
+      } = { dataChanged: true, columnsChanged: true }
+    ) => {
+      console.log('📝 Commit called:', {
+        dataChanged: changes.dataChanged,
+        columnsChanged: changes.columnsChanged,
+        validationOnly: changes.validationOnly,
+        dataLength: nextData.length,
+        columnsLength: nextCols.length,
+        skipHistory,
+      });
+
+      // Only update data if it actually changed
+      if (changes.dataChanged) {
+        console.log('📊 Updating data state');
+        setData(nextData);
+      }
+
+      // Only update columns if they actually changed
+      if (changes.columnsChanged) {
+        console.log('📋 Updating columns state');
+        setColumns(nextCols);
+      }
+
+      // Only update history if data or columns changed (not for validation-only changes)
+      if (historyEnabled && !skipHistory && (changes.dataChanged || changes.columnsChanged)) {
         const entry: HistoryEntry = { data: deepClone(nextData), columns: deepClone(nextCols) };
         setHistory(prev => [...prev.slice(0, historyIndex + 1), entry]);
         setHistoryIndex(i => i + 1);
       }
-      // Always notify parent (debounced for large data)
-      if (onDataChange) {
+
+      // Only notify parent if data or columns actually changed
+      if (onDataChange && (changes.dataChanged || changes.columnsChanged)) {
+        console.log('📤 Notifying parent (onDataChange):', {
+          dataChanged: changes.dataChanged,
+          columnsChanged: changes.columnsChanged,
+          isLarge,
+          dataLength: nextData.length,
+          columnsLength: nextCols.length,
+        });
         if (isLarge) {
           // Debounce using requestAnimationFrame + timeout
           const fn = onDataChange as unknown as { _timer?: NodeJS.Timeout };
@@ -240,78 +287,89 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // Generic mutation helpers
   // setCell no longer used with temp editing; keep minimal helper if needed in future
   const setHeader = (c: number, val: string) => {
+    console.log('📝 setHeader called:', { column: c, newName: val, currentName: columns[c]?.name });
     const nc = deepClone(columns, true).map((col, i) => (i === c ? { ...col, name: val } : col));
     nc[c].name = val;
-    commit(data, nc);
+    // For header changes, only update columns (no data re-render)
+    commit(data, nc, false, {
+      dataChanged: false, // Don't re-render data cells
+      columnsChanged: true, // Only update column headers
+    });
   };
 
   const setType = (c: number, val: 'text' | 'number' | 'date') => {
+    console.log('🔧 setType called:', { column: c, newType: val, currentType: columns[c]?.type });
     if (columns[c].type === val) return;
     setInfoMessage(null);
 
     const { nextData, nextColumns } = tryConvertColumn(c, val);
 
-    commit(nextData, nextColumns);
-
-    setTouchedCells(prev => new Set([...prev]));
-  };
-
-  // Apply a pending edit for a single cell (trim and commit), then validate
-  const applyCellEdit = (r: number, c: number) => {
-    const key = `${r}-${c}`;
-    const pending = Object.prototype.hasOwnProperty.call(tempEdits, key)
-      ? tempEdits[key]
-      : (data[r][c] ?? '');
-    const finalVal = (pending ?? '').trim();
-
-    // Commit trimmed value to data only (no normalization)
-    const nextData = [...data];
-    const rowCopy = [...nextData[r]];
-    rowCopy[c] = finalVal;
-    nextData[r] = rowCopy;
-    commit(nextData, columns);
-
-    // Validate against current column type and update parseErrors map
-    const colType = columns[c]?.type ?? 'text';
-    // Use the same date format as the context for consistent validation
-    const conv = tryConvert(
-      colType,
-      c,
-      r,
-      finalVal,
-      undefined,
-      colType === 'date' ? dateFormat : undefined
-    );
-    const existing = validationErrors.excelErrors?.parseErrors || {};
-    const next: Record<number, number[]> = { ...existing };
-    const r1 = r + 1;
-    if (conv.ok) {
-      if (next[r1]?.includes(c)) {
-        const remaining = (next[r1] || []).filter(idx => idx !== c);
-        if (remaining.length) next[r1] = remaining;
-        else delete next[r1];
-      }
-    } else {
-      const cols = next[r1] ? [...next[r1]] : [];
-      if (!cols.includes(c)) cols.push(c);
-      next[r1] = cols;
-    }
-    setExcelErrors({ parseErrors: next });
-
-    // Clear temp edit for this cell after applying
-    setTempEdits(prev => {
-      if (!Object.prototype.hasOwnProperty.call(prev, key)) return prev;
-      const nextMap = { ...prev } as Record<string, string>;
-      delete nextMap[key];
-      return nextMap;
+    // For column type changes, only update columns initially (no data re-render)
+    // The validation will run separately and only update data if needed
+    commit(nextData, nextColumns, false, {
+      dataChanged: false, // Don't re-render data cells
+      columnsChanged: true, // Only update column headers
     });
+
+    setTouchedCells(new Set());
   };
+
+  // Handle cell changes from individual ExcelCell components
+  const handleCellChange = useCallback(
+    (rowIndex: number, columnIndex: number, newValue: string) => {
+      const finalVal = newValue.trim();
+      console.log('✏️ handleCellChange called:', {
+        row: rowIndex,
+        col: columnIndex,
+        value: finalVal,
+      });
+
+      // Commit trimmed value to data only (no normalization)
+      const nextData = [...data];
+      const rowCopy = [...nextData[rowIndex]];
+      rowCopy[columnIndex] = finalVal;
+      nextData[rowIndex] = rowCopy;
+      commit(nextData, columns);
+
+      // Validate against current column type and update parseErrors map
+      const colType = columns[columnIndex]?.type ?? 'text';
+      // Use the same date format as the context for consistent validation
+      const conv = tryConvert(
+        colType,
+        columnIndex,
+        rowIndex,
+        finalVal,
+        undefined,
+        colType === 'date' ? dateFormat : undefined
+      );
+      const existing = validationErrors.excelErrors?.parseErrors || {};
+      const next: Record<number, number[]> = { ...existing };
+      const r1 = rowIndex + 1;
+      if (conv.ok) {
+        if (next[r1]?.includes(columnIndex)) {
+          const remaining = (next[r1] || []).filter(idx => idx !== columnIndex);
+          if (remaining.length) next[r1] = remaining;
+          else delete next[r1];
+        }
+      } else {
+        const cols = next[r1] ? [...next[r1]] : [];
+        if (!cols.includes(columnIndex)) cols.push(columnIndex);
+        next[r1] = cols;
+      }
+      setExcelErrors({ parseErrors: next });
+    },
+    [data, columns, commit, tryConvert, dateFormat, validationErrors.excelErrors, setExcelErrors]
+  );
 
   // Add/remove
   const addRow = () => {
     if (mode === 'view') return;
     const nd = [...data, Array(columns.length).fill('')];
-    commit(nd, columns);
+    // Adding row changes both data and columns (new row added)
+    commit(nd, columns, false, {
+      dataChanged: true, // Update data cells
+      columnsChanged: true, // Update column headers (for row count)
+    });
   };
   const addColumn = () => {
     if (mode === 'view') return;
@@ -325,7 +383,11 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       },
     ];
     const nd = data.map(r => [...r, '']) as string[][];
-    commit(nd, nc);
+    // Adding column changes both data and columns
+    commit(nd, nc, false, {
+      dataChanged: true, // Update data cells (new column added)
+      columnsChanged: true, // Update column headers
+    });
     setFilters(f => [...f, '']);
   };
 
@@ -333,7 +395,11 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     if (mode === 'view' || data.length <= 1) return;
     const nd = data.filter((_, i) => i !== r);
     setSelectedRow(null);
-    commit(nd, columns);
+    // Removing row changes both data and columns
+    commit(nd, columns, false, {
+      dataChanged: true, // Update data cells
+      columnsChanged: true, // Update column headers (for row count)
+    });
   };
 
   const removeColumn = (c: number) => {
@@ -342,7 +408,11 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     const nd = data.map(r => r.filter((_, i) => i !== c));
     setSelectedColumn(null);
     setSortConfig(null);
-    commit(nd, nc);
+    // Removing column changes both data and columns
+    commit(nd, nc, false, {
+      dataChanged: true, // Update data cells
+      columnsChanged: true, // Update column headers
+    });
     setFilters(f => f.filter((_, i) => i !== c));
   };
 
@@ -404,7 +474,11 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       }
     });
 
-    commit(nd, columns);
+    // Sorting changes data order but not columns
+    commit(nd, columns, false, {
+      dataChanged: true, // Update data cells (reordered)
+      columnsChanged: false, // Don't re-render column headers
+    });
   };
 
   // Filters
@@ -426,11 +500,6 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       );
   }, [data, filters]);
 
-  // Map of parse error cells from centralized validation state
-  const parseErrorsMap = useMemo(() => {
-    return validationErrors.excelErrors?.parseErrors || {};
-  }, [validationErrors.excelErrors]);
-
   // Virtualization calculations
   useEffect(() => {
     if (!scrollRef.current) return;
@@ -438,12 +507,55 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     const resize = () => setViewportHeight(el.clientHeight);
     resize();
     window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
+    return () => {
+      window.removeEventListener('resize', resize);
+      // Cleanup animation frame
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
   }, []);
 
-  const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
-  };
+  // Use useRef to track scroll position without causing re-renders
+  const scrollTopRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+
+  console.log('🔄 CustomExcel re-render:', {
+    dataLength: initialData.length,
+    columnsLength: initialColumns.length,
+    mode,
+    timestamp: new Date().toISOString(),
+    onDataChange: !!onDataChange,
+    scrollTop: scrollTop,
+    isScrolling: scrollTopRef.current !== scrollTop,
+  });
+
+  const onScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      const newScrollTop = e.currentTarget.scrollTop;
+      scrollTopRef.current = newScrollTop;
+
+      // Cancel previous animation frame
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+
+      // Use requestAnimationFrame for smooth updates
+      rafRef.current = requestAnimationFrame(() => {
+        // Only update state if we need to recalculate visible rows
+        if (isLarge) {
+          const newStartIndex = Math.max(0, Math.floor(newScrollTop / ROW_HEIGHT) - 2);
+          const currentStartIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 2);
+
+          // Only update if the visible range actually changed
+          if (newStartIndex !== currentStartIndex) {
+            setScrollTop(newScrollTop);
+          }
+        }
+      });
+    },
+    [isLarge, scrollTop, ROW_HEIGHT]
+  );
 
   const visibleCount = Math.ceil(viewportHeight / ROW_HEIGHT) + 5;
   const startIndex = isLarge ? Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 2) : 0;
@@ -749,75 +861,18 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
                 </tr>
               )}
               {rowsToRender.map(({ row, i }) => (
-                <tr
+                <ExcelRow
                   key={i}
-                  className={`hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
-                    selectedRow === i ? 'bg-blue-100 dark:bg-blue-900/50' : ''
-                  }`}
-                  onClick={() => setSelectedRow(selectedRow === i ? null : i)}
-                >
-                  <td className="sticky left-0 z-20 bg-gray-100 dark:bg-gray-700 border-r border-b border-gray-300 dark:border-gray-600 text-center text-gray-600 dark:text-gray-300 px-2 text-xs">
-                    {i + 1}
-                    {selectedRow === i && (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={e => {
-                          e.stopPropagation();
-                          setSelectedRow(null);
-                        }}
-                        className="w-4 h-4 ml-1"
-                      >
-                        <X size={10} className="text-blue-500" />
-                      </Button>
-                    )}
-                  </td>
-                  {columns.map((col, ci) => (
-                    <td
-                      key={ci}
-                      className="border-b border-r border-gray-200 dark:border-gray-600"
-                      style={{ width: col.width || DEFAULT_WIDTH, minWidth: 150 }}
-                    >
-                      <input
-                        data-cell={`${i}-${ci}`}
-                        value={
-                          Object.prototype.hasOwnProperty.call(tempEdits, `${i}-${ci}`)
-                            ? tempEdits[`${i}-${ci}`]
-                            : row[ci] || ''
-                        }
-                        readOnly={mode === 'view'}
-                        onChange={e => {
-                          const key = `${i}-${ci}`;
-                          const val = e.target.value;
-                          setTempEdits(prev => ({ ...prev, [key]: val }));
-                        }}
-                        onBlur={() => {
-                          setTouchedCells(s => new Set(s).add(`${i}-${ci}`));
-                          applyCellEdit(i, ci);
-                        }}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            (e.target as HTMLInputElement).blur();
-                          }
-                        }}
-                        type="text"
-                        placeholder={col.type === 'date' ? 'YYYY-MM-DD' : ''}
-                        className={`w-full h-full p-2 bg-transparent border-none text-sm ${mode === 'edit' ? 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-blue-50 dark:focus:bg-blue-900/40' : 'cursor-default'} ${
-                          // Highlight strictly based on centralized parse errors
-                          (parseErrorsMap[i + 1]?.includes(ci) ?? false)
-                            ? 'bg-red-50 dark:bg-red-900/30 ring-1 ring-red-400'
-                            : ''
-                        }`}
-                        title={
-                          (parseErrorsMap[i + 1]?.includes(ci) ?? false)
-                            ? 'Ô này có lỗi phân tích cú pháp'
-                            : ''
-                        }
-                      />
-                    </td>
-                  ))}
-                </tr>
+                  rowIndex={i}
+                  rowData={row}
+                  columns={columns}
+                  isSelected={selectedRow === i}
+                  mode={mode}
+                  validationErrors={validationErrors}
+                  onRowSelect={setSelectedRow}
+                  onCellChange={handleCellChange}
+                  onDataChange={onDataChange}
+                />
               ))}
               {isLarge && bottomSpacer > 0 && (
                 <tr style={{ height: bottomSpacer }}>
