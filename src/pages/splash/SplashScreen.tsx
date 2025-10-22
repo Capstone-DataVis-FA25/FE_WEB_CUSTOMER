@@ -59,7 +59,7 @@ export default function SplashScreen({ onDone }: SplashScreenProps) {
       <div className="relative z-10 flex flex-col items-center justify-center">
         {/* Logo container with animation */}
         <div className="mb-8 animate-fade-in-scale">
-          <div className="relative w-32 h-32 flex items-center justify-center">
+          <div className="relative w-50 h-50 flex items-center justify-center">
             {/* Glow effect */}
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-2xl opacity-25 animate-pulse dark:opacity-30"></div>
 
@@ -67,7 +67,7 @@ export default function SplashScreen({ onDone }: SplashScreenProps) {
             <img
               src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/remove_bg_logo-ZHPgfK6ogYcw9zzL37rPOJMcQJ8RTq.png"
               alt="DataVis Logo"
-              className="w-28 h-28 object-contain relative z-10 drop-shadow-lg"
+              className="w-80 h-80 object-contain relative z-10 drop-shadow-lg"
             />
           </div>
         </div>
@@ -90,7 +90,9 @@ export default function SplashScreen({ onDone }: SplashScreenProps) {
 
           {/* Loading text */}
           <div className="text-center">
-            <p className="text-sm text-muted-foreground font-medium">Loading your dashboard</p>
+            <p className="text-sm text-muted-foreground font-medium">
+              Welcome to Nexora Production
+            </p>
             <p className="text-xs text-muted-foreground mt-1">{Math.round(progress)}%</p>
           </div>
         </div>
@@ -112,12 +114,23 @@ export default function SplashScreen({ onDone }: SplashScreenProps) {
         </div>
       </div>
 
-      {/* Bottom text */}
+      {/* Footer - small 'from' label with Meta-style logo */}
       <div
-        className="absolute bottom-8 text-center animate-fade-in"
+        className="absolute bottom-6 w-full flex items-center justify-center animate-fade-in"
         style={{ animationDelay: '1.2s' }}
       >
-        <p className="text-xs text-slate-500">Preparing your data insights...</p>
+        <div className="flex items-center gap-3 text-center text-xs text-slate-500">
+          <div className="text-[11px]">from</div>
+          {/* Simple inline Meta-style logo (infinite loop glyph) */}
+          <div className="flex items-center gap-3">
+            <img
+              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/remove_bg_logo-ZHPgfK6ogYcw9zzL37rPOJMcQJ8RTq.png"
+              alt="DataVis logo"
+              className="w-20 h-20 object-contain"
+            />
+            <span className="font-semibold text-sm text-blue-600">DataVis</span>
+          </div>
+        </div>
       </div>
     </div>
   );
