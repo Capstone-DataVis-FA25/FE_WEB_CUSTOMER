@@ -46,14 +46,12 @@ const Header: React.FC<HeaderProps> = ({
 
   const { goToAuth } = useNavigation();
 
-  // Navigation items
   const navItems = [
     { name: t('navigation_home'), href: '/' },
     ...(isAuthenticated ? [{ name: 'Workspace', href: '/workspace' }] : []),
     { name: t('navigation_about'), href: '/about-us' },
   ];
 
-  // Resources dropdown items
   const resourcesItems = [
     { name: 'FAQ', href: '/resources/frequent-questions' },
     { name: 'Changelog', href: '/resources/changelog' },
@@ -66,7 +64,6 @@ const Header: React.FC<HeaderProps> = ({
     { name: 'Terms Service', href: '/terms-of-service' },
   ];
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -89,14 +86,13 @@ const Header: React.FC<HeaderProps> = ({
       <header className="sticky top-0 z-50 bg-gradient-to-r from-white/95 via-blue-50/95 to-purple-50/95 dark:from-gray-900/95 dark:via-gray-900/95 dark:to-gray-800/95 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg dark:shadow-gray-900/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
             <SlideInDown className="flex items-center space-x-2">
               <Link
                 to={isAuthenticated ? '/workspace' : '/'}
                 className="flex items-center space-x-2 group"
                 aria-label="Go to home"
               >
-                <div className="w-10 h-10  rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center">
                   <img
                     src="https://res.cloudinary.com/dfvy81evi/image/upload/v1754983215/only_logo-removebg-preview_ncdidg.png"
                     alt="Logo"
@@ -114,7 +110,6 @@ const Header: React.FC<HeaderProps> = ({
               </Link>
             </SlideInDown>
 
-            {/* Navigation - Desktop */}
             <nav className="hidden lg:flex items-center space-x-8">
               {navItems.map((item, index) => (
                 <FadeIn key={item.name} delay={index * 0.1}>
@@ -128,33 +123,34 @@ const Header: React.FC<HeaderProps> = ({
                 </FadeIn>
               ))}
 
-              {/* Resources Dropdown */}
               <FadeIn delay={0.4}>
-                <div className="relative" ref={resourcesDropdownRef}>
+                <div
+                  className="relative"
+                  ref={resourcesDropdownRef}
+                  onMouseEnter={() => setIsResourcesDropdownOpen(true)}
+                  onMouseLeave={() => setIsResourcesDropdownOpen(false)}
+                >
                   <button
-                    onClick={() => setIsResourcesDropdownOpen(!isResourcesDropdownOpen)}
-                    onMouseEnter={() => setIsResourcesDropdownOpen(true)}
+                    onClick={() => setIsResourcesDropdownOpen(p => !p)}
                     className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 font-medium relative group px-3 py-2 rounded-lg hover:bg-blue-50/50 dark:hover:bg-blue-900/20 flex items-center space-x-1"
+                    aria-expanded={isResourcesDropdownOpen}
+                    aria-haspopup="menu"
                   >
                     <span>Resources</span>
                     <ChevronDown
                       className={`w-4 h-4 transition-transform duration-200 ${isResourcesDropdownOpen ? 'rotate-180' : ''}`}
                     />
-                    <span className="absolute inset-x-0 -bottom-1 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200 rounded-full" />
                   </button>
 
-                  {/* Resources Dropdown Menu */}
                   {isResourcesDropdownOpen && (
-                    <SlideInDown
-                      className="absolute left-0 mt-2 w-60 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-2 z-50 ring-1 ring-black/5 dark:ring-white/5"
-                      onMouseLeave={() => setIsResourcesDropdownOpen(false)}
-                    >
+                    <SlideInDown className="absolute left-0 mt-2 w-60 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-2 z-50 ring-1 ring-black/5 dark:ring-white/5">
                       <div className="grid grid-cols-2 gap-1 px-2">
                         {resourcesItems.map((item, index) => (
                           <FadeIn key={item.name} delay={index * 0.05}>
                             <Link
                               to={item.href}
                               className="block px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 rounded-xl font-medium"
+                              onClick={() => setIsResourcesDropdownOpen(false)}
                             >
                               {item.name}
                             </Link>
@@ -167,11 +163,9 @@ const Header: React.FC<HeaderProps> = ({
               </FadeIn>
             </nav>
 
-            {/* Right Side Actions */}
             <div className="flex items-center space-x-3">
               {isAuthenticated ? (
                 <FadeIn delay={0.3} className="flex items-center space-x-3">
-                  {/* Notifications */}
                   <AnimatedButton className="relative p-2.5 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 ring-1 ring-gray-200/50 dark:ring-gray-700/50 bg-white/50 dark:bg-gray-800/50 shadow-sm">
                     <Bell className="w-5 h-5" />
                     {notificationCount > 0 && (
@@ -181,10 +175,9 @@ const Header: React.FC<HeaderProps> = ({
                     )}
                   </AnimatedButton>
 
-                  {/* User Dropdown */}
                   <div className="relative" ref={dropdownRef}>
                     <AnimatedButton
-                      onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                      onClick={() => setIsUserDropdownOpen(p => !p)}
                       className="flex items-center space-x-2 p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 ring-1 ring-gray-200/50 dark:ring-gray-700/50 bg-white/50 dark:bg-gray-800/50 shadow-sm"
                     >
                       <Avatar className="w-8 h-8 ring-4 ring-blue-500/20">
@@ -202,10 +195,8 @@ const Header: React.FC<HeaderProps> = ({
                       />
                     </AnimatedButton>
 
-                    {/* Dropdown Menu */}
                     {isUserDropdownOpen && (
                       <SlideInDown className="absolute right-0 mt-2 w-80 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-3 z-50 ring-1 ring-black/5 dark:ring-white/5">
-                        {/* User Info Header */}
                         <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-700/50 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-900/20 dark:to-purple-900/20 mx-2 rounded-xl mb-2">
                           <div className="flex items-center space-x-3">
                             <div className="flex-1 min-w-0">
@@ -219,7 +210,6 @@ const Header: React.FC<HeaderProps> = ({
                           </div>
                         </div>
 
-                        {/* Navigation Links */}
                         <div className="px-2 py-1 space-y-1">
                           <Link
                             to="/profile"
@@ -237,10 +227,8 @@ const Header: React.FC<HeaderProps> = ({
                           </Link>
                         </div>
 
-                        {/* Divider */}
                         <div className="mx-4 my-2 border-t border-gray-200 dark:border-gray-700/50"></div>
 
-                        {/* Settings Section */}
                         <div className="px-2 py-1 space-y-2">
                           <div className="flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl transition-all duration-200 group">
                             <div className="flex items-center">
@@ -262,10 +250,8 @@ const Header: React.FC<HeaderProps> = ({
                           </div>
                         </div>
 
-                        {/* Divider */}
                         <div className="mx-4 my-2 border-t border-gray-200 dark:border-gray-700/50"></div>
 
-                        {/* Logout */}
                         <div className="px-2 py-1">
                           <button
                             onClick={onLogout}
@@ -296,9 +282,8 @@ const Header: React.FC<HeaderProps> = ({
                 </FadeIn>
               )}
 
-              {/* Mobile Menu Button */}
               <AnimatedButton
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                onClick={() => setIsMenuOpen(p => !p)}
                 className="lg:hidden p-2.5 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 ring-1 ring-gray-200/50 dark:ring-gray-700/50 bg-white/50 dark:bg-gray-800/50 shadow-sm"
               >
                 {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -306,11 +291,9 @@ const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Mobile Menu */}
           {isMenuOpen && (
             <SlideInDown className="lg:hidden border-t border-gray-200/50 dark:border-gray-700/50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md">
               <div className="px-2 pt-4 pb-3 space-y-1">
-                {/* Search Bar - Mobile */}
                 <div className="relative mb-4">
                   <input
                     type="text"
@@ -320,7 +303,6 @@ const Header: React.FC<HeaderProps> = ({
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
                 </div>
 
-                {/* Navigation Items */}
                 {navItems.map((item, index) => (
                   <FadeIn key={item.name} delay={index * 0.05}>
                     <Link
@@ -332,7 +314,6 @@ const Header: React.FC<HeaderProps> = ({
                   </FadeIn>
                 ))}
 
-                {/* Resources Section - Mobile */}
                 <FadeIn delay={0.3}>
                   <div className="pt-2">
                     <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -353,7 +334,6 @@ const Header: React.FC<HeaderProps> = ({
                   </div>
                 </FadeIn>
 
-                {/* Mobile Actions */}
                 {!isAuthenticated && (
                   <div className="pt-4 space-y-3">
                     <AnimatedButton
