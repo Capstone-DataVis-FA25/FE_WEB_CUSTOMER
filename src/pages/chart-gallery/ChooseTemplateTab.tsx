@@ -25,13 +25,11 @@ import {
   Filter,
   Grid3X3,
   TrendingUp,
-  Eye,
   ArrowRight,
   Info,
   Database,
 } from 'lucide-react';
 import { useToastContext } from '@/components/providers/ToastProvider';
-import { useDataset } from '@/features/dataset/useDataset';
 import Routers from '@/router/routers';
 import type { ChartCategory, ChartTemplate } from '@/types/chart-gallery-types';
 import ChartTemplateCard from './ChartTemplateCard';
