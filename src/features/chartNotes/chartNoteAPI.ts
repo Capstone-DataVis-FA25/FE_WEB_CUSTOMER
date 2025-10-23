@@ -4,19 +4,7 @@ import type { ChartNote, CreateChartNoteRequest, UpdateChartNoteRequest } from '
 const API_BASE = '/chart-notes';
 
 // Helper function to transform BE response to FE format
-const transformChartNote = (note: {
-  id: string;
-  chartId: string;
-  content: string;
-  isCompleted: boolean;
-  author: {
-    id: string;
-    email: string;
-    firstName?: string;
-    lastName?: string;
-  };
-  createdAt: string;
-}): ChartNote => {
+const transformChartNote = (note: ChartNote): ChartNote => {
   return {
     id: note.id,
     chartId: note.chartId,
