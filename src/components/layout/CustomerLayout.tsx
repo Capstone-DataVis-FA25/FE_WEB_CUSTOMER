@@ -2,8 +2,12 @@ import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Header from '../header/Header';
 import Footer from '../footer/Footer';
-import { PageTransition, LoadingSpinner } from '../../theme/animation';
-import { useTranslation } from 'react-i18next';
+
+// import { useTranslation } from 'react-i18next';
+import SimpleChatBox from '../ui/SimpleChatBox';
+import { PageTransition } from '../../theme/animation';
+
+// import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/useAuth';
 
 interface CustomerLayoutProps {
@@ -12,8 +16,8 @@ interface CustomerLayoutProps {
 
 const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
-  const { t } = useTranslation();
+  const { user, isAuthenticated, logout } = useAuth();
+  // const { t } = useTranslation();
   const location = useLocation();
   const isFullScreen = location.pathname.includes('/chart-editor');
 
@@ -29,16 +33,17 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
     logout();
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5">
-        <div className="text-center space-y-4">
-          <LoadingSpinner size={48} className="border-primary/30 border-t-primary" />
-          <p className="text-gray-600 font-medium">{t('loading')}</p>
-        </div>
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   console.log('TÔI ĐANG Ở CUSTOMER LAYOUT');
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5">
+  //       <div className="text-center space-y-4">
+  //         <LoadingSpinner />
+  //         <p className="text-gray-600 font-medium">{t('loading')}</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen flex flex-col min-w-0 bg-gray-50">
@@ -59,6 +64,9 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
           {children ? children : <Outlet />}
         </PageTransition>
       </main>
+
+      {/* Chatbox */}
+      <SimpleChatBox />
 
       {/* Footer */}
       {!isFullScreen && <Footer />}

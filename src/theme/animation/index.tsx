@@ -222,19 +222,6 @@ export const PageTransition: React.FC<{
   </motion.div>
 );
 
-// Loading Spinner Component
-export const LoadingSpinner: React.FC<{
-  size?: number;
-  className?: string;
-}> = ({ size = 24, className }) => (
-  <motion.div
-    variants={animationPresets.spinner}
-    animate="spin"
-    className={`inline-block border-2 border-gray-300 border-t-blue-500 rounded-full ${className || ''}`}
-    style={{ width: size, height: size }}
-  />
-);
-
 // Progress Bar Component
 export const AnimatedProgress: React.FC<{
   progress: number;

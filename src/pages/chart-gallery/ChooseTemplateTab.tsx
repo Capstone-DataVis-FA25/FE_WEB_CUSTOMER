@@ -1,10 +1,10 @@
+import chartTemplatesData from './chartTemplatesData';
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,7 +18,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import Pagination from '@/components/ui/pagination';
-import ChartPreview from '@/components/charts/preview/ChartPreview';
 import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
 import {
   Search,
@@ -35,22 +34,19 @@ import { useToastContext } from '@/components/providers/ToastProvider';
 import { useDataset } from '@/features/dataset/useDataset';
 import Routers from '@/router/routers';
 import type { ChartCategory, ChartTemplate } from '@/types/chart-gallery-types';
+import ChartTemplateCard from './ChartTemplateCard';
 
 export default function ChooseTemplateTab() {
   const { t } = useTranslation();
   const location = useLocation();
   const { showError, showSuccess } = useToastContext();
   const navigate = useNavigate();
-  const { getDatasetById } = useDataset();
 
   // Extract data from both location state AND query parameters
   const locationState = location.state as {
     datasetId?: string;
     datasetName?: string;
   } | null;
-
-  console.log(`DATASET ID GET FROM DATASET CARD :${locationState?.datasetId}`);
-  console.log(`DATASET NAME GET FROM DATASET CARD :${locationState?.datasetName}`);
 
   // Get datasetId from state first, then fallback to query params
   const datasetIdFromState = locationState?.datasetId;
@@ -64,21 +60,6 @@ export default function ChooseTemplateTab() {
 
   // Use local state instead of location state
   const datasetId = currentDatasetId;
-  const datasetName = currentDatasetName;
-  // const preselectedChartType = locationState?.chartType; // reserved for future use
-
-  console.log('ChooseTemplateTab - datasetIdFromState:', datasetIdFromState);
-  console.log('ChooseTemplateTab - Final datasetId:', datasetId);
-
-  // // Effect to sync URL when dataset changes
-  // useEffect(() => {
-  //   if (datasetId) {
-  //     // Update URL params when dataset is selected
-  //     const newSearchParams = new URLSearchParams();
-  //     newSearchParams.set('datasetId', datasetId);
-  //     navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
-  //   }
-  // }, [datasetId, navigate, location.pathname]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<ChartCategory[]>([]);
@@ -92,7 +73,7 @@ export default function ChooseTemplateTab() {
   const [showDatasetModal, setShowDatasetModal] = useState(false);
 
   // Handle dataset selection from modal
-  const handleSelectDataset = async (selectedDatasetId: string) => {
+  const handleSelectDataset = async (selectedDatasetId: string, selectedDatasetName: string) => {
     try {
       setIsLoadingDataset(true);
 
@@ -108,12 +89,9 @@ export default function ChooseTemplateTab() {
         return;
       }
 
-      // Load dataset information
-      const dataset = await getDatasetById(selectedDatasetId).unwrap();
-
       // Update current dataset state
       setCurrentDatasetId(selectedDatasetId);
-      setCurrentDatasetName(dataset.name || 'Selected Dataset');
+      setCurrentDatasetName(selectedDatasetName);
 
       // If we have a template selected, continue with it
       if (selectedTemplate) {
@@ -121,7 +99,7 @@ export default function ChooseTemplateTab() {
       }
 
       setShowDatasetModal(false);
-      showSuccess(`Selected dataset: ${dataset.name}`);
+      showSuccess(`Selected datasset successfully`);
     } catch (error) {
       console.error('Failed to load dataset:', error);
       showError('Failed to load selected dataset');
@@ -134,7 +112,8 @@ export default function ChooseTemplateTab() {
   const continueWithTemplate = (template: ChartTemplate, datasetIdParam?: string) => {
     try {
       // Only allow chart types supported by CreateChartRequest
-      if (!['line', 'bar', 'area'].includes(template.type)) {
+      // Extend support to include 'scatter'
+      if (!['line', 'bar', 'area', 'scatter'].includes(template.type)) {
         showError(
           t('chart_create_error', 'Error'),
           t('chart_create_unsupported_type', 'This chart type is not supported for creation.')
@@ -155,7 +134,7 @@ export default function ChooseTemplateTab() {
       // ChartEditorPage will fetch dataset and setup default config, name, description
       navigate(`${Routers.CHART_EDITOR}${finalDatasetId ? `?${params.toString()}` : ''}`, {
         state: {
-          type: template.type, // Pass chart type via state
+          type: template.type,
         },
       });
     } catch (error: unknown) {
@@ -223,161 +202,7 @@ export default function ChooseTemplateTab() {
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        const mockCategories: ChartCategory[] = [
-          {
-            id: 'All',
-            name: t('chart_gallery_category_all'),
-            templates: [],
-          },
-          {
-            id: 'basic',
-            name: t('chart_gallery_category_basic'),
-            templates: [
-              {
-                id: 'line-basic',
-                name: t('chart_gallery_line_basic'),
-                description: t('chart_gallery_line_basic_desc'),
-                type: 'line',
-                category: 'basic',
-                configuration: { type: 'line' },
-              },
-              {
-                id: 'bar-basic',
-                name: t('chart_gallery_bar_basic'),
-                description: t('chart_gallery_bar_basic_desc'),
-                type: 'bar',
-                category: 'basic',
-                configuration: { type: 'bar' },
-              },
-              {
-                id: 'area-basic',
-                name: t('chart_gallery_area_basic'),
-                description: t('chart_gallery_area_basic_desc'),
-                type: 'area',
-                category: 'basic',
-                configuration: { type: 'area' },
-              },
-              {
-                id: 'pie-basic',
-                name: t('chart_gallery_pie_basic'),
-                description: t('chart_gallery_pie_basic_desc'),
-                type: 'pie',
-                category: 'basic',
-                configuration: { type: 'pie' },
-              },
-              {
-                id: 'donut-basic',
-                name: t('chart_gallery_donut_basic'),
-                description: t('chart_gallery_donut_basic_desc'),
-                type: 'donut',
-                category: 'basic',
-                configuration: { type: 'donut' },
-              },
-              {
-                id: 'column-basic',
-                name: t('chart_gallery_column_basic'),
-                description: t('chart_gallery_column_basic_desc'),
-                type: 'column',
-                category: 'basic',
-                configuration: { type: 'column' },
-              },
-            ],
-          },
-          {
-            id: 'advanced',
-            name: t('chart_gallery_category_advanced'),
-            templates: [
-              {
-                id: 'scatter-advanced',
-                name: t('chart_gallery_scatter_advanced'),
-                description: t('chart_gallery_scatter_advanced_desc'),
-                type: 'scatter',
-                category: 'advanced',
-                configuration: { type: 'scatter' },
-              },
-              {
-                id: 'heatmap-advanced',
-                name: t('chart_gallery_heatmap_specialized'),
-                description: t('chart_gallery_heatmap_specialized_desc'),
-                type: 'heatmap',
-                category: 'advanced',
-                configuration: { type: 'heatmap' },
-              },
-              {
-                id: 'radar-advanced',
-                name: t('chart_gallery_radar_advanced'),
-                description: t('chart_gallery_radar_advanced_desc'),
-                type: 'radar',
-                category: 'advanced',
-                configuration: { type: 'radar' },
-              },
-              {
-                id: 'bubble-advanced',
-                name: t('chart_gallery_bubble_advanced'),
-                description: t('chart_gallery_bubble_advanced_desc'),
-                type: 'bubble',
-                category: 'advanced',
-                configuration: { type: 'bubble' },
-              },
-              {
-                id: 'treemap-advanced',
-                name: t('chart_gallery_treemap_advanced'),
-                description: t('chart_gallery_treemap_advanced_desc'),
-                type: 'treemap',
-                category: 'advanced',
-                configuration: { type: 'treemap' },
-              },
-            ],
-          },
-          {
-            id: 'specialized',
-            name: t('chart_gallery_category_specialized'),
-            templates: [
-              {
-                id: 'map-specialized',
-                name: t('chart_gallery_map_specialized'),
-                description: t('chart_gallery_map_specialized_desc'),
-                type: 'map',
-                category: 'specialized',
-                configuration: { type: 'map' },
-              },
-              {
-                id: 'sankey-specialized',
-                name: t('chart_gallery_sankey_advanced'),
-                description: t('chart_gallery_sankey_advanced_desc'),
-                type: 'sankey',
-                category: 'specialized',
-                configuration: { type: 'sankey' },
-              },
-              {
-                id: 'gauge-specialized',
-                name: t('chart_gallery_gauge_specialized'),
-                description: t('chart_gallery_gauge_specialized_desc'),
-                type: 'gauge',
-                category: 'specialized',
-                configuration: { type: 'gauge' },
-              },
-              {
-                id: 'funnel-specialized',
-                name: t('chart_gallery_funnel_specialized'),
-                description: t('chart_gallery_funnel_specialized_desc'),
-                type: 'funnel',
-                category: 'specialized',
-                configuration: { type: 'funnel' },
-              },
-              {
-                id: 'waterfall-specialized',
-                name: t('chart_gallery_waterfall_specialized'),
-                description: t('chart_gallery_waterfall_specialized_desc'),
-                type: 'waterfall',
-                category: 'specialized',
-                configuration: { type: 'waterfall' },
-              },
-            ],
-          },
-        ];
-
-        setCategories(mockCategories);
+        setCategories(chartTemplatesData);
       } catch {
         showError(t('chart_gallery_error_loading'));
       } finally {
@@ -476,13 +301,13 @@ export default function ChooseTemplateTab() {
           </div>
 
           {datasetId ? (
-            <div className="text-xs text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+            <div className="text-xs text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded mt-2">
               <div className="font-medium text-blue-800 dark:text-blue-200">
-                Dataset name: {datasetName || 'Selected Dataset'}
+                Dataset name: {currentDatasetName || 'Selected Dataset'}
               </div>
             </div>
           ) : (
-            <div className="text-xs text-gray-600 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+            <div className="text-xs text-gray-600 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 p-2 rounded mt-2">
               No dataset selected - will use sample data
             </div>
           )}
@@ -636,9 +461,6 @@ export default function ChooseTemplateTab() {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {t('chart_gallery_chart_templates')}
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {filteredTemplates.length} {t('chart_gallery_templates_count')}
-              </p>
             </div>
 
             {/* Selected Template Info */}
@@ -802,108 +624,12 @@ export default function ChooseTemplateTab() {
               {paginatedTemplates.map(template => {
                 const isSelected = selectedTemplate?.id === template.id;
                 return (
-                  <motion.div
+                  <ChartTemplateCard
                     key={template.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    whileHover={{ y: -5 }}
-                    className="group"
-                  >
-                    <Card
-                      className={`h-full overflow-hidden transition-all duration-300 cursor-pointer ${
-                        isSelected
-                          ? 'border-gray-400 ring-2 ring-gray-400/20 shadow-lg bg-gray-50/50 dark:bg-gray-800/50'
-                          : 'border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600'
-                      }`}
-                    >
-                      <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 relative overflow-hidden">
-                        {/* Chart Preview */}
-                        <div className="absolute inset-0 p-2">
-                          <ChartPreview
-                            type={template.type}
-                            className="w-full h-full border border-gray-200 dark:border-gray-600 rounded-md"
-                          />
-                        </div>
-
-                        {/* Selected Indicator */}
-                        {isSelected && (
-                          <div className="absolute top-2 left-2 z-10">
-                            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
-                              <svg
-                                className="w-4 h-4 text-white"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Hover Actions */}
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="w-8 h-8 p-0 bg-white/90 hover:bg-white shadow-sm"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="w-8 h-8 p-0 bg-white/90 hover:bg-white shadow-sm"
-                            >
-                              <Star className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-4">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3
-                            className={`font-medium line-clamp-1 ${
-                              isSelected
-                                ? 'text-blue-700 dark:text-blue-300'
-                                : 'text-gray-900 dark:text-white'
-                            }`}
-                          >
-                            {template.name}
-                          </h3>
-                          <Badge
-                            variant="outline"
-                            className={`text-xs shrink-0 capitalize ${
-                              isSelected
-                                ? 'border-gray-400 text-gray-700 dark:border-gray-500 dark:text-gray-300'
-                                : ''
-                            }`}
-                          >
-                            {template.type}
-                          </Badge>
-                        </div>
-
-                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
-                          {template.description}
-                        </p>
-
-                        <Button
-                          onClick={() => setSelectedTemplate(template)}
-                          className="w-full"
-                          size="sm"
-                          variant={isSelected ? 'default' : 'outline'}
-                        >
-                          {isSelected ? t('chart_gallery_selected') : t('chart_gallery_select')}
-                        </Button>
-                      </div>
-                    </Card>
-                  </motion.div>
+                    template={template}
+                    isSelected={isSelected}
+                    onClick={() => setSelectedTemplate(template)}
+                  />
                 );
               })}
             </div>
@@ -933,14 +659,10 @@ export default function ChooseTemplateTab() {
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                     {t('chart_gallery_template_selected_desc', 'Ready to create chart with')}{' '}
                     <strong>{selectedTemplate.name}</strong>
-                    {datasetName ? (
-                      <>
-                        {' '}
-                        {t('chart_gallery_for_dataset', 'for dataset')}{' '}
-                        <strong>{datasetName}</strong>
-                      </>
+                    {datasetId ? (
+                      <div>Dataset name: {currentDatasetName || 'Selected Dataset'}</div>
                     ) : (
-                      <span className="text-gray-500"> using sample data</span>
+                      <div>No dataset selected - will use sample data</div>
                     )}
                   </p>
                   <div className="flex gap-3 justify-center">
@@ -992,6 +714,7 @@ export default function ChooseTemplateTab() {
         open={showDatasetModal}
         onOpenChange={setShowDatasetModal}
         onSelectDataset={handleSelectDataset}
+        currentDatasetId={currentDatasetId}
       />
     </div>
   );

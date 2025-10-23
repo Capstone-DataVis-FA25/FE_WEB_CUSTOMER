@@ -239,6 +239,98 @@ export const progressVariants: Variants = {
   }),
 };
 
+// Animation variants cho accordion/collapsible sections
+export const accordionVariants: Variants = {
+  collapsed: {
+    height: 0,
+    opacity: 0,
+    overflow: 'hidden',
+    transition: transitions.smooth,
+  },
+  expanded: {
+    height: 'auto',
+    opacity: 1,
+    overflow: 'visible',
+    transition: transitions.smooth,
+  },
+};
+
+// Animation variants cho settings section
+export const settingsVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    scaleY: 0,
+    transformOrigin: 'top',
+  },
+  visible: {
+    opacity: 1,
+    scaleY: 1,
+    transformOrigin: 'top',
+    transition: {
+      duration: 0.25,
+      ease: 'easeOut',
+    },
+  },
+  exit: {
+    opacity: 0,
+    scaleY: 0,
+    transformOrigin: 'top',
+    transition: {
+      duration: 0.2,
+      ease: 'easeIn',
+    },
+  },
+};
+
+// Animation variants cho domino effect (staggered slide down)
+export const dominoContainerVariants: Variants = {
+  hidden: {
+    opacity: 0,
+  },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.05,
+    },
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      staggerChildren: 0.05,
+      staggerDirection: -1,
+    },
+  },
+};
+
+export const dominoItemVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: -20,
+    scale: 0.95,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: 'spring',
+      stiffness: 300,
+      damping: 25,
+      duration: 0.4,
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    scale: 0.95,
+    transition: {
+      duration: 0.2,
+      ease: 'easeIn',
+    },
+  },
+};
+
 // Animation variants cho notification/toast
 export const toastVariants: Variants = {
   hidden: {
@@ -329,81 +421,81 @@ export const repeatableVariants = {
   // Slide variants that work well with repeat animations
   slideRepeatLeft: {
     hidden: { x: -100, opacity: 0 },
-    visible: { 
-      x: 0, 
-      opacity: 1, 
-      transition: { 
+    visible: {
+      x: 0,
+      opacity: 1,
+      transition: {
         type: 'spring' as const,
         stiffness: 100,
-        damping: 15
-      } 
+        damping: 15,
+      },
     },
     exit: { x: -100, opacity: 0, transition: transitions.fast },
   },
   slideRepeatRight: {
     hidden: { x: 100, opacity: 0 },
-    visible: { 
-      x: 0, 
-      opacity: 1, 
-      transition: { 
+    visible: {
+      x: 0,
+      opacity: 1,
+      transition: {
         type: 'spring' as const,
         stiffness: 100,
-        damping: 15
-      } 
+        damping: 15,
+      },
     },
     exit: { x: 100, opacity: 0, transition: transitions.fast },
   },
   slideRepeatBottom: {
     hidden: { y: 80, opacity: 0 },
-    visible: { 
-      y: 0, 
-      opacity: 1, 
-      transition: { 
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
         type: 'spring' as const,
         stiffness: 100,
-        damping: 15
-      } 
+        damping: 15,
+      },
     },
     exit: { y: 80, opacity: 0, transition: transitions.fast },
   },
   // Fade with elastic effect
   fadeElastic: {
     hidden: { opacity: 0, scale: 0.5 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       scale: 1,
       transition: {
         type: 'spring' as const,
         stiffness: 200,
         damping: 20,
-        duration: 0.6
-      }
+        duration: 0.6,
+      },
     },
     exit: { opacity: 0, scale: 0.5, transition: transitions.fast },
   },
   // Bounce effect
   bounceIn: {
     hidden: { opacity: 0, scale: 0.3, y: 50 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       scale: 1,
       y: 0,
       transition: {
         type: 'spring' as const,
         stiffness: 300,
         damping: 10,
-        duration: 0.8
-      }
+        duration: 0.8,
+      },
     },
     exit: { opacity: 0, scale: 0.3, y: 50, transition: transitions.fast },
-  }
+  },
 } as const;
 
 // Viewport configuration presets
 export const viewportConfigs = {
   // Standard - triggers once when 30% visible
   standard: { once: true, amount: 0.3 },
-  // Repeat - triggers every time when 30% visible  
+  // Repeat - triggers every time when 30% visible
   repeat: { once: false, amount: 0.3 },
   // Early - triggers once when 10% visible
   early: { once: true, amount: 0.1 },

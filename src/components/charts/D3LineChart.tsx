@@ -78,7 +78,7 @@ export interface D3LineChartProps {
   seriesNames?: Record<string, string>; // Add series names mapping
   xAxisNames?: Record<string, string>; // Map X-axis values from ID to display name
   // Individual series configurations
-  seriesConfigs?: Record<
+  axisConfigs?: Record<
     string,
     {
       lineWidth?: number;
@@ -163,7 +163,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   colors = defaultColorsChart,
   seriesNames = {}, // Default to empty object
   xAxisNames = {}, // X-axis names mapping from ID to display name
-  seriesConfigs = {}, // Individual series configurations
+  axisConfigs = {}, // Individual series configurations
   title,
   yAxisLabel,
   xAxisLabel,
@@ -773,7 +773,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         return;
       }
 
-      const seriesConfig = seriesConfigs[key] || {};
+      const seriesConfig = axisConfigs[key] || {};
 
       // Get individual series configurations or fallback to global
       const seriesLineWidth = seriesConfig.lineWidth ?? lineWidth;
@@ -1598,7 +1598,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     yAxisKeys,
     disabledLines,
     colors,
-    seriesConfigs,
+    axisConfigs,
     seriesNames,
     showLegend,
     showGrid,

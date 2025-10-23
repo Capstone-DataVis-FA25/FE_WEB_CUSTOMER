@@ -8,6 +8,7 @@ import type { AuthState } from '../features/auth/authType';
 import type { DatasetState } from '../features/dataset/datasetSlice';
 import { chartReducer, type ChartState } from '@/features/charts';
 import { chartNoteReducer, type ChartNoteState } from '@/features/chartNotes';
+import { chartEditorReducer, type ChartEditorState } from '@/features/chartEditor';
 
 const persistConfig = {
   key: 'root',
@@ -20,6 +21,7 @@ const rootReducer = combineReducers({
   dataset: datasetReducer,
   chart: chartReducer,
   chartNote: chartNoteReducer,
+  chartEditor: chartEditorReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -41,6 +43,7 @@ export type RootState = {
   dataset: DatasetState;
   chart: ChartState;
   chartNote: ChartNoteState;
+  chartEditor: ChartEditorState;
 };
 
 export type AppDispatch = typeof store.dispatch;

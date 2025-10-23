@@ -335,7 +335,7 @@
   "lineChart_editor_sizePresets": "Kích thước có sẵn",
   "lineChart_editor_width": "Chiều rộng",
   "lineChart_editor_height": "Chiều cao",
-  "lineChart_editor_title_chart": "Tiêu đề",
+  "lineChart_editor_title_chart": "Tiêu đề biểu đồ",
   "lineChart_editor_xAxisLabel": "Nhãn trục X",
   "lineChart_editor_yAxisLabel": "Nhãn trục Y",
   "lineChart_editor_xAxisKey": "Khóa trục X",
@@ -1280,7 +1280,6 @@
   "chart_gallery_notify_when_ready": "Thông báo khi sẵn sàng",
   "chart_gallery_file_upload_success": "Tính năng tải lên tệp sắp ra mắt!",
   "chart_gallery_sample_data_loaded": "Tính năng dữ liệu mẫu sắp ra mắt!",
-
   "size_preset_tiny": "Nhỏ (300×200)",
   "size_preset_small": "Nhỏ vừa (400×250)",
   "size_preset_medium": "Trung bình (600×375)",
