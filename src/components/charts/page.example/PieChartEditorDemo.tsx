@@ -7,7 +7,7 @@ const PieChartEditorDemo: React.FC = () => {
     <PieChartEditor
       initialArrayData={categoryArrayData}
       initialConfig={{
-        title: 'Market Share by Category',
+        title: 'Market Share by Category 123',
         labelKey: 'category',
         valueKey: 'value',
         width: 1200,
