@@ -24,7 +24,7 @@ import { useToast } from '@/hooks/useToast';
 import ToastContainer from '@/components/ui/toast-container';
 import { sizePresets, getResponsiveDefaults } from '@/types/chart';
 import { defaultColorsChart } from '@/utils/Utils';
-import { DataEditorSection, BasicSettingsSection } from '@/components/charts/ChartEditorShared';
+import { BasicSettingsSection } from '@/components/charts/ChartEditorShared';
 
 import D3PieChart from '@/components/charts/D3PieChart';
 import type { ChartDataPoint } from '@/components/charts/D3PieChart';
@@ -187,7 +187,7 @@ const PieChartEditor: React.FC<PieChartEditorProps> = ({
   const defaultConfig: PieChartConfig = {
     width: responsiveDefaults.width,
     height: responsiveDefaults.height,
-    margin: { top: 20, right: 20, bottom: 20, left: 20 },
+    margin: { top: 60, right: 60, bottom: 60, left: 60 },
     labelKey: (() => {
       if (initialConfig.labelKey) return decodeKeysToNames(initialConfig.labelKey) as string;
       return processedInitialData.length > 0 ? Object.keys(processedInitialData[0])[0] : 'label';
@@ -607,16 +607,7 @@ const PieChartEditor: React.FC<PieChartEditorProps> = ({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.15 }}
-            >
-              <DataEditorSection
-                data={data}
-                xAxisKey={config.labelKey}
-                yAxisKeys={[config.valueKey]}
-                isCollapsed={collapsedSections.dataEditor}
-                onToggleCollapse={() => toggleSection('dataEditor')}
-                onOpenModal={openDataModal}
-              />
-            </motion.div>
+            ></motion.div>
 
             {/* Basic Settings */}
             <motion.div
@@ -699,14 +690,15 @@ const PieChartEditor: React.FC<PieChartEditorProps> = ({
 
                       <div>
                         <Label className="text-xs">
-                          {'Inner Radius (Donut)'}: {config.innerRadius}
+                          {'Inner Radius (Donut)'}: {(config.innerRadius * 100).toFixed(0)}%
                         </Label>
                         <input
                           type="range"
                           min="0"
-                          max="150"
+                          max="1"
+                          step="0.01"
                           value={config.innerRadius}
-                          onChange={e => updateConfig({ innerRadius: parseInt(e.target.value) })}
+                          onChange={e => updateConfig({ innerRadius: parseFloat(e.target.value) })}
                           className="w-full mt-1"
                         />
                       </div>
@@ -876,13 +868,13 @@ const PieChartEditor: React.FC<PieChartEditorProps> = ({
                       {/* Visual Effects */}
                       <div>
                         <Label className="text-xs">
-                          {'Slice Opacity'}: {config.sliceOpacity.toFixed(2)}
+                          {'Slice Opacity'}: {(config.sliceOpacity * 100).toFixed(0)}%
                         </Label>
                         <input
                           type="range"
-                          min="0.1"
+                          min="0"
                           max="1"
-                          step="0.1"
+                          step="0.01"
                           value={config.sliceOpacity}
                           onChange={e => updateConfig({ sliceOpacity: parseFloat(e.target.value) })}
                           className="w-full mt-1"
@@ -902,12 +894,12 @@ const PieChartEditor: React.FC<PieChartEditorProps> = ({
                       {config.enableHoverEffect && (
                         <div>
                           <Label className="text-xs">
-                            {'Hover Scale'}: {config.hoverScale.toFixed(2)}
+                            {'Hover Scale'}: {config.hoverScale.toFixed(2)}x
                           </Label>
                           <input
                             type="range"
                             min="1"
-                            max="1.2"
+                            max="1.5"
                             step="0.01"
                             value={config.hoverScale}
                             onChange={e => updateConfig({ hoverScale: parseFloat(e.target.value) })}
@@ -934,8 +926,8 @@ const PieChartEditor: React.FC<PieChartEditorProps> = ({
                           </Label>
                           <input
                             type="range"
-                            min="0"
-                            max="2000"
+                            min="100"
+                            max="3000"
                             step="100"
                             value={config.animationDuration}
                             onChange={e =>

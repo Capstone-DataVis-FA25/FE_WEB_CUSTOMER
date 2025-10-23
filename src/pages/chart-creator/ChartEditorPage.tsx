@@ -16,8 +16,6 @@ import { useBeforeUnload } from '@/hooks/useBeforeUnload';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal';
 import ToastContainer from '@/components/ui/toast-container';
 import ChartNoteSidebar from '@/components/charts/ChartNoteSidebar';
-import { useChartNotes, updateNoteLocally } from '@/features/chartNotes';
-import { useAppDispatch } from '@/store/hooks';
 import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
 import { getDefaultChartConfig } from '@/utils/chartDefaults';
 // MainChartConfig now handled by contexts
@@ -30,7 +28,6 @@ import type { MainChartConfig } from '@/types/chart';
 import ChartEditorHeader from './ChartEditorHeader';
 
 const ChartEditorPage: React.FC = () => {
-  const dispatch = useAppDispatch();
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -70,79 +67,12 @@ const ChartEditorPage: React.FC = () => {
     createChart,
   } = useCharts();
 
-  // Chart notes management with Redux
-  const {
-    currentChartNotes,
-    creating: creatingNote,
-    updating: updatingNote,
-    deleting: deletingNote,
-    toggling: togglingNote,
-    createNote,
-    updateNote,
-    deleteNote,
-    toggleNoteCompleted,
-    getChartNotes,
-  } = useChartNotes();
-
   // Chart notes sidebar state
   const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(false);
+
   // Handle notes sidebar
-
-  const handleDeleteNote = async (noteId: string) => {
-    if (!chartId) return;
-
-    console.log('[ChartEditor] Deleting note:', { chartId, noteId });
-
-    try {
-      const result = await deleteNote(chartId, noteId);
-
-      if (result.meta.requestStatus === 'fulfilled') {
-        await getChartNotes(chartId);
-      } else {
-        showError(t('chartEditor.notes.deleteError', 'Failed to delete note'));
-      }
-    } catch (error) {
-      showError(t('chartEditor.notes.deleteError', 'Failed to delete note'));
-    }
-  };
-
-  const handleUpdateNote = async (noteId: string, content: string) => {
-    if (!chartId) return;
-
-    console.log('[ChartEditor] Updating note:', { chartId, noteId, content });
-
-    try {
-      // Optimistically update the note in Redux store
-      // This will immediately update the UI without waiting for server response
-      dispatch(updateNoteLocally({ chartId, noteId, content }));
-
-      const result = await updateNote(noteId, { content });
-
-      if (result.meta.requestStatus === 'fulfilled') {
-        await getChartNotes(chartId);
-      } else {
-        showError(t('chartEditor.notes.updateError', 'Failed to update note'));
-        await getChartNotes(chartId);
-      }
-    } catch (error) {
-      showError(t('chartEditor.notes.updateError', 'Failed to update note'));
-      await getChartNotes(chartId);
-    }
-  };
-
-  const handleToggleCompleted = async (noteId: string) => {
-    if (!chartId) return;
-    try {
-      const result = await toggleNoteCompleted(noteId);
-
-      if (result.meta.requestStatus === 'fulfilled') {
-        await getChartNotes(chartId);
-      } else {
-        showError(t('chartEditor.notes.toggleError', 'Failed to toggle note status'));
-      }
-    } catch (error) {
-      showError(t('chartEditor.notes.toggleError', 'Failed to toggle note status'));
-    }
+  const handleToggleNotesSidebar = () => {
+    setIsNotesSidebarOpen(!isNotesSidebarOpen);
   };
 
   // Unsaved changes modal state
@@ -193,7 +123,7 @@ const ChartEditorPage: React.FC = () => {
     }
   }, [mode, chartId]);
 
-  // =============w===============================================
+  // ============================================================
   // EFFECT 3: Initialize form fields when chart loads (edit mode)
   // ============================================================
   // useEffect #4: Initialize form fields when chart loads (edit mode)
@@ -474,56 +404,6 @@ const ChartEditorPage: React.FC = () => {
     modalConfirm.close();
   };
 
-  // Handle notes sidebar
-  const handleToggleNotesSidebar = () => {
-    const newState = !isNotesSidebarOpen;
-    setIsNotesSidebarOpen(newState);
-
-    // Load notes when opening sidebar
-    if (newState && chartId) {
-      console.log('[ChartEditor] Sidebar opened, loading notes for chart:', chartId);
-      getChartNotes(chartId).then(result => {
-        if (result.meta.requestStatus === 'fulfilled') {
-          console.log('[ChartEditor] Notes loaded successfully:', result.payload);
-        } else {
-          console.error('[ChartEditor] Failed to load notes:', result);
-        }
-      });
-    }
-  };
-
-  const handleAddNote = async (content: string) => {
-    if (!chartId) {
-      console.warn('[ChartEditor] Cannot create note: chartId is missing');
-      showError(t('chartEditor.notes.noChartId', 'Please save the chart first'));
-      return;
-    }
-
-    console.log('[ChartEditor] Creating note:', { chartId, content });
-
-    try {
-      const result = await createNote({ chartId, content });
-      console.log('result createNote: ', result);
-
-      if (result.meta.requestStatus === 'fulfilled') {
-        // Refresh notes list after creating
-        await getChartNotes(chartId);
-      } else {
-        console.error('[ChartEditor] Failed to create note:', result);
-        showError(t('chartEditor.notes.createError', 'Failed to add note'));
-      }
-    } catch (error) {
-      console.error('[ChartEditor] Error creating note:', error);
-      showError(t('chartEditor.notes.createError', 'Failed to add note'));
-    }
-  };
-
-  // Handle chart type change (now handled by context)
-  // const handleChartTypeChange = (type: string) => {
-  //   const newType = type as ChartType;
-  //   setCurrentChartType(newType);
-  // };
-
   // Clear Redux entities on unmount
   useEffect(() => {
     return () => {
@@ -626,14 +506,9 @@ const ChartEditorPage: React.FC = () => {
       {/* Chart Notes Sidebar - Only show in edit mode when chartId exists */}
       {mode === 'edit' && chartId && (
         <ChartNoteSidebar
+          chartId={chartId}
           isOpen={isNotesSidebarOpen}
           onToggle={handleToggleNotesSidebar}
-          notes={currentChartNotes}
-          onAddNote={handleAddNote}
-          isLoading={creatingNote || updatingNote || deletingNote || togglingNote}
-          onDeleteNote={handleDeleteNote}
-          onUpdateNote={handleUpdateNote}
-          onToggleCompleted={handleToggleCompleted}
         />
       )}
     </div>

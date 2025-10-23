@@ -33,7 +33,6 @@ import {
   type FormatterConfig,
 } from '@/types/chart';
 import {
-  DataEditorSection,
   BasicSettingsSection,
   ChartSettingsSection,
   AxisConfigurationSection,
@@ -94,7 +93,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
       const keysArray = Array.isArray(keys) ? keys : [keys];
       const decodedNames = keysArray.map(keyId => {
         const header = dataset.headers.find((h: DatasetHeader) => h.id === keyId);
-        return header ? header.name.toLowerCase() : keyId.toLowerCase(); // Convert to lowercase
+        return header ? header.name : keyId; // Convert to lowercase
       });
 
       return Array.isArray(keys) ? decodedNames : decodedNames[0];
@@ -108,9 +107,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
 
       const keysArray = Array.isArray(keys) ? keys : [keys];
       const encodedIds = keysArray.map(keyName => {
-        const header = dataset.headers.find(
-          (h: DatasetHeader) => h.name.toLowerCase() === keyName.toLowerCase()
-        );
+        const header = dataset.headers.find((h: DatasetHeader) => h.name === keyName);
         return header ? header.id : keyName; // Fallback to keyName if not found
       });
 
@@ -189,9 +186,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
       if (initialConfig.xAxisKey) {
         return decodeKeysToNames(initialConfig.xAxisKey) as string;
       }
-      return processedInitialData.length > 0
-        ? Object.keys(processedInitialData[0])[0].toLowerCase()
-        : 'x';
+      return processedInitialData.length > 0 ? Object.keys(processedInitialData[0])[0] : 'x';
     })(),
     yAxisKeys: (() => {
       // Decode initialConfig.yAxisKeys if provided, otherwise use remaining data columns
@@ -201,7 +196,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
       return processedInitialData.length > 0
         ? Object.keys(processedInitialData[0])
             .slice(1)
-            .map(key => key.toLowerCase())
+            .map(key => key)
         : ['y']; // Lấy tất cả columns trừ column đầu tiên (xAxisKey)
     })(),
     disabledBars: initialConfig.disabledBars
@@ -339,9 +334,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
       setaxisConfigs(prevConfigs => {
         const newConfigs = config.yAxisKeys.map((key, index) => {
           // Find the header with matching name (case insensitive)
-          const header = dataset.headers.find(
-            (h: DatasetHeader) => h.name.toLowerCase() === key.toLowerCase()
-          );
+          const header = dataset.headers.find((h: DatasetHeader) => h.name === key);
 
           const colorKeys = Object.keys(defaultColorsChart);
           const colorIndex = index % colorKeys.length;
@@ -1193,16 +1186,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <DataEditorSection
-                data={data}
-                xAxisKey={config.xAxisKey}
-                yAxisKeys={config.yAxisKeys}
-                isCollapsed={collapsedSections.dataEditor}
-                onToggleCollapse={() => toggleSection('dataEditor')}
-                onOpenModal={openDataModal}
-              />
-            </motion.div>
+            ></motion.div>
 
             {/* Basic Settings */}
             <motion.div
