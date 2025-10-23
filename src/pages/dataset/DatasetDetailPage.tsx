@@ -4,10 +4,21 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SlideInUp } from '@/theme/animation';
-import { ArrowLeft, Database, BarChart3 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Trash2,
+  Database,
+  BarChart3,
+  Settings,
+  Save,
+  RotateCcw,
+  Download,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
-// Input/Textarea moved to DatasetInfoPanel
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useDataset } from '@/features/dataset/useDataset';
 import { useToastContext } from '@/components/providers/ToastProvider';
@@ -18,9 +29,6 @@ import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal';
 
 import Routers from '@/router/routers';
 import DatasetViewerTable from '@/components/dataset/DatasetViewerTable';
-import DatasetInfoPanel from './DatasetInfoPanel';
-import DatasetActionsPanel from './DatasetActionsPanel';
-import DatasetPreviewHeader from './DatasetPreviewHeader';
 
 // Type for header with data
 interface DatasetHeader {
@@ -103,6 +111,39 @@ const DatasetDetailPage: React.FC = () => {
 
     return nameChanged || descriptionChanged;
   }, [editableName, originalName, editableDescription, originalDescription, currentDataset]);
+
+  const exportCsv = (
+    headerRow: { name: string }[],
+    bodyRows: (string | number | null)[][],
+    filename: string
+  ) => {
+    try {
+      if (!headerRow || headerRow.length === 0) return;
+
+      const delimiter = ',';
+      const escapeCell = (v: string | number | null) => {
+        const s = v == null ? '' : String(v);
+        return '"' + s.replace(/"/g, '""') + '"';
+      };
+
+      const headerLine = headerRow.map(h => escapeCell(h.name)).join(delimiter);
+      const lines = bodyRows.map(r => r.map(c => escapeCell(c)).join(delimiter));
+      const csv = [headerLine, ...lines].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export CSV failed', err);
+    }
+  };
 
   // Fetch dataset on component mount
   useEffect(() => {
@@ -639,33 +680,6 @@ const DatasetDetailPage: React.FC = () => {
     );
   }
 
-  // Export CSV function extracted from inline handler
-  const exportCSV = useCallback(() => {
-    try {
-      if (!headerRow || headerRow.length === 0) return;
-      const delimiter = ',';
-      const escapeCell = (v: string | number | null) => {
-        const s = v == null ? '' : String(v);
-        return '"' + s.replace(/"/g, '""') + '"';
-      };
-      const headerLine = headerRow.map(h => escapeCell(h.name)).join(delimiter);
-      const lines = bodyRows.map(r => r.map(c => escapeCell(c)).join(delimiter));
-      const csv = [headerLine, ...lines].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const safeName = (currentDataset?.name || 'dataset').replace(/[^a-z0-9-_\.]/gi, '_');
-      a.download = `${safeName}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export CSV failed', err);
-    }
-  }, [headerRow, bodyRows, currentDataset]);
-
   // Note: unmount cleanup handled in initial data fetch effect above
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 dark:from-gray-900 dark:via-slate-900 dark:to-indigo-900 relative overflow-hidden">
@@ -713,32 +727,205 @@ const DatasetDetailPage: React.FC = () => {
             <div className="flex gap-3 items-start">
               {/* Left Sidebar - Dataset Information */}
               <div className="w-80 shrink-0 space-y-6">
-                <DatasetInfoPanel
-                  t={t}
-                  currentDataset={currentDataset}
-                  isEditingName={isEditingName}
-                  setIsEditingName={setIsEditingName}
-                  editableName={editableName}
-                  handleNameChange={handleNameChange}
-                  handleNameSave={handleNameSave}
-                  validationErrors={validationErrors}
-                  isEditingDescription={isEditingDescription}
-                  setIsEditingDescription={setIsEditingDescription}
-                  editableDescription={editableDescription}
-                  handleDescriptionChange={handleDescriptionChange}
-                  handleDescriptionSave={handleDescriptionSave}
-                  formatDate={formatDate}
-                />
+                <SlideInUp delay={0.15}>
+                  <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/20 shadow-xl rounded-2xl overflow-hidden group hover:shadow-2xl transition-all duration-300">
+                    <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4">
+                      <CardTitle className="flex items-center gap-3 text-white">
+                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                          <Database className="h-4 w-4" />
+                        </div>
+                        <span className="font-semibold">
+                          {t('dataset_information', 'Dataset Information')}
+                        </span>
+                      </CardTitle>
+                    </div>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="space-y-3">
+                        {/* Dataset Name - Inline Editing */}
+                        <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-xl">
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                            {t('dataset_name', 'Name')}
+                          </label>
+                          {isEditingName ? (
+                            <div className="space-y-2 mt-2">
+                              <Input
+                                value={editableName}
+                                onChange={e => handleNameChange(e.target.value)}
+                                onBlur={handleNameSave}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') handleNameSave();
+                                  if (e.key === 'Escape') {
+                                    setEditableName(originalName);
+                                    setIsEditingName(false);
+                                    setValidationErrors(prev => ({ ...prev, name: '' }));
+                                  }
+                                }}
+                                autoFocus
+                                className={`font-medium ${
+                                  validationErrors.name ? 'border-red-500 focus:ring-red-500' : ''
+                                }`}
+                                placeholder={t('dataset_namePlaceholder', 'Enter dataset name')}
+                              />
+                              {validationErrors.name && (
+                                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                                  <span>⚠</span>
+                                  {validationErrors.name}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p
+                              className="text-gray-900 dark:text-white font-medium mt-1 cursor-pointer hover:bg-gray-200/50 dark:hover:bg-gray-700/50 p-2 rounded transition-colors"
+                              onClick={() => setIsEditingName(true)}
+                              title={t('dataset_clickToEdit', 'Click to edit')}
+                            >
+                              {editableName || t('dataset_noName', 'No name')}
+                            </p>
+                          )}
+                        </div>
 
-                <DatasetActionsPanel
-                  t={t}
-                  hasChanges={hasChanges}
-                  handleSave={handleSave}
-                  handleReset={handleReset}
-                  handleBack={handleBack}
-                  handleDeleteDataset={handleDeleteDataset}
-                  deleting={deleting}
-                />
+                        {/* Dataset Description - Inline Editing */}
+                        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl">
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                            {t('dataset_description', 'Description')}
+                          </label>
+                          {isEditingDescription ? (
+                            <div className="space-y-2 mt-2">
+                              <Textarea
+                                value={editableDescription}
+                                onChange={e => handleDescriptionChange(e.target.value)}
+                                onBlur={handleDescriptionSave}
+                                onKeyDown={e => {
+                                  if (e.key === 'Escape') {
+                                    setEditableDescription(originalDescription);
+                                    setIsEditingDescription(false);
+                                    setValidationErrors(prev => ({ ...prev, description: '' }));
+                                  }
+                                }}
+                                autoFocus
+                                className={`font-medium min-h-[100px] ${
+                                  validationErrors.description
+                                    ? 'border-red-500 focus:ring-red-500'
+                                    : ''
+                                }`}
+                                placeholder={t(
+                                  'dataset_descriptionPlaceholder',
+                                  'Enter dataset description'
+                                )}
+                              />
+                              {validationErrors.description && (
+                                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                                  <span>⚠</span>
+                                  {validationErrors.description}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p
+                              className="text-gray-900 dark:text-white font-medium mt-1 leading-relaxed cursor-pointer hover:bg-blue-100/50 dark:hover:bg-blue-900/30 p-2 rounded transition-colors whitespace-pre-wrap"
+                              onClick={() => setIsEditingDescription(true)}
+                              title={t('dataset_clickToEdit', 'Click to edit')}
+                            >
+                              {editableDescription || t('dataset_noDescription', 'No description')}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Created & Last Updated info */}
+                        <div className="grid grid-cols-1 gap-3">
+                          <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200/30 dark:border-green-800/30">
+                            <label className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide flex items-center gap-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              {t('dataset_createdAt', 'Created')}
+                            </label>
+                            <p className="text-gray-900 dark:text-white font-medium mt-2">
+                              {formatDate(currentDataset.createdAt)}
+                            </p>
+                          </div>
+                          <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-100 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl border border-blue-200/30 dark:border-blue-800/30">
+                            <label className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide flex items-center gap-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              {t('dataset_updatedAt', 'Last Updated')}
+                            </label>
+                            <p className="text-gray-900 dark:text-white font-medium mt-2">
+                              {formatDate(currentDataset.updatedAt)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </SlideInUp>
+
+                {/* Metadata card removed; created/updated info merged into information card above */}
+
+                <SlideInUp delay={0.25}>
+                  <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/20 shadow-xl rounded-2xl overflow-hidden">
+                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4">
+                      <CardTitle className="flex items-center gap-3 text-white">
+                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                          <Settings className="w-4 h-4" />
+                        </div>
+                        <span className="font-semibold">Actions</span>
+                        {hasChanges && (
+                          <Badge className="bg-yellow-500 text-white ml-auto">
+                            {t('unsaved_changes', 'Unsaved changes')}
+                          </Badge>
+                        )}
+                      </CardTitle>
+                    </div>
+                    <CardContent className="p-6 space-y-4">
+                      {/* Save Button - Only show when there are changes */}
+                      {hasChanges && (
+                        <Button
+                          onClick={handleSave}
+                          className="w-full h-12 flex items-center justify-start gap-3 bg-gradient-to-r from-green-400 to-emerald-500 dark:from-green-700/30 dark:to-emerald-800/30 border border-green-300/60 dark:border-green-700/60 hover:from-green-500 hover:to-emerald-600 dark:hover:from-green-800/40 dark:hover:to-emerald-900/40 shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 group"
+                        >
+                          <Save className="w-5 h-5 text-green-700 dark:text-green-300 group-hover:text-white transition-colors flex-shrink-0" />
+                          <span className="text-green-800 dark:text-green-200 font-medium text-left group-hover:text-white">
+                            {t('save', 'Save')}
+                          </span>
+                        </Button>
+                      )}
+
+                      {/* Reset Button - Only show when there are changes */}
+                      {hasChanges && (
+                        <Button
+                          variant="outline"
+                          onClick={handleReset}
+                          className="w-full h-12 flex items-center justify-start gap-3 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-200/50 dark:border-orange-800/50 hover:from-orange-100 hover:to-amber-100 dark:hover:from-orange-800/30 dark:hover:to-amber-800/30 shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 group"
+                        >
+                          <RotateCcw className="w-5 h-5 text-orange-600 dark:text-orange-400 group-hover:text-orange-700 dark:group-hover:text-orange-300 transition-colors flex-shrink-0" />
+                          <span className="text-orange-700 dark:text-orange-300 font-medium text-left">
+                            {t('reset', 'Reset')}
+                          </span>
+                        </Button>
+                      )}
+
+                      <Button
+                        variant="outline"
+                        onClick={handleBack}
+                        className="w-full h-12 flex items-center justify-start gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-800/50 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30 shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 group"
+                      >
+                        <ArrowLeft className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                        <span className="text-blue-700 dark:text-blue-300 font-medium text-left">
+                          {t('back', 'Back')}
+                        </span>
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={handleDeleteDataset}
+                        disabled={deleting}
+                        className="w-full h-12 flex items-center justify-start gap-3 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border border-red-200/50 dark:border-red-800/50 hover:from-red-500 hover:to-pink-600 hover:text-white dark:hover:from-red-600 dark:hover:to-pink-700 shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 group disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="w-5 h-5 text-red-600 dark:text-white group-hover:text-white transition-colors flex-shrink-0" />
+                        <span className="text-red-700 dark:text-white font-medium group-hover:text-white text-left">
+                          {deleting ? 'Deleting...' : t('dataset_delete', 'Delete')}
+                        </span>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </SlideInUp>
               </div>
 
               {/* Main Content Area with Enhanced Layout */}
@@ -802,11 +989,23 @@ const DatasetDetailPage: React.FC = () => {
                               </div>
                             </div>
                             {/* Export CSV button */}
-                            <DatasetPreviewHeader
-                              t={t}
-                              currentDataset={currentDataset}
-                              onExport={exportCSV}
-                            />
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={() =>
+                                  exportCsv(
+                                    headerRow,
+                                    bodyRows,
+                                    `${(currentDataset?.name || 'dataset').replace(/[^a-z0-9-_\.]/gi, '_')}.csv`
+                                  )
+                                }
+                                className="ml-3"
+                              >
+                                <Download className="w-4 h-4 mr-2" />
+                                Export CSV
+                              </Button>
+                            </div>
+
                             {/* Mobile format info */}
                             <div className="md:hidden mt-2 grid grid-cols-1 gap-1 text-[11px] text-gray-600 dark:text-gray-400">
                               <div className="flex items-center gap-1">
