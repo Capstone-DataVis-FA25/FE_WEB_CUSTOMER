@@ -24,7 +24,7 @@ import { useToast } from '@/hooks/useToast';
 import ToastContainer from '@/components/ui/toast-container';
 import { sizePresets, getResponsiveDefaults } from '@/types/chart';
 import { defaultColorsChart } from '@/utils/Utils';
-import { DataEditorSection, BasicSettingsSection } from '@/components/charts/ChartEditorShared';
+import { BasicSettingsSection } from '@/components/charts/ChartEditorShared';
 
 import D3PieChart from '@/components/charts/D3PieChart';
 import type { ChartDataPoint } from '@/components/charts/D3PieChart';
@@ -607,16 +607,7 @@ const PieChartEditor: React.FC<PieChartEditorProps> = ({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.15 }}
-            >
-              <DataEditorSection
-                data={data}
-                xAxisKey={config.labelKey}
-                yAxisKeys={[config.valueKey]}
-                isCollapsed={collapsedSections.dataEditor}
-                onToggleCollapse={() => toggleSection('dataEditor')}
-                onOpenModal={openDataModal}
-              />
-            </motion.div>
+            ></motion.div>
 
             {/* Basic Settings */}
             <motion.div

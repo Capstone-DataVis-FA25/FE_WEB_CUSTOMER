@@ -33,7 +33,6 @@ import {
   type FormatterConfig,
 } from '@/types/chart';
 import {
-  DataEditorSection,
   BasicSettingsSection,
   ChartSettingsSection,
   AxisConfigurationSection,
@@ -1187,16 +1186,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <DataEditorSection
-                data={data}
-                xAxisKey={config.xAxisKey}
-                yAxisKeys={config.yAxisKeys}
-                isCollapsed={collapsedSections.dataEditor}
-                onToggleCollapse={() => toggleSection('dataEditor')}
-                onOpenModal={openDataModal}
-              />
-            </motion.div>
+            ></motion.div>
 
             {/* Basic Settings */}
             <motion.div
