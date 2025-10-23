@@ -68,7 +68,7 @@ const DatasetDetailPage: React.FC = () => {
     getDatasetById,
     deleteDataset,
     updateDataset,
-    clearCurrent: clearCurrentDataset,
+    clearCurrent,
   } = useDataset();
 
   // Edit mode states
@@ -109,9 +109,9 @@ const DatasetDetailPage: React.FC = () => {
       getDatasetById(extractedId);
     }
     return () => {
-      clearCurrentDataset();
+      clearCurrent();
     };
-  }, [extractedId, getDatasetById, clearCurrentDataset]);
+  }, [extractedId, getDatasetById, clearCurrent]);
 
   // Initialize editable fields when dataset is loaded
   useEffect(() => {
@@ -143,7 +143,7 @@ const DatasetDetailPage: React.FC = () => {
         // Show unsaved changes modal
         setPendingNavigation(() => () => {
           // Navigate to workspace datasets when confirmed
-          navigate('/workspace', { replace: true, state: { tab: 'datasets' } });
+          navigate(Routers.WORKSPACE_DATASETS, { replace: true });
         });
         setShowUnsavedModal(true);
       }
@@ -375,7 +375,7 @@ const DatasetDetailPage: React.FC = () => {
       setShowUnsavedModal(true);
     } else {
       // Navigate to workspace datasets to prevent invalid state
-      navigate('/workspace', { replace: true, state: { tab: 'datasets' } });
+      navigate(Routers.WORKSPACE_DATASETS, { replace: true });
     }
   }, [hasChanges, navigate]);
 
@@ -530,9 +530,7 @@ const DatasetDetailPage: React.FC = () => {
               </p>
               <div className="space-y-3">
                 <Button
-                  onClick={() =>
-                    navigate('/workspace', { replace: true, state: { tab: 'datasets' } })
-                  }
+                  onClick={() => navigate(Routers.WORKSPACE_DATASETS, { replace: true })}
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
@@ -638,7 +636,6 @@ const DatasetDetailPage: React.FC = () => {
     );
   }
 
-  // Note: unmount cleanup handled in initial data fetch effect above
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 dark:from-gray-900 dark:via-slate-900 dark:to-indigo-900 relative overflow-hidden">
       {/* Animated Background Elements */}
@@ -668,9 +665,7 @@ const DatasetDetailPage: React.FC = () => {
                 )}
               </p>
               <Button
-                onClick={() =>
-                  navigate('/workspace', { replace: true, state: { tab: 'datasets' } })
-                }
+                onClick={() => navigate(Routers.WORKSPACE_DATASETS)}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />

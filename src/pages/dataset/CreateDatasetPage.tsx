@@ -239,7 +239,7 @@ function CreateDatasetPageContent() {
         const created = result.payload as any; // dataset object
         if (created && created.id) {
           // Use React Router navigation instead of window.location.href
-          navigate('/workspace', { state: { tab: 'datasets' } });
+          navigate('/workspace/datasets');
         }
 
         // Reset state after successful upload
@@ -394,11 +394,7 @@ function CreateDatasetPageContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {isProcessing ? (
-        <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
-          <div className="text-center">
-            <LoadingSpinner />
-          </div>
-        </div>
+        <LoadingSpinner />
       ) : viewMode === 'view' ? (
         // Data Viewer - Full Width
         <div className="py-8">

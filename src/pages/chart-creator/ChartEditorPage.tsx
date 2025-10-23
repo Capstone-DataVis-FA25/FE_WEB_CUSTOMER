@@ -16,7 +16,6 @@ import { useBeforeUnload } from '@/hooks/useBeforeUnload';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal';
 import ToastContainer from '@/components/ui/toast-container';
 import ChartNoteSidebar from '@/components/charts/ChartNoteSidebar';
-import DatasetUploadModal from '@/components/dataset/DatasetUploadModal';
 import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
 import { getDefaultChartConfig } from '@/utils/chartDefaults';
 // MainChartConfig now handled by contexts
@@ -27,7 +26,6 @@ import { clearCurrentChartNotes } from '@/features/chartNotes/chartNoteSlice';
 import { useChartEditor } from '@/features/chartEditor';
 import type { MainChartConfig } from '@/types/chart';
 import ChartEditorHeader from './ChartEditorHeader';
-import { getChartNotes } from '@/features/chartNotes';
 
 const ChartEditorPage: React.FC = () => {
   const { t } = useTranslation();
