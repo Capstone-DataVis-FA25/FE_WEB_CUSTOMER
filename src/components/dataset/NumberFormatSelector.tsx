@@ -28,8 +28,8 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
   const { creating: isUploading } = useAppSelector(state => state.dataset);
   const [isCustom, setIsCustom] = useState(false);
   const [customNumberFormat, setCustomNumberFormat] = useState<NumberFormat>({
-    thousandsSeparator: '',
-    decimalSeparator: '',
+    thousandsSeparator: thousandsSeparator,
+    decimalSeparator: decimalSeparator,
   });
   const numberFormats = [
     {
@@ -60,6 +60,14 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
       example: '',
     },
   ] as const;
+
+  // Update customNumberFormat when props change (when switching between formats)
+  useEffect(() => {
+    setCustomNumberFormat({
+      thousandsSeparator: thousandsSeparator,
+      decimalSeparator: decimalSeparator,
+    });
+  }, [thousandsSeparator, decimalSeparator]);
 
   // Update validation errors whenever format changes
   useEffect(() => {
@@ -115,15 +123,18 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
             }
 
             if (isEmpty) {
+              // Switching to Custom - preserve current format, don't revalidate
               setIsCustom(true);
+              // Don't call onChange or revalidateColumnsOfType when switching to Custom
             } else {
+              // Switching to predefined format - apply the new format
               setIsCustom(false);
               revalidateColumnsOfType('number', {
                 thousandsSeparator: data.thousandsSeparator,
                 decimalSeparator: data.decimalSeparator,
               });
+              onChange(data);
             }
-            onChange(data);
           }}
         >
           <SelectTrigger className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
