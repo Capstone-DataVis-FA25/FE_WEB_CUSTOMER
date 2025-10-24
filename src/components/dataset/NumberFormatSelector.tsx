@@ -69,6 +69,16 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
     });
   }, [thousandsSeparator, decimalSeparator]);
 
+  // Auto-toggle custom mode when incoming separators don't match any preset
+  useEffect(() => {
+    const preset = numberFormats.find(
+      nf =>
+        nf.value.decimalSeparator === decimalSeparator &&
+        nf.value.thousandsSeparator === thousandsSeparator
+    );
+    setIsCustom(!preset);
+  }, [thousandsSeparator, decimalSeparator]);
+
   // Update validation errors whenever format changes
   useEffect(() => {
     const separatorsEqual =
@@ -90,6 +100,7 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
   const separatorsAreEqual = validationErrors.numberFormat?.separatorsEqual || false;
   const isDecimalSeparatorMissing = validationErrors.numberFormat?.missingDecimalSeparator || false;
   const hasValidationError = separatorsAreEqual || isDecimalSeparatorMissing;
+  // Compute Select value as the preset key, or 'Custom' when custom
   const selectedNumberFormat = isCustom
     ? 'Custom'
     : numberFormats.find(
@@ -107,34 +118,29 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
         <Select
           value={selectedNumberFormat}
           onValueChange={v => {
-            const data = JSON.parse(v) as {
-              thousandsSeparator: string;
-              decimalSeparator: string;
-            };
+            if (v === 'Custom') {
+              // Switching to Custom - preserve current format, don't revalidate
+              setIsCustom(true);
+              return;
+            }
 
-            const isEmpty = data.thousandsSeparator === '' && data.decimalSeparator === '';
+            const preset = numberFormats.find(nf => nf.key === v);
+            if (!preset) return;
+
+            const data = preset.value;
             const isSame =
               data.thousandsSeparator === thousandsSeparator &&
               data.decimalSeparator === decimalSeparator;
 
-            // Skip if nothing changes
-            if ((isCustom && isEmpty) || (!isCustom && isSame)) {
-              return;
-            }
+            if (isSame) return; // Skip if nothing changes
 
-            if (isEmpty) {
-              // Switching to Custom - preserve current format, don't revalidate
-              setIsCustom(true);
-              // Don't call onChange or revalidateColumnsOfType when switching to Custom
-            } else {
-              // Switching to predefined format - apply the new format
-              setIsCustom(false);
-              revalidateColumnsOfType('number', {
-                thousandsSeparator: data.thousandsSeparator,
-                decimalSeparator: data.decimalSeparator,
-              });
-              onChange(data);
-            }
+            // Switching to predefined format - apply the new format
+            setIsCustom(false);
+            revalidateColumnsOfType('number', {
+              thousandsSeparator: data.thousandsSeparator,
+              decimalSeparator: data.decimalSeparator,
+            });
+            onChange(data);
           }}
         >
           <SelectTrigger className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
@@ -142,7 +148,7 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
           </SelectTrigger>
           <SelectContent>
             {numberFormats.map(numberFormat => (
-              <SelectItem key={numberFormat.key} value={JSON.stringify(numberFormat.value)}>
+              <SelectItem key={numberFormat.key} value={numberFormat.key}>
                 <div className="flex items-center justify-between w-full">
                   <span className="font-mono">{numberFormat.label}</span>
                   <span className="text-gray-500 dark:text-gray-400 ml-4">

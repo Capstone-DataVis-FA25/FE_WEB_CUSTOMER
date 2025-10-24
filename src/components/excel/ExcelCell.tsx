@@ -68,11 +68,9 @@ const ExcelCell = memo(
       setTempValue(e.target.value);
     }, []);
 
-    const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        e.currentTarget.blur();
-      }
-    }, []);
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') e.currentTarget.blur();
+    };
 
     // Determine the display value
     const displayValue = isEditing ? tempValue : value;

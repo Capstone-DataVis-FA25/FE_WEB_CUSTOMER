@@ -1,6 +1,4 @@
-'use client';
-
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useEffect } from 'react';
 import ExcelCell from './ExcelCell';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
@@ -36,7 +34,7 @@ const ExcelRow = memo(function ExcelRow({
   const dispatch = useAppDispatch();
 
   // Reset both row and column selection when data changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (onDataChange) {
       dispatch(setSelectedRow(null));
       dispatch(setSelectedColumn(null)); // Add this line
@@ -68,7 +66,7 @@ const ExcelRow = memo(function ExcelRow({
       <td className="sticky left-0 z-20 bg-gray-100 dark:bg-gray-700 border-r border-b border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-2 text-xs">
         <div className="flex flex-col items-center min-h-[2rem] justify-between py-1">
           <span>{rowIndex + 1}</span>
-          {(isSelected as boolean) && (
+          {isSelected && (
             <Button size="icon" variant="ghost" onClick={handleDeselect} className="w-4 h-4">
               <X size={10} className="text-blue-500" />
             </Button>

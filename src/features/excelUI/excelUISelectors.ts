@@ -48,7 +48,7 @@ export const selectNumberFormat = createSelector([selectExcelUI], excelUI => exc
 // Memoized selectors for rows and columns to prevent recreation on every render
 const rowParseErrorsSelectors = new Map<number, ReturnType<typeof createSelector>>();
 const columnDuplicateSelectors = new Map<number, ReturnType<typeof createSelector>>();
-const rowSelectionSelectors = new Map<number, ReturnType<typeof createSelector>>();
+const rowSelectionSelectors = new Map<number, (state: RootState) => boolean>();
 
 // Individual row validation selectors - only re-render when that specific row's validation changes
 export const selectRowParseErrors = (rowIndex: number) => {
@@ -74,9 +74,12 @@ export const selectIsColumnDuplicate = (columnIndex: number) => {
 };
 
 // Individual row selection selector - only re-renders when THIS specific row's selection changes
-export const selectIsRowSelected = (rowIndex: number) => {
+export const selectIsRowSelected = (rowIndex: number): ((state: RootState) => boolean) => {
   if (!rowSelectionSelectors.has(rowIndex)) {
-    const selector = createSelector([selectSelectedRow], selectedRow => selectedRow === rowIndex);
+    const selector = createSelector(
+      [(state: RootState) => selectSelectedRow(state)],
+      selectedRow => selectedRow === rowIndex
+    );
     rowSelectionSelectors.set(rowIndex, selector);
   }
   return rowSelectionSelectors.get(rowIndex)!;

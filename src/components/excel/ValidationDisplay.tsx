@@ -1,5 +1,3 @@
-'use client';
-
 import { memo } from 'react';
 import { useAppSelector } from '@/store/hooks';
 import {
@@ -9,27 +7,30 @@ import {
   selectNumberFormat,
 } from '@/features/excelUI';
 import type { DateFormat, NumberFormat } from '@/contexts/DatasetContext';
+import { t } from 'i18next';
 
 interface ValidationDisplayProps {
   columns: Array<{ name: string; type: string }>;
 }
 
-// Helper function to get expected format for each column type
 const getExpectedFormat = (
   columnType: string,
   dateFormat: DateFormat,
   numberFormat: NumberFormat
 ): string => {
   switch (columnType) {
-    case 'number':
+    case 'number': {
       const { thousandsSeparator, decimalSeparator } = numberFormat;
-      return `số (ví dụ: 123${thousandsSeparator}456${decimalSeparator}78)`;
+      return t('expectedFormat.number', {
+        example: `123${thousandsSeparator}456${decimalSeparator}78`,
+      });
+    }
     case 'date':
-      return `ngày tháng (định dạng: ${dateFormat})`;
+      return t('expectedFormat.date', { format: dateFormat });
     case 'text':
-      return 'văn bản';
+      return t('expectedFormat.text');
     default:
-      return 'dữ liệu hợp lệ';
+      return t('expectedFormat.default');
   }
 };
 
@@ -57,10 +58,9 @@ const ValidationDisplay = memo(function ValidationDisplay({ columns }: Validatio
     const emptyColumnNames = emptyColumns
       .map(idx => columns[idx]?.name || `Cột ${idx + 1}`)
       .join(', ');
-    const msg = `Lỗi: Tên cột không được để trống: ${emptyColumnNames}`;
     return (
       <div className="text-red-600 dark:text-red-400 flex items-start gap-2">
-        <span>{msg}</span>
+        <span>{t('excelErrors.emptyColumns', { names: emptyColumnNames })};</span>
       </div>
     );
   }
@@ -72,8 +72,19 @@ const ValidationDisplay = memo(function ValidationDisplay({ columns }: Validatio
   const colType = columns[firstColIdx]?.type ?? 'text';
   const expectedFormat = getExpectedFormat(colType, dateFormat as DateFormat, numberFormat);
   const remaining = Math.max(0, rows.length - 1);
-  const base = `Lỗi: Dữ liệu không đúng định dạng tại hàng ${firstRow + 1}, cột "${colName}". Định dạng mong đợi: ${expectedFormat}`;
-  const msg = remaining > 0 ? `${base}. Còn ${remaining} hàng khác gặp vấn đề.` : `${base}.`;
+  const msg =
+    remaining > 0
+      ? t('excelErrors.invalidData.withRemaining', {
+          row: firstRow + 1,
+          column: colName,
+          expectedFormat,
+          remaining,
+        })
+      : t('excelErrors.invalidData.base', {
+          row: firstRow + 1,
+          column: colName,
+          expectedFormat,
+        });
 
   return (
     <div className="text-red-600 dark:text-red-400 flex items-start gap-2">

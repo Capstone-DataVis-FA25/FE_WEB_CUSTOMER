@@ -10,6 +10,7 @@ import {
   applyDetectedFormats,
   FORMAT_APPLICATION_CONFIDENCE_THRESHOLD,
 } from './smartColumnDetector';
+import type { DateFormat, NumberFormat } from '@/contexts/DatasetContext';
 
 // File validation configuration constants
 export const ALLOWED_TYPES = [
@@ -51,8 +52,8 @@ export interface ParsedDataResult {
   headers: DataHeader[];
   data: string[][];
   detectionResult?: any; // Smart detection results
-  detectedDateFormat?: string | null; // Auto-detected date format
-  detectedNumberFormat?: { thousandsSeparator: string; decimalSeparator: string } | null; // Auto-detected number format
+  detectedDateFormat?: DateFormat | null; // Auto-detected date format
+  detectedNumberFormat?: NumberFormat | null; // Auto-detected number format
 }
 
 /**

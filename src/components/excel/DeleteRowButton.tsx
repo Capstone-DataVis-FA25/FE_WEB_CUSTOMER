@@ -1,5 +1,3 @@
-'use client';
-
 import React, { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAppSelector } from '@/store/hooks';

@@ -53,6 +53,7 @@ import {
 
 // =============== Types & Helpers =================
 import type { DataHeader } from '@/utils/dataProcessors';
+import { t } from 'i18next';
 interface CustomExcelProps {
   initialData?: string[][];
   initialColumns?: DataHeader[];
@@ -900,10 +901,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
               const duplicateNames = duplicateColumns.duplicateNames.join(', ');
               return (
                 <div className="text-red-600 dark:text-red-400 flex items-start gap-2">
-                  <span>
-                    Lỗi: Các cột có tên trùng lặp: {duplicateNames}. Vui lòng đổi tên để tránh xung
-                    đột.
-                  </span>
+                  <span>{t('excelErrors.duplicateColumns', { names: duplicateNames })};</span>
                 </div>
               );
             }

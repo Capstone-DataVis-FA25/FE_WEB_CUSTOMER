@@ -1,5 +1,3 @@
-'use client';
-
 import React, { memo, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
@@ -64,7 +62,7 @@ const ExcelColumnHeader = memo(function ExcelColumnHeader({
     dispatch(setSelectedColumn(columnIndex));
   }, [columnIndex, dispatch]);
 
-  const handleDeselect = useCallback(
+  const handleDeselectColumn = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
       dispatch(setSelectedColumn(null));
@@ -168,7 +166,7 @@ const ExcelColumnHeader = memo(function ExcelColumnHeader({
           <Button
             size="icon"
             variant="ghost"
-            onClick={handleDeselect}
+            onClick={handleDeselectColumn}
             className="w-6 h-6 flex-shrink-0"
           >
             <X size={12} className="text-blue-500" />
