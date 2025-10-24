@@ -1292,7 +1292,6 @@
   "chart_gallery_notify_when_ready": "Notify When Ready",
   "chart_gallery_file_upload_success": "File upload feature coming soon!",
   "chart_gallery_sample_data_loaded": "Sample data feature coming soon!",
-
   "size_preset_tiny": "Tiny (300×200)",
   "size_preset_small": "Small (400×250)",
   "size_preset_medium": "Medium (600×375)",
@@ -1381,5 +1380,19 @@
   "chart_editor_save_chart": "Save Chart",
   "chart_update_success_message": "Chart has been updated successfully",
   "chart_editor_no_series": "No data series selected",
-  "chart_editor_add_series_hint": "Add a data series to display the chart"
+  "chart_editor_add_series_hint": "Add a data series to display the chart",
+  "expectedFormat": {
+    "number": "number (e.g. {{example}})",
+    "date": "date (format: {{format}})",
+    "text": "text",
+    "default": "valid data"
+  },
+  "excelErrors": {
+    "duplicateColumns": "Error: Columns with duplicate names: {{names}}. Please rename them to avoid conflicts.",
+    "emptyColumns": "Error: Column names cannot be empty: {{names}}.",
+    "invalidData": {
+      "base": "Error: Invalid data format at row {{row}}, column \"{{column}}\". Expected format: {{expectedFormat}}.",
+      "withRemaining": "Error: Invalid data format at row {{row}}, column \"{{column}}\". Expected format: {{expectedFormat}}. {{remaining}} other rows also have issues."
+    }
+  }
 }

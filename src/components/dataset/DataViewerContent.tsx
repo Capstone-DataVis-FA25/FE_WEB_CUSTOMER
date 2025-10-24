@@ -2,7 +2,6 @@ import { memo, useCallback, useMemo } from 'react';
 import CustomExcel from '../excel/CustomExcel';
 import type { DataHeader, ParsedDataResult } from '@/utils/dataProcessors';
 import { useDataset } from '@/contexts/DatasetContext';
-import { ExcelUIProvider } from '@/contexts/ExcelUIContext';
 
 const DataViewerContent = memo(function DataViewerContent() {
   const { currentParsedData, setCurrentParsedData } = useDataset();
@@ -32,14 +31,12 @@ const DataViewerContent = memo(function DataViewerContent() {
   );
 
   return (
-    <ExcelUIProvider>
-      <CustomExcel
-        initialData={initialData}
-        initialColumns={initialColumns}
-        onDataChange={handleDataChange}
-        mode="edit" // can be toggled to 'view' where needed
-      />
-    </ExcelUIProvider>
+    <CustomExcel
+      initialData={initialData}
+      initialColumns={initialColumns}
+      onDataChange={handleDataChange}
+      mode="edit" // can be toggled to 'view' where needed
+    />
   );
 });
 

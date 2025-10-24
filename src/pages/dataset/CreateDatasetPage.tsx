@@ -54,6 +54,8 @@ function CreateDatasetPageContent() {
     parsedValues,
     numberFormat,
     dateFormat,
+    setNumberFormat,
+    setDateFormat,
   } = useDataset();
 
   // Local state management (non-shareable states)
@@ -107,6 +109,19 @@ function CreateDatasetPageContent() {
         console.log('📊 Setting currentParsedData');
         setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
         console.log('Processed result:', result);
+
+        // Auto-apply detected formats from parsing result
+        if (result.detectedDateFormat) {
+          console.log('🎯 Auto-applying detected date format:', result.detectedDateFormat);
+          setDateFormat(result.detectedDateFormat);
+          console.log('✅ Date format updated to:', result.detectedDateFormat);
+        }
+
+        if (result.detectedNumberFormat) {
+          console.log('🎯 Auto-applying detected number format:', result.detectedNumberFormat);
+          setNumberFormat(result.detectedNumberFormat);
+          console.log('✅ Number format updated to:', result.detectedNumberFormat);
+        }
 
         // Batch the remaining state updates
         console.log('📊 Batching remaining state updates');
@@ -352,6 +367,22 @@ function CreateDatasetPageContent() {
           // Set up 3-layer data structure
           setOriginalParsedData(result); // Layer 2: Original parsed data
           setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
+
+          // Auto-apply detected formats from parsing result
+          if (result.detectedDateFormat) {
+            console.log('🎯 Auto-applying detected date format (JSON):', result.detectedDateFormat);
+            setDateFormat(result.detectedDateFormat);
+            console.log('✅ Date format updated to:', result.detectedDateFormat);
+          }
+
+          if (result.detectedNumberFormat) {
+            console.log(
+              '🎯 Auto-applying detected number format (JSON):',
+              result.detectedNumberFormat
+            );
+            setNumberFormat(result.detectedNumberFormat);
+            console.log('✅ Number format updated to:', result.detectedNumberFormat);
+          }
         } else {
           // Parse as regular CSV/text data
           const detectedDelimiter = detectDelimiter(content);
@@ -361,6 +392,22 @@ function CreateDatasetPageContent() {
           // Set up 3-layer data structure
           setOriginalParsedData(result); // Layer 2: Original parsed data
           setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
+
+          // Auto-apply detected formats from parsing result
+          if (result.detectedDateFormat) {
+            console.log('🎯 Auto-applying detected date format (CSV):', result.detectedDateFormat);
+            setDateFormat(result.detectedDateFormat);
+            console.log('✅ Date format updated to:', result.detectedDateFormat);
+          }
+
+          if (result.detectedNumberFormat) {
+            console.log(
+              '🎯 Auto-applying detected number format (CSV):',
+              result.detectedNumberFormat
+            );
+            setNumberFormat(result.detectedNumberFormat);
+            console.log('✅ Number format updated to:', result.detectedNumberFormat);
+          }
         }
 
         setPreviousViewMode(viewMode);
@@ -396,6 +443,8 @@ function CreateDatasetPageContent() {
       setOriginalParsedData,
       setCurrentParsedData,
       setSelectedDelimiter,
+      setDateFormat,
+      setNumberFormat,
     ]
   );
 
