@@ -5,6 +5,12 @@
 
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+import {
+  detectColumnFormats,
+  applyDetectedFormats,
+  FORMAT_APPLICATION_CONFIDENCE_THRESHOLD,
+} from './smartColumnDetector';
+import type { DateFormat, NumberFormat } from '@/contexts/DatasetContext';
 
 // File validation configuration constants
 export const ALLOWED_TYPES = [
@@ -45,6 +51,9 @@ export interface DataHeader {
 export interface ParsedDataResult {
   headers: DataHeader[];
   data: string[][];
+  detectionResult?: any; // Smart detection results
+  detectedDateFormat?: DateFormat | null; // Auto-detected date format
+  detectedNumberFormat?: NumberFormat | null; // Auto-detected number format
 }
 
 /**
@@ -209,9 +218,25 @@ export const parseTabularContent = (
     index: index,
   }));
 
+  // Run smart detection on the data (exclude header row)
+  const detectionResult = detectColumnFormats(dataRows, 20);
+
+  // Apply detected column types to headers
+  const smartHeaders = applyDetectedFormats(headers, detectionResult);
+
   return {
-    headers,
+    headers: smartHeaders,
     data: dataRows,
+    detectionResult,
+    // Auto-apply detected formats if confidence is high enough
+    detectedDateFormat:
+      detectionResult.confidence.dateFormat >= FORMAT_APPLICATION_CONFIDENCE_THRESHOLD
+        ? detectionResult.dateFormat
+        : null,
+    detectedNumberFormat:
+      detectionResult.confidence.numberFormat >= FORMAT_APPLICATION_CONFIDENCE_THRESHOLD
+        ? detectionResult.numberFormat
+        : null,
   };
 };
 
@@ -388,9 +413,25 @@ export const parseJsonDirectly = (jsonText: string): ParsedDataResult => {
       index: index,
     }));
 
+    // Run smart detection on the data (exclude header row)
+    const detectionResult = detectColumnFormats(dataRows, 20);
+
+    // Apply detected column types to headers
+    const smartHeaders = applyDetectedFormats(headers, detectionResult);
+
     return {
-      headers,
+      headers: smartHeaders,
       data: dataRows,
+      detectionResult,
+      // Auto-apply detected formats if confidence is high enough
+      detectedDateFormat:
+        detectionResult.confidence.dateFormat >= FORMAT_APPLICATION_CONFIDENCE_THRESHOLD
+          ? detectionResult.dateFormat
+          : null,
+      detectedNumberFormat:
+        detectionResult.confidence.numberFormat >= FORMAT_APPLICATION_CONFIDENCE_THRESHOLD
+          ? detectionResult.numberFormat
+          : null,
     };
   } catch (error) {
     // If it's already a translation key, throw it directly

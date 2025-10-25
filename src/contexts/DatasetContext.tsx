@@ -152,8 +152,12 @@ interface DatasetContextType extends DatasetState {
   setExcelErrors: (errors: { parseErrors: ExcelErrorMap }) => void;
   clearExcelErrors: () => void;
 
-  // Duplicate column validation
-  validateDuplicateColumns: (columns: DataHeader[]) => void;
+  // Column validation (duplicates and empty names)
+  validateDuplicateColumns: (columns: DataHeader[]) => {
+    duplicateNames: string[];
+    duplicateColumnIndices: number[];
+    emptyColumnIndices: number[];
+  };
 
   // Parsed values helper
   updateParsedValue: (
@@ -351,13 +355,14 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
     });
   }, []);
 
-  // Duplicate column validation
+  // Column validation (duplicates and empty names)
   const validateDuplicateColumns = useCallback((columns: DataHeader[]) => {
     const nameCount: Record<string, number[]> = {};
     const duplicateNames: string[] = [];
     const duplicateColumnIndices: number[] = [];
+    const emptyColumnIndices: number[] = [];
 
-    // Count occurrences of each column name
+    // Count occurrences of each column name and check for empty names
     columns.forEach((col, index) => {
       const name = col.name.trim();
       if (name) {
@@ -365,6 +370,8 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
           nameCount[name] = [];
         }
         nameCount[name].push(index);
+      } else {
+        emptyColumnIndices.push(index);
       }
     });
 
@@ -387,6 +394,13 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
         },
       },
     }));
+
+    // Return the result for external use
+    return {
+      duplicateNames,
+      duplicateColumnIndices,
+      emptyColumnIndices,
+    };
   }, []);
 
   // Utility actions

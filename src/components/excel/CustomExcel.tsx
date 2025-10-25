@@ -3,8 +3,30 @@
 import type React from 'react';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
-import { useExcelUI } from '@/contexts/ExcelUIContext';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import {
+  setSelectedRow,
+  setSelectedColumn,
+  setTouchedCells,
+  setInfoMessage,
+  setSortConfig,
+  setDuplicateColumns,
+  setEmptyColumns,
+  setParseErrors,
+  updateParseError,
+  setDateFormat,
+  setNumberFormat,
+  selectSelectedColumn,
+  selectTouchedCells,
+  selectInfoMessage,
+  selectSortConfig,
+  selectDuplicateColumns,
+  selectParseErrors,
+} from '@/features/excelUI';
 import ExcelRow from './ExcelRow';
+import ExcelColumnHeader from './ExcelColumnHeader';
+import DeleteRowButton from './DeleteRowButton';
+import ValidationDisplay from './ValidationDisplay';
 import { Button } from '@/components/ui/button';
 import * as XLSX from 'xlsx';
 import saveAs from 'file-saver';
@@ -31,6 +53,7 @@ import {
 
 // =============== Types & Helpers =================
 import type { DataHeader } from '@/utils/dataProcessors';
+import { t } from 'i18next';
 interface CustomExcelProps {
   initialData?: string[][];
   initialColumns?: DataHeader[];
@@ -48,11 +71,6 @@ const deepClone = <T,>(v: T, shallow = false): T => {
   return JSON.parse(JSON.stringify(v));
 };
 const DEFAULT_WIDTH = 180;
-const COLUMN_TYPES = [
-  { label: 'Text', value: 'text', icon: <FileText size={14} /> },
-  { label: 'Number', value: 'number', icon: <FileDigit size={14} /> },
-  { label: 'Date', value: 'date', icon: <Calendar size={14} /> },
-];
 
 // removed unused isValidValue
 
@@ -83,26 +101,27 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  // UI state from context (doesn't cause parent re-renders)
-  const {
-    selectedRow,
-    setSelectedRow,
-    selectedColumn,
-    setSelectedColumn,
-    setTouchedCells,
-    infoMessage,
-    setInfoMessage,
-    sortConfig,
-    setSortConfig,
-  } = useExcelUI();
-  const {
-    setExcelErrors,
-    validationErrors,
-    tryConvert,
-    tryConvertColumn,
-    validateDuplicateColumns,
-    dateFormat,
-  } = useDataset();
+  // Redux dispatch and selectors
+  const dispatch = useAppDispatch();
+  // Only subscribe to selectors that CustomExcel actually needs for its own rendering
+  const selectedColumn = useAppSelector(selectSelectedColumn);
+  const infoMessage = useAppSelector(selectInfoMessage);
+  const sortConfig = useAppSelector(selectSortConfig);
+  const duplicateColumns = useAppSelector(selectDuplicateColumns);
+  // Removed parseErrors - individual cells handle their own validation
+  // Removed touchedCells - not used in CustomExcel rendering
+  const { tryConvert, tryConvertColumn, validateDuplicateColumns, dateFormat, numberFormat } =
+    useDataset();
+
+  // Sync dateFormat to Redux when it changes
+  useEffect(() => {
+    dispatch(setDateFormat(dateFormat));
+  }, [dateFormat, dispatch]);
+
+  // Sync numberFormat to Redux when it changes
+  useEffect(() => {
+    dispatch(setNumberFormat(numberFormat));
+  }, [numberFormat, dispatch]);
   // Temporary edits are now managed by ExcelUIContext
 
   // Large dataset heuristics
@@ -145,13 +164,53 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       setHistoryIndex(0);
     }
 
-    // Validate duplicate columns immediately to prevent extra re-render
+    // Validate columns immediately and update Redux
     if (initCols.length > 0) {
-      validateDuplicateColumns(initCols);
+      const validationResult = validateDuplicateColumns(initCols);
+      dispatch(
+        setDuplicateColumns({
+          duplicateNames: validationResult.duplicateNames,
+          duplicateColumnIndices: validationResult.duplicateColumnIndices,
+        })
+      );
+      dispatch(setEmptyColumns(validationResult.emptyColumnIndices));
+
+      // Validate all cells on initial load
+      const parseErrors: Record<number, number[]> = {};
+      initData.forEach((row, rowIndex) => {
+        row.forEach((cellValue, colIndex) => {
+          const colType = initCols[colIndex]?.type ?? 'text';
+          const conv = tryConvert(
+            colType,
+            colIndex,
+            rowIndex,
+            cellValue,
+            undefined,
+            colType === 'date' ? dateFormat : undefined
+          );
+
+          if (!conv.ok) {
+            if (!parseErrors[rowIndex]) {
+              parseErrors[rowIndex] = [];
+            }
+            parseErrors[rowIndex].push(colIndex);
+          }
+        });
+      });
+      dispatch(setParseErrors(parseErrors));
     }
 
     initializedRef.current = true;
-  }, [initialColumns, initialData, mode, historyEnabled, validateDuplicateColumns]);
+  }, [
+    initialColumns,
+    initialData,
+    mode,
+    historyEnabled,
+    validateDuplicateColumns,
+    dispatch,
+    tryConvert,
+    dateFormat,
+  ]);
 
   // History initialization moved to main useEffect to prevent extra re-renders
 
@@ -226,9 +285,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       setData(deepClone(st.data));
       setColumns(deepClone(st.columns));
       setFilters(Array(st.columns.length).fill(''));
-      setSelectedRow(null);
-      setSelectedColumn(null);
-      setSortConfig(null);
+      dispatch(setSelectedRow(null));
+      dispatch(setSelectedColumn(null));
+      dispatch(setSortConfig(null));
       if (onDataChange) onDataChange(st.data, st.columns);
     }
   }, [historyIndex, history, onDataChange]);
@@ -241,9 +300,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       setData(deepClone(st.data));
       setColumns(deepClone(st.columns));
       setFilters(Array(st.columns.length).fill(''));
-      setSelectedRow(null);
-      setSelectedColumn(null);
-      setSortConfig(null);
+      dispatch(setSelectedRow(null));
+      dispatch(setSelectedColumn(null));
+      dispatch(setSortConfig(null));
       if (onDataChange) onDataChange(st.data, st.columns);
     }
   }, [historyIndex, history, onDataChange]);
@@ -286,21 +345,46 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
 
   // Generic mutation helpers
   // setCell no longer used with temp editing; keep minimal helper if needed in future
-  const setHeader = (c: number, val: string) => {
-    console.log('📝 setHeader called:', { column: c, newName: val, currentName: columns[c]?.name });
-    const nc = deepClone(columns, true).map((col, i) => (i === c ? { ...col, name: val } : col));
-    nc[c].name = val;
-    // For header changes, only update columns (no data re-render)
-    commit(data, nc, false, {
-      dataChanged: false, // Don't re-render data cells
-      columnsChanged: true, // Only update column headers
-    });
-  };
+  const setHeader = useCallback(
+    (c: number, val: string) => {
+      console.log('📝 setHeader called:', {
+        column: c,
+        newName: val,
+        currentName: columns[c]?.name,
+      });
+
+      // Skip if the name hasn't actually changed
+      if (columns[c]?.name === val) {
+        console.log('📝 setHeader skipped - no change');
+        return;
+      }
+
+      const nc = deepClone(columns, true).map((col, i) => (i === c ? { ...col, name: val } : col));
+      nc[c].name = val;
+
+      // Validate columns after name change
+      const validationResult = validateDuplicateColumns(nc);
+      dispatch(
+        setDuplicateColumns({
+          duplicateNames: validationResult.duplicateNames,
+          duplicateColumnIndices: validationResult.duplicateColumnIndices,
+        })
+      );
+      dispatch(setEmptyColumns(validationResult.emptyColumnIndices));
+
+      // For header changes, only update columns (no data re-render)
+      commit(data, nc, false, {
+        dataChanged: false, // Don't re-render data cells
+        columnsChanged: true, // Only update column headers
+      });
+    },
+    [columns, validateDuplicateColumns, dispatch, commit]
+  );
 
   const setType = (c: number, val: 'text' | 'number' | 'date') => {
     console.log('🔧 setType called:', { column: c, newType: val, currentType: columns[c]?.type });
     if (columns[c].type === val) return;
-    setInfoMessage(null);
+    dispatch(setInfoMessage(null));
 
     const { nextData, nextColumns } = tryConvertColumn(c, val);
 
@@ -311,13 +395,34 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       columnsChanged: true, // Only update column headers
     });
 
-    setTouchedCells(new Set());
+    dispatch(setTouchedCells([]));
   };
+
+  // Handle cell focus to select column
+  const handleCellFocus = useCallback(
+    (rowIndex: number, columnIndex: number) => {
+      // Select the column when a cell is focused
+      dispatch(setSelectedColumn(columnIndex));
+    },
+    [dispatch]
+  );
 
   // Handle cell changes from individual ExcelCell components
   const handleCellChange = useCallback(
     (rowIndex: number, columnIndex: number, newValue: string) => {
       const finalVal = newValue.trim();
+      const currentValue = data[rowIndex]?.[columnIndex] || '';
+
+      // Skip if value hasn't actually changed
+      if (finalVal === currentValue) {
+        console.log('✏️ handleCellChange skipped - no change:', {
+          row: rowIndex,
+          col: columnIndex,
+          value: finalVal,
+        });
+        return;
+      }
+
       console.log('✏️ handleCellChange called:', {
         row: rowIndex,
         col: columnIndex,
@@ -331,9 +436,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       nextData[rowIndex] = rowCopy;
       commit(nextData, columns);
 
-      // Validate against current column type and update parseErrors map
+      // Validate against current column type and update Redux parseErrors
       const colType = columns[columnIndex]?.type ?? 'text';
-      // Use the same date format as the context for consistent validation
       const conv = tryConvert(
         colType,
         columnIndex,
@@ -342,23 +446,17 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         undefined,
         colType === 'date' ? dateFormat : undefined
       );
-      const existing = validationErrors.excelErrors?.parseErrors || {};
-      const next: Record<number, number[]> = { ...existing };
-      const r1 = rowIndex + 1;
-      if (conv.ok) {
-        if (next[r1]?.includes(columnIndex)) {
-          const remaining = (next[r1] || []).filter(idx => idx !== columnIndex);
-          if (remaining.length) next[r1] = remaining;
-          else delete next[r1];
-        }
-      } else {
-        const cols = next[r1] ? [...next[r1]] : [];
-        if (!cols.includes(columnIndex)) cols.push(columnIndex);
-        next[r1] = cols;
-      }
-      setExcelErrors({ parseErrors: next });
+
+      // Update Redux with individual cell validation result
+      dispatch(
+        updateParseError({
+          row: rowIndex,
+          column: columnIndex,
+          hasError: !conv.ok,
+        })
+      );
     },
-    [data, columns, commit, tryConvert, dateFormat, validationErrors.excelErrors, setExcelErrors]
+    [data, columns, commit, tryConvert, dateFormat, dispatch]
   );
 
   // Add/remove
@@ -406,7 +504,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     if (mode === 'view' || columns.length <= 1) return;
     const nc = columns.filter((_, i) => i !== c);
     const nd = data.map(r => r.filter((_, i) => i !== c));
-    setSelectedColumn(null);
+    dispatch(setSelectedColumn(null));
     setSortConfig(null);
     // Removing column changes both data and columns
     commit(nd, nc, false, {
@@ -416,10 +514,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     setFilters(f => f.filter((_, i) => i !== c));
   };
 
-  const deleteSelectedRow = () => {
-    if (selectedRow !== null) {
-      removeRow(selectedRow);
-    }
+  const deleteSelectedRow = (rowIndex: number) => {
+    removeRow(rowIndex);
   };
   const deleteSelectedColumn = () => {
     if (selectedColumn !== null) {
@@ -435,7 +531,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       direction = 'desc';
     }
 
-    setSortConfig({ column: columnIndex, direction });
+    dispatch(setSortConfig({ column: columnIndex, direction }));
 
     const nd = [...data];
     const columnType = columns[columnIndex].type;
@@ -519,16 +615,6 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // Use useRef to track scroll position without causing re-renders
   const scrollTopRef = useRef(0);
   const rafRef = useRef<number | null>(null);
-
-  console.log('🔄 CustomExcel re-render:', {
-    dataLength: initialData.length,
-    columnsLength: initialColumns.length,
-    mode,
-    timestamp: new Date().toISOString(),
-    onDataChange: !!onDataChange,
-    scrollTop: scrollTop,
-    isScrolling: scrollTopRef.current !== scrollTop,
-  });
 
   const onScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
@@ -679,15 +765,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
               <Plus size={14} /> Col
             </Button>
             <div className="h-5 w-px bg-gray-300 dark:bg-gray-600" />
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={deleteSelectedRow}
-              disabled={selectedRow === null || data.length <= 1}
-              className="gap-1"
-            >
-              Delete Row {selectedRow !== null ? `#${selectedRow + 1}` : ''}
-            </Button>
+            <DeleteRowButton onDelete={deleteSelectedRow} dataLength={data.length} />
             <Button
               size="sm"
               variant="destructive"
@@ -763,95 +841,20 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
                 <th className="sticky left-0 z-40 bg-gray-100 dark:bg-gray-700 border-r border-b border-gray-300 dark:border-gray-600 w-12 text-center font-semibold">
                   #
                 </th>
-                {columns.map((col, ci) => {
-                  const isDuplicate =
-                    validationErrors.duplicateColumns?.duplicateColumnIndices.includes(ci) || false;
-                  return (
-                    <th
-                      key={ci}
-                      className={`relative group border-b border-r p-2 align-top font-semibold text-gray-700 dark:text-gray-200 cursor-pointer ${
-                        isDuplicate
-                          ? 'bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-600 hover:bg-red-200 dark:hover:bg-red-800/50'
-                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      } ${selectedColumn === ci ? 'bg-blue-100 dark:bg-blue-900/50' : ''}`}
-                      style={{ width: col.width || DEFAULT_WIDTH, minWidth: 150 }}
-                      onClick={() => setSelectedColumn(selectedColumn === ci ? null : ci)}
-                    >
-                      <div className="flex items-center gap-1">
-                        {mode === 'edit' && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="icon" variant="ghost" className="w-6 h-6 flex-shrink-0">
-                                {COLUMN_TYPES.find(t => t.value === col.type)?.icon}
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              {COLUMN_TYPES.map(t => (
-                                <DropdownMenuItem
-                                  key={t.value}
-                                  onClick={() => setType(ci, t.value as DataHeader['type'])}
-                                  className="gap-2"
-                                >
-                                  {t.icon} {t.label}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                        <input
-                          value={col.name}
-                          readOnly={mode === 'view'}
-                          onChange={e => setHeader(ci, e.target.value)}
-                          className={`flex-grow bg-transparent font-bold text-sm px-2 py-1 rounded-md min-w-0 ${mode === 'edit' ? 'focus:outline-none focus:ring-1 focus:ring-blue-500 hover:bg-gray-50 dark:hover:bg-gray-600' : 'cursor-default'}`}
-                          style={{ maxWidth: '140px' }}
-                        />
-                        {mode === 'edit' && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleSort(ci);
-                            }}
-                            className="w-6 h-6 flex-shrink-0 ml-auto"
-                            title="Sort column"
-                          >
-                            {sortConfig?.column === ci ? (
-                              sortConfig.direction === 'asc' ? (
-                                <ArrowUp size={12} />
-                              ) : (
-                                <ArrowDown size={12} />
-                              )
-                            ) : (
-                              <ArrowUpDown size={12} />
-                            )}
-                          </Button>
-                        )}
-                        {selectedColumn === ci && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={e => {
-                              e.stopPropagation();
-                              setSelectedColumn(null);
-                            }}
-                            className="w-6 h-6 flex-shrink-0"
-                          >
-                            <X size={12} className="text-blue-500" />
-                          </Button>
-                        )}
-                      </div>
-                      {mode === 'edit' && (
-                        <input
-                          value={filters[ci] || ''}
-                          onChange={e => changeFilter(ci, e.target.value)}
-                          placeholder="Filter..."
-                          className="w-full text-xs border rounded px-2 py-1 mt-1 bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                        />
-                      )}
-                    </th>
-                  );
-                })}
+                {columns.map((col, ci) => (
+                  <ExcelColumnHeader
+                    key={ci}
+                    columnIndex={ci}
+                    column={col}
+                    mode={mode}
+                    filterValue={filters[ci] || ''}
+                    onHeaderChange={setHeader}
+                    onTypeChange={setType}
+                    onSort={handleSort}
+                    onFilterChange={changeFilter}
+                    sortConfig={sortConfig}
+                  />
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -866,11 +869,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
                   rowIndex={i}
                   rowData={row}
                   columns={columns}
-                  isSelected={selectedRow === i}
                   mode={mode}
-                  validationErrors={validationErrors}
-                  onRowSelect={setSelectedRow}
                   onCellChange={handleCellChange}
+                  onCellFocus={handleCellFocus}
                   onDataChange={onDataChange}
                 />
               ))}
@@ -896,45 +897,22 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-1">
           {(() => {
             // Duplicate column errors
-            const duplicateColumns = validationErrors.duplicateColumns;
             if (duplicateColumns && duplicateColumns.duplicateNames.length > 0) {
               const duplicateNames = duplicateColumns.duplicateNames.join(', ');
               return (
                 <div className="text-red-600 dark:text-red-400 flex items-start gap-2">
-                  <span>
-                    Lỗi: Các cột có tên trùng lặp: {duplicateNames}. Vui lòng đổi tên để tránh xung
-                    đột.
-                  </span>
+                  <span>{t('excelErrors.duplicateColumns', { names: duplicateNames })};</span>
                 </div>
               );
             }
             return null;
           })()}
-          {(() => {
-            const parseMap = validationErrors.excelErrors?.parseErrors || {};
-            const rows = Object.keys(parseMap)
-              .map(n => Number(n))
-              .filter(n => !Number.isNaN(n))
-              .sort((a, b) => a - b);
-            if (rows.length === 0) return null;
-            const firstRow = rows[0];
-            const firstColIdx = (parseMap[firstRow] || [])[0] ?? 0;
-            const colName = columns[firstColIdx]?.name ?? '';
-            const remaining = Math.max(0, rows.length - 1);
-            const base = `Opps, vui lòng kiểm tra hàng ${firstRow} tại cột "${colName}"`;
-            const msg =
-              remaining > 0 ? `${base}. Còn ${remaining} hàng khác gặp vấn đề.` : `${base}.`;
-            return (
-              <div className="text-red-600 dark:text-red-400 flex items-start gap-2">
-                <span>{msg}</span>
-              </div>
-            );
-          })()}
+          <ValidationDisplay columns={columns} />
           {infoMessage && (
             <div className="text-blue-600 dark:text-blue-400 flex items-start gap-2">
               <span>{infoMessage}</span>
               <button
-                onClick={() => setInfoMessage(null)}
+                onClick={() => dispatch(setInfoMessage(null))}
                 className="ml-auto text-blue-500 hover:text-blue-700 dark:hover:text-blue-300"
               >
                 ×
