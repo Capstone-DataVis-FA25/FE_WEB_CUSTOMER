@@ -254,6 +254,25 @@ const DatasetDetailPage: React.FC = () => {
     [t]
   );
 
+  // Key handling for name input moved out of JSX to keep markup simple
+  const handleNameKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        handleNameSave();
+      } else if (e.key === 'Escape') {
+        setEditableName(originalName);
+        setIsEditingName(false);
+        setValidationErrors(prev => ({ ...prev, name: '' }));
+      }
+    },
+    [handleNameSave, originalName]
+  );
+
+  const nameInputClass = useMemo(
+    () => `font-medium ${validationErrors.name ? 'border-red-500 focus:ring-red-500' : ''}`,
+    [validationErrors.name]
+  );
+
   // Handle description change - validate on every change
   const handleDescriptionChange = useCallback(
     (value: string) => {
@@ -752,18 +771,9 @@ const DatasetDetailPage: React.FC = () => {
                                 value={editableName}
                                 onChange={e => handleNameChange(e.target.value)}
                                 onBlur={handleNameSave}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter') handleNameSave();
-                                  if (e.key === 'Escape') {
-                                    setEditableName(originalName);
-                                    setIsEditingName(false);
-                                    setValidationErrors(prev => ({ ...prev, name: '' }));
-                                  }
-                                }}
+                                onKeyDown={handleNameKeyDown}
                                 autoFocus
-                                className={`font-medium ${
-                                  validationErrors.name ? 'border-red-500 focus:ring-red-500' : ''
-                                }`}
+                                className={nameInputClass}
                                 placeholder={t('dataset_namePlaceholder', 'Enter dataset name')}
                               />
                               {validationErrors.name && (
