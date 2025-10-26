@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useDataset, type DateFormat, type NumberFormat } from '@/contexts/DatasetContext';
 import { useForm } from '@/contexts/FormContext';
 import { useAppSelector } from '@/store/hooks';
+import { selectDuplicateColumns, selectEmptyColumns } from '@/features/excelUI';
 import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
 import { Settings, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +25,8 @@ const DataViewerOptions = memo(function DataViewerOptions({
 }: DataViewerOptionsProps) {
   const { t } = useTranslation();
   const { creating: isUploading } = useAppSelector(state => state.dataset);
+  const duplicateColumns = useAppSelector(selectDuplicateColumns);
+  const emptyColumns = useAppSelector(selectEmptyColumns);
 
   // Get form states from FormContext
   const {
@@ -99,8 +102,11 @@ const DataViewerOptions = memo(function DataViewerOptions({
 
   // Memoize expensive validation check - combine both form and dataset validation
   const hasErrors = useMemo(() => {
-    return hasFormValidationErrors() || hasDatasetValidationErrors();
-  }, [hasFormValidationErrors, hasDatasetValidationErrors]);
+    const hasHeaderErrors =
+      (duplicateColumns && duplicateColumns.duplicateNames.length > 0) ||
+      (emptyColumns && emptyColumns.length > 0);
+    return hasFormValidationErrors() || hasDatasetValidationErrors() || hasHeaderErrors;
+  }, [hasFormValidationErrors, hasDatasetValidationErrors, duplicateColumns, emptyColumns]);
 
   return (
     <div className="w-full flex-shrink-0">

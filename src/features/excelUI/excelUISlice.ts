@@ -1,6 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { NumberFormat } from '@/contexts/DatasetContext';
+import type { DataHeader } from '@/utils/dataProcessors';
 
 export interface ExcelUIState {
   selectedRow: number | null;
@@ -12,6 +13,8 @@ export interface ExcelUIState {
     column: number;
     direction: 'asc' | 'desc';
   } | null;
+  columns: DataHeader[]; // Moved columns ownership to Redux (step 1)
+  filters: string[];
   // Validation errors moved from DatasetContext to prevent prop drilling
   duplicateColumns: {
     duplicateNames: string[];
@@ -31,6 +34,8 @@ const initialState: ExcelUIState = {
   touchedCells: [], // Changed from new Set() to [] for serialization
   infoMessage: null,
   sortConfig: null,
+  columns: [],
+  filters: [],
   duplicateColumns: null,
   emptyColumns: [],
   parseErrors: {},
@@ -76,6 +81,36 @@ const excelUISlice = createSlice({
       action: PayloadAction<{ column: number; direction: 'asc' | 'desc' } | null>
     ) => {
       state.sortConfig = action.payload;
+    },
+    // ===== Columns management =====
+    setColumns: (state, action: PayloadAction<DataHeader[]>) => {
+      state.columns = action.payload;
+    },
+    setColumnName: (state, action: PayloadAction<{ index: number; name: string }>) => {
+      const { index, name } = action.payload;
+      if (state.columns[index]) state.columns[index] = { ...state.columns[index], name };
+    },
+    setColumnType: (
+      state,
+      action: PayloadAction<{ index: number; type: 'text' | 'number' | 'date' }>
+    ) => {
+      const { index, type } = action.payload;
+      if (state.columns[index]) state.columns[index] = { ...state.columns[index], type };
+    },
+    setColumnWidth: (state, action: PayloadAction<{ index: number; width: number }>) => {
+      const { index, width } = action.payload;
+      if (state.columns[index]) state.columns[index] = { ...state.columns[index], width };
+    },
+    // ===== Filters management =====
+    setFilters: (state, action: PayloadAction<string[]>) => {
+      state.filters = action.payload;
+    },
+    setFilter: (state, action: PayloadAction<{ index: number; value: string }>) => {
+      const { index, value } = action.payload;
+      if (!state.filters || state.filters.length < state.columns.length) {
+        state.filters = Array(state.columns.length).fill('');
+      }
+      state.filters[index] = value;
     },
     clearUIState: () => {
       return initialState;
@@ -135,6 +170,12 @@ export const {
   addTouchedCell,
   setInfoMessage,
   setSortConfig,
+  setColumns,
+  setColumnName,
+  setColumnType,
+  setColumnWidth,
+  setFilters,
+  setFilter,
   clearUIState,
   setDuplicateColumns,
   setEmptyColumns,

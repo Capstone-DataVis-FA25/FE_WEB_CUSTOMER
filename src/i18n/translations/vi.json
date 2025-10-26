@@ -1374,6 +1374,7 @@
     "default": "dữ liệu hợp lệ"
   },
   "excelErrors": {
+    "columnIndex": "Cột {{index}}",
     "duplicateColumns": "Lỗi: Các cột có tên trùng lặp: {{names}}. Vui lòng đổi tên để tránh xung đột.",
     "emptyColumns": "Lỗi: Tên cột không được để trống: {{names}}.",
     "invalidData": {

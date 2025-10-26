@@ -1,97 +1,113 @@
-import React, { memo, useCallback, useEffect } from 'react';
+import React, { memo, useCallback, useEffect, useRef } from 'react';
 import ExcelCell from './ExcelCell';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
-import type { DataHeader } from '@/utils/dataProcessors';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import {
-  setSelectedRow,
-  selectIsRowSelected,
-  selectRowParseErrors,
-  setSelectedColumn, // Import the action to reset column selection
-} from '@/features/excelUI';
+import { setSelectedRow, selectIsRowSelected, setSelectedColumn } from '@/features/excelUI';
 
 interface ExcelRowProps {
   rowIndex: number;
   rowData: string[];
-  columns: DataHeader[];
+  columnsLength: number;
   mode: 'edit' | 'view';
   onCellChange: (rowIndex: number, columnIndex: number, newValue: string) => void;
   onCellFocus: (rowIndex: number, columnIndex: number) => void;
-  onDataChange?: (data: string[][], columns: DataHeader[]) => void;
+  onDataChange?: (data: string[][], columns: any[]) => void;
 }
 
-const ExcelRow = memo(function ExcelRow({
-  rowIndex,
-  rowData,
-  columns,
-  mode,
-  onCellChange,
-  onCellFocus,
-  onDataChange,
-}: ExcelRowProps) {
-  const isSelected = useAppSelector(selectIsRowSelected(rowIndex));
-  const dispatch = useAppDispatch();
+const ExcelRow = memo(
+  function ExcelRow({
+    rowIndex,
+    rowData,
+    columnsLength,
+    mode,
+    onCellChange,
+    onCellFocus,
+    onDataChange,
+  }: ExcelRowProps) {
+    const isSelected = useAppSelector(selectIsRowSelected(rowIndex));
+    const dispatch = useAppDispatch();
 
-  // Reset both row and column selection when data changes
-  useEffect(() => {
-    if (onDataChange) {
-      dispatch(setSelectedRow(null));
-      dispatch(setSelectedColumn(null)); // Add this line
-    }
-  }, [rowData, columns, dispatch, onDataChange]);
+    const renderCountRef = useRef(0);
+    useEffect(() => {
+      renderCountRef.current += 1;
+    }, []);
 
-  // Get validation errors for this specific row - only re-renders when this row's validation changes
-  const handleRowClick = useCallback(() => {
-    // Always select this row (this will deselect any other selected row)
-    dispatch(setSelectedRow(rowIndex));
-  }, [rowIndex, dispatch]);
+    useEffect(() => {
+      console.log('ExcelRow render', {
+        rowIndex,
+        rowLength: rowData.length,
+        columnsLength,
+        isSelected,
+        renderCount: renderCountRef.current,
+      });
+    }, [rowIndex, rowData, columnsLength, isSelected]);
 
-  const handleDeselect = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      dispatch(setSelectedRow(null));
-    },
-    [dispatch]
-  );
+    // Reset both row and column selection when data changes
+    useEffect(() => {
+      if (onDataChange) {
+        dispatch(setSelectedRow(null));
+        dispatch(setSelectedColumn(null));
+      }
+    }, [rowData, columnsLength, dispatch, onDataChange]);
 
-  return (
-    <tr
-      className={`hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
-        isSelected ? 'bg-blue-100 dark:bg-blue-900/50' : ''
-      }`}
-      onClick={handleRowClick}
-    >
-      {/* Row number cell */}
-      <td className="sticky left-0 z-20 bg-gray-100 dark:bg-gray-700 border-r border-b border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-2 text-xs">
-        <div className="flex flex-col items-center min-h-[2rem] justify-between py-1">
-          <span>{rowIndex + 1}</span>
-          {isSelected && (
-            <Button size="icon" variant="ghost" onClick={handleDeselect} className="w-4 h-4">
-              <X size={10} className="text-blue-500" />
-            </Button>
-          )}
-        </div>
-      </td>
+    const handleRowClick = useCallback(() => {
+      dispatch(setSelectedRow(rowIndex));
+    }, [rowIndex, dispatch]);
 
-      {/* Data cells */}
-      {columns.map((col, columnIndex) => {
-        return (
+    const handleDeselect = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        dispatch(setSelectedRow(null));
+      },
+      [dispatch]
+    );
+
+    return (
+      <tr
+        className={`hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+          isSelected ? 'bg-blue-100 dark:bg-blue-900/50' : ''
+        }`}
+        onClick={handleRowClick}
+      >
+        {/* Row number cell */}
+        <td className="sticky left-0 z-20 bg-gray-100 dark:bg-gray-700 border-r border-b border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-2 text-xs">
+          <div className="flex flex-col items-center min-h-[2rem] justify-between py-1">
+            <span>{rowIndex + 1}</span>
+            {isSelected && (
+              <Button size="icon" variant="ghost" onClick={handleDeselect} className="w-4 h-4">
+                <X size={10} className="text-blue-500" />
+              </Button>
+            )}
+          </div>
+        </td>
+
+        {/* Data cells */}
+        {Array.from({ length: columnsLength }).map((_, columnIndex) => (
           <ExcelCell
             key={columnIndex}
             rowIndex={rowIndex}
             columnIndex={columnIndex}
             value={rowData[columnIndex] || ''}
-            columnType={col.type}
             mode={mode}
-            onDataChange={onDataChange}
             onCellChange={onCellChange}
             onCellFocus={onCellFocus}
           />
-        );
-      })}
-    </tr>
-  );
-});
+        ))}
+      </tr>
+    );
+  },
+  (prevProps: ExcelRowProps, nextProps: ExcelRowProps) => {
+    return (
+      prevProps.rowIndex === nextProps.rowIndex &&
+      prevProps.columnsLength === nextProps.columnsLength &&
+      prevProps.mode === nextProps.mode &&
+      prevProps.onCellChange === nextProps.onCellChange &&
+      prevProps.onCellFocus === nextProps.onCellFocus &&
+      prevProps.onDataChange === nextProps.onDataChange &&
+      prevProps.rowData === nextProps.rowData
+    );
+  }
+);
 
 export default ExcelRow;
