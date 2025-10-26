@@ -9,6 +9,7 @@ import type { DatasetState } from '../features/dataset/datasetSlice';
 import { chartReducer, type ChartState } from '@/features/charts';
 import { chartNoteReducer, type ChartNoteState } from '@/features/chartNotes';
 import { chartEditorReducer, type ChartEditorState } from '@/features/chartEditor';
+import { excelUIReducer, type ExcelUIState } from '@/features/excelUI';
 
 const persistConfig = {
   key: 'root',
@@ -22,6 +23,7 @@ const rootReducer = combineReducers({
   chart: chartReducer,
   chartNote: chartNoteReducer,
   chartEditor: chartEditorReducer,
+  excelUI: excelUIReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -44,6 +46,7 @@ export type RootState = {
   chart: ChartState;
   chartNote: ChartNoteState;
   chartEditor: ChartEditorState;
+  excelUI: ExcelUIState;
 };
 
 export type AppDispatch = typeof store.dispatch;

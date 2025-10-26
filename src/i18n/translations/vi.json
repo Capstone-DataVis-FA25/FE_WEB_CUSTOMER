@@ -1366,5 +1366,20 @@
   "chart_editor_series": "Chuỗi",
   "chart_editor_seriesManagement": "Quản Lý Chuỗi Dữ Liệu",
   "chart_editor_save_chart": "Lưu Biểu Đồ",
-  "chart_update_success_message": "Cập Nhật Biểu Đồ Thành Công"
+  "chart_update_success_message": "Cập Nhật Biểu Đồ Thành Công",
+  "expectedFormat": {
+    "number": "số (ví dụ: {{example}})",
+    "date": "ngày tháng (định dạng: {{format}})",
+    "text": "văn bản",
+    "default": "dữ liệu hợp lệ"
+  },
+  "excelErrors": {
+    "columnIndex": "Cột {{index}}",
+    "duplicateColumns": "Lỗi: Các cột có tên trùng lặp: {{names}}. Vui lòng đổi tên để tránh xung đột.",
+    "emptyColumns": "Lỗi: Tên cột không được để trống: {{names}}.",
+    "invalidData": {
+      "base": "Lỗi: Dữ liệu không đúng định dạng tại hàng {{row}}, cột \"{{column}}\". Định dạng mong đợi: {{expectedFormat}}.",
+      "withRemaining": "Lỗi: Dữ liệu không đúng định dạng tại hàng {{row}}, cột \"{{column}}\". Định dạng mong đợi: {{expectedFormat}}. Còn {{remaining}} hàng khác gặp vấn đề."
+    }
+  }
 }

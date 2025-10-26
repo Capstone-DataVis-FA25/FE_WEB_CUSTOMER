@@ -28,8 +28,8 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
   const { creating: isUploading } = useAppSelector(state => state.dataset);
   const [isCustom, setIsCustom] = useState(false);
   const [customNumberFormat, setCustomNumberFormat] = useState<NumberFormat>({
-    thousandsSeparator: '',
-    decimalSeparator: '',
+    thousandsSeparator: thousandsSeparator,
+    decimalSeparator: decimalSeparator,
   });
   const numberFormats = [
     {
@@ -61,6 +61,24 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
     },
   ] as const;
 
+  // Update customNumberFormat when props change (when switching between formats)
+  useEffect(() => {
+    setCustomNumberFormat({
+      thousandsSeparator: thousandsSeparator,
+      decimalSeparator: decimalSeparator,
+    });
+  }, [thousandsSeparator, decimalSeparator]);
+
+  // Auto-toggle custom mode when incoming separators don't match any preset
+  useEffect(() => {
+    const preset = numberFormats.find(
+      nf =>
+        nf.value.decimalSeparator === decimalSeparator &&
+        nf.value.thousandsSeparator === thousandsSeparator
+    );
+    setIsCustom(!preset);
+  }, [thousandsSeparator, decimalSeparator]);
+
   // Update validation errors whenever format changes
   useEffect(() => {
     const separatorsEqual =
@@ -82,6 +100,7 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
   const separatorsAreEqual = validationErrors.numberFormat?.separatorsEqual || false;
   const isDecimalSeparatorMissing = validationErrors.numberFormat?.missingDecimalSeparator || false;
   const hasValidationError = separatorsAreEqual || isDecimalSeparatorMissing;
+  // Compute Select value as the preset key, or 'Custom' when custom
   const selectedNumberFormat = isCustom
     ? 'Custom'
     : numberFormats.find(
@@ -99,30 +118,28 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
         <Select
           value={selectedNumberFormat}
           onValueChange={v => {
-            const data = JSON.parse(v) as {
-              thousandsSeparator: string;
-              decimalSeparator: string;
-            };
+            if (v === 'Custom') {
+              // Switching to Custom - preserve current format, don't revalidate
+              setIsCustom(true);
+              return;
+            }
 
-            const isEmpty = data.thousandsSeparator === '' && data.decimalSeparator === '';
+            const preset = numberFormats.find(nf => nf.key === v);
+            if (!preset) return;
+
+            const data = preset.value;
             const isSame =
               data.thousandsSeparator === thousandsSeparator &&
               data.decimalSeparator === decimalSeparator;
 
-            // Skip if nothing changes
-            if ((isCustom && isEmpty) || (!isCustom && isSame)) {
-              return;
-            }
+            if (isSame) return; // Skip if nothing changes
 
-            if (isEmpty) {
-              setIsCustom(true);
-            } else {
-              setIsCustom(false);
-              revalidateColumnsOfType('number', {
-                thousandsSeparator: data.thousandsSeparator,
-                decimalSeparator: data.decimalSeparator,
-              });
-            }
+            // Switching to predefined format - apply the new format
+            setIsCustom(false);
+            revalidateColumnsOfType('number', {
+              thousandsSeparator: data.thousandsSeparator,
+              decimalSeparator: data.decimalSeparator,
+            });
             onChange(data);
           }}
         >
@@ -131,7 +148,7 @@ export const NumberFormatSelector: React.FC<NumberFormatSelectorProps> = ({
           </SelectTrigger>
           <SelectContent>
             {numberFormats.map(numberFormat => (
-              <SelectItem key={numberFormat.key} value={JSON.stringify(numberFormat.value)}>
+              <SelectItem key={numberFormat.key} value={numberFormat.key}>
                 <div className="flex items-center justify-between w-full">
                   <span className="font-mono">{numberFormat.label}</span>
                   <span className="text-gray-500 dark:text-gray-400 ml-4">

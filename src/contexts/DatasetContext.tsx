@@ -152,8 +152,12 @@ interface DatasetContextType extends DatasetState {
   setExcelErrors: (errors: { parseErrors: ExcelErrorMap }) => void;
   clearExcelErrors: () => void;
 
-  // Duplicate column validation
-  validateDuplicateColumns: (columns: DataHeader[]) => void;
+  // Column validation (duplicates and empty names)
+  validateDuplicateColumns: (columns: DataHeader[]) => {
+    duplicateNames: string[];
+    duplicateColumnIndices: number[];
+    emptyColumnIndices: number[];
+  };
 
   // Parsed values helper
   updateParsedValue: (
@@ -220,17 +224,24 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
   }, []);
 
   const setOriginalParsedData = useCallback((data: ParsedDataResult | null) => {
-    console.log('🔧 DatasetContext: setOriginalParsedData called', {
-      dataLength: data?.data?.length,
-    });
+    if (data && typeof data.data?.length !== 'undefined') {
+      console.log('🔧 DatasetContext: setOriginalParsedData called', {
+        dataLength: data.data.length,
+      });
+    }
     setState(prev => ({ ...prev, originalParsedData: data }));
   }, []);
 
   const setCurrentParsedData = useCallback((data: ParsedDataResult | null) => {
-    console.log('🔧 DatasetContext: setCurrentParsedData called', {
-      dataLength: data?.data?.length,
+    setState(prev => {
+      if (prev.currentParsedData === data) return prev; // no-op if same reference
+      if (data && typeof data.data?.length !== 'undefined') {
+        console.log('🔧 DatasetContext: setCurrentParsedData called', {
+          dataLength: data.data.length,
+        });
+      }
+      return { ...prev, currentParsedData: data };
     });
-    setState(prev => ({ ...prev, currentParsedData: data }));
   }, []);
 
   const setIsJsonFormat = useCallback((isJson: boolean) => {
@@ -351,13 +362,14 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
     });
   }, []);
 
-  // Duplicate column validation
+  // Column validation (duplicates and empty names)
   const validateDuplicateColumns = useCallback((columns: DataHeader[]) => {
     const nameCount: Record<string, number[]> = {};
     const duplicateNames: string[] = [];
     const duplicateColumnIndices: number[] = [];
+    const emptyColumnIndices: number[] = [];
 
-    // Count occurrences of each column name
+    // Count occurrences of each column name and check for empty names
     columns.forEach((col, index) => {
       const name = col.name.trim();
       if (name) {
@@ -365,6 +377,8 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
           nameCount[name] = [];
         }
         nameCount[name].push(index);
+      } else {
+        emptyColumnIndices.push(index);
       }
     });
 
@@ -387,6 +401,13 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
         },
       },
     }));
+
+    // Return the result for external use
+    return {
+      duplicateNames,
+      duplicateColumnIndices,
+      emptyColumnIndices,
+    };
   }, []);
 
   // Utility actions
