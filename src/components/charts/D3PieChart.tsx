@@ -157,17 +157,17 @@ const D3PieChart: React.FC<D3PieChartProps> = ({
         return [];
       }
 
-      // Validate required keys
+      // Validate required keys (treat labelKey and valueKey as IDs)
       const hasValidData = dataToProcess.every(
         d =>
-          d[labelKey] !== undefined &&
-          d[valueKey] !== undefined &&
+          Object.prototype.hasOwnProperty.call(d, labelKey) &&
+          Object.prototype.hasOwnProperty.call(d, valueKey) &&
           typeof d[valueKey] === 'number' &&
           !isNaN(d[valueKey] as number)
       );
 
       if (!hasValidData) {
-        setError(`Invalid data: missing or invalid ${labelKey} or ${valueKey}`);
+        setError(`Invalid data: missing or invalid column id '${labelKey}' or '${valueKey}'`);
         return [];
       }
 
@@ -353,11 +353,18 @@ const D3PieChart: React.FC<D3PieChartProps> = ({
       const result: string[] = [];
       processedData.forEach((d, index) => {
         const label = String(d[labelKey]);
-        const colorKey = colors[label] ? label : `color${index + 1}`;
-        result.push(colors[colorKey]?.[mode] || defaultColorsChart[`color${index + 1}`][mode]);
+        // Nếu có màu tùy chỉnh cho label, dùng nó
+        if (colors[label]) {
+          result.push(colors[label][mode]);
+          return;
+        }
+        // Nếu không, lấy màu từ defaultColorsChart theo chu kỳ
+        const colorIndex = (index % 6) + 1; // Lặp lại từ 1-6 nếu có nhiều hơn 6 phần
+        result.push(defaultColorsChart[`color${colorIndex}`][mode]);
       });
       return result;
     };
+
     const currentColors = getCurrentColors();
 
     const textColor = titleColor || (isDarkMode ? '#f3f4f6' : '#1f2937');

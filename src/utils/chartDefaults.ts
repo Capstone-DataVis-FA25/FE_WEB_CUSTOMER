@@ -13,6 +13,9 @@ import type {
   SubLineChartConfig,
   SubScatterChartConfig,
   ScatterChartConfig,
+  SubPieChartConfig,
+  PieChartConfig,
+  PieFormatterConfig,
 } from '@/types/chart';
 
 // Default Sub configs
@@ -75,6 +78,32 @@ const defaultSubScatterConfig: SubScatterChartConfig = {
   showLegend: false,
 };
 
+// Pie config block (after all dependencies)
+const defaultSubPieConfig: SubPieChartConfig = {
+  ...defaultBaseChartConfig,
+  labelKey: '',
+  valueKey: '',
+  showLabels: true,
+  showPercentage: true,
+  showSliceValues: true,
+  enableAnimation: true,
+  innerRadius: 0,
+  cornerRadius: 0,
+  padAngle: 0,
+  startAngle: 0,
+  endAngle: 360,
+  sortSlices: 'descending',
+  sliceOpacity: 1,
+  legendMaxItems: 10,
+  strokeWidth: 2,
+  strokeColor: '#ffffff',
+  hoverScale: 1.05,
+  enableHoverEffect: true,
+  titleColor: '',
+  labelColor: '',
+  showTitle: true,
+};
+
 // Default formatter config
 const defaultFormatterConfig: Partial<FormatterConfig> = {
   useYFormatter: false,
@@ -83,6 +112,12 @@ const defaultFormatterConfig: Partial<FormatterConfig> = {
   xFormatterType: 'number',
   customYFormatter: '',
   customXFormatter: '',
+};
+
+const defaultPieFormatterConfig: Partial<PieFormatterConfig> = {
+  useValueFormatter: true,
+  valueFormatterType: 'number',
+  customValueFormatter: '',
 };
 
 // Default axis configs - updated to match new type
@@ -128,6 +163,12 @@ export const defaultScatterChartConfig: ScatterChartConfig = {
   chartType: 'scatter',
 };
 
+export const defaultPieChartConfig: PieChartConfig = {
+  config: defaultSubPieConfig,
+  formatters: defaultPieFormatterConfig,
+  chartType: 'pie',
+};
+
 // Returns a consistent default StructuredChartConfig for given chart type and optional dataset name
 export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => {
   const log = (cfg: MainChartConfig) => {
@@ -144,5 +185,7 @@ export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => 
       return log(defaultBarChartConfig);
     case ChartType.Scatter:
       return log(defaultScatterChartConfig);
+    case ChartType.Pie:
+      return log(defaultPieChartConfig);
   }
 };

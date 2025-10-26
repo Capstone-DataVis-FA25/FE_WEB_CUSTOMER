@@ -1,3 +1,4 @@
+import * as d3 from 'd3-shape';
 // Removed direct d3 import to avoid hard dependency during type-check
 
 // Color configuration
@@ -9,7 +10,8 @@ export type MainChartConfig =
   | LineChartConfig
   | BarChartConfig
   | AreaChartConfig
-  | ScatterChartConfig;
+  | ScatterChartConfig
+  | PieChartConfig;
 // Scatter chart specific configuration
 export interface SubScatterChartConfig extends BaseChartConfig {
   pointRadius?: number;
@@ -43,17 +45,23 @@ export interface AreaChartConfig {
   chartType: 'area';
 }
 
+export interface PieChartConfig {
+  config: SubPieChartConfig;
+  formatters: Partial<PieFormatterConfig>;
+  chartType: 'pie';
+}
+
 // Curve options
 export const curveOptions = {
-  curveLinear: 'curveLinear',
-  curveMonotoneX: 'curveMonotoneX',
-  curveMonotoneY: 'curveMonotoneY',
-  curveBasis: 'curveBasis',
-  curveCardinal: 'curveCardinal',
-  curveCatmullRom: 'curveCatmullRom',
-  curveStep: 'curveStep',
-  curveStepBefore: 'curveStepBefore',
-  curveStepAfter: 'curveStepAfter',
+  curveLinear: d3.curveLinear,
+  curveMonotoneX: d3.curveMonotoneX,
+  curveMonotoneY: d3.curveMonotoneY,
+  curveBasis: d3.curveBasis,
+  curveCardinal: d3.curveCardinal,
+  curveCatmullRom: d3.curveCatmullRom,
+  curveStep: d3.curveStep,
+  curveStepBefore: d3.curveStepBefore,
+  curveStepAfter: d3.curveStepAfter,
 } as const;
 
 // Common chart size presets (unified for all chart types)
@@ -176,6 +184,30 @@ export interface SubBarChartConfig extends BaseChartConfig {
   barSpacing: number;
 }
 
+export interface SubPieChartConfig extends BaseChartConfig {
+  labelKey: string;
+  valueKey: string;
+  showLabels?: boolean;
+  showPercentage?: boolean;
+  showSliceValues?: boolean;
+  enableAnimation?: boolean;
+  innerRadius?: number;
+  cornerRadius?: number;
+  padAngle?: number;
+  startAngle?: number;
+  endAngle?: number;
+  sortSlices?: 'ascending' | 'descending' | 'none';
+  sliceOpacity?: number;
+  legendMaxItems?: number;
+  strokeWidth?: number;
+  strokeColor?: string;
+  hoverScale?: number;
+  enableHoverEffect?: boolean;
+  titleColor?: string;
+  labelColor?: string;
+  showTitle?: boolean;
+}
+
 // For backward compatibility, keep ChartConfig as LineChartConfig
 export type ChartConfig = LineChartConfig | BarChartConfig | AreaChartConfig;
 
@@ -205,6 +237,20 @@ export interface FormatterConfig {
     | 'custom';
   customYFormatter: string;
   customXFormatter: string;
+}
+
+export interface PieFormatterConfig {
+  useValueFormatter: boolean;
+  valueFormatterType:
+    | 'currency'
+    | 'percentage'
+    | 'number'
+    | 'decimal'
+    | 'scientific'
+    | 'bytes'
+    | 'duration'
+    | 'custom';
+  customValueFormatter: string;
 }
 
 // Chart data point interface
