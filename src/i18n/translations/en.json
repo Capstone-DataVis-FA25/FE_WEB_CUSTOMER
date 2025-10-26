@@ -1388,6 +1388,7 @@
     "default": "valid data"
   },
   "excelErrors": {
+    "columnIndex": "Column {{index}}",
     "duplicateColumns": "Error: Columns with duplicate names: {{names}}. Please rename them to avoid conflicts.",
     "emptyColumns": "Error: Column names cannot be empty: {{names}}.",
     "invalidData": {

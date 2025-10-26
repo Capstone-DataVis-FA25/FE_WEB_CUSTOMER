@@ -56,11 +56,12 @@ const ValidationDisplay = memo(function ValidationDisplay({ columns }: Validatio
   // Show empty column error first
   if (hasEmptyColumns) {
     const emptyColumnNames = emptyColumns
-      .map(idx => columns[idx]?.name || `Cột ${idx + 1}`)
+      .map(idx => columns[idx]?.name || t('excelErrors.columnIndex', { index: idx + 1 }))
       .join(', ');
+
     return (
       <div className="text-red-600 dark:text-red-400 flex items-start gap-2">
-        <span>{t('excelErrors.emptyColumns', { names: emptyColumnNames })};</span>
+        <span>{t('excelErrors.emptyColumns', { names: emptyColumnNames })}</span>
       </div>
     );
   }

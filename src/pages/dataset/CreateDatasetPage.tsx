@@ -39,7 +39,7 @@ function CreateDatasetPageContent() {
   const navigate = useNavigate();
 
   // Get form states from FormContext
-  const { datasetName, description } = useForm();
+  const { datasetName, description, resetForm } = useForm();
 
   // Get dataset states from DatasetContext
   const {
@@ -338,6 +338,11 @@ function CreateDatasetPageContent() {
     const prevText = originalTextContent;
     // Reset all shared dataset state back to initial
     resetState();
+    // Reset form fields (name/description)
+    resetForm();
+    // Reset formats to defaults explicitly (in case any external sync exists)
+    setNumberFormat({ thousandsSeparator: ',', decimalSeparator: '.' });
+    setDateFormat('DD/MM/YYYY');
     // Clear local file selection
     setSelectedFile(null);
 
@@ -347,7 +352,15 @@ function CreateDatasetPageContent() {
     }
 
     setViewMode(previousViewMode);
-  }, [originalTextContent, previousViewMode, resetState, setOriginalTextContent]);
+  }, [
+    originalTextContent,
+    previousViewMode,
+    resetState,
+    setOriginalTextContent,
+    resetForm,
+    setNumberFormat,
+    setDateFormat,
+  ]);
 
   // Handle text processing
   const handleTextProcess = useCallback(
@@ -395,18 +408,18 @@ function CreateDatasetPageContent() {
 
           // Auto-apply detected formats from parsing result
           if (result.detectedDateFormat) {
-            console.log('🎯 Auto-applying detected date format (CSV):', result.detectedDateFormat);
+            // console.log('🎯 Auto-applying detected date format (CSV):', result.detectedDateFormat);
             setDateFormat(result.detectedDateFormat);
-            console.log('✅ Date format updated to:', result.detectedDateFormat);
+            // console.log('✅ Date format updated to:', result.detectedDateFormat);
           }
 
           if (result.detectedNumberFormat) {
-            console.log(
-              '🎯 Auto-applying detected number format (CSV):',
-              result.detectedNumberFormat
-            );
+            // console.log(
+            //   '🎯 Auto-applying detected number format (CSV):',
+            //   result.detectedNumberFormat
+            // );
             setNumberFormat(result.detectedNumberFormat);
-            console.log('✅ Number format updated to:', result.detectedNumberFormat);
+            // console.log('✅ Number format updated to:', result.detectedNumberFormat);
           }
         }
 

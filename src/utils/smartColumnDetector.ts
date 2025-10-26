@@ -190,15 +190,15 @@ function analyzeColumn(columnData: string[]): {
   }
 
   // Debug logging
-  console.log('🔍 Column analysis:', {
-    samples: samples.slice(0, 3),
-    dateScore,
-    numberScore,
-    bestDatePattern: bestDatePattern?.format,
-    bestNumberPattern: bestNumberPattern
-      ? `${bestNumberPattern.thousandsSeparator}|${bestNumberPattern.decimalSeparator}`
-      : null,
-  });
+  // console.log('🔍 Column analysis:', {
+  //   samples: samples.slice(0, 3),
+  //   dateScore,
+  //   numberScore,
+  //   bestDatePattern: bestDatePattern?.format,
+  //   bestNumberPattern: bestNumberPattern
+  //     ? `${bestNumberPattern.thousandsSeparator}|${bestNumberPattern.decimalSeparator}`
+  //     : null,
+  // });
 
   // Determine final type
   if (dateScore > 0.6 && dateScore > numberScore) {
@@ -405,13 +405,13 @@ export function detectColumnFormats(data: string[][], maxRows: number = 20): Det
   const dateFormatResult = detectDateFormat(columnAnalyses, analysisData);
   const numberFormatResult = detectNumberFormat(columnAnalyses, analysisData);
 
-  console.log('🎯 Final detection results:', {
-    dateFormat: dateFormatResult.format,
-    dateConfidence: dateFormatResult.confidence,
-    numberFormat: numberFormatResult.format,
-    numberConfidence: numberFormatResult.confidence,
-    columnTypes: columnAnalyses.map(col => col.type),
-  });
+  // console.log('🎯 Final detection results:', {
+  //   dateFormat: dateFormatResult.format,
+  //   dateConfidence: dateFormatResult.confidence,
+  //   numberFormat: numberFormatResult.format,
+  //   numberConfidence: numberFormatResult.confidence,
+  //   columnTypes: columnAnalyses.map(col => col.type),
+  // });
 
   return {
     dateFormat: dateFormatResult.format,
