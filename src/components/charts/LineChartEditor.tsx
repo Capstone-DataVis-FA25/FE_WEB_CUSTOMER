@@ -36,7 +36,6 @@ import {
   type FormatterConfig,
 } from '@/types/chart';
 import {
-  DataEditorSection,
   BasicSettingsSection,
   ChartSettingsSection,
   AxisConfigurationSection,
@@ -110,7 +109,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       const keysArray = Array.isArray(keys) ? keys : [keys];
       const decodedNames = keysArray.map(keyId => {
         const header = dataset.headers.find((h: DatasetHeader) => h.id === keyId);
-        return header ? header.name.toLowerCase() : keyId.toLowerCase(); // Convert to lowercase
+        return header ? header.name : keyId;
       });
 
       return Array.isArray(keys) ? decodedNames : decodedNames[0];
@@ -124,9 +123,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
 
       const keysArray = Array.isArray(keys) ? keys : [keys];
       const encodedIds = keysArray.map(keyName => {
-        const header = dataset.headers.find(
-          (h: DatasetHeader) => h.name.toLowerCase() === keyName.toLowerCase()
-        );
+        const header = dataset.headers.find((h: DatasetHeader) => h.name === keyName);
         return header ? header.id : keyName; // Fallback to keyName if not found
       });
 
@@ -192,9 +189,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       if (initialConfig.xAxisKey) {
         return decodeKeysToNames(initialConfig.xAxisKey) as string;
       }
-      return processedInitialData.length > 0
-        ? Object.keys(processedInitialData[0])[0].toLowerCase()
-        : 'x';
+      return processedInitialData.length > 0 ? Object.keys(processedInitialData[0])[0] : 'x';
     })(),
     yAxisKeys: (() => {
       // Decode initialConfig.yAxisKeys if provided, otherwise use remaining data columns
@@ -204,7 +199,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       return processedInitialData.length > 0
         ? Object.keys(processedInitialData[0])
             .slice(1)
-            .map(key => key.toLowerCase())
+            .map(key => key)
         : ['y']; // Lấy tất cả columns trừ column đầu tiên (xAxisKey)
     })(),
     disabledLines: initialConfig.disabledLines
@@ -267,6 +262,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   const [showDataModal, setShowDataModal] = useState(false);
   const [tempData, setTempData] = useState<ChartDataPoint[]>(processedInitialData);
 
+  console.log('defaultConfig 123: ', defaultConfig);
   // Collapse state for sections
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     basicSettings: true,
@@ -296,9 +292,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       setaxisConfigs(prevConfigs => {
         const newConfigs = config.yAxisKeys.map((key, index) => {
           // Find the header with matching name (case insensitive)
-          const header = dataset.headers.find(
-            (h: DatasetHeader) => h.name.toLowerCase() === key.toLowerCase()
-          );
+          const header = dataset.headers.find((h: DatasetHeader) => h.name === key);
 
           const colorKeys = Object.keys(defaultColorsChart);
           const colorIndex = index % colorKeys.length;
@@ -549,11 +543,10 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         : [config.yAxisKeys];
 
       // Use header names for keys (assuming headers have 'name' property)
-      const newXAxisKey =
-        availableHeaders.length > 0 ? availableHeaders[0].name.toLowerCase() : 'x';
+      const newXAxisKey = availableHeaders.length > 0 ? availableHeaders[0].name : 'x';
       const newYAxisKeys =
         availableHeaders.length > 1
-          ? availableHeaders.slice(1).map((header: DatasetHeader) => header.name.toLowerCase())
+          ? availableHeaders.slice(1).map((header: DatasetHeader) => header.name)
           : ['y'];
 
       // Only update if keys have actually changed and different from last update
@@ -581,11 +574,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         ? config.yAxisKeys
         : [config.yAxisKeys];
 
-      const newXAxisKey = availableKeys[0]?.toLowerCase() || 'x';
+      const newXAxisKey = availableKeys[0] || 'x';
       const newYAxisKeys =
-        availableKeys.slice(1).length > 0
-          ? availableKeys.slice(1).map(key => key.toLowerCase())
-          : ['y'];
+        availableKeys.slice(1).length > 0 ? availableKeys.slice(1).map(key => key) : ['y'];
 
       const keysChanged =
         currentXAxisKey !== newXAxisKey ||
@@ -1021,7 +1012,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 // Find the header for this series dataColumn to get the correct id
                 const decodedDataColumn = decodeKeysToNames(series.dataColumn) as string;
                 const header = dataset?.headers?.find(
-                  (h: DatasetHeader) => h.name.toLowerCase() === decodedDataColumn.toLowerCase()
+                  (h: DatasetHeader) => h.name === decodedDataColumn
                 );
 
                 return {
@@ -1239,16 +1230,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.15 }}
-            >
-              <DataEditorSection
-                data={data}
-                xAxisKey={config.xAxisKey}
-                yAxisKeys={config.yAxisKeys}
-                isCollapsed={collapsedSections.dataEditor}
-                onToggleCollapse={() => toggleSection('dataEditor')}
-                onOpenModal={openDataModal}
-              />
-            </motion.div>
+            ></motion.div>
 
             {/* Basic Settings */}
             <motion.div

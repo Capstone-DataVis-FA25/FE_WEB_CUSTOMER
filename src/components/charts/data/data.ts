@@ -71,6 +71,7 @@ export const categoryArrayData: (string | number)[][] = [
   ['Healthcare', 28, '#ef4444'],
   ['Finance', 22, '#10b981'],
   ['Education', 15, '#f59e0b'],
+  ['Energy', 18, '#8b5cf6'],
 ];
 
 export const categoryData = convertArrayToChartData(categoryArrayData);

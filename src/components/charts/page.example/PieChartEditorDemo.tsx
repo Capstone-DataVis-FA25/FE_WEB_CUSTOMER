@@ -1,49 +1,46 @@
 import React from 'react';
 import PieChartEditor from '@/components/charts/PieChartEditor';
 import { categoryArrayData } from '../data/data';
-import { useTranslation } from 'react-i18next';
 
 const PieChartEditorDemo: React.FC = () => {
-  const { t } = useTranslation();
-
   return (
     <PieChartEditor
       initialArrayData={categoryArrayData}
       initialConfig={{
-        title: t('pieChart_editor_demo_marketShare'),
+        title: 'Market Share by Category 123',
         labelKey: 'category',
         valueKey: 'value',
-        width: 600,
-        height: 600,
+        width: 1200,
+        height: 400,
         showTitle: true,
         showLegend: true,
         showLabels: true,
         showPercentage: true,
-        showSliceValues: false,
+        showSliceValues: true,
         animationDuration: 1000,
-        enableAnimation: true,
-        innerRadius: 0, // 0 for pie chart, 0.5 for donut chart
-        cornerRadius: 4,
-        padAngle: 0.02,
+        enableAnimation: false,
+        innerRadius: 0,
+        cornerRadius: 0,
+        padAngle: 0,
         startAngle: 0,
         endAngle: 360,
         sortSlices: 'descending',
         sliceOpacity: 1,
         theme: 'auto',
         backgroundColor: 'transparent',
-        titleFontSize: 20,
+        titleFontSize: 22,
         titleColor: '',
         labelFontSize: 12,
         labelColor: '',
         legendFontSize: 12,
-        legendPosition: 'right',
-        legendMaxItems: 10,
+        legendPosition: 'bottom',
+        legendMaxItems: 5,
         showTooltip: true,
         strokeWidth: 2,
         strokeColor: '',
         hoverScale: 1.05,
         enableHoverEffect: true,
-        margin: { top: 20, right: 20, bottom: 20, left: 20 },
+        margin: { top: 60, right: 60, bottom: 60, left: 60 },
       }}
       initialFormatters={{
         useValueFormatter: true,
@@ -56,7 +53,7 @@ const PieChartEditorDemo: React.FC = () => {
         Finance: { light: '#10b981', dark: '#34d399' },
         Education: { light: '#f59e0b', dark: '#fbbf24' },
       }}
-      dataset={undefined} // No dataset for demo, uses sample data
+      dataset={undefined}
     />
   );
 };

@@ -8,7 +8,6 @@ export const fetchChartNotes = createAsyncThunk(
   async (chartId: string, { rejectWithValue }) => {
     try {
       const notes = await chartNoteAPI.getChartNotes(chartId);
-      console.log('Fetched notes for chartId: ', notes);
       return { chartId, notes };
     } catch (error) {
       const err = error as { response?: { data?: { message?: string } } };

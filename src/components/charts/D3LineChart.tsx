@@ -156,7 +156,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   arrayData,
   width = 800,
   height = 600, // Reduced from 500 to 400 for better proportions
-  margin = { top: 20, right: 40, bottom: 60, left: 60 }, // Optimized left margin for Y-axis
+  margin = { top: 60, right: 60, bottom: 60, left: 60 }, // Optimized left margin for Y-axis
   xAxisKey,
   yAxisKeys,
   disabledLines = [], // Default to no disabled lines
