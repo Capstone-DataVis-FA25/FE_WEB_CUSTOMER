@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { SubPieChartConfig } from '@/types/chart';
+import type { SubPieDonutChartConfig } from '@/types/chart';
 import { Card, CardHeader, CardContent } from '../ui/card';
 import { ChevronDown, ChevronUp, Sliders } from 'lucide-react';
 import { Label } from '../ui/label';
@@ -8,7 +8,7 @@ import { useDataset } from '@/features/dataset/useDataset';
 import { AnimatePresence, motion } from '@/theme/animation';
 
 // Pie config type guard
-function isPieConfig(config: any): config is SubPieChartConfig {
+function isPieDonutConfig(config: any): config is SubPieDonutChartConfig {
   return (
     config &&
     typeof config === 'object' &&
@@ -56,7 +56,7 @@ const ChartSettingsPieSection: React.FC = () => {
           </div>
         </CardHeader>
         <AnimatePresence>
-          {!isCollapsed && isPieConfig(config) && (
+          {!isCollapsed && isPieDonutConfig(config) && (
             <CardContent className="space-y-4">
               <div className="space-y-3">
                 {/* Label Column Selection */}

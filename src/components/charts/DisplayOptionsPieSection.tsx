@@ -3,10 +3,10 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import { useChartEditor, useChartEditorActions } from '@/features/chartEditor';
-import type { SubPieChartConfig } from '@/types/chart';
+import type { SubPieDonutChartConfig } from '@/types/chart';
 import { motion, AnimatePresence } from 'framer-motion';
 
-function isPieConfig(config: any): config is SubPieChartConfig {
+function isPieDonutConfig(config: any): config is SubPieDonutChartConfig {
   return (
     config &&
     typeof config === 'object' &&
@@ -57,7 +57,7 @@ const DisplayOptionsPieSection: React.FC = () => {
           </div>
         </CardHeader>
         <AnimatePresence mode="wait">
-          {!isCollapsed && isPieConfig(config) && (
+          {!isCollapsed && isPieDonutConfig(config) && (
             <CardContent className="space-y-4">
               <div className="space-y-3">
                 {/* Title Settings */}
