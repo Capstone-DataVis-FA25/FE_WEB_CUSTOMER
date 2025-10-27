@@ -110,8 +110,8 @@ export default function ChooseTemplateTab() {
   const continueWithTemplate = (template: ChartTemplate, datasetIdParam?: string) => {
     try {
       // Only allow chart types supported by CreateChartRequest
-      // Extend support to include 'scatter' and 'pie'
-      if (!['line', 'bar', 'area', 'scatter', 'pie'].includes(template.type)) {
+      // Extend support to include 'scatter' 'pie' and 'donut'
+      if (!['line', 'bar', 'area', 'scatter', 'pie', 'donut'].includes(template.type)) {
         showError(
           t('chart_create_error', 'Error'),
           t('chart_create_unsupported_type', 'This chart type is not supported for creation.')

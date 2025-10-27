@@ -45,7 +45,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = () => {
                 </>
               )}
 
-              {chartType == ChartType.Pie && (
+              {(chartType == ChartType.Pie || chartType == ChartType.Donut) && (
                 <>
                   {/* Basic Chart Settings Section */}
                   <ChartSettingsPieSection />

@@ -10,7 +10,7 @@ import D3ScatterChart from '@/components/charts/D3ScatterChart';
 import { TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { curveOptions } from '@/types/chart';
-import type { SubPieChartConfig, PieFormatterConfig } from '@/types/chart';
+import type { SubPieDonutChartConfig, PieDonutFormatterConfig } from '@/types/chart';
 import { convertChartDataToArray } from '@/utils/dataConverter';
 import { ChartType } from '@/features/charts/chartTypes';
 import D3PieChart from './D3PieChart';
@@ -19,6 +19,9 @@ const ChartDisplaySection: React.FC = () => {
   const { t } = useTranslation();
   const { chartData, chartConfig, currentChartType: chartType } = useChartEditorRead();
   const { currentDataset } = useDataset();
+
+  console.log('chartType 1234:', chartType);
+  console.log('chartConfig 1234: ', chartConfig);
 
   // Helper: Map DataHeader ID to name
   const dataHeaders = currentDataset?.headers || [];
@@ -32,7 +35,12 @@ const ChartDisplaySection: React.FC = () => {
   let axisConfigs: any = undefined;
   let colors: any = {};
   let safeChartConfig: any = null;
-  if (chartType !== ChartType.Pie && chartConfig && 'axisConfigs' in chartConfig) {
+  if (
+    chartType !== ChartType.Pie &&
+    chartType !== ChartType.Donut &&
+    chartConfig &&
+    'axisConfigs' in chartConfig
+  ) {
     formatters = chartConfig.formatters || {
       useYFormatter: false,
       useXFormatter: false,
@@ -50,7 +58,7 @@ const ChartDisplaySection: React.FC = () => {
       }
     });
     safeChartConfig = chartConfig.config || null;
-  } else if (chartType === ChartType.Pie && chartConfig) {
+  } else if ((chartType === ChartType.Pie || chartType === ChartType.Donut) && chartConfig) {
     // Pie chart chỉ lấy config và colors nếu có
     safeChartConfig = chartConfig.config || null;
     colors = {};
@@ -457,7 +465,8 @@ const ChartDisplaySection: React.FC = () => {
             return null;
         }
       }
-      case ChartType.Pie: {
+      case ChartType.Pie:
+      case ChartType.Donut: {
         if (!chartData || chartData.length === 0) {
           return (
             <ErrorPanel
@@ -483,7 +492,7 @@ const ChartDisplaySection: React.FC = () => {
           );
         }
 
-        const pieConfig = safeChartConfig as SubPieChartConfig;
+        const pieConfig = safeChartConfig as SubPieDonutChartConfig;
 
         // Kiểm tra xem đã chọn labelKey và valueKey chưa
         if (!pieConfig.labelKey || !pieConfig.valueKey) {
@@ -504,7 +513,7 @@ const ChartDisplaySection: React.FC = () => {
         const valueKeyName = getHeaderName(pieConfig.valueKey);
 
         // Format values if needed
-        const formatter = (chartConfig.formatters as Partial<PieFormatterConfig>) || {};
+        const formatter = (chartConfig.formatters as Partial<PieDonutFormatterConfig>) || {};
 
         const pieProps = {
           // Data props

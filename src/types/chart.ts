@@ -11,7 +11,8 @@ export type MainChartConfig =
   | BarChartConfig
   | AreaChartConfig
   | ScatterChartConfig
-  | PieChartConfig;
+  | PieChartConfig
+  | DonutChartConfig;
 // Scatter chart specific configuration
 export interface SubScatterChartConfig extends BaseChartConfig {
   pointRadius?: number;
@@ -46,9 +47,15 @@ export interface AreaChartConfig {
 }
 
 export interface PieChartConfig {
-  config: SubPieChartConfig;
-  formatters: Partial<PieFormatterConfig>;
+  config: SubPieDonutChartConfig;
+  formatters: Partial<PieDonutFormatterConfig>;
   chartType: 'pie';
+}
+
+export interface DonutChartConfig {
+  config: SubPieDonutChartConfig;
+  formatters: Partial<PieDonutFormatterConfig>;
+  chartType: 'donut';
 }
 
 // Curve options
@@ -184,7 +191,7 @@ export interface SubBarChartConfig extends BaseChartConfig {
   barSpacing: number;
 }
 
-export interface SubPieChartConfig extends BaseChartConfig {
+export interface SubPieDonutChartConfig extends BaseChartConfig {
   labelKey: string;
   valueKey: string;
   showLabels?: boolean;
@@ -239,7 +246,7 @@ export interface FormatterConfig {
   customXFormatter: string;
 }
 
-export interface PieFormatterConfig {
+export interface PieDonutFormatterConfig {
   useValueFormatter: boolean;
   valueFormatterType:
     | 'currency'

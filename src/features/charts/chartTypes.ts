@@ -34,6 +34,7 @@ export enum ChartType {
   Area = 'area',
   Scatter = 'scatter',
   Pie = 'pie',
+  Donut = 'donut',
 }
 
 // Chart configuration interfaces
