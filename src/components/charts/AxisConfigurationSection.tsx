@@ -14,6 +14,11 @@ import { ChartType } from '@/features/charts/chartTypes';
 import WarningPanel from './WarningPanel';
 import AxisLabelsSettings from './AxisLabelsSettings';
 
+// Type guard: check if chartConfig has axisConfigs
+function hasAxisConfigs(config: any): config is { axisConfigs: any } {
+  return config && typeof config === 'object' && 'axisConfigs' in config;
+}
+
 const AxisConfigurationSection: React.FC = () => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -26,23 +31,32 @@ const AxisConfigurationSection: React.FC = () => {
   const [yAxisRotation, setYAxisRotation] = useState<number>(0);
 
   // Debounced update handlers using custom hook
-  const debouncedUpdateXRotation = useDebouncedUpdater<number>(value =>
-    handleConfigChange({ axisConfigs: { ...chartConfig?.axisConfigs, xAxisRotation: value } })
-  );
+  const debouncedUpdateXRotation = useDebouncedUpdater<number>(value => {
+    if (hasAxisConfigs(chartConfig)) {
+      handleConfigChange({ axisConfigs: { ...chartConfig.axisConfigs, xAxisRotation: value } });
+    }
+  });
 
-  const debouncedUpdateYRotation = useDebouncedUpdater<number>(value =>
-    handleConfigChange({ axisConfigs: { ...chartConfig?.axisConfigs, yAxisRotation: value } })
-  );
+  const debouncedUpdateYRotation = useDebouncedUpdater<number>(value => {
+    if (hasAxisConfigs(chartConfig)) {
+      handleConfigChange({ axisConfigs: { ...chartConfig.axisConfigs, yAxisRotation: value } });
+    }
+  });
 
   // Sync local state with config changes from external sources
   useEffect(() => {
-    if (chartConfig?.axisConfigs?.xAxisRotation !== undefined) {
-      setXAxisRotation(chartConfig.axisConfigs.xAxisRotation);
+    if (hasAxisConfigs(chartConfig)) {
+      if (chartConfig.axisConfigs.xAxisRotation !== undefined) {
+        setXAxisRotation(chartConfig.axisConfigs.xAxisRotation);
+      }
+      if (chartConfig.axisConfigs.yAxisRotation !== undefined) {
+        setYAxisRotation(chartConfig.axisConfigs.yAxisRotation);
+      }
     }
-    if (chartConfig?.axisConfigs?.yAxisRotation !== undefined) {
-      setYAxisRotation(chartConfig.axisConfigs.yAxisRotation);
-    }
-  }, [chartConfig?.axisConfigs?.xAxisRotation, chartConfig?.axisConfigs?.yAxisRotation]);
+  }, [
+    hasAxisConfigs(chartConfig) ? chartConfig.axisConfigs.xAxisRotation : undefined,
+    hasAxisConfigs(chartConfig) ? chartConfig.axisConfigs.yAxisRotation : undefined,
+  ]);
 
   // Update handlers
   const handleXRotationChange = (value: number) => {
@@ -55,7 +69,7 @@ const AxisConfigurationSection: React.FC = () => {
     debouncedUpdateYRotation(value);
   };
 
-  if (!chartConfig) return null;
+  if (!chartConfig || !hasAxisConfigs(chartConfig)) return null;
 
   // Get chart type from config (chartType is at root level of MainChartConfig)
   const chartType = chartConfig.chartType || ChartType.Line;
@@ -135,7 +149,7 @@ const AxisConfigurationSection: React.FC = () => {
                   <select
                     value={chartConfig.axisConfigs.xAxisKey || 'placeholder'}
                     onChange={e => {
-                      if (e.target.value !== 'placeholder') {
+                      if (e.target.value !== 'placeholder' && hasAxisConfigs(chartConfig)) {
                         handleConfigChange({
                           axisConfigs: {
                             ...chartConfig.axisConfigs,
@@ -180,12 +194,14 @@ const AxisConfigurationSection: React.FC = () => {
                   <select
                     value={chartConfig.axisConfigs?.xAxisStart || 'auto'}
                     onChange={e => {
-                      handleConfigChange({
-                        axisConfigs: {
-                          ...chartConfig.axisConfigs,
-                          xAxisStart: e.target.value as 'auto' | 'zero',
-                        },
-                      });
+                      if (hasAxisConfigs(chartConfig)) {
+                        handleConfigChange({
+                          axisConfigs: {
+                            ...chartConfig.axisConfigs,
+                            xAxisStart: e.target.value as 'auto' | 'zero',
+                          },
+                        });
+                      }
                     }}
                     className="w-full h-9 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                   >
@@ -206,12 +222,14 @@ const AxisConfigurationSection: React.FC = () => {
                   <select
                     value={chartConfig.axisConfigs?.yAxisStart || 'auto'}
                     onChange={e => {
-                      handleConfigChange({
-                        axisConfigs: {
-                          ...chartConfig.axisConfigs,
-                          yAxisStart: e.target.value as 'auto' | 'zero',
-                        },
-                      });
+                      if (hasAxisConfigs(chartConfig)) {
+                        handleConfigChange({
+                          axisConfigs: {
+                            ...chartConfig.axisConfigs,
+                            yAxisStart: e.target.value as 'auto' | 'zero',
+                          },
+                        });
+                      }
                     }}
                     className="w-full h-9 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                   >
@@ -266,14 +284,16 @@ const AxisConfigurationSection: React.FC = () => {
                     <Checkbox
                       id="showAxisLabels"
                       checked={!!chartConfig.axisConfigs?.showAxisLabels}
-                      onCheckedChange={checked =>
-                        handleConfigChange({
-                          axisConfigs: {
-                            ...chartConfig.axisConfigs,
-                            showAxisLabels: !!checked,
-                          },
-                        })
-                      }
+                      onCheckedChange={checked => {
+                        if (hasAxisConfigs(chartConfig)) {
+                          handleConfigChange({
+                            axisConfigs: {
+                              ...chartConfig.axisConfigs,
+                              showAxisLabels: !!checked,
+                            },
+                          });
+                        }
+                      }}
                     />
                     <Label
                       htmlFor="showAxisLabels"
@@ -288,14 +308,16 @@ const AxisConfigurationSection: React.FC = () => {
                     <Checkbox
                       id="showAxisTicks"
                       checked={!!chartConfig.axisConfigs?.showAxisTicks}
-                      onCheckedChange={checked =>
-                        handleConfigChange({
-                          axisConfigs: {
-                            ...chartConfig.axisConfigs,
-                            showAxisTicks: !!checked,
-                          },
-                        })
-                      }
+                      onCheckedChange={checked => {
+                        if (hasAxisConfigs(chartConfig)) {
+                          handleConfigChange({
+                            axisConfigs: {
+                              ...chartConfig.axisConfigs,
+                              showAxisTicks: !!checked,
+                            },
+                          });
+                        }
+                      }}
                     />
                     <Label
                       htmlFor="showAxisTicks"
