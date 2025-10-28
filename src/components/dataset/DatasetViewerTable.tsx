@@ -222,6 +222,13 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
                     ? 'bg-white dark:bg-gray-800'
                     : 'bg-gray-50 dark:bg-gray-900/40'
                   : 'bg-white dark:bg-gray-800';
+                // Use a solid background for the sticky index cell to avoid translucent overlap
+                const stickyBg = striped
+                  ? even
+                    ? 'bg-white dark:bg-gray-800'
+                    : 'bg-gray-50 dark:bg-gray-900'
+                  : 'bg-white dark:bg-gray-800';
+
                 return (
                   <tr
                     key={realIndex}
@@ -229,7 +236,7 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
                     style={useVirtual ? { height: rowHeight } : undefined}
                   >
                     <td
-                      className={`sticky left-0 z-10 border-r border-b border-gray-200 dark:border-gray-600 text-center text-gray-500 dark:text-gray-400 px-2 text-xs ${rowBg}`}
+                      className={`sticky left-0 z-10 border-r border-b border-gray-200 dark:border-gray-600 text-center text-gray-500 dark:text-gray-400 px-2 text-xs ${stickyBg} hover:bg-gray-100 dark:hover:bg-gray-700`}
                     >
                       {realIndex + 1}
                     </td>

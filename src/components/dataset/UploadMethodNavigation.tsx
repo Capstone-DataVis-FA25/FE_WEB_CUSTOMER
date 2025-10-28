@@ -1,9 +1,9 @@
 import React from 'react';
-import { FileSpreadsheet, FileUp, FileText, Database } from 'lucide-react';
+import { FileSpreadsheet, FileUp, FileText, Database, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FadeIn } from '@/theme/animation';
 
-type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view';
+type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view' | 'cleanDataset';
 
 interface UploadMethodNavigationProps {
   viewMode: ViewMode;
@@ -29,6 +29,11 @@ const UploadMethodNavigation: React.FC<UploadMethodNavigationProps> = ({
       mode: 'sampleData' as ViewMode,
       icon: Database,
       label: 'Try sample data',
+    },
+    {
+      mode: 'cleanDataset' as ViewMode,
+      icon: Sparkles,
+      label: 'Clean with AI',
     },
   ];
 
