@@ -1,12 +1,12 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, useDeferredValue } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  setSelectedRow,
   setSelectedColumn,
+  setSelectedRow,
   setTouchedCells,
   setInfoMessage,
   setSortConfig,
@@ -17,39 +17,26 @@ import {
   setDateFormat,
   setNumberFormat,
   selectSelectedColumn,
-  selectTouchedCells,
   selectInfoMessage,
   selectSortConfig,
   selectDuplicateColumns,
+  selectEmptyColumns,
   selectParseErrors,
+  clearUIState,
+  setColumns as setColumnsRedux,
+  selectColumns,
+  selectFilters,
+  setFilters,
 } from '@/features/excelUI';
 import ExcelRow from './ExcelRow';
-import ExcelColumnHeader from './ExcelColumnHeader';
+import ExcelHeaderRow from './ExcelHeaderRow';
 import DeleteRowButton from './DeleteRowButton';
 import ValidationDisplay from './ValidationDisplay';
 import { Button } from '@/components/ui/button';
 import * as XLSX from 'xlsx';
 import saveAs from 'file-saver';
-import {
-  Undo,
-  Redo,
-  Plus,
-  Copy,
-  FileText,
-  FileDigit,
-  Calendar,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  X,
-  FileDown,
-} from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Plus, Copy, FileDown } from 'lucide-react';
+// removed unused dropdown menu imports
 
 // =============== Types & Helpers =================
 import type { DataHeader } from '@/utils/dataProcessors';
@@ -61,15 +48,6 @@ interface CustomExcelProps {
   className?: string;
   mode?: 'edit' | 'view';
 }
-interface HistoryEntry {
-  data: string[][];
-  columns: DataHeader[];
-}
-// Safer clone (JSON stringify can crash large datasets). For large arrays we shallow copy.
-const deepClone = <T,>(v: T, shallow = false): T => {
-  if (shallow) return v;
-  return JSON.parse(JSON.stringify(v));
-};
 const DEFAULT_WIDTH = 180;
 
 // removed unused isValidValue
@@ -93,25 +71,45 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   mode = 'edit',
 }) => {
   // Core state
-  const [columns, setColumns] = useState<DataHeader[]>([]);
+  const columns = useAppSelector(selectColumns);
+  // Keep a ref of columns to avoid function identity churn in callbacks that shouldn't care about header name changes
+  const columnsRef = useRef(columns);
+  useEffect(() => {
+    columnsRef.current = columns;
+  }, [columns]);
   const [data, setData] = useState<string[][]>([]);
-  const [filters, setFilters] = useState<string[]>([]);
+  const dataRef = useRef<string[][]>([]);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+  // Filters moved to Redux; use selector below
   // Track one-time initialization so prop identity changes (triggered by onDataChange upstream) do not reset edited state
   const initializedRef = useRef(false);
 
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [ready, setReady] = useState(false);
+  // Track last initialized dimensions to detect real Change Data
+  const lastInitRowsRef = useRef<number>(0);
+  const lastInitColsRef = useRef<number>(0);
   // Redux dispatch and selectors
   const dispatch = useAppDispatch();
   // Only subscribe to selectors that CustomExcel actually needs for its own rendering
   const selectedColumn = useAppSelector(selectSelectedColumn);
   const infoMessage = useAppSelector(selectInfoMessage);
   const sortConfig = useAppSelector(selectSortConfig);
+  const filters = useAppSelector(selectFilters);
   const duplicateColumns = useAppSelector(selectDuplicateColumns);
+  // const currentEmptyColumns = useAppSelector(selectEmptyColumns); // unused
   // Removed parseErrors - individual cells handle their own validation
   // Removed touchedCells - not used in CustomExcel rendering
-  const { tryConvert, tryConvertColumn, validateDuplicateColumns, dateFormat, numberFormat } =
-    useDataset();
+  const {
+    tryConvert,
+    tryConvertColumn,
+    validateDuplicateColumns,
+    dateFormat,
+    numberFormat,
+    clearExcelErrors,
+    setExcelErrors,
+  } = useDataset();
 
   // Sync dateFormat to Redux when it changes
   useEffect(() => {
@@ -125,11 +123,11 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // Temporary edits are now managed by ExcelUIContext
 
   // Large dataset heuristics
-  const LARGE_ROW_THRESHOLD = 2000;
-  const LARGE_CELL_THRESHOLD = 50000; // rows * cols
+  const LARGE_ROW_THRESHOLD = 300; // enable virtualization earlier for smoother UX
+  const LARGE_CELL_THRESHOLD = 20000; // rows * cols
   const isLarge =
     data.length > LARGE_ROW_THRESHOLD || data.length * columns.length > LARGE_CELL_THRESHOLD;
-  const historyEnabled = !isLarge;
+  // history removed
 
   // Virtualization states
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -137,15 +135,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   const [viewportHeight, setViewportHeight] = useState(0);
   const ROW_HEIGHT = 40; // approximate row height incl. borders
 
-  // Always reset state when initialData, initialColumns, or mode changes
-  useEffect(() => {
-    console.log('🔄 CustomExcel useEffect - props changed:', {
-      initialDataLength: initialData.length,
-      initialColumnsLength: initialColumns.length,
-      mode,
-      initialized: initializedRef.current,
-    });
-
+  // Shared initializer used on first mount and on Change Data
+  const initializeFromProps = useCallback(() => {
+    // init from incoming props
     const initCols = (initialColumns.length ? initialColumns : DEFAULT_COLS).map(c => ({
       ...c,
       width: c.width || DEFAULT_WIDTH,
@@ -153,18 +145,10 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     const initData = initialData.length
       ? initialData
       : DEFAULT_ROWS.map(() => Array(initCols.length).fill(''));
-    setColumns(initCols);
+    dispatch(setColumnsRedux(initCols));
     setData(initData);
-    setFilters(Array(initCols.length).fill(''));
+    dispatch(setFilters(Array(initCols.length).fill('')));
 
-    // Initialize history immediately to prevent extra re-render
-    if (historyEnabled) {
-      const first: HistoryEntry = { data: deepClone(initData), columns: deepClone(initCols) };
-      setHistory([first]);
-      setHistoryIndex(0);
-    }
-
-    // Validate columns immediately and update Redux
     if (initCols.length > 0) {
       const validationResult = validateDuplicateColumns(initCols);
       dispatch(
@@ -175,7 +159,6 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       );
       dispatch(setEmptyColumns(validationResult.emptyColumnIndices));
 
-      // Validate all cells on initial load
       const parseErrors: Record<number, number[]> = {};
       initData.forEach((row, rowIndex) => {
         row.forEach((cellValue, colIndex) => {
@@ -185,14 +168,11 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
             colIndex,
             rowIndex,
             cellValue,
-            undefined,
+            colType === 'number' ? numberFormat : undefined,
             colType === 'date' ? dateFormat : undefined
           );
-
           if (!conv.ok) {
-            if (!parseErrors[rowIndex]) {
-              parseErrors[rowIndex] = [];
-            }
+            if (!parseErrors[rowIndex]) parseErrors[rowIndex] = [];
             parseErrors[rowIndex].push(colIndex);
           }
         });
@@ -201,71 +181,186 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     }
 
     initializedRef.current = true;
+    setReady(true);
+    lastInitRowsRef.current = initData.length;
+    lastInitColsRef.current = initCols.length;
   }, [
     initialColumns,
     initialData,
     mode,
-    historyEnabled,
     validateDuplicateColumns,
     dispatch,
     tryConvert,
     dateFormat,
+    numberFormat,
   ]);
 
-  // History initialization moved to main useEffect to prevent extra re-renders
+  // Initialize once from initialData/initialColumns
+  useEffect(() => {
+    if (!initializedRef.current) {
+      initializeFromProps();
+    }
+  }, [initializeFromProps]);
 
-  // Duplicate column validation moved to main useEffect to prevent extra re-renders
+  // Hard reset when upstream data/columns truly change (e.g., Change Data flow)
+  useEffect(() => {
+    if (!initializedRef.current) return; // already in init path
+    // Only treat as Change Data if dataset dimensions changed
+    const incomingRows = initialData?.length || 0;
+    const incomingCols = initialColumns?.length || 0;
+    const rowsChanged = incomingRows !== lastInitRowsRef.current;
+    const colsChanged = incomingCols !== lastInitColsRef.current;
+    if (!rowsChanged && !colsChanged) return;
+    // hard reset due to dataset dimensions change
+    // Allow init effect to run again
+    clearExcelErrors();
+    dispatch(clearUIState());
+    initializedRef.current = false;
+    setReady(false);
+    // Wipe local state so init can repopulate
+    setData([]);
+    // Now re-initialize from new props after this tick to avoid race with Redux clear
+    setTimeout(() => {
+      initializeFromProps();
+    }, 0);
+  }, [initialData, initialColumns, dispatch, clearExcelErrors]);
 
+  // Keep DatasetContext excelErrors map in sync with Redux parseErrors for Create button validation
+  const reduxParseErrors = useAppSelector(selectParseErrors);
+  useEffect(() => {
+    setExcelErrors({ parseErrors: reduxParseErrors || {} });
+  }, [reduxParseErrors, setExcelErrors]);
+
+  // Recompute parseErrors when number/date formats or typed column sets change (quiet on name-only changes)
+  const prevNumberColsRef = useRef<number[] | null>(null);
+  const prevDateColsRef = useRef<number[] | null>(null);
+  const prevFormatsRef = useRef<{ dec: string; thou: string; date: string } | null>(null);
+  useEffect(() => {
+    if (!columns || columns.length === 0) return;
+    const numberCols = columns.map((c, i) => (c.type === 'number' ? i : -1)).filter(i => i >= 0);
+    const dateCols = columns.map((c, i) => (c.type === 'date' ? i : -1)).filter(i => i >= 0);
+    const formats = {
+      dec: numberFormat.decimalSeparator,
+      thou: numberFormat.thousandsSeparator,
+      date: dateFormat,
+    };
+
+    const sameNumbers =
+      prevNumberColsRef.current &&
+      prevNumberColsRef.current.length === numberCols.length &&
+      prevNumberColsRef.current.every((v, i) => v === numberCols[i]);
+    const sameDates =
+      prevDateColsRef.current &&
+      prevDateColsRef.current.length === dateCols.length &&
+      prevDateColsRef.current.every((v, i) => v === dateCols[i]);
+    const sameFormats =
+      prevFormatsRef.current &&
+      prevFormatsRef.current.dec === formats.dec &&
+      prevFormatsRef.current.thou === formats.thou &&
+      prevFormatsRef.current.date === formats.date;
+
+    if (sameNumbers && sameDates && sameFormats) return;
+
+    // Update refs
+    prevNumberColsRef.current = numberCols;
+    prevDateColsRef.current = dateCols;
+    prevFormatsRef.current = formats;
+
+    if (numberCols.length === 0 && dateCols.length === 0) return;
+
+    const nextErrors: Record<number, number[]> = {};
+    for (let ri = 0; ri < data.length; ri++) {
+      for (const ci of numberCols) {
+        const v = data[ri]?.[ci] ?? '';
+        const conv = tryConvert('number', ci, ri, v, numberFormat, undefined);
+        if (!conv.ok) {
+          if (!nextErrors[ri]) nextErrors[ri] = [];
+          nextErrors[ri].push(ci);
+        }
+      }
+      for (const ci of dateCols) {
+        const v = data[ri]?.[ci] ?? '';
+        const conv = tryConvert('date', ci, ri, v, undefined, dateFormat);
+        if (!conv.ok) {
+          if (!nextErrors[ri]) nextErrors[ri] = [];
+          nextErrors[ri].push(ci);
+        }
+      }
+    }
+    dispatch(setParseErrors(nextErrors));
+  }, [numberFormat, dateFormat, columns, data, tryConvert, dispatch]);
+
+  // Unified commit (no history). Backward-compatible with previous call shapes.
   const commit = useCallback(
     (
       nextData: string[][],
       nextCols: DataHeader[],
-      skipHistory = false,
-      changes: {
+      arg3?:
+        | boolean
+        | {
+            dataChanged?: boolean;
+            columnsChanged?: boolean;
+            validationOnly?: boolean;
+            removedRowIndex?: number;
+            scheduleRevalidate?: boolean;
+          },
+      arg4?: {
         dataChanged?: boolean;
         columnsChanged?: boolean;
         validationOnly?: boolean;
-      } = { dataChanged: true, columnsChanged: true }
+        removedRowIndex?: number;
+        scheduleRevalidate?: boolean;
+      }
     ) => {
-      console.log('📝 Commit called:', {
-        dataChanged: changes.dataChanged,
-        columnsChanged: changes.columnsChanged,
-        validationOnly: changes.validationOnly,
-        dataLength: nextData.length,
-        columnsLength: nextCols.length,
-        skipHistory,
-      });
+      let changes: {
+        dataChanged?: boolean;
+        columnsChanged?: boolean;
+        validationOnly?: boolean;
+        removedRowIndex?: number;
+        scheduleRevalidate?: boolean;
+      } = {
+        dataChanged: true,
+        columnsChanged: false,
+      };
+      if (typeof arg3 === 'boolean') {
+        // skipHistory ignored, keep compatibility
+        changes = { ...changes, ...(arg4 || {}) };
+      } else if (typeof arg3 === 'object') {
+        changes = { ...changes, ...arg3 };
+      }
 
-      // Only update data if it actually changed
+      // Update data
       if (changes.dataChanged) {
-        console.log('📊 Updating data state');
-        setData(nextData);
+        const prev = dataRef.current;
+        const rowsEqual = (a?: string[], b?: string[]) => {
+          if (!a || !b) return false;
+          if (a.length !== b.length) return false;
+          for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+          return true;
+        };
+        let optimized: string[][];
+        if (typeof changes.removedRowIndex === 'number') {
+          const removed = changes.removedRowIndex;
+          optimized = nextData.map((row, i) => {
+            // Before removed index, compare against same index
+            if (i < removed) return rowsEqual(row, prev[i]) ? prev[i] : row;
+            // After removed index, compare against prev[i+1] to preserve references
+            return rowsEqual(row, prev[i + 1]) ? (prev[i + 1] as string[]) : row;
+          });
+        } else {
+          optimized = nextData.map((row, i) => (rowsEqual(row, prev[i]) ? prev[i] : row));
+        }
+        setData(optimized);
       }
 
-      // Only update columns if they actually changed
+      // Update columns only when changed
       if (changes.columnsChanged) {
-        console.log('📋 Updating columns state');
-        setColumns(nextCols);
+        dispatch(setColumnsRedux(nextCols));
       }
 
-      // Only update history if data or columns changed (not for validation-only changes)
-      if (historyEnabled && !skipHistory && (changes.dataChanged || changes.columnsChanged)) {
-        const entry: HistoryEntry = { data: deepClone(nextData), columns: deepClone(nextCols) };
-        setHistory(prev => [...prev.slice(0, historyIndex + 1), entry]);
-        setHistoryIndex(i => i + 1);
-      }
-
-      // Only notify parent if data or columns actually changed
-      if (onDataChange && (changes.dataChanged || changes.columnsChanged)) {
-        console.log('📤 Notifying parent (onDataChange):', {
-          dataChanged: changes.dataChanged,
-          columnsChanged: changes.columnsChanged,
-          isLarge,
-          dataLength: nextData.length,
-          columnsLength: nextCols.length,
-        });
+      // Notify parent only on structural changes
+      if (onDataChange && changes.columnsChanged) {
         if (isLarge) {
-          // Debounce using requestAnimationFrame + timeout
           const fn = onDataChange as unknown as { _timer?: NodeJS.Timeout };
           if (fn._timer) clearTimeout(fn._timer);
           fn._timer = setTimeout(() => onDataChange(nextData, nextCols), 150);
@@ -273,130 +368,93 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
           onDataChange(nextData, nextCols);
         }
       }
+
+      // Revalidate entire sheet for non-keystroke commits
+      const doRevalidate = () => {
+        const numberCols = nextCols
+          .map((c, i) => (c.type === 'number' ? i : -1))
+          .filter(i => i >= 0);
+        const dateCols = nextCols.map((c, i) => (c.type === 'date' ? i : -1)).filter(i => i >= 0);
+        const nextErrors: Record<number, number[]> = {};
+        for (let ri = 0; ri < nextData.length; ri++) {
+          for (const ci of numberCols) {
+            const v = nextData[ri]?.[ci] ?? '';
+            const conv = tryConvert('number', ci, ri, v, numberFormat, undefined);
+            if (!conv.ok) {
+              if (!nextErrors[ri]) nextErrors[ri] = [];
+              nextErrors[ri].push(ci);
+            }
+          }
+          for (const ci of dateCols) {
+            const v = nextData[ri]?.[ci] ?? '';
+            const conv = tryConvert('date', ci, ri, v, undefined, dateFormat);
+            if (!conv.ok) {
+              if (!nextErrors[ri]) nextErrors[ri] = [];
+              nextErrors[ri].push(ci);
+            }
+          }
+        }
+        dispatch(setParseErrors(nextErrors));
+      };
+      if (!changes.validationOnly && (changes.dataChanged || changes.columnsChanged)) {
+        if (changes.scheduleRevalidate) {
+          // Defer heavy revalidation to keep UI smooth
+          setTimeout(doRevalidate, 0);
+        } else {
+          doRevalidate();
+        }
+      }
     },
-    [historyIndex, onDataChange, historyEnabled, isLarge]
+    [onDataChange, isLarge, numberFormat, dateFormat, tryConvert, dispatch]
   );
 
-  const undo = useCallback(() => {
-    if (historyIndex > 0) {
-      const idx = historyIndex - 1;
-      const st = history[idx];
-      setHistoryIndex(idx);
-      setData(deepClone(st.data));
-      setColumns(deepClone(st.columns));
-      setFilters(Array(st.columns.length).fill(''));
-      dispatch(setSelectedRow(null));
-      dispatch(setSelectedColumn(null));
-      dispatch(setSortConfig(null));
-      if (onDataChange) onDataChange(st.data, st.columns);
-    }
-  }, [historyIndex, history, onDataChange]);
-
-  const redo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const idx = historyIndex + 1;
-      const st = history[idx];
-      setHistoryIndex(idx);
-      setData(deepClone(st.data));
-      setColumns(deepClone(st.columns));
-      setFilters(Array(st.columns.length).fill(''));
-      dispatch(setSelectedRow(null));
-      dispatch(setSelectedColumn(null));
-      dispatch(setSortConfig(null));
-      if (onDataChange) onDataChange(st.data, st.columns);
-    }
-  }, [historyIndex, history, onDataChange]);
-
-  useEffect(() => {
-    if (mode === 'edit') {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        const target = e.target as HTMLElement;
-
-        // Skip if user is typing in input fields
-        if (
-          target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable
-        ) {
-          return;
-        }
-
-        // Handle Ctrl+Z (Undo)
-        if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
-          e.preventDefault();
-          e.stopPropagation();
-          undo();
-          return;
-        }
-
-        // Handle Ctrl+Y or Ctrl+Shift+Z (Redo)
-        if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
-          e.preventDefault();
-          e.stopPropagation();
-          redo();
-          return;
-        }
-      };
-
-      document.addEventListener('keydown', handleKeyDown, true);
-      return () => document.removeEventListener('keydown', handleKeyDown, true);
-    }
-  }, [undo, redo, mode]);
-
   // Generic mutation helpers
-  // setCell no longer used with temp editing; keep minimal helper if needed in future
-  const setHeader = useCallback(
-    (c: number, val: string) => {
-      console.log('📝 setHeader called:', {
-        column: c,
-        newName: val,
-        currentName: columns[c]?.name,
-      });
+  // setCell no longer used with temp editing; setHeader removed (name edits now dispatch from header)
 
-      // Skip if the name hasn't actually changed
-      if (columns[c]?.name === val) {
-        console.log('📝 setHeader skipped - no change');
-        return;
-      }
+  // Internal type change logic (mutates columns/data/history)
+  const setTypeInternal = useCallback(
+    (c: number, val: 'text' | 'number' | 'date') => {
+      console.log('🔧 setType called:', { column: c, newType: val });
+      dispatch(setInfoMessage(null));
 
-      const nc = deepClone(columns, true).map((col, i) => (i === c ? { ...col, name: val } : col));
-      nc[c].name = val;
+      const { nextData, nextColumns } = tryConvertColumn(c, val);
 
-      // Validate columns after name change
-      const validationResult = validateDuplicateColumns(nc);
-      dispatch(
-        setDuplicateColumns({
-          duplicateNames: validationResult.duplicateNames,
-          duplicateColumnIndices: validationResult.duplicateColumnIndices,
-        })
-      );
-      dispatch(setEmptyColumns(validationResult.emptyColumnIndices));
-
-      // For header changes, only update columns (no data re-render)
-      commit(data, nc, false, {
+      // For column type changes, only update columns initially (no data re-render)
+      // The validation will run separately and only update data if needed
+      commit(nextData, nextColumns, false, {
         dataChanged: false, // Don't re-render data cells
         columnsChanged: true, // Only update column headers
       });
+
+      // Recompute Redux parseErrors for this column based on new type
+      const colType = nextColumns[c]?.type ?? 'text';
+      for (let ri = 0; ri < nextData.length; ri++) {
+        const v = nextData[ri]?.[c] ?? '';
+        const conv = tryConvert(
+          colType,
+          c,
+          ri,
+          v,
+          colType === 'number' ? numberFormat : undefined,
+          colType === 'date' ? dateFormat : undefined
+        );
+        dispatch(updateParseError({ row: ri, column: c, hasError: !conv.ok }));
+      }
+
+      dispatch(setTouchedCells([]));
     },
-    [columns, validateDuplicateColumns, dispatch, commit]
+    [dispatch, tryConvertColumn, commit, tryConvert, dateFormat]
   );
 
-  const setType = (c: number, val: 'text' | 'number' | 'date') => {
-    console.log('🔧 setType called:', { column: c, newType: val, currentType: columns[c]?.type });
-    if (columns[c].type === val) return;
-    dispatch(setInfoMessage(null));
-
-    const { nextData, nextColumns } = tryConvertColumn(c, val);
-
-    // For column type changes, only update columns initially (no data re-render)
-    // The validation will run separately and only update data if needed
-    commit(nextData, nextColumns, false, {
-      dataChanged: false, // Don't re-render data cells
-      columnsChanged: true, // Only update column headers
-    });
-
-    dispatch(setTouchedCells([]));
-  };
+  // Expose a stable callback to children to prevent prop identity churn
+  const setTypeRef = useRef(setTypeInternal);
+  useEffect(() => {
+    setTypeRef.current = setTypeInternal;
+  }, [setTypeInternal]);
+  const setType = useCallback(
+    (c: number, val: 'text' | 'number' | 'date') => setTypeRef.current(c, val),
+    []
+  );
 
   // Handle cell focus to select column
   const handleCellFocus = useCallback(
@@ -415,48 +473,22 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
 
       // Skip if value hasn't actually changed
       if (finalVal === currentValue) {
-        console.log('✏️ handleCellChange skipped - no change:', {
-          row: rowIndex,
-          col: columnIndex,
-          value: finalVal,
-        });
         return;
       }
-
-      console.log('✏️ handleCellChange called:', {
-        row: rowIndex,
-        col: columnIndex,
-        value: finalVal,
-      });
 
       // Commit trimmed value to data only (no normalization)
       const nextData = [...data];
       const rowCopy = [...nextData[rowIndex]];
       rowCopy[columnIndex] = finalVal;
       nextData[rowIndex] = rowCopy;
-      commit(nextData, columns);
-
-      // Validate against current column type and update Redux parseErrors
-      const colType = columns[columnIndex]?.type ?? 'text';
-      const conv = tryConvert(
-        colType,
-        columnIndex,
-        rowIndex,
-        finalVal,
-        undefined,
-        colType === 'date' ? dateFormat : undefined
-      );
-
-      // Update Redux with individual cell validation result
-      dispatch(
-        updateParseError({
-          row: rowIndex,
-          column: columnIndex,
-          hasError: !conv.ok,
-        })
-      );
+      // Use latest columns via ref; mark as validationOnly so we don't recompute the whole sheet here
+      commit(nextData, columnsRef.current, false, {
+        dataChanged: true,
+        columnsChanged: false,
+        validationOnly: true,
+      });
     },
-    [data, columns, commit, tryConvert, dateFormat, dispatch]
+    [data, commit]
   );
 
   // Add/remove
@@ -464,10 +496,43 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     if (mode === 'view') return;
     const nd = [...data, Array(columns.length).fill('')];
     // Adding row changes both data and columns (new row added)
-    commit(nd, columns, false, {
+    commit(nd, columns, {
       dataChanged: true, // Update data cells
-      columnsChanged: true, // Update column headers (for row count)
+      columnsChanged: false, // Do not notify parent; columns unchanged
+      scheduleRevalidate: true,
     });
+    // Select and scroll to the new row
+    const newIndex = nd.length - 1;
+    dispatch(setSelectedRow(newIndex));
+    // Scroll after layout so virtualization has updated
+    setTimeout(() => {
+      const el = scrollRef.current;
+      const tryScroll = (attempt: number) => {
+        if (!el) return;
+        const targetInput = el.querySelector(
+          `input[data-cell='${newIndex}-0']`
+        ) as HTMLElement | null;
+        if (targetInput) {
+          // Scroll only the container, not the whole page
+          const containerRect = el.getBoundingClientRect();
+          const targetRect = targetInput.getBoundingClientRect();
+          const thead = el.querySelector('thead') as HTMLElement | null;
+          const headerH = thead ? thead.getBoundingClientRect().height : 0;
+          const current = el.scrollTop;
+          const offsetWithin = targetRect.top - containerRect.top;
+          // Aim to place the row a little below the header
+          const desiredTop = Math.max(0, current + offsetWithin - headerH - 8);
+          el.scrollTo({ top: desiredTop, behavior: 'smooth' });
+          return;
+        }
+        // Nudge to bottom to force virtualization to render last rows
+        el.scrollTop = el.scrollHeight;
+        if (attempt < 5) {
+          requestAnimationFrame(() => tryScroll(attempt + 1));
+        }
+      };
+      tryScroll(0);
+    }, 0);
   };
   const addColumn = () => {
     if (mode === 'view') return;
@@ -481,22 +546,37 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       },
     ];
     const nd = data.map(r => [...r, '']) as string[][];
-    // Adding column changes both data and columns
-    commit(nd, nc, false, {
+    // Update columns locally without notifying parent
+    dispatch(setColumnsRedux(nc));
+    commit(nd, nc, {
       dataChanged: true, // Update data cells (new column added)
-      columnsChanged: true, // Update column headers
+      columnsChanged: false, // columns already updated locally; avoid parent notify
+      scheduleRevalidate: true,
     });
-    setFilters(f => [...f, '']);
+    dispatch(setFilters([...(filters || []), '']));
+    // Select and scroll to the new column
+    const newColIndex = nc.length - 1;
+    dispatch(setSelectedColumn(newColIndex));
+    setTimeout(() => {
+      const el = scrollRef.current;
+      if (el) {
+        // Wait one frame to ensure layout has updated widths
+        requestAnimationFrame(() => {
+          el.scrollTo({ left: el.scrollWidth, behavior: 'smooth' });
+        });
+      }
+    }, 0);
   };
 
   const removeRow = (r: number) => {
     if (mode === 'view' || data.length <= 1) return;
     const nd = data.filter((_, i) => i !== r);
-    setSelectedRow(null);
     // Removing row changes both data and columns
-    commit(nd, columns, false, {
+    commit(nd, columns, {
       dataChanged: true, // Update data cells
-      columnsChanged: true, // Update column headers (for row count)
+      columnsChanged: false, // Do not notify parent; columns unchanged
+      removedRowIndex: r,
+      scheduleRevalidate: true,
     });
   };
 
@@ -506,12 +586,22 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     const nd = data.map(r => r.filter((_, i) => i !== c));
     dispatch(setSelectedColumn(null));
     setSortConfig(null);
-    // Removing column changes both data and columns
-    commit(nd, nc, false, {
+    // Update columns locally without notifying parent
+    dispatch(setColumnsRedux(nc));
+    // If current sorting references this column, clear it; if it was after, shift left
+    if (sortConfig) {
+      if (sortConfig.column === c) {
+        dispatch(setSortConfig(null));
+      } else if (sortConfig.column > c) {
+        dispatch(setSortConfig({ column: sortConfig.column - 1, direction: sortConfig.direction }));
+      }
+    }
+    commit(nd, nc, {
       dataChanged: true, // Update data cells
-      columnsChanged: true, // Update column headers
+      columnsChanged: false, // columns already updated locally; avoid parent notify
+      scheduleRevalidate: true,
     });
-    setFilters(f => f.filter((_, i) => i !== c));
+    dispatch(setFilters((filters || []).filter((_, i) => i !== c)));
   };
 
   const deleteSelectedRow = (rowIndex: number) => {
@@ -523,94 +613,91 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     }
   };
 
-  const handleSort = (columnIndex: number) => {
-    if (mode === 'view') return;
+  // Sorting handled in header via Redux; CustomExcel derives sorted view by sortConfig
 
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.column === columnIndex && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
+  // Filters now handled in Redux in column header
 
-    dispatch(setSortConfig({ column: columnIndex, direction }));
+  const filteredData = useMemo(() => {
+    const indexed = data.map((row, i) => ({ row, i }));
+    if (!filters.some(f => f)) return indexed;
+    return indexed.filter(({ row }) =>
+      row.every((cell, ci) =>
+        filters[ci] ? String(cell).toLowerCase().includes(filters[ci].toLowerCase()) : true
+      )
+    );
+  }, [data, filters]);
 
-    const nd = [...data];
-    const columnType = columns[columnIndex].type;
+  // Defer heavy filtered data propagation to keep typing/editing responsive
+  const deferredFilteredData = useDeferredValue(filteredData);
 
-    nd.sort((a, b) => {
-      const aVal = a[columnIndex] || '';
-      const bVal = b[columnIndex] || '';
-
-      // Handle empty values - put them at the end
+  // Apply sorting to the filtered view only; do not mutate base data
+  const sortedFilteredData = useMemo(() => {
+    if (!sortConfig) return deferredFilteredData;
+    const { column, direction } = sortConfig;
+    const type = columns[column]?.type ?? 'text';
+    const out = [...deferredFilteredData];
+    out.sort((a, b) => {
+      const aVal = a.row[column] || '';
+      const bVal = b.row[column] || '';
       if (!aVal && !bVal) return 0;
       if (!aVal) return direction === 'asc' ? 1 : -1;
       if (!bVal) return direction === 'asc' ? -1 : 1;
-
-      if (columnType === 'number') {
+      if (type === 'number') {
         const aNum = Number.parseFloat(aVal) || 0;
         const bNum = Number.parseFloat(bVal) || 0;
         return direction === 'asc' ? aNum - bNum : bNum - aNum;
-      } else if (columnType === 'date') {
-        // Parse dates and compare
+      }
+      if (type === 'date') {
         const aDate = new Date(aVal);
         const bDate = new Date(bVal);
-
-        // Handle invalid dates - put them at the end
-        if (isNaN(aDate.getTime()) && isNaN(bDate.getTime())) return 0;
-        if (isNaN(aDate.getTime())) return direction === 'asc' ? 1 : -1;
-        if (isNaN(bDate.getTime())) return direction === 'asc' ? -1 : 1;
-
-        return direction === 'asc'
-          ? aDate.getTime() - bDate.getTime()
-          : bDate.getTime() - aDate.getTime();
-      } else {
-        // Text sorting (case-insensitive)
-        return direction === 'asc'
-          ? aVal.toLowerCase().localeCompare(bVal.toLowerCase())
-          : bVal.toLowerCase().localeCompare(aVal.toLowerCase());
+        const aT = aDate.getTime();
+        const bT = bDate.getTime();
+        if (Number.isNaN(aT) && Number.isNaN(bT)) return 0;
+        if (Number.isNaN(aT)) return direction === 'asc' ? 1 : -1;
+        if (Number.isNaN(bT)) return direction === 'asc' ? -1 : 1;
+        return direction === 'asc' ? aT - bT : bT - aT;
       }
+      return direction === 'asc'
+        ? aVal.toLowerCase().localeCompare(bVal.toLowerCase())
+        : bVal.toLowerCase().localeCompare(aVal.toLowerCase());
     });
+    return out;
+  }, [deferredFilteredData, sortConfig, columns]);
 
-    // Sorting changes data order but not columns
-    commit(nd, columns, false, {
-      dataChanged: true, // Update data cells (reordered)
-      columnsChanged: false, // Don't re-render column headers
-    });
-  };
-
-  // Filters
-  const changeFilter = (c: number, v: string) =>
-    setFilters(fs => {
-      const nf = [...fs];
-      nf[c] = v;
-      return nf;
-    });
-
-  const filteredData = useMemo(() => {
-    if (!filters.some(f => f)) return data.map((row, i) => ({ row, i }));
-    return data
-      .map((row, i) => ({ row, i }))
-      .filter(({ row }) =>
-        row.every((cell, ci) =>
-          filters[ci] ? String(cell).toLowerCase().includes(filters[ci].toLowerCase()) : true
-        )
-      );
-  }, [data, filters]);
-
-  // Virtualization calculations
+  // Virtualization calculations: robustly measure visible height
   useEffect(() => {
-    if (!scrollRef.current) return;
     const el = scrollRef.current;
-    const resize = () => setViewportHeight(el.clientHeight);
-    resize();
-    window.addEventListener('resize', resize);
-    return () => {
-      window.removeEventListener('resize', resize);
-      // Cleanup animation frame
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
+    if (!el) return;
+
+    const measure = () => {
+      const containerH = el.clientHeight || el.getBoundingClientRect().height;
+      const thead = el.querySelector('thead') as HTMLElement | null;
+      const headerH = thead ? thead.getBoundingClientRect().height : 0;
+      const bodyH = Math.max(0, containerH - headerH);
+      if (bodyH > 0) setViewportHeight(bodyH);
     };
-  }, []);
+
+    // Initial measure (in case effect runs before layout stabilizes)
+    measure();
+    // Retry once on next frame if zero height
+    if (el.getBoundingClientRect().height === 0) {
+      requestAnimationFrame(measure);
+    }
+
+    // Observe size changes of the scroll container
+    const ro = new ResizeObserver(() => {
+      measure();
+    });
+    ro.observe(el);
+
+    const onWinResize = () => measure();
+    window.addEventListener('resize', onWinResize);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', onWinResize);
+    };
+  }, [ready]);
 
   // Use useRef to track scroll position without causing re-renders
   const scrollTopRef = useRef(0);
@@ -643,14 +730,28 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     [isLarge, scrollTop, ROW_HEIGHT]
   );
 
-  const visibleCount = Math.ceil(viewportHeight / ROW_HEIGHT) + 5;
-  const startIndex = isLarge ? Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 2) : 0;
+  const visibleCount = Math.ceil(viewportHeight / ROW_HEIGHT) + 8;
+  const rawStart = isLarge ? Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 2) : 0;
+  const maxStart = Math.max(0, sortedFilteredData.length - visibleCount);
+  const startIndex = Math.min(rawStart, maxStart);
   const endIndex = isLarge
-    ? Math.min(filteredData.length, startIndex + visibleCount)
-    : filteredData.length;
-  const rowsToRender = filteredData.slice(startIndex, endIndex);
+    ? Math.min(sortedFilteredData.length, startIndex + visibleCount)
+    : sortedFilteredData.length;
+  const rowsToRender = sortedFilteredData.slice(startIndex, endIndex);
   const topSpacer = startIndex * ROW_HEIGHT;
-  const bottomSpacer = (filteredData.length - endIndex) * ROW_HEIGHT;
+  const bottomSpacer = (sortedFilteredData.length - endIndex) * ROW_HEIGHT;
+
+  // If data length shrinks while scrolled far, clamp scrollTop to keep viewport filled
+  useEffect(() => {
+    if (!isLarge) return;
+    const desiredMaxStart = Math.max(0, sortedFilteredData.length - visibleCount);
+    const currentStart = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 2);
+    if (currentStart > desiredMaxStart) {
+      const clampedScroll = (desiredMaxStart + 2) * ROW_HEIGHT; // +2 to keep buffer logic
+      setScrollTop(clampedScroll);
+      scrollTopRef.current = clampedScroll;
+    }
+  }, [isLarge, sortedFilteredData.length, visibleCount, ROW_HEIGHT]);
 
   const totalWidth = Math.max(
     columns.reduce((s, c) => s + (c.width || DEFAULT_WIDTH), 0),
@@ -730,7 +831,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
               }
               return r;
             });
-            setColumns(newCols);
+            dispatch(setColumnsRedux(newCols));
           }
         }
         // Apply pasted cells
@@ -750,6 +851,18 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     },
     [mode, columns, commit]
   );
+
+  if (!ready) {
+    return (
+      <div
+        className={`w-full max-w-full p-4 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}
+      >
+        <div className="border rounded-md bg-white dark:bg-gray-800 h-[60vh] relative overflow-hidden flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
+          Loading...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -774,31 +887,6 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
               className="gap-1"
             >
               Delete Col {selectedColumn !== null ? `"${columns[selectedColumn]?.name}"` : ''}
-            </Button>
-            <div className="h-5 w-px bg-gray-300 dark:bg-gray-600" />
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={e => {
-                e.preventDefault();
-                undo();
-              }}
-              disabled={!historyEnabled || historyIndex <= 0}
-              title={historyEnabled ? 'Undo (Ctrl+Z)' : 'Undo disabled for large dataset'}
-            >
-              <Undo size={16} />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={e => {
-                e.preventDefault();
-                redo();
-              }}
-              disabled={!historyEnabled || historyIndex >= history.length - 1}
-              title={historyEnabled ? 'Redo (Ctrl+Y)' : 'Redo disabled for large dataset'}
-            >
-              <Redo size={16} />
             </Button>
             <div className="h-5 w-px bg-gray-300 dark:bg-gray-600" />
             <Button size="sm" variant="outline" onClick={copyAll} className="gap-1 bg-transparent">
@@ -836,27 +924,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
             }}
             onPaste={handlePaste}
           >
-            <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0 z-30 select-none">
-              <tr>
-                <th className="sticky left-0 z-40 bg-gray-100 dark:bg-gray-700 border-r border-b border-gray-300 dark:border-gray-600 w-12 text-center font-semibold">
-                  #
-                </th>
-                {columns.map((col, ci) => (
-                  <ExcelColumnHeader
-                    key={ci}
-                    columnIndex={ci}
-                    column={col}
-                    mode={mode}
-                    filterValue={filters[ci] || ''}
-                    onHeaderChange={setHeader}
-                    onTypeChange={setType}
-                    onSort={handleSort}
-                    onFilterChange={changeFilter}
-                    sortConfig={sortConfig}
-                  />
-                ))}
-              </tr>
-            </thead>
+            <ExcelHeaderRow mode={mode} onTypeChange={setType} />
             <tbody>
               {isLarge && topSpacer > 0 && (
                 <tr style={{ height: topSpacer }}>
@@ -868,7 +936,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
                   key={i}
                   rowIndex={i}
                   rowData={row}
-                  columns={columns}
+                  columnsLength={columns.length}
                   mode={mode}
                   onCellChange={handleCellChange}
                   onCellFocus={handleCellFocus}
@@ -901,7 +969,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
               const duplicateNames = duplicateColumns.duplicateNames.join(', ');
               return (
                 <div className="text-red-600 dark:text-red-400 flex items-start gap-2">
-                  <span>{t('excelErrors.duplicateColumns', { names: duplicateNames })};</span>
+                  <span>{t('excelErrors.duplicateColumns', { names: duplicateNames })}</span>
                 </div>
               );
             }
@@ -920,15 +988,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
             </div>
           )}
           <p>
-            {historyEnabled ? (
-              <>
-                History: {historyIndex + 1}/{history.length} states available
-              </>
-            ) : (
-              <>History disabled (large dataset)</>
-            )}
             {sortConfig &&
-              ` | Sorted by "${columns[sortConfig.column]?.name}" (${sortConfig.direction})`}
+              `Sorted by "${columns[sortConfig.column]?.name}" (${sortConfig.direction})`}
           </p>
         </div>
       )}

@@ -25,6 +25,7 @@ export interface D3ScatterChartProps {
   margin?: { top: number; right: number; bottom: number; left: number };
   xAxisKey: string;
   yAxisKey: string;
+  yAxisKeys?: string[];
   colorKey?: string; // Key for color grouping
   sizeKey?: string; // Key for bubble size
   colors?: Record<string, { light: string; dark: string }>;
@@ -52,6 +53,7 @@ export interface D3ScatterChartProps {
 
   // Legend options
   legendFontSize?: number;
+  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
 
   // Axis configuration
   xAxisStart?: 'auto' | 'zero';
@@ -78,6 +80,9 @@ export interface D3ScatterChartProps {
   showRegressionLine?: boolean;
   regressionLineColor?: string;
   regressionLineWidth?: number;
+  // Optional series name for single-series scatter (used for legend)
+  seriesName?: string;
+  seriesNames?: Record<string, string>;
 }
 
 // Convert array data to scatter data format
@@ -185,6 +190,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   margin = { top: 20, right: 40, bottom: 60, left: 60 },
   xAxisKey,
   yAxisKey,
+  yAxisKeys,
   colorKey,
   sizeKey,
   colors = defaultColorsChart,
@@ -238,6 +244,9 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   showRegressionLine = false,
   regressionLineColor,
   regressionLineWidth = 2,
+  seriesName,
+  seriesNames,
+  // legendPosition = 'top',
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -368,8 +377,42 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
 
     const chartWidth = dimensions.width;
     const chartHeight = dimensions.height;
-    const innerWidth = chartWidth - margin.left - margin.right;
-    const innerHeight = chartHeight - margin.top - margin.bottom;
+
+    // Responsive margin adjustments (match LineChart behavior) so axis labels and
+    // left Y axis ticks are not clipped. Calculate a responsive margin based on
+    // container width and whether axis labels/legend are present.
+    const hasXAxisLabel = xAxisLabel && showAxisLabels;
+    const hasYAxisLabel = yAxisLabel && showAxisLabels;
+    // Legend position isn't passed explicitly for scatter props in some flows;
+    // default to 'top' which matches the defaultBaseChartConfig.
+    const legendPosition: string = 'top';
+
+    const responsiveMargin = {
+      top: chartWidth < 640 ? Math.max(margin.top * 0.8, 15) : margin.top,
+      right: chartWidth < 640 ? Math.max(margin.right * 0.7, 20) : margin.right,
+      bottom:
+        legendPosition === 'bottom'
+          ? chartWidth < 640
+            ? Math.max(margin.bottom * 2.5, 120)
+            : Math.max(margin.bottom * 2.0, 100)
+          : hasXAxisLabel
+            ? chartWidth < 640
+              ? Math.max(margin.bottom + 30, 50)
+              : Math.max(margin.bottom + 35, 55)
+            : chartWidth < 640
+              ? Math.max(margin.bottom * 0.8, 25)
+              : Math.max(margin.bottom, 30),
+      left: hasYAxisLabel
+        ? chartWidth < 640
+          ? Math.max(margin.left * 0.7 + 20, 60)
+          : Math.max(margin.left + 25, 70)
+        : chartWidth < 640
+          ? Math.max(margin.left * 0.7, 40)
+          : Math.max(margin.left, 50),
+    };
+
+    const innerWidth = Math.max(chartWidth - responsiveMargin.left - responsiveMargin.right, 100);
+    const innerHeight = Math.max(chartHeight - responsiveMargin.top - responsiveMargin.bottom, 100);
 
     if (innerWidth <= 0 || innerHeight <= 0) return;
 
@@ -469,7 +512,9 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
       .attr('fill', backgroundColor)
       .attr('rx', 8);
 
-    const chartGroup = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+    const chartGroup = svg
+      .append('g')
+      .attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top})`);
 
     const xExtent = d3.extent(xValues) as [number, number];
     const yExtent = d3.extent(yValues) as [number, number];
@@ -613,119 +658,224 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     // Tooltip group
     const tooltipGroup = svg.append('g').attr('class', 'scatter-tooltip-group');
 
-    // Draw points with animation and tooltip
-    chartGroup
-      .selectAll('.scatter-point')
-      .data(processedData)
-      .enter()
-      .append('circle')
-      .attr('class', 'scatter-point')
-      .attr('cx', (d: ScatterDataPoint) => xScale(+d[xAxisKey]))
-      .attr('cy', (d: ScatterDataPoint) => yScale(+d[yAxisKey]))
-      .attr('r', 0)
-      .attr('fill', (d: ScatterDataPoint) =>
-        colorKey && colorScale
-          ? colorScale(String(d[colorKey]))
-          : themeColors['default'] || '#3b82f6'
-      )
-      .attr('opacity', pointOpacity)
-      .style('cursor', showTooltip ? 'pointer' : 'default')
-      .on('mouseover', function (event, d) {
-        if (!showTooltip) return;
-        // Remove any existing tooltip
-        tooltipGroup.selectAll('*').remove();
-        // Tooltip content
-        const tooltipContent =
-          `${xAxisKey}: ${d[xAxisKey]}\n${yAxisKey}: ${d[yAxisKey]}` +
-          (colorKey ? `\n${colorKey}: ${d[colorKey]}` : '') +
-          (sizeKey ? `\n${sizeKey}: ${d[sizeKey]}` : '');
-        // Position
-        const mouse = d3.pointer(event, svg.node());
-        tooltipGroup
-          .append('rect')
-          .attr('x', mouse[0] + 10)
-          .attr('y', mouse[1] - 10)
-          .attr('width', 180)
-          .attr('height', 60)
-          .attr('fill', isDarkMode ? '#222' : '#fff')
-          .attr('stroke', isDarkMode ? '#eee' : '#333')
-          .attr('rx', 8)
-          .attr('opacity', 0.95);
-        tooltipGroup
-          .append('text')
-          .attr('x', mouse[0] + 20)
-          .attr('y', mouse[1] + 10)
-          .attr('fill', isDarkMode ? '#fff' : '#222')
-          .style('font-size', '14px')
-          .style('font-family', 'monospace')
-          .text(tooltipContent)
-          .call(text => {
-            const lines = tooltipContent.split('\n');
-            lines.forEach((line, i) => {
-              text
-                .append('tspan')
-                .attr('x', mouse[0] + 20)
-                .attr('y', mouse[1] + 10 + i * 18)
-                .text(line);
-            });
-          });
-      })
-      .on('mouseout', function () {
-        tooltipGroup.selectAll('*').remove();
-      })
-      .transition()
-      .duration(animationDuration)
-      .attr('r', (d: ScatterDataPoint) =>
-        sizeKey && sizeScale ? sizeScale(+d[sizeKey]) : pointRadius
-      );
+    // Draw points with support for multiple Y-series
+    // Prefer explicit prop `yAxisKeys`, then keys from `seriesNames`, then fallback to single `yAxisKey`
+    const seriesNamesKeys = seriesNames ? Object.keys(seriesNames) : undefined;
+    const keysToRender: string[] =
+      Array.isArray((yAxisKeys as any) || []) && (yAxisKeys as any).length > 0
+        ? (yAxisKeys as string[])
+        : Array.isArray(seriesNamesKeys) && seriesNamesKeys.length > 0
+          ? seriesNamesKeys
+          : [yAxisKey];
 
-    // Legend (match LineChart glassmorphism, responsive)
-    if (showLegend && colorKey && colorScale) {
-      const categories = colorScale.domain();
-      // Responsive legend sizing
-      const legendItemHeight = 28;
-      const legendItemSpacing = 6;
-      const legendPadding = 12;
-      const legendWidth = dimensions.width < 640 ? 100 : 120;
-      const legendHeight =
-        categories.length * legendItemHeight +
-        (categories.length - 1) * legendItemSpacing +
-        2 * legendPadding;
-      // Position legend bottom right (like LineChart)
-      const legendX = dimensions.width - margin.right - legendWidth - 16;
-      const legendY = dimensions.height - legendHeight - 16;
-      // Glassmorphism background
+    // If colorKey is provided and no explicit multiple y keys, we'll fallback to color grouping per point
+    if (keysToRender && keysToRender.length > 1) {
+      keysToRender.forEach((key, idx) => {
+        const seriesLabel = (seriesNames && seriesNames[key]) || key;
+        const seriesColor = themeColors[key] || Object.values(themeColors)[idx] || '#3b82f6';
+
+        const validPoints = processedData.filter(d => !isNaN(+d[xAxisKey]) && !isNaN(+d[key]));
+
+        chartGroup
+          .selectAll(`.scatter-point-${idx}`)
+          .data(validPoints)
+          .enter()
+          .append('circle')
+          .attr('class', `scatter-point scatter-point-${idx}`)
+          .attr('cx', (d: ScatterDataPoint) => xScale(+d[xAxisKey]))
+          .attr('cy', (d: ScatterDataPoint) => yScale(+d[key]))
+          .attr('r', 0)
+          .attr('fill', seriesColor)
+          .attr('opacity', pointOpacity)
+          .style('cursor', showTooltip ? 'pointer' : 'default')
+          .on('mouseover', function (event, d) {
+            if (!showTooltip) return;
+            tooltipGroup.selectAll('*').remove();
+            const tooltipContent = `${xAxisKey}: ${d[xAxisKey]}\n${seriesLabel}: ${d[key]}`;
+            const mouse = d3.pointer(event, svg.node());
+            tooltipGroup
+              .append('rect')
+              .attr('x', mouse[0] + 10)
+              .attr('y', mouse[1] - 10)
+              .attr('width', 200)
+              .attr('height', 40)
+              .attr('fill', isDarkMode ? '#222' : '#fff')
+              .attr('stroke', isDarkMode ? '#eee' : '#333')
+              .attr('rx', 8)
+              .attr('opacity', 0.95);
+            tooltipGroup
+              .append('text')
+              .attr('x', mouse[0] + 20)
+              .attr('y', mouse[1] + 8)
+              .attr('fill', isDarkMode ? '#fff' : '#222')
+              .style('font-size', '13px')
+              .text(tooltipContent)
+              .call(text => {
+                const lines = tooltipContent.split('\n');
+                lines.forEach((line, i) => {
+                  text
+                    .append('tspan')
+                    .attr('x', mouse[0] + 20)
+                    .attr('y', mouse[1] + 8 + i * 16)
+                    .text(line);
+                });
+              });
+          })
+          .on('mouseout', function () {
+            tooltipGroup.selectAll('*').remove();
+          })
+          .transition()
+          .duration(animationDuration)
+          .attr('r', (d: ScatterDataPoint) =>
+            sizeKey && sizeScale ? sizeScale(+d[sizeKey]) : pointRadius
+          );
+      });
+    } else {
+      // Fallback behavior: color by colorKey or single yAxisKey
+      chartGroup
+        .selectAll('.scatter-point')
+        .data(processedData)
+        .enter()
+        .append('circle')
+        .attr('class', 'scatter-point')
+        .attr('cx', (d: ScatterDataPoint) => xScale(+d[xAxisKey]))
+        .attr('cy', (d: ScatterDataPoint) => yScale(+d[yAxisKey]))
+        .attr('r', 0)
+        .attr('fill', (d: ScatterDataPoint) =>
+          colorKey && colorScale
+            ? colorScale(String(d[colorKey]))
+            : themeColors['default'] || '#3b82f6'
+        )
+        .attr('opacity', pointOpacity)
+        .style('cursor', showTooltip ? 'pointer' : 'default')
+        .on('mouseover', function (event, d) {
+          if (!showTooltip) return;
+          tooltipGroup.selectAll('*').remove();
+          const tooltipContent = `${xAxisKey}: ${d[xAxisKey]}\n${yAxisKey}: ${d[yAxisKey]}`;
+          const mouse = d3.pointer(event, svg.node());
+          tooltipGroup
+            .append('rect')
+            .attr('x', mouse[0] + 10)
+            .attr('y', mouse[1] - 10)
+            .attr('width', 180)
+            .attr('height', 60)
+            .attr('fill', isDarkMode ? '#222' : '#fff')
+            .attr('stroke', isDarkMode ? '#eee' : '#333')
+            .attr('rx', 8)
+            .attr('opacity', 0.95);
+          tooltipGroup
+            .append('text')
+            .attr('x', mouse[0] + 20)
+            .attr('y', mouse[1] + 10)
+            .attr('fill', isDarkMode ? '#fff' : '#222')
+            .style('font-size', '14px')
+            .style('font-family', 'monospace')
+            .text(tooltipContent)
+            .call(text => {
+              const lines = tooltipContent.split('\n');
+              lines.forEach((line, i) => {
+                text
+                  .append('tspan')
+                  .attr('x', mouse[0] + 20)
+                  .attr('y', mouse[1] + 10 + i * 18)
+                  .text(line);
+              });
+            });
+        })
+        .on('mouseout', function () {
+          tooltipGroup.selectAll('*').remove();
+        })
+        .transition()
+        .duration(animationDuration)
+        .attr('r', (d: ScatterDataPoint) =>
+          sizeKey && sizeScale ? sizeScale(+d[sizeKey]) : pointRadius
+        );
+    }
+
+    // Legend (top-centered pill style like the screenshot)
+    if (showLegend) {
+      // Build legend items based on series keys (multi-series), fallback to color grouping, otherwise single series
+      let items: Array<{ label: string; color: string }> = [];
+      if (keysToRender && keysToRender.length > 1) {
+        items = keysToRender.map((k, idx) => ({
+          label: (seriesNames && seriesNames[k]) || k,
+          color: themeColors[k] || Object.values(themeColors)[idx] || '#3b82f6',
+        }));
+      } else if (colorKey && colorScale) {
+        const categories = colorScale.domain();
+        items = categories.map(cat => ({
+          label: cat,
+          color: colorScale ? colorScale(cat) : '#3b82f6',
+        }));
+      } else {
+        const label = seriesName || yAxisKey || 'Series';
+        const color = themeColors[label] || themeColors['color1'] || '#3b82f6';
+        items = [{ label, color }];
+      }
+
+      // Measure approximate widths (chars * factor) to compute pill width
+      const fontSizePx = legendFontSize || 12;
+      const iconSize = 12;
+      const itemSpacing = 18; // space between items
+      const paddingX = 14;
+      const paddingY = 8;
+
+      const estimatedTextWidth = (s: string) =>
+        Math.max(8, Math.min(200, s.length * (fontSizePx * 0.6)));
+      const itemsWidth = items.reduce(
+        (acc, it) => acc + iconSize + 6 + estimatedTextWidth(it.label),
+        0
+      );
+      const totalSpacing = Math.max(0, (items.length - 1) * itemSpacing);
+      const pillWidth = itemsWidth + totalSpacing + paddingX * 2;
+      const pillHeight = iconSize + paddingY * 2;
+
+      const pillX = Math.max(12, (dimensions.width - pillWidth) / 2);
+      const pillY = Math.max(8, Math.min(margin.top / 2 || 12, 40));
+
       const legendGroup = svg.append('g').attr('class', 'legend-group');
+
+      // Background pill
       legendGroup
         .append('rect')
-        .attr('x', legendX)
-        .attr('y', legendY)
-        .attr('width', legendWidth + 2 * legendPadding)
-        .attr('height', legendHeight)
-        .attr('fill', isDarkMode ? 'rgba(55,65,81,0.8)' : 'rgba(248,250,252,0.9)')
-        .attr('stroke', isDarkMode ? 'rgba(107,114,128,0.3)' : 'rgba(209,213,219,0.3)')
+        .attr('x', pillX)
+        .attr('y', pillY)
+        .attr('rx', pillHeight / 2)
+        .attr('ry', pillHeight / 2)
+        .attr('width', pillWidth)
+        .attr('height', pillHeight)
+        .attr('fill', isDarkMode ? 'rgba(17,24,39,0.85)' : 'rgba(255,255,255,0.92)')
+        .attr('stroke', isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)')
         .attr('stroke-width', 1)
-        .attr('rx', dimensions.width < 640 ? 8 : 12)
-        .attr('ry', dimensions.width < 640 ? 8 : 12)
-        .style('filter', 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))')
-        .style('backdrop-filter', 'blur(10px)');
-      // Legend items
-      categories.forEach((category, i) => {
-        const itemY = legendY + legendPadding + i * (legendItemHeight + legendItemSpacing);
+        .style('filter', 'drop-shadow(0 6px 14px rgba(2,6,23,0.35))');
+
+      // Render items horizontally inside the pill
+      let cursorX = pillX + paddingX;
+      items.forEach((it, idx) => {
+        // color square (rounded)
         legendGroup
-          .append('circle')
-          .attr('cx', legendX + legendPadding + 10)
-          .attr('cy', itemY + legendItemHeight / 2)
-          .attr('r', 7)
-          .attr('fill', colorScale(category));
+          .append('rect')
+          .attr('x', cursorX)
+          .attr('y', pillY + (pillHeight - iconSize) / 2)
+          .attr('width', iconSize)
+          .attr('height', iconSize)
+          .attr('rx', 4)
+          .attr('ry', 4)
+          .attr('fill', it.color || '#3b82f6');
+
+        cursorX += iconSize + 6;
+
+        // text
         legendGroup
           .append('text')
-          .attr('x', legendX + legendPadding + 28)
-          .attr('y', itemY + legendItemHeight / 2 + 4)
-          .attr('font-size', legendFontSize)
+          .attr('x', cursorX)
+          .attr('y', pillY + pillHeight / 2 + Math.round(fontSizePx / 3))
+          .attr('font-size', fontSizePx)
           .attr('fill', textColor)
-          .style('font-weight', 'bold')
-          .text(category);
+          .style('font-weight', 600)
+          .text(it.label);
+
+        cursorX += estimatedTextWidth(it.label) + itemSpacing;
       });
     }
 
@@ -789,13 +939,27 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   // make sure the parent container does NOT restrict width/height. This div uses 100% width/height.
   // If the chart appears small, check parent CSS/layout.
   return (
-    <div ref={containerRef} className="w-full h-full" style={{ width: '100%', height: '100%' }}>
-      <svg
-        ref={svgRef}
-        width={dimensions.width}
-        height={dimensions.height}
-        style={{ display: 'block', width: '100%', height: '100%' }}
-      />
+    <div ref={containerRef} className="w-full">
+      {title && title.trim() !== '' && (
+        <h3
+          className="font-bold text-gray-900 dark:text-white text-center mb-4"
+          style={{ fontSize: `${responsiveFontSize.title}px` }}
+        >
+          {title}
+        </h3>
+      )}
+
+      <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+        <svg
+          ref={svgRef}
+          width={dimensions.width}
+          height={dimensions.height}
+          className="w-full h-auto chart-svg"
+          viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+          style={{ display: 'block' }}
+          preserveAspectRatio="xMidYMid meet"
+        />
+      </div>
     </div>
   );
 };

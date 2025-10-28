@@ -68,6 +68,26 @@ export const CHART_VALIDATION_RULES: Record<
       description: 'Y-axis must be numeric values',
     },
   },
+  [ChartType.Pie]: {
+    xAxis: {
+      allowedTypes: [],
+      description: '',
+    },
+    yAxis: {
+      allowedTypes: [],
+      description: '',
+    },
+  },
+  [ChartType.Donut]: {
+    xAxis: {
+      allowedTypes: [],
+      description: '',
+    },
+    yAxis: {
+      allowedTypes: [],
+      description: '',
+    },
+  },
 };
 
 /**

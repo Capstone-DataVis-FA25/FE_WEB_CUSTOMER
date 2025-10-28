@@ -98,6 +98,11 @@ const ColorPicker = ({
   </div>
 );
 
+// Type guard: check if chartConfig has axisConfigs
+function hasAxisConfigs(config: any): config is { axisConfigs: any } {
+  return config && typeof config === 'object' && 'axisConfigs' in config;
+}
+
 const SeriesManagementSection: React.FC = () => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -105,7 +110,7 @@ const SeriesManagementSection: React.FC = () => {
   const { handleConfigChange } = useChartEditorActions();
   const { currentDataset } = useDataset();
 
-  if (!chartConfig) return null;
+  if (!chartConfig || !hasAxisConfigs(chartConfig)) return null;
 
   // Check if dataset is available
   const hasDataset = currentDataset && currentDataset.id;
@@ -124,9 +129,10 @@ const SeriesManagementSection: React.FC = () => {
   };
 
   // Safely get series array from config - should be at chartConfig.axisConfigs.seriesConfigs
-  const series: SeriesItem[] = Array.isArray(chartConfig.axisConfigs?.seriesConfigs)
-    ? (chartConfig.axisConfigs.seriesConfigs as SeriesItem[])
-    : [];
+  const series: SeriesItem[] =
+    hasAxisConfigs(chartConfig) && Array.isArray(chartConfig.axisConfigs?.seriesConfigs)
+      ? (chartConfig.axisConfigs.seriesConfigs as SeriesItem[])
+      : [];
 
   // console.log('🔍 SeriesManagementSection - series:', series);
   // console.log('🔍 SeriesManagementSection - chartConfig.axisConfigs:', chartConfig.axisConfigs);
@@ -158,12 +164,14 @@ const SeriesManagementSection: React.FC = () => {
         : s
     );
     // Update at root level: axisConfigs
-    handleConfigChange({
-      axisConfigs: {
-        ...chartConfig.axisConfigs,
-        seriesConfigs: newSeries,
-      },
-    } as any);
+    if (hasAxisConfigs(chartConfig)) {
+      handleConfigChange({
+        axisConfigs: {
+          ...chartConfig.axisConfigs,
+          seriesConfigs: newSeries,
+        },
+      } as any);
+    }
   };
 
   // Get columns already used by existing series
@@ -201,23 +209,27 @@ const SeriesManagementSection: React.FC = () => {
       },
     ];
     // Update at root level: axisConfigs
-    handleConfigChange({
-      axisConfigs: {
-        ...chartConfig.axisConfigs,
-        seriesConfigs: newSeries,
-      },
-    } as any);
+    if (hasAxisConfigs(chartConfig)) {
+      handleConfigChange({
+        axisConfigs: {
+          ...chartConfig.axisConfigs,
+          seriesConfigs: newSeries,
+        },
+      } as any);
+    }
   };
 
   const onRemoveSeries = (seriesId: string) => {
     const newSeries = series.filter((s: SeriesItem) => s.id !== seriesId);
     // Update at root level: axisConfigs
-    handleConfigChange({
-      axisConfigs: {
-        ...chartConfig.axisConfigs,
-        seriesConfigs: newSeries,
-      },
-    } as any);
+    if (hasAxisConfigs(chartConfig)) {
+      handleConfigChange({
+        axisConfigs: {
+          ...chartConfig.axisConfigs,
+          seriesConfigs: newSeries,
+        },
+      } as any);
+    }
   };
 
   const onMoveSeriesUp = (seriesId: string) => {
@@ -226,12 +238,14 @@ const SeriesManagementSection: React.FC = () => {
       const newSeries = [...series];
       [newSeries[idx - 1], newSeries[idx]] = [newSeries[idx], newSeries[idx - 1]];
       // Update at root level: axisConfigs
-      handleConfigChange({
-        axisConfigs: {
-          ...chartConfig.axisConfigs,
-          seriesConfigs: newSeries,
-        },
-      } as any);
+      if (hasAxisConfigs(chartConfig)) {
+        handleConfigChange({
+          axisConfigs: {
+            ...chartConfig.axisConfigs,
+            seriesConfigs: newSeries,
+          },
+        } as any);
+      }
     }
   };
 

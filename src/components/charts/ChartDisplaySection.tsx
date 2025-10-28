@@ -10,22 +10,18 @@ import D3ScatterChart from '@/components/charts/D3ScatterChart';
 import { TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { curveOptions } from '@/types/chart';
+import type { SubPieDonutChartConfig, PieDonutFormatterConfig } from '@/types/chart';
 import { convertChartDataToArray } from '@/utils/dataConverter';
+import { ChartType } from '@/features/charts/chartTypes';
+import D3PieChart from './D3PieChart';
 
 const ChartDisplaySection: React.FC = () => {
   const { t } = useTranslation();
   const { chartData, chartConfig, currentChartType: chartType } = useChartEditorRead();
   const { currentDataset } = useDataset();
 
-  // Extract formatters, axisConfigs, and colors from chartConfig
-  const formatters = chartConfig?.formatters || {
-    useYFormatter: false,
-    useXFormatter: false,
-    yFormatterType: 'number' as const,
-    xFormatterType: 'number' as const,
-  };
-
-  const axisConfigs = chartConfig?.axisConfigs || {};
+  console.log('chartType 1234:', chartType);
+  console.log('chartConfig 1234: ', chartConfig);
 
   // Helper: Map DataHeader ID to name
   const dataHeaders = currentDataset?.headers || [];
@@ -34,19 +30,39 @@ const ChartDisplaySection: React.FC = () => {
     return header ? header.name : id;
   };
 
-  // Build colors from axisConfigs.seriesConfigs (using names, not IDs)
-  const colors: any = {};
-  (axisConfigs.seriesConfigs || []).forEach((series: any) => {
-    if (series.dataColumn && series.color) {
-      const columnName = getHeaderName(series.dataColumn);
-      colors[columnName] = {
-        light: series.color,
-        dark: series.color,
-      };
-    }
-  });
-
-  const safeChartConfig = chartConfig?.config || null;
+  // Tách logic Pie chart và các chart khác
+  let formatters: any = undefined;
+  let axisConfigs: any = undefined;
+  let colors: any = {};
+  let safeChartConfig: any = null;
+  if (
+    chartType !== ChartType.Pie &&
+    chartType !== ChartType.Donut &&
+    chartConfig &&
+    'axisConfigs' in chartConfig
+  ) {
+    formatters = chartConfig.formatters || {
+      useYFormatter: false,
+      useXFormatter: false,
+      yFormatterType: 'number' as const,
+      xFormatterType: 'number' as const,
+    };
+    axisConfigs = chartConfig.axisConfigs || {};
+    (axisConfigs.seriesConfigs || []).forEach((series: any) => {
+      if (series.dataColumn && series.color) {
+        const columnName = getHeaderName(series.dataColumn);
+        colors[columnName] = {
+          light: series.color,
+          dark: series.color,
+        };
+      }
+    });
+    safeChartConfig = chartConfig.config || null;
+  } else if ((chartType === ChartType.Pie || chartType === ChartType.Donut) && chartConfig) {
+    // Pie chart chỉ lấy config và colors nếu có
+    safeChartConfig = chartConfig.config || null;
+    colors = {};
+  }
 
   // Unified error panel for chart display
   const ErrorPanel: React.FC<{ title: string; subtitle?: string; bordered?: boolean }> = ({
@@ -79,424 +95,528 @@ const ChartDisplaySection: React.FC = () => {
         />
       );
     }
-
-    // Convert IDs to names for chart keys
-    const xAxisKeyName = Array.isArray(axisConfigs.xAxisKey)
-      ? getHeaderName(axisConfigs.xAxisKey[0] || '')
-      : getHeaderName(axisConfigs.xAxisKey || '');
-
-    // Validate xAxisKey first
-    if (!xAxisKeyName || xAxisKeyName === '') {
-      return (
-        <ErrorPanel
-          title={t('chart_editor_no_xaxis', 'No X-Axis column selected')}
-          subtitle={t(
-            'chart_editor_select_xaxis_hint',
-            'Please select an X-Axis column in Axis Configuration'
-          )}
-          bordered
-        />
-      );
-    }
-
-    // Build yAxisKeys from axisConfigs (only visible series)
-    const visibleSeries = (axisConfigs.seriesConfigs || []).filter(
-      (series: any) => series.visible !== false
-    );
-
-    const yAxisKeysNames = visibleSeries.map((series: any) => {
-      const columnName = getHeaderName(series.dataColumn);
-      return columnName;
-    });
-
-    // Then check if no series are selected OR no visible series
-    if (
-      !axisConfigs ||
-      !axisConfigs.seriesConfigs ||
-      axisConfigs.seriesConfigs.length === 0 ||
-      yAxisKeysNames.length === 0
-    ) {
-      return (
-        <ErrorPanel
-          title={t('chart_editor_no_series', 'No data series selected')}
-          subtitle={
-            yAxisKeysNames.length === 0 &&
-            axisConfigs.seriesConfigs &&
-            axisConfigs.seriesConfigs.length > 0
-              ? t(
-                  'chart_editor_no_visible_series',
-                  'All series are hidden. Please make at least one series visible.'
-                )
-              : t('chart_editor_add_series_hint', 'Add a data series to display the chart')
-          }
-          bordered
-        />
-      );
-    }
-
-    // console.log('═══════════════════════════════════════════════════');
-    // console.log('� CHART DATA DEBUG - X & Y AXIS VALUES');
-    // console.log('═══════════════════════════════════════════════════');
-
-    // console.log('\n�🗺️ ID to Name Mapping:');
-    // console.log('  - xAxisKey (ID):', safeChartConfig.xAxisKey);
-    // console.log('  - xAxisKey (Name):', xAxisKeyName);
-    // console.log('  - Available keys in chartData:', Object.keys(chartData[0] || {}));
-
-    // console.log('\n📈 Series Configuration:');
-    // axisConfigs.forEach((series: any, index: number) => {
-    //   console.log(`  Series ${index + 1}:`);
-    //   console.log(`    - ID: ${series.id}`);
-    //   console.log(`    - Name: ${series.name}`);
-    //   console.log(`    - DataColumn (ID): ${series.dataColumn}`);
-    //   console.log(`    - DataColumn (Name): ${getHeaderName(series.dataColumn)}`);
-    //   console.log(`    - Color: ${series.color}`);
-    //   console.log(`    - Visible: ${series.visible}`);
-    // });
-
-    // console.log('\n🎯 Final Y-Axis Keys (Names):', yAxisKeysNames);
-
-    // console.log('\n📋 Sample Data Values (First 3 Rows):');
-    // chartData.slice(0, 3).forEach((row: any, rowIndex: number) => {
-    //   console.log(`  Row ${rowIndex + 1}:`);
-    //   console.log(`    - X-Axis [${xAxisKeyName}]:`, row[xAxisKeyName]);
-    //   yAxisKeysNames.forEach((yKey: string) => {
-    //     console.log(`    - Y-Axis [${yKey}]:`, row[yKey]);
-    //   });
-    // });
-
-    // if (chartData[0]) {
-    //   console.log(`  - X value type: ${typeof chartData[0][xAxisKeyName]}`);
-    //   yAxisKeysNames.forEach((yKey: string) => {
-    //     console.log(`  - Y value [${yKey}] type: ${typeof chartData[0][yKey]}`);
-    //   });
-    // }
-
-    // console.log('\n⚠️ Missing/Undefined Values Check:');
-    // let hasIssues = false;
-    // chartData.forEach((row: any, rowIndex: number) => {
-    //   if (row[xAxisKeyName] === undefined || row[xAxisKeyName] === null) {
-    //     console.warn(`  ⚠️ Row ${rowIndex + 1}: X-Axis [${xAxisKeyName}] is ${row[xAxisKeyName]}`);
-    //     hasIssues = true;
-    //   }
-    //   yAxisKeysNames.forEach((yKey: string) => {
-    //     if (row[yKey] === undefined || row[yKey] === null) {
-    //       console.warn(`  ⚠️ Row ${rowIndex + 1}: Y-Axis [${yKey}] is ${row[yKey]}`);
-    //       hasIssues = true;
-    //     }
-    //   });
-    // });
-    // if (!hasIssues) {
-    //   console.log('  ✅ No missing/undefined values found!');
-    // }
-
-    // console.log('═══════════════════════════════════════════════════\n');
-
-    // Common props that are safe for all chart types
-    const safeCommonProps = {
-      data: chartData,
-      arrayData:
-        chartData.length > 0
-          ? [
-              [
-                // Use converted names instead of IDs
-                xAxisKeyName,
-                ...yAxisKeysNames,
-              ],
-              ...chartData.map((point: any) => {
-                return [point[xAxisKeyName], ...yAxisKeysNames.map((name: string) => point[name])];
-              }),
-            ]
-          : undefined,
-      width: safeChartConfig.width,
-      height: safeChartConfig.height,
-      margin: safeChartConfig.margin,
-      xAxisKey: xAxisKeyName,
-      yAxisKeys: yAxisKeysNames as string[],
-      colors: colors,
-      seriesNames: Object.fromEntries(
-        (axisConfigs.seriesConfigs || []).map((series: any) => [
-          getHeaderName(series.dataColumn),
-          series.name,
-        ])
-      ),
-      title: safeChartConfig.title,
-      xAxisLabel: axisConfigs.xAxisLabel,
-      yAxisLabel: axisConfigs.yAxisLabel,
-      showLegend: safeChartConfig.showLegend,
-      showGrid: safeChartConfig.showGrid,
-      animationDuration: safeChartConfig.animationDuration,
-      yAxisFormatter: formatters.useYFormatter
-        ? (value: number) => {
-            switch (formatters.yFormatterType) {
-              case 'currency':
-                return new Intl.NumberFormat('en-US', {
-                  style: 'currency',
-                  currency: 'USD',
-                }).format(value);
-              case 'percentage':
-                return new Intl.NumberFormat('en-US', { style: 'percent' }).format(value / 100);
-              case 'number':
-                return new Intl.NumberFormat('en-US').format(value);
-              case 'decimal':
-                return value.toFixed(2);
-              case 'scientific':
-                return value.toExponential(2);
-              case 'bytes':
-                return new Intl.NumberFormat('en-US', { style: 'unit', unit: 'byte' }).format(
-                  value
-                );
-              case 'duration':
-                return new Intl.NumberFormat('en-US', { style: 'unit', unit: 'second' }).format(
-                  value
-                );
-              case 'custom':
-                return (formatters as any).customYFormatter
-                  ? (formatters as any).customYFormatter.replace('{value}', value.toString())
-                  : value.toString();
-              default:
-                return value.toString();
-            }
-          }
-        : undefined,
-      xAxisFormatter: formatters.useXFormatter
-        ? (value: number) => {
-            switch (formatters.xFormatterType) {
-              case 'currency':
-                return new Intl.NumberFormat('en-US', {
-                  style: 'currency',
-                  currency: 'USD',
-                }).format(value);
-              case 'percentage':
-                return new Intl.NumberFormat('en-US', { style: 'percent' }).format(value / 100);
-              case 'number':
-                return new Intl.NumberFormat('en-US').format(value);
-              case 'decimal':
-                return value.toFixed(2);
-              case 'scientific':
-                return value.toExponential(2);
-              case 'bytes':
-                return new Intl.NumberFormat('en-US', { style: 'unit', unit: 'byte' }).format(
-                  value
-                );
-              case 'duration':
-                return new Intl.NumberFormat('en-US', { style: 'unit', unit: 'second' }).format(
-                  value
-                );
-              case 'custom':
-                return (formatters as any).customXFormatter
-                  ? (formatters as any).customXFormatter.replace('{value}', value.toString())
-                  : value.toString();
-              default:
-                return value.toString();
-            }
-          }
-        : undefined,
-      fontSize: {
-        axis: safeChartConfig.labelFontSize || 12,
-        label: safeChartConfig.labelFontSize || 12,
-        title: safeChartConfig.titleFontSize || 16,
-      },
-    };
-
+    // Check chart type and render appropriate component
     switch (chartType) {
-      case 'line': {
-        const lineConfig = safeChartConfig as any; // Using 'any' for SubLineChartConfig compatibility
-        return (
-          <D3LineChart
-            {...safeCommonProps}
-            disabledLines={lineConfig.disabledLines}
-            showPoints={lineConfig.showPoints}
-            showPointValues={lineConfig.showPointValues}
-            // curve={curveOptions[lineConfig.curve as keyof typeof curveOptions] ?? undefined}
-            lineWidth={lineConfig.lineWidth}
-            pointRadius={lineConfig.pointRadius}
-            xAxisStart={axisConfigs.xAxisStart}
-            yAxisStart={axisConfigs.yAxisStart}
-            gridOpacity={lineConfig.gridOpacity}
-            legendPosition={lineConfig.legendPosition}
-            xAxisRotation={axisConfigs.xAxisRotation}
-            yAxisRotation={axisConfigs.yAxisRotation}
-            showAxisLabels={axisConfigs.showAxisLabels}
-            showAxisTicks={axisConfigs.showAxisTicks}
-            enableZoom={lineConfig.enableZoom}
-            enablePan={lineConfig.enablePan}
-            zoomExtent={lineConfig.zoomExtent}
-            showTooltip={lineConfig.showTooltip}
-            theme={lineConfig.theme}
-            backgroundColor={lineConfig.backgroundColor}
-            titleFontSize={lineConfig.titleFontSize}
-            labelFontSize={lineConfig.labelFontSize}
-            legendFontSize={lineConfig.legendFontSize}
-            yFormatterType={
-              formatters.useYFormatter ? (formatters.yFormatterType as any) : undefined
-            }
-            xFormatterType={
-              formatters.useXFormatter ? (formatters.xFormatterType as any) : undefined
-            }
-          />
+      case ChartType.Line:
+      case ChartType.Area:
+      case ChartType.Bar:
+      case ChartType.Scatter: {
+        // Convert IDs to names for chart keys
+        const xAxisKeyName = Array.isArray(axisConfigs.xAxisKey)
+          ? getHeaderName(axisConfigs.xAxisKey[0] || '')
+          : getHeaderName(axisConfigs.xAxisKey || '');
+
+        // Validate xAxisKey first
+        if (!xAxisKeyName || xAxisKeyName === '') {
+          return (
+            <ErrorPanel
+              title={t('chart_editor_no_xaxis', 'No X-Axis column selected')}
+              subtitle={t(
+                'chart_editor_select_xaxis_hint',
+                'Please select an X-Axis column in Axis Configuration'
+              )}
+              bordered
+            />
+          );
+        }
+
+        // Build yAxisKeys from axisConfigs (only visible series)
+        const visibleSeries = (axisConfigs.seriesConfigs || []).filter(
+          (series: any) => series.visible !== false
         );
-      }
 
-      case 'scatter': {
-        const scatterConfig = safeChartConfig as any;
+        const yAxisKeysNames = visibleSeries.map((series: any) => {
+          const columnName = getHeaderName(series.dataColumn);
+          return columnName;
+        });
 
-        // For scatter, use the first visible series as Y key
-        const yKey = (yAxisKeysNames as string[])[0];
+        // Then check if no series are selected OR no visible series
+        if (
+          !axisConfigs ||
+          !axisConfigs.seriesConfigs ||
+          axisConfigs.seriesConfigs.length === 0 ||
+          yAxisKeysNames.length === 0
+        ) {
+          return (
+            <ErrorPanel
+              title={t('chart_editor_no_series', 'No data series selected')}
+              subtitle={
+                yAxisKeysNames.length === 0 &&
+                axisConfigs.seriesConfigs &&
+                axisConfigs.seriesConfigs.length > 0
+                  ? t(
+                      'chart_editor_no_visible_series',
+                      'All series are hidden. Please make at least one series visible.'
+                    )
+                  : t('chart_editor_add_series_hint', 'Add a data series to display the chart')
+              }
+              bordered
+            />
+          );
+        }
 
-        // Convert chartData to array format with ALL columns (including potential colorKey/sizeKey)
-        const arrayData = convertChartDataToArray(chartData);
-
-        // Scatter-specific configuration
-        const scatterProps = {
-          arrayData,
-          width: safeChartConfig.width,
-          height: safeChartConfig.height,
-          margin: safeChartConfig.margin,
-          xAxisKey: xAxisKeyName,
-          yAxisKey: yKey,
-
-          // Optional: colorKey for grouping by category
-          colorKey: scatterConfig.colorKey, // Should be a column name from dataset
-
-          // Optional: sizeKey for bubble chart effect
-          sizeKey: scatterConfig.sizeKey, // Should be a column name from dataset
-
-          // Colors
-          colors: colors,
-
-          // Title and labels
-          title: safeChartConfig.title,
-          xAxisLabel: axisConfigs.xAxisLabel,
-          yAxisLabel: axisConfigs.yAxisLabel,
-
-          // Display options
-          showGrid: safeChartConfig.showGrid,
-          showLegend: safeChartConfig.showLegend,
-          showTooltip: scatterConfig.showTooltip,
-          showAxisLabels: axisConfigs.showAxisLabels,
-          showAxisTicks: axisConfigs.showAxisTicks,
-
-          // Styling
-          pointRadius: scatterConfig.pointRadius || 5,
-          minPointRadius: scatterConfig.minPointRadius || 3,
-          maxPointRadius: scatterConfig.maxPointRadius || 15,
-          pointOpacity: scatterConfig.pointOpacity || 0.7,
-
-          // Grid and legend
-          gridOpacity: scatterConfig.gridOpacity,
-          legendFontSize: scatterConfig.legendFontSize,
-
-          // Axis configuration
-          xAxisStart: axisConfigs.xAxisStart,
-          yAxisStart: axisConfigs.yAxisStart,
-          xAxisRotation: axisConfigs.xAxisRotation,
-
-          // Formatters
-          yAxisFormatter: safeCommonProps.yAxisFormatter,
-          xAxisFormatter: safeCommonProps.xAxisFormatter,
-
-          // Font sizes
-          fontSize: safeCommonProps.fontSize,
-          titleFontSize: scatterConfig.titleFontSize,
-          labelFontSize: scatterConfig.labelFontSize,
-
-          // Theme
-          theme: scatterConfig.theme,
-          backgroundColor: safeChartConfig.backgroundColor,
-
-          // Animation
-          animationDuration: safeChartConfig.animationDuration,
-
-          // Regression line
-          showRegressionLine: scatterConfig.showRegressionLine,
-          regressionLineColor: scatterConfig.regressionLineColor,
-          regressionLineWidth: scatterConfig.regressionLineWidth,
-        };
-
-        return <D3ScatterChart {...scatterProps} />;
-      }
-
-      case 'bar': {
-        const barConfig = safeChartConfig as any; // Using 'any' for SubBarChartConfig compatibility
-        return (
-          <D3BarChart
-            {...safeCommonProps}
-            yAxisKeys={yAxisKeysNames as string[]}
-            disabledBars={barConfig.disabledBars || []}
-            barType={barConfig.barType}
-            barWidth={barConfig.barWidth}
-            barSpacing={barConfig.barSpacing}
-            showLegend={safeChartConfig.showLegend}
-            showGrid={safeChartConfig.showGrid}
-            gridOpacity={barConfig.gridOpacity}
-            legendPosition={barConfig.legendPosition}
-            xAxisRotation={axisConfigs.xAxisRotation}
-            yAxisRotation={axisConfigs.yAxisRotation}
-            showAxisLabels={axisConfigs.showAxisLabels}
-            showAxisTicks={axisConfigs.showAxisTicks}
-            yAxisStart={axisConfigs.yAxisStart}
-            xAxisStart={axisConfigs.xAxisStart}
-            theme={barConfig.theme}
-            backgroundColor={barConfig.backgroundColor}
-            showTooltip={barConfig.showTooltip}
-            titleFontSize={barConfig.titleFontSize}
-            labelFontSize={barConfig.labelFontSize}
-            legendFontSize={barConfig.legendFontSize}
-            enableZoom={barConfig.enableZoom}
-            enablePan={barConfig.enablePan}
-            zoomExtent={barConfig.zoomExtent}
-            yFormatterType={
-              formatters.useYFormatter ? (formatters.yFormatterType as any) : undefined
-            }
-            xFormatterType={
-              formatters.useXFormatter ? (formatters.xFormatterType as any) : undefined
-            }
-          />
-        );
-      }
-
-      case 'area': {
-        const areaConfig = safeChartConfig as any; // Using 'any' for SubAreaChartConfig compatibility
-        const areaProps = {
+        // Common props that are safe for all chart types
+        const safeCommonProps = {
           data: chartData,
+          arrayData:
+            chartData.length > 0
+              ? [
+                  [
+                    // Use converted names instead of IDs
+                    xAxisKeyName,
+                    ...yAxisKeysNames,
+                  ],
+                  ...chartData.map((point: any) => {
+                    return [
+                      point[xAxisKeyName],
+                      ...yAxisKeysNames.map((name: string) => point[name]),
+                    ];
+                  }),
+                ]
+              : undefined,
           width: safeChartConfig.width,
           height: safeChartConfig.height,
           margin: safeChartConfig.margin,
           xAxisKey: xAxisKeyName,
           yAxisKeys: yAxisKeysNames as string[],
           colors: colors,
+          seriesNames: Object.fromEntries(
+            (axisConfigs.seriesConfigs || []).map((series: any) => [
+              getHeaderName(series.dataColumn),
+              series.name,
+            ])
+          ),
           title: safeChartConfig.title,
           xAxisLabel: axisConfigs.xAxisLabel,
           yAxisLabel: axisConfigs.yAxisLabel,
           showLegend: safeChartConfig.showLegend,
           showGrid: safeChartConfig.showGrid,
           animationDuration: safeChartConfig.animationDuration,
-          disabledLines: areaConfig.disabledLines,
-          showPoints: areaConfig.showPoints,
-          showStroke: areaConfig.showStroke,
-          curve: curveOptions[areaConfig.curve as keyof typeof curveOptions],
-          enableZoom: areaConfig.enableZoom,
-          enablePan: areaConfig.enablePan,
-          zoomExtent: areaConfig.zoomExtent,
-          showTooltip: areaConfig.showTooltip,
-          theme: areaConfig.theme,
-          backgroundColor: areaConfig.backgroundColor,
-          gridOpacity: areaConfig.gridOpacity,
-          legendPosition: areaConfig.legendPosition,
-          xAxisRotation: axisConfigs.xAxisRotation,
-          yAxisRotation: axisConfigs.yAxisRotation,
-          showAxisLabels: axisConfigs.showAxisLabels,
-          showAxisTicks: axisConfigs.showAxisTicks,
-          titleFontSize: areaConfig.titleFontSize,
-          labelFontSize: areaConfig.labelFontSize,
-          legendFontSize: areaConfig.legendFontSize,
+          yAxisFormatter: formatters.useYFormatter
+            ? (value: number) => {
+                switch (formatters.yFormatterType) {
+                  case 'currency':
+                    return new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: 'USD',
+                    }).format(value);
+                  case 'percentage':
+                    return new Intl.NumberFormat('en-US', { style: 'percent' }).format(value / 100);
+                  case 'number':
+                    return new Intl.NumberFormat('en-US').format(value);
+                  case 'decimal':
+                    return value.toFixed(2);
+                  case 'scientific':
+                    return value.toExponential(2);
+                  case 'bytes':
+                    return new Intl.NumberFormat('en-US', { style: 'unit', unit: 'byte' }).format(
+                      value
+                    );
+                  case 'duration':
+                    return new Intl.NumberFormat('en-US', { style: 'unit', unit: 'second' }).format(
+                      value
+                    );
+                  case 'custom':
+                    return (formatters as any).customYFormatter
+                      ? (formatters as any).customYFormatter.replace('{value}', value.toString())
+                      : value.toString();
+                  default:
+                    return value.toString();
+                }
+              }
+            : undefined,
+          xAxisFormatter: formatters.useXFormatter
+            ? (value: number) => {
+                switch (formatters.xFormatterType) {
+                  case 'currency':
+                    return new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: 'USD',
+                    }).format(value);
+                  case 'percentage':
+                    return new Intl.NumberFormat('en-US', { style: 'percent' }).format(value / 100);
+                  case 'number':
+                    return new Intl.NumberFormat('en-US').format(value);
+                  case 'decimal':
+                    return value.toFixed(2);
+                  case 'scientific':
+                    return value.toExponential(2);
+                  case 'bytes':
+                    return new Intl.NumberFormat('en-US', { style: 'unit', unit: 'byte' }).format(
+                      value
+                    );
+                  case 'duration':
+                    return new Intl.NumberFormat('en-US', { style: 'unit', unit: 'second' }).format(
+                      value
+                    );
+                  case 'custom':
+                    return (formatters as any).customXFormatter
+                      ? (formatters as any).customXFormatter.replace('{value}', value.toString())
+                      : value.toString();
+                  default:
+                    return value.toString();
+                }
+              }
+            : undefined,
+          fontSize: {
+            axis: safeChartConfig.labelFontSize || 12,
+            label: safeChartConfig.labelFontSize || 12,
+            title: safeChartConfig.titleFontSize || 16,
+          },
         };
-        return <D3AreaChart {...areaProps} />;
-      }
 
+        switch (chartType) {
+          case 'line': {
+            const lineConfig = safeChartConfig as any; // Using 'any' for SubLineChartConfig compatibility
+            return (
+              <D3LineChart
+                {...safeCommonProps}
+                disabledLines={lineConfig.disabledLines}
+                showPoints={lineConfig.showPoints}
+                showPointValues={lineConfig.showPointValues}
+                curve={curveOptions[lineConfig.curve as keyof typeof curveOptions] ?? undefined}
+                lineWidth={lineConfig.lineWidth}
+                pointRadius={lineConfig.pointRadius}
+                xAxisStart={axisConfigs.xAxisStart}
+                yAxisStart={axisConfigs.yAxisStart}
+                gridOpacity={lineConfig.gridOpacity}
+                legendPosition={lineConfig.legendPosition}
+                xAxisRotation={axisConfigs.xAxisRotation}
+                yAxisRotation={axisConfigs.yAxisRotation}
+                showAxisLabels={axisConfigs.showAxisLabels}
+                showAxisTicks={axisConfigs.showAxisTicks}
+                enableZoom={lineConfig.enableZoom}
+                enablePan={lineConfig.enablePan}
+                zoomExtent={lineConfig.zoomExtent}
+                showTooltip={lineConfig.showTooltip}
+                theme={lineConfig.theme}
+                backgroundColor={lineConfig.backgroundColor}
+                titleFontSize={lineConfig.titleFontSize}
+                labelFontSize={lineConfig.labelFontSize}
+                legendFontSize={lineConfig.legendFontSize}
+                yFormatterType={
+                  formatters.useYFormatter ? (formatters.yFormatterType as any) : undefined
+                }
+                xFormatterType={
+                  formatters.useXFormatter ? (formatters.xFormatterType as any) : undefined
+                }
+              />
+            );
+          }
+
+          case 'scatter': {
+            const scatterConfig = safeChartConfig as any;
+
+            // For scatter, use the first visible series as Y key
+            const yKey = (yAxisKeysNames as string[])[0];
+
+            // Convert chartData to array format with ALL columns (including potential colorKey/sizeKey)
+            const arrayData = convertChartDataToArray(chartData);
+
+            // Scatter-specific configuration
+            const scatterProps = {
+              arrayData,
+              width: safeChartConfig.width,
+              height: safeChartConfig.height,
+              margin: safeChartConfig.margin,
+              xAxisKey: xAxisKeyName,
+              // Support multiple series: pass all visible series as yAxisKeys
+              yAxisKey: yKey,
+              yAxisKeys: yAxisKeysNames as string[],
+
+              // Optional: colorKey for grouping by category
+              colorKey: scatterConfig.colorKey, // Should be a column name from dataset
+
+              // Optional: sizeKey for bubble chart effect
+              sizeKey: scatterConfig.sizeKey, // Should be a column name from dataset
+
+              // Colors
+              colors: colors,
+              // Series display names mapping
+              seriesNames: Object.fromEntries(
+                (axisConfigs.seriesConfigs || []).map((series: any) => [
+                  getHeaderName(series.dataColumn),
+                  series.name,
+                ])
+              ),
+
+              // Title and labels
+              title: safeChartConfig.title,
+              xAxisLabel: axisConfigs.xAxisLabel,
+              yAxisLabel: axisConfigs.yAxisLabel,
+
+              // Display options
+              showGrid: safeChartConfig.showGrid,
+              showLegend: safeChartConfig.showLegend,
+              showTooltip: scatterConfig.showTooltip,
+              showAxisLabels: axisConfigs.showAxisLabels,
+              showAxisTicks: axisConfigs.showAxisTicks,
+
+              // Styling
+              pointRadius: scatterConfig.pointRadius || 5,
+              minPointRadius: scatterConfig.minPointRadius || 3,
+              maxPointRadius: scatterConfig.maxPointRadius || 15,
+              pointOpacity: scatterConfig.pointOpacity || 0.7,
+
+              // Grid and legend
+              gridOpacity: scatterConfig.gridOpacity,
+              legendFontSize: scatterConfig.legendFontSize,
+
+              // Axis configuration
+              xAxisStart: axisConfigs.xAxisStart,
+              yAxisStart: axisConfigs.yAxisStart,
+              xAxisRotation: axisConfigs.xAxisRotation,
+
+              // Formatters
+              yAxisFormatter: safeCommonProps.yAxisFormatter,
+              xAxisFormatter: safeCommonProps.xAxisFormatter,
+
+              // Font sizes
+              fontSize: safeCommonProps.fontSize,
+              titleFontSize: scatterConfig.titleFontSize,
+              labelFontSize: scatterConfig.labelFontSize,
+
+              // Theme
+              theme: scatterConfig.theme,
+              backgroundColor: safeChartConfig.backgroundColor,
+
+              // Animation
+              animationDuration: safeChartConfig.animationDuration,
+
+              // Regression line
+              showRegressionLine: scatterConfig.showRegressionLine,
+              regressionLineColor: scatterConfig.regressionLineColor,
+              regressionLineWidth: scatterConfig.regressionLineWidth,
+            };
+
+            return <D3ScatterChart {...scatterProps} />;
+          }
+
+          case 'bar': {
+            const barConfig = safeChartConfig as any; // Using 'any' for SubBarChartConfig compatibility
+            return (
+              <D3BarChart
+                {...safeCommonProps}
+                yAxisKeys={yAxisKeysNames as string[]}
+                disabledBars={barConfig.disabledBars || []}
+                barType={barConfig.barType}
+                barWidth={barConfig.barWidth}
+                barSpacing={barConfig.barSpacing}
+                showLegend={safeChartConfig.showLegend}
+                showGrid={safeChartConfig.showGrid}
+                gridOpacity={barConfig.gridOpacity}
+                legendPosition={barConfig.legendPosition}
+                xAxisRotation={axisConfigs.xAxisRotation}
+                yAxisRotation={axisConfigs.yAxisRotation}
+                showAxisLabels={axisConfigs.showAxisLabels}
+                showAxisTicks={axisConfigs.showAxisTicks}
+                yAxisStart={axisConfigs.yAxisStart}
+                xAxisStart={axisConfigs.xAxisStart}
+                theme={barConfig.theme}
+                backgroundColor={barConfig.backgroundColor}
+                showTooltip={barConfig.showTooltip}
+                titleFontSize={barConfig.titleFontSize}
+                labelFontSize={barConfig.labelFontSize}
+                legendFontSize={barConfig.legendFontSize}
+                enableZoom={barConfig.enableZoom}
+                enablePan={barConfig.enablePan}
+                zoomExtent={barConfig.zoomExtent}
+                yFormatterType={
+                  formatters.useYFormatter ? (formatters.yFormatterType as any) : undefined
+                }
+                xFormatterType={
+                  formatters.useXFormatter ? (formatters.xFormatterType as any) : undefined
+                }
+              />
+            );
+          }
+
+          case 'area': {
+            const areaConfig = safeChartConfig as any; // Using 'any' for SubAreaChartConfig compatibility
+            const areaProps = {
+              data: chartData,
+              width: safeChartConfig.width,
+              height: safeChartConfig.height,
+              margin: safeChartConfig.margin,
+              xAxisKey: xAxisKeyName,
+              yAxisKeys: yAxisKeysNames as string[],
+              colors: colors,
+              title: safeChartConfig.title,
+              xAxisLabel: axisConfigs.xAxisLabel,
+              yAxisLabel: axisConfigs.yAxisLabel,
+              showLegend: safeChartConfig.showLegend,
+              showGrid: safeChartConfig.showGrid,
+              animationDuration: safeChartConfig.animationDuration,
+              disabledLines: areaConfig.disabledLines,
+              showPoints: areaConfig.showPoints,
+              showStroke: areaConfig.showStroke,
+              curve: curveOptions[areaConfig.curve as keyof typeof curveOptions],
+              enableZoom: areaConfig.enableZoom,
+              enablePan: areaConfig.enablePan,
+              zoomExtent: areaConfig.zoomExtent,
+              showTooltip: areaConfig.showTooltip,
+              theme: areaConfig.theme,
+              backgroundColor: areaConfig.backgroundColor,
+              gridOpacity: areaConfig.gridOpacity,
+              legendPosition: areaConfig.legendPosition,
+              xAxisRotation: axisConfigs.xAxisRotation,
+              yAxisRotation: axisConfigs.yAxisRotation,
+              showAxisLabels: axisConfigs.showAxisLabels,
+              showAxisTicks: axisConfigs.showAxisTicks,
+              titleFontSize: areaConfig.titleFontSize,
+              labelFontSize: areaConfig.labelFontSize,
+              legendFontSize: areaConfig.legendFontSize,
+            };
+            return <D3AreaChart {...areaProps} />;
+          }
+
+          default:
+            return null;
+        }
+      }
+      case ChartType.Pie:
+      case ChartType.Donut: {
+        if (!chartData || chartData.length === 0) {
+          return (
+            <ErrorPanel
+              title={t('chart_editor_no_data', 'No data available')}
+              subtitle={t(
+                'chart_editor_no_data_hint',
+                'Please upload data or select a dataset to display the chart.'
+              )}
+            />
+          );
+        }
+
+        if (!safeChartConfig || !chartConfig) {
+          return (
+            <ErrorPanel
+              title={t('chart_editor_invalid_config', 'Invalid chart configuration')}
+              subtitle={t(
+                'chart_editor_invalid_config_hint',
+                'The chart configuration is invalid or missing.'
+              )}
+              bordered
+            />
+          );
+        }
+
+        const pieConfig = safeChartConfig as SubPieDonutChartConfig;
+
+        // Kiểm tra xem đã chọn labelKey và valueKey chưa
+        if (!pieConfig.labelKey || !pieConfig.valueKey) {
+          return (
+            <ErrorPanel
+              title={t('chart_editor_no_pie_keys', 'Missing required fields')}
+              subtitle={t(
+                'chart_editor_pie_keys_hint',
+                'Please select Label and Value columns for the pie chart.'
+              )}
+              bordered
+            />
+          );
+        }
+
+        // Map labelKey and valueKey (id) to header name for Pie Chart, like other chart types
+        const labelKeyName = getHeaderName(pieConfig.labelKey);
+        const valueKeyName = getHeaderName(pieConfig.valueKey);
+
+        // Format values if needed
+        const formatter = (chartConfig.formatters as Partial<PieDonutFormatterConfig>) || {};
+
+        const pieProps = {
+          // Data props
+          data: chartData,
+          width: pieConfig.width,
+          height: pieConfig.height,
+          margin: pieConfig.margin,
+          labelKey: labelKeyName,
+          valueKey: valueKeyName,
+
+          // Display options
+          title: pieConfig.title,
+          showTitle: pieConfig.showTitle,
+          showLegend: pieConfig.showLegend,
+          showLabels: pieConfig.showLabels,
+          showPercentage: pieConfig.showPercentage,
+          showSliceValues: pieConfig.showSliceValues,
+          showTooltip: pieConfig.showTooltip,
+
+          // Pie-specific settings
+          innerRadius: pieConfig.innerRadius,
+          cornerRadius: pieConfig.cornerRadius,
+          padAngle: pieConfig.padAngle,
+          startAngle: pieConfig.startAngle,
+          endAngle: pieConfig.endAngle,
+          sortSlices: pieConfig.sortSlices,
+          sliceOpacity: pieConfig.sliceOpacity,
+
+          // Visual settings
+          theme: pieConfig.theme,
+          backgroundColor: pieConfig.backgroundColor,
+          titleColor: pieConfig.titleColor,
+          labelColor: pieConfig.labelColor,
+          strokeWidth: pieConfig.strokeWidth,
+          strokeColor: pieConfig.strokeColor,
+
+          // Font sizes
+          titleFontSize: pieConfig.titleFontSize,
+          labelFontSize: pieConfig.labelFontSize,
+          legendFontSize: pieConfig.legendFontSize,
+
+          // Legend settings
+          legendPosition: pieConfig.legendPosition,
+          legendMaxItems: pieConfig.legendMaxItems,
+
+          // Animation
+          animationDuration: pieConfig.animationDuration,
+          enableAnimation: pieConfig.enableAnimation,
+          hoverScale: pieConfig.hoverScale,
+          enableHoverEffect: pieConfig.enableHoverEffect,
+
+          // Colors
+          colors: colors,
+
+          // Value formatter
+          valueFormatter: formatter.useValueFormatter
+            ? (value: number) => {
+                switch (formatter.valueFormatterType) {
+                  case 'currency':
+                    return new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: 'USD',
+                    }).format(value);
+                  case 'percentage':
+                    return new Intl.NumberFormat('en-US', { style: 'percent' }).format(value / 100);
+                  case 'decimal':
+                    return value.toFixed(2);
+                  case 'scientific':
+                    return value.toExponential(2);
+                  case 'bytes':
+                    return new Intl.NumberFormat('en-US', { style: 'unit', unit: 'byte' }).format(
+                      value
+                    );
+                  case 'custom':
+                    return formatter.customValueFormatter
+                      ? formatter.customValueFormatter.replace('{value}', value.toString())
+                      : value.toString();
+                  default:
+                    return value.toString();
+                }
+              }
+            : undefined,
+        };
+
+        return <D3PieChart {...pieProps} />;
+      }
       default:
-        return null;
+        return (
+          <ErrorPanel
+            title={t('chart_editor_invalid_type', 'Invalid chart type')}
+            subtitle={t('chart_editor_select_type_hint', 'Please select a valid chart type.')}
+            bordered
+          />
+        );
     }
   };
 

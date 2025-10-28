@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, LineChart, BarChart3, AreaChart, Dot } from 'lucide-react';
+import { Settings, LineChart, BarChart3, AreaChart, Dot, ChartPie, Donut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
 
@@ -50,6 +50,16 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
         value: ChartType.Scatter,
         label: t('chart_type_scatter', 'Scatter Chart'),
         icon: Dot,
+      },
+      {
+        value: ChartType.Pie,
+        label: t('chart_type_pie', 'Pie Chart'),
+        icon: ChartPie,
+      },
+      {
+        value: ChartType.Donut,
+        label: t('chart_type_donut', 'Donut Chart'),
+        icon: Donut,
       },
     ],
     [t]
@@ -129,6 +139,12 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
     if (chartConfig) {
       const mergedConfig = mergeConfigs(chartConfig, newChartType);
       setChartConfig(mergedConfig);
+    } else {
+      // If there's no existing config (e.g. fresh create flow), immediately set a
+      // sensible default config for the selected chart type so downstream UI does
+      // not observe a transient null `chartConfig` value.
+      const defaultConfig = getDefaultChartConfig(newChartType);
+      setChartConfig(defaultConfig);
     }
 
     setCurrentChartType(newChartType);

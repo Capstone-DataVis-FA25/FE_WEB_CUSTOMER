@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import Routers from '@/router/routers';
+import { useDataset } from '@/features/dataset/useDataset';
 import type { ChartCategory, ChartTemplate } from '@/types/chart-gallery-types';
 import ChartTemplateCard from './ChartTemplateCard';
 
@@ -58,6 +59,19 @@ export default function ChooseTemplateTab() {
 
   // Use local state instead of location state
   const datasetId = currentDatasetId;
+
+  // Dataset hook - keep selection in global store so it persists across navigation
+  const { currentDataset, getDatasetById } = useDataset();
+
+  // Sync local display state from global currentDataset so selection persists when navigating back
+  useEffect(() => {
+    if (currentDataset && currentDataset.id) {
+      // Only update if local state differs to avoid overwriting selection in dialog flows
+      if (currentDatasetId !== currentDataset.id) setCurrentDatasetId(currentDataset.id);
+      if (currentDatasetName !== currentDataset.name)
+        setCurrentDatasetName(currentDataset.name || '');
+    }
+  }, [currentDataset, currentDatasetId, currentDatasetName]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<ChartCategory[]>([]);
@@ -91,6 +105,15 @@ export default function ChooseTemplateTab() {
       setCurrentDatasetId(selectedDatasetId);
       setCurrentDatasetName(selectedDatasetName);
 
+      // Also populate global currentDataset so selection persists across pages
+      if (selectedDatasetId) {
+        try {
+          await getDatasetById(selectedDatasetId);
+        } catch (e) {
+          // ignore - getDatasetById will set errors in store if necessary
+        }
+      }
+
       // If we have a template selected, continue with it
       if (selectedTemplate) {
         continueWithTemplate(selectedTemplate, selectedDatasetId);
@@ -110,8 +133,8 @@ export default function ChooseTemplateTab() {
   const continueWithTemplate = (template: ChartTemplate, datasetIdParam?: string) => {
     try {
       // Only allow chart types supported by CreateChartRequest
-      // Extend support to include 'scatter'
-      if (!['line', 'bar', 'area', 'scatter'].includes(template.type)) {
+      // Extend support to include 'scatter' 'pie' and 'donut'
+      if (!['line', 'bar', 'area', 'scatter', 'pie', 'donut'].includes(template.type)) {
         showError(
           t('chart_create_error', 'Error'),
           t('chart_create_unsupported_type', 'This chart type is not supported for creation.')

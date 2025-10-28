@@ -224,17 +224,24 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
   }, []);
 
   const setOriginalParsedData = useCallback((data: ParsedDataResult | null) => {
-    console.log('🔧 DatasetContext: setOriginalParsedData called', {
-      dataLength: data?.data?.length,
-    });
+    if (data && typeof data.data?.length !== 'undefined') {
+      console.log('🔧 DatasetContext: setOriginalParsedData called', {
+        dataLength: data.data.length,
+      });
+    }
     setState(prev => ({ ...prev, originalParsedData: data }));
   }, []);
 
   const setCurrentParsedData = useCallback((data: ParsedDataResult | null) => {
-    console.log('🔧 DatasetContext: setCurrentParsedData called', {
-      dataLength: data?.data?.length,
+    setState(prev => {
+      if (prev.currentParsedData === data) return prev; // no-op if same reference
+      if (data && typeof data.data?.length !== 'undefined') {
+        console.log('🔧 DatasetContext: setCurrentParsedData called', {
+          dataLength: data.data.length,
+        });
+      }
+      return { ...prev, currentParsedData: data };
     });
-    setState(prev => ({ ...prev, currentParsedData: data }));
   }, []);
 
   const setIsJsonFormat = useCallback((isJson: boolean) => {
