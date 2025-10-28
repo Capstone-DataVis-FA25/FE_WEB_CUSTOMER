@@ -78,17 +78,40 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
     [useVirtual]
   );
 
-  const viewportHeight = useMemo(() => {
-    if (!useVirtual) return totalRows * rowHeight;
-    if (!scrollRef.current) return 0;
-    return scrollRef.current.clientHeight;
-  }, [useVirtual, totalRows, rowHeight]);
+  // Measure viewport height for virtualization. Use state + effect so we update after mount
+  const [viewportHeight, setViewportHeight] = useState<number>(() =>
+    useVirtual ? 0 : totalRows * rowHeight
+  );
 
-  const startIndex = useVirtual ? Math.max(0, Math.floor(scrollTop / rowHeight) - overscan) : 0;
-  const visibleCount = useVirtual
-    ? Math.ceil(viewportHeight / rowHeight) + overscan * 2
+  // effectiveUseVirtual is disabled until we can measure the viewport to avoid 0-sized calculations
+  const effectiveUseVirtual = useVirtual && viewportHeight > 0;
+
+  useEffect(() => {
+    if (!useVirtual) {
+      setViewportHeight(totalRows * rowHeight);
+      return;
+    }
+
+    const el = scrollRef.current;
+    const update = () => {
+      if (el) setViewportHeight(el.clientHeight || 0);
+    };
+
+    // measure initially
+    update();
+
+    // listen to resize to update measurement
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [useVirtual, totalRows, rowHeight, height]);
+
+  const startIndex = effectiveUseVirtual
+    ? Math.max(0, Math.floor(scrollTop / rowHeight) - overscan)
+    : 0;
+  const visibleCount = effectiveUseVirtual
+    ? Math.min(totalRows, Math.ceil(viewportHeight / rowHeight) + overscan * 2)
     : totalRows;
-  const endIndex = useVirtual ? Math.min(totalRows, startIndex + visibleCount) : totalRows;
+  const endIndex = effectiveUseVirtual ? Math.min(totalRows, startIndex + visibleCount) : totalRows;
   const slice = rows.slice(startIndex, endIndex);
   const topSpacer = useVirtual ? startIndex * rowHeight : 0;
   const bottomSpacer = useVirtual ? (totalRows - endIndex) * rowHeight : 0;

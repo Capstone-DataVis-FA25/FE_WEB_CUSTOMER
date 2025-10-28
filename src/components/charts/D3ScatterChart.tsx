@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
+import { getAxisRequirementDescription } from '../../utils/chartValidation';
 
 // Default color scheme matching LineChart
 const defaultColorsChart: Record<string, { light: string; dark: string }> = {
@@ -137,6 +138,46 @@ function convertArrayToScatterData(arrayData: (string | number)[][]): ScatterDat
   return scatterData;
 }
 
+// Validate processed scatter data (objects) for given x/y keys
+function validateScatterDataObjects(
+  data: ScatterDataPoint[],
+  xKey: string,
+  yKey: string
+): { validCount: number; total: number; invalidRows: number[] } {
+  let validCount = 0;
+  const invalidRows: number[] = [];
+  data.forEach((d, i) => {
+    const x = Number(d[xKey]);
+    const y = Number(d[yKey]);
+    if (!isNaN(x) && !isNaN(y)) validCount++;
+    else invalidRows.push(i + 1); // 1-based for easier messages
+  });
+  return { validCount, total: data.length, invalidRows };
+}
+
+// Suggest pairs of keys that have at least `minValid` numeric rows
+function suggestNumericPairsFromObjects(
+  data: ScatterDataPoint[],
+  minValid = 2
+): Array<[string, string]> {
+  if (!data || data.length === 0) return [];
+  const keys = Object.keys(data[0]);
+  // Count numeric occurrences per key
+  const counts: Record<string, number> = {};
+  keys.forEach(k => {
+    counts[k] = data.reduce((acc, d) => (!isNaN(Number(d[k])) ? acc + 1 : acc), 0);
+  });
+
+  const numericKeys = keys.filter(k => counts[k] >= minValid);
+  const pairs: Array<[string, string]> = [];
+  for (let i = 0; i < numericKeys.length; i++) {
+    for (let j = i + 1; j < numericKeys.length; j++) {
+      pairs.push([numericKeys[i], numericKeys[j]]);
+    }
+  }
+  return pairs;
+}
+
 const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   arrayData,
   width = 800,
@@ -201,8 +242,8 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  // Chart dimensions always follow props (for interactive control)
-  const dimensions = { width, height };
+  // Chart dimensions follow container size (responsive) but honor default props as maximums
+  const [dimensions, setDimensions] = useState({ width, height });
 
   // Responsive font sizes (match LineChart)
   const responsiveFontSize = React.useMemo(
@@ -259,6 +300,49 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
 
   // Remove ResizeObserver: chart size strictly follows props
 
+  // Monitor container size for responsiveness (make scatter fill the inner container similar to LineChart)
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        let aspectRatio = height / width;
+
+        if (containerWidth < 640) {
+          aspectRatio = Math.min(aspectRatio * 1.2, 0.75);
+        } else if (containerWidth < 1024) {
+          aspectRatio = Math.min(aspectRatio, 0.6);
+        } else {
+          aspectRatio = Math.min(aspectRatio, 0.5);
+        }
+
+        const newWidth = Math.min(containerWidth - 16, width);
+        let newHeight = newWidth * aspectRatio;
+
+        const hasXAxisLabel = xAxisLabel && showAxisLabels;
+        if (hasXAxisLabel) {
+          newHeight += containerWidth < 640 ? 35 : 40;
+        }
+
+        if (showLegend) {
+          // Reserve space for legend at bottom
+          newHeight = newHeight * 0.8;
+          const legendExtraHeight = 150;
+          newHeight += legendExtraHeight;
+        }
+
+        setDimensions({
+          width: Math.max(Math.floor(newWidth), 100),
+          height: Math.max(Math.floor(newHeight), 100),
+        });
+      }
+    };
+
+    updateDimensions();
+
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    if (containerRef.current) resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect();
+  }, [width, height, showLegend, showAxisLabels, xAxisLabel]);
   // Helper: Calculate linear regression
   const calculateLinearRegression = (xVals: number[], yVals: number[]) => {
     const n = xVals.length;
@@ -289,22 +373,92 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
 
     if (innerWidth <= 0 || innerHeight <= 0) return;
 
-    // Create scales
-    const xValues = processedData.map(d => +d[xAxisKey]).filter(v => !isNaN(v));
-    const yValues = processedData.map(d => +d[yAxisKey]).filter(v => !isNaN(v));
+    // Validate selected X/Y keys on processed data
+    const validation = validateScatterDataObjects(processedData, xAxisKey, yAxisKey);
+    // Debug logs for validation
+    try {
+      console.groupCollapsed && console.groupCollapsed('[D3ScatterChart] validation');
+      console.debug('[D3ScatterChart] processedData.length=', processedData.length);
+      console.debug('[D3ScatterChart] keys=', Object.keys(processedData[0] || {}));
+      console.debug('[D3ScatterChart] xAxisKey, yAxisKey=', xAxisKey, yAxisKey);
+      console.debug('[D3ScatterChart] validation=', validation);
+    } catch (e) {
+      /* ignore */
+    } finally {
+      try {
+        console.groupEnd && console.groupEnd();
+      } catch (e) {
+        /* ignore */
+      }
+    }
+    if (validation.validCount < 2) {
+      // Suggest alternative numeric column pairs (up to 3 suggestions)
+      const suggestions = suggestNumericPairsFromObjects(processedData, 2).slice(0, 3);
+      console.warn(
+        '[D3ScatterChart] not enough numeric pairs for',
+        xAxisKey,
+        '/',
+        yAxisKey,
+        validation
+      );
+      if (suggestions.length > 0) console.debug('[D3ScatterChart] suggestions=', suggestions);
 
-    // If no valid numeric data, show warning in chart area
-    if (xValues.length === 0 || yValues.length === 0) {
+      const xReq = getAxisRequirementDescription('scatter', 'x');
+      const yReq = getAxisRequirementDescription('scatter', 'y');
+
+      let message = `Scatter chart requires: ${xReq}; ${yReq}.`;
+      if (suggestions.length > 0) {
+        message += ` Try pairs: ${suggestions.map(p => p.join('/')).join(', ')}`;
+      }
+
       svg
         .append('text')
         .attr('x', chartWidth / 2)
         .attr('y', chartHeight / 2)
         .attr('text-anchor', 'middle')
         .attr('fill', isDarkMode ? '#e5e7eb' : '#374151')
-        .style('font-size', '18px')
-        .style('font-weight', 'bold')
-        .text('No numeric data for selected X/Y axis');
+        .style('font-size', '14px')
+        .style('font-weight', '600')
+        .text(message);
       return;
+    }
+
+    // Create numeric arrays for scales and regression
+    const xValues = processedData.map(d => +d[xAxisKey]).filter(v => !isNaN(v));
+    const yValues = processedData.map(d => +d[yAxisKey]).filter(v => !isNaN(v));
+
+    // Debug: show sample converted rows and extents
+    try {
+      console.groupCollapsed && console.groupCollapsed('[D3ScatterChart] sample conversion');
+      const sample = processedData.slice(0, 6).map((d, i) => ({
+        row: i + 1,
+        rawX: d[xAxisKey],
+        rawY: d[yAxisKey],
+        numX: Number(d[xAxisKey]),
+        numY: Number(d[yAxisKey]),
+        valid: !isNaN(Number(d[xAxisKey])) && !isNaN(Number(d[yAxisKey])),
+      }));
+      console.debug('[D3ScatterChart] sampleRows=', sample);
+      console.debug(
+        '[D3ScatterChart] xValues.length=',
+        xValues.length,
+        'yValues.length=',
+        yValues.length
+      );
+      console.debug(
+        '[D3ScatterChart] xExtent=',
+        d3.extent(xValues),
+        'yExtent=',
+        d3.extent(yValues)
+      );
+    } catch (e) {
+      /* ignore */
+    } finally {
+      try {
+        console.groupEnd && console.groupEnd();
+      } catch (e) {
+        /* ignore */
+      }
     }
 
     // Set background
@@ -635,11 +789,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   // make sure the parent container does NOT restrict width/height. This div uses 100% width/height.
   // If the chart appears small, check parent CSS/layout.
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full"
-      style={{ width: width, height: height, minWidth: width, minHeight: height }}
-    >
+    <div ref={containerRef} className="w-full h-full" style={{ width: '100%', height: '100%' }}>
       <svg
         ref={svgRef}
         width={dimensions.width}

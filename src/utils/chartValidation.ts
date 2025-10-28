@@ -60,9 +60,8 @@ export const CHART_VALIDATION_RULES: Record<
   },
   [ChartType.Scatter]: {
     xAxis: {
-      allowedTypes: ['number', 'date', 'string', 'text'],
-      description:
-        'X-axis can be number (continuous), date/time (timeline), or string (categorical)',
+      allowedTypes: ['number'],
+      description: 'X-axis must be numeric (continuous) for scatter charts',
     },
     yAxis: {
       allowedTypes: ['number'],
@@ -99,20 +98,28 @@ export const isDataTypeValidForAxis = (
 /**
  * Convert chart type string to enum key
  */
-const getChartTypeKey = (chartType: ChartType | string): ChartType => {
-  if (typeof chartType === 'object') return chartType; // Already enum
+export const getChartTypeKey = (chartType: ChartType | string): ChartType => {
+  // If caller passed the enum value directly (number), return it
+  if (typeof chartType === 'number') return chartType as ChartType;
 
-  // Map string values to enum
-  switch (chartType.toLowerCase()) {
-    case 'line':
-      return ChartType.Line;
-    case 'bar':
-      return ChartType.Bar;
-    case 'area':
-      return ChartType.Area;
-    default:
-      return ChartType.Line; // Default fallback
+  // If it's a string, map common names to enum
+  if (typeof chartType === 'string') {
+    switch (chartType.toLowerCase()) {
+      case 'line':
+        return ChartType.Line;
+      case 'bar':
+        return ChartType.Bar;
+      case 'area':
+        return ChartType.Area;
+      case 'scatter':
+        return ChartType.Scatter;
+      default:
+        return ChartType.Line; // Default fallback
+    }
   }
+
+  // Fallback - return Line
+  return ChartType.Line;
 };
 
 /**

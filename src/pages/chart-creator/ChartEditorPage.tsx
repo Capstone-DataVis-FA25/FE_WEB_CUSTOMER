@@ -92,8 +92,14 @@ const ChartEditorPage: React.FC = () => {
     console.log(
       'useEffect #1: mount - clearCurrentChart, clearCurrentDataset, clearCurrentChartNotes'
     );
+    // Clear current chart and notes on mount. Only clear current dataset if there is
+    // no dataset context provided. This avoids wiping `currentDataset` when the
+    // user navigates to the chart editor immediately after creating a dataset
+    // (the dataset creation flow may have set `currentDataset` already).
     clearCurrentChart();
-    clearCurrentDataset();
+    if (!contextDatasetId) {
+      clearCurrentDataset();
+    }
     clearCurrentChartNotes();
   }, []);
 
