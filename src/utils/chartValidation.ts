@@ -11,22 +11,27 @@ export type DataType = 'string' | 'number' | 'date' | 'text';
 // Axis type
 export type AxisType = 'x' | 'y';
 
+// Role type for non-Cartesian charts (e.g., Pie, Donut)
+export type RoleType = 'label' | 'value';
+
 /**
  * Chart type validation rules
  * Defines which data types are acceptable for X and Y axes for each chart type
  */
-export const CHART_VALIDATION_RULES: Record<
-  ChartType,
-  {
-    xAxis: {
-      allowedTypes: DataType[];
-      description: string;
-    };
-    yAxis: {
-      allowedTypes: DataType[];
-      description: string;
-    };
-  }
+export const CHART_VALIDATION_RULES: Partial<
+  Record<
+    ChartType,
+    {
+      xAxis: {
+        allowedTypes: DataType[];
+        description: string;
+      };
+      yAxis: {
+        allowedTypes: DataType[];
+        description: string;
+      };
+    }
+  >
 > = {
   [ChartType.Line]: {
     xAxis: {
@@ -86,6 +91,39 @@ export const CHART_VALIDATION_RULES: Record<
     yAxis: {
       allowedTypes: [],
       description: '',
+    },
+  },
+};
+
+/**
+ * Role-based validation for charts that do not use x/y axes
+ * Keyed by chart type name (lowercase) to avoid hard enum coupling.
+ */
+export const CHART_ROLE_VALIDATION_RULES: Record<
+  string,
+  {
+    label: { allowedTypes: DataType[]; description: string };
+    value: { allowedTypes: DataType[]; description: string };
+  }
+> = {
+  pie: {
+    label: {
+      allowedTypes: ['string', 'text', 'date'],
+      description: 'Label should be categorical or date text',
+    },
+    value: {
+      allowedTypes: ['number'],
+      description: 'Value must be numeric',
+    },
+  },
+  donut: {
+    label: {
+      allowedTypes: ['string', 'text', 'date'],
+      description: 'Label should be categorical or date text',
+    },
+    value: {
+      allowedTypes: ['number'],
+      description: 'Value must be numeric',
     },
   },
 };

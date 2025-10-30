@@ -23,7 +23,7 @@ import type {
 const defaultBaseChartConfig: BaseChartConfig = {
   width: 800,
   height: 400,
-  margin: { top: 40, right: 40, bottom: 40, left: 40 },
+  margin: { top: 40, right: 40, bottom: 40, left: 80 },
   title: '',
   showLegend: true,
   showGrid: true,
