@@ -65,12 +65,6 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
     setSelectedDatasetId(currentDatasetId || '');
   };
 
-  const handleSkip = () => {
-    onSelectDataset('', ''); // Pass empty string to indicate skip
-    onOpenChange(false);
-    setSelectedDatasetId('');
-  };
-
   const handleRefresh = () => {
     getDatasets();
   };
@@ -221,14 +215,6 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
             className="rounded-lg pointer-events-auto"
           >
             Cancel
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleSkip}
-            className="rounded-lg pointer-events-auto"
-          >
-            Skip & Use Sample Data
           </Button>
           <Button
             type="button"

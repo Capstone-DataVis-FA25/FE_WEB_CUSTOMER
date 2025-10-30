@@ -41,15 +41,17 @@ function convertArrayToChartData(arrayData: (string | number)[][]): ChartDataPoi
         return;
       }
 
-      // Try to convert to number if it's a numeric string
+      // Try to convert to number if it's a numeric string (strict check)
       if (typeof value === 'string') {
-        // Clean the string (remove commas, spaces, etc.)
+        // Clean the string (remove commas, spaces)
         const cleanedValue = value.replace(/[,\s]/g, '');
-        const numValue = parseFloat(cleanedValue);
-        if (!isNaN(numValue)) {
-          dataPoint[header] = numValue;
+        // Only treat as numeric if the entire cleaned string is a valid number (no letters, dashes, etc.)
+        const numericPattern = /^[+-]?\d+(?:\.\d+)?$/;
+        if (numericPattern.test(cleanedValue)) {
+          dataPoint[header] = parseFloat(cleanedValue);
         } else {
-          dataPoint[header] = value; // Keep as string if not numeric
+          // Keep as original string (useful for dates like '2024-01')
+          dataPoint[header] = value;
         }
       } else {
         dataPoint[header] = value;

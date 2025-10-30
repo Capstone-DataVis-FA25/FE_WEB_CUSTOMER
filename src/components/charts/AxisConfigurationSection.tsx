@@ -9,7 +9,12 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Checkbox } from '../ui/checkbox';
 import { useDebouncedUpdater } from '@/hooks/useDebounce';
-import { filterHeadersByAxisType, getAxisRequirementDescription } from '@/utils/chartValidation';
+import {
+  filterHeadersByAxisType,
+  getAxisRequirementDescription,
+  getChartTypeKey,
+  validateHeaderForAxis,
+} from '@/utils/chartValidation';
 import { ChartType } from '@/features/charts/chartTypes';
 import WarningPanel from './WarningPanel';
 import AxisLabelsSettings from './AxisLabelsSettings';
@@ -78,11 +83,30 @@ const AxisConfigurationSection: React.FC = () => {
   const dataHeaders = currentDataset?.headers || [];
   const hasDataset = currentDataset && currentDataset.id;
 
-  // Filter headers valid for X-axis based on chart type
-  const validXAxisHeaders = filterHeadersByAxisType(dataHeaders, chartType, 'x');
+  // Normalize chart type and debug
+  const chartTypeKey = getChartTypeKey(chartType);
+  // Debug: ensure chart type mapping is correct when troubleshooting
+  if (process.env.NODE_ENV !== 'production') {
+    console.debug('[AxisConfiguration] raw chartType=', chartType, 'mapped=', chartTypeKey);
+    console.debug('[AxisConfiguration] dataHeaders sample=', dataHeaders.slice(0, 6));
+  }
+
+  // Filter headers valid for X-axis based on chart type (use normalized key)
+  const validXAxisHeaders = filterHeadersByAxisType(dataHeaders, chartTypeKey, 'x');
+
+  // Current selected header for X (if any) and validation
+  const currentXAxisId = chartConfig.axisConfigs?.xAxisKey;
+  const currentHeader = dataHeaders.find((h: any) => h.id === currentXAxisId);
+  const currentHeaderValidation = currentHeader
+    ? validateHeaderForAxis(
+        { name: currentHeader.name, type: currentHeader.type },
+        chartTypeKey,
+        'x'
+      )
+    : { isValid: true };
 
   // Get requirement description for X-axis
-  const xAxisRequirement = getAxisRequirementDescription(chartType, 'x');
+  const xAxisRequirement = getAxisRequirementDescription(chartTypeKey, 'x');
 
   return (
     <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl select-none overflow-hidden rounded-lg">
@@ -147,7 +171,7 @@ const AxisConfigurationSection: React.FC = () => {
                     X-Axis Column
                   </Label>
                   <select
-                    value={chartConfig.axisConfigs.xAxisKey || 'placeholder'}
+                    value={currentXAxisId || 'placeholder'}
                     onChange={e => {
                       if (e.target.value !== 'placeholder' && hasAxisConfigs(chartConfig)) {
                         handleConfigChange({
@@ -165,6 +189,15 @@ const AxisConfigurationSection: React.FC = () => {
                         ? t('no_valid_columns', 'No valid columns available')
                         : t('select_column', 'Select a column')}
                     </option>
+
+                    {/* If current header exists but is invalid for this chart type, show it as disabled so user sees current selection but cannot pick it */}
+                    {currentHeader && !currentHeaderValidation.isValid && (
+                      <option value={currentHeader.id} disabled>
+                        {`${currentHeader.name} (${currentHeader.type}) — ${currentHeaderValidation.message || 'Not allowed'}`}
+                      </option>
+                    )}
+
+                    {/* List only valid headers as selectable options */}
                     {validXAxisHeaders.map((header: any) => (
                       <option key={header.id} value={header.id}>
                         {header.name} ({header.type})
@@ -175,6 +208,13 @@ const AxisConfigurationSection: React.FC = () => {
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 italic">
                     💡 {xAxisRequirement}
                   </p>
+                  {/* Warning if current selected header is invalid for this chart type */}
+                  {currentHeader && !currentHeaderValidation.isValid && (
+                    <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+                      ⚠️{' '}
+                      {currentHeaderValidation.message || 'Selected column is not valid for X-axis'}
+                    </p>
+                  )}
                   {/* Warning if no valid columns */}
                   {validXAxisHeaders.length === 0 && (
                     <p className="mt-2 text-xs text-red-600 dark:text-red-400">
