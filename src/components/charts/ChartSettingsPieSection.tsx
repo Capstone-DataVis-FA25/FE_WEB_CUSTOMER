@@ -6,6 +6,8 @@ import { Label } from '../ui/label';
 import { useChartEditor, useChartEditorActions } from '@/features/chartEditor';
 import { useDataset } from '@/features/dataset/useDataset';
 import { AnimatePresence, motion } from '@/theme/animation';
+import { CHART_ROLE_VALIDATION_RULES } from '@/utils/chartValidation';
+import { ChartType } from '@/features/charts/chartTypes';
 
 // Pie config type guard
 function isPieDonutConfig(config: any): config is SubPieDonutChartConfig {
@@ -27,6 +29,26 @@ const ChartSettingsPieSection: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { handleConfigChange } = useChartEditorActions();
   const config = chartConfig?.config;
+
+  // Determine chart type name for role validation (pie/donut)
+  const chartTypeName = ((chartConfig as any)?.chartType || ChartType.Pie).toString().toLowerCase();
+  const roleRules =
+    CHART_ROLE_VALIDATION_RULES[chartTypeName] || CHART_ROLE_VALIDATION_RULES['pie'];
+
+  // Build valid header lists per role
+  const headers = currentDataset?.headers || [];
+  const validLabelHeaders = headers.filter((h: any) => {
+    const norm = String(h.type || '')
+      .toLowerCase()
+      .trim() as any;
+    return roleRules.label.allowedTypes.includes(norm);
+  });
+  const validValueHeaders = headers.filter((h: any) => {
+    const norm = String(h.type || '')
+      .toLowerCase()
+      .trim() as any;
+    return roleRules.value.allowedTypes.includes(norm);
+  });
 
   const toggleSection = () => {
     setIsCollapsed(!isCollapsed);
@@ -63,66 +85,58 @@ const ChartSettingsPieSection: React.FC = () => {
                 <div>
                   <Label className="text-xs">{'Label Column'}</Label>
                   <select
-                    value={config.labelKey || ''}
-                    onChange={e =>
-                      handleConfigChange({ config: { labelKey: e.target.value } as any })
-                    }
+                    value={config.labelKey || 'placeholder'}
+                    onChange={e => {
+                      if (e.target.value !== 'placeholder') {
+                        handleConfigChange({ config: { labelKey: e.target.value } as any });
+                      }
+                    }}
                     className="w-full p-2 text-sm border rounded-md bg-background mt-1 h-10"
-                    disabled={
-                      !currentDataset ||
-                      !currentDataset.headers ||
-                      currentDataset.headers.length === 0
-                    }
+                    disabled={!currentDataset || headers.length === 0}
                   >
-                    <option value="" disabled>
-                      {!currentDataset ||
-                      !currentDataset.headers ||
-                      currentDataset.headers.length === 0
-                        ? 'No dataset or columns available'
+                    <option value="placeholder" disabled>
+                      {validLabelHeaders.length === 0
+                        ? 'No valid columns available'
                         : 'Select a column'}
                     </option>
-                    {currentDataset &&
-                      currentDataset.headers &&
-                      currentDataset.headers.length > 0 &&
-                      currentDataset.headers.map((header: any) => (
-                        <option key={header.id || header.name} value={header.id || header.name}>
-                          {header.name || header.id}
-                        </option>
-                      ))}
+                    {validLabelHeaders.map((header: any) => (
+                      <option key={header.id || header.name} value={header.id || header.name}>
+                        {header.name || header.id} ({header.type})
+                      </option>
+                    ))}
                   </select>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 italic">
+                    {roleRules.label.description}
+                  </p>
                 </div>
 
                 {/* Value Column Selection */}
                 <div>
                   <Label className="text-xs">{'Value Column'}</Label>
                   <select
-                    value={config.valueKey || ''}
-                    onChange={e =>
-                      handleConfigChange({ config: { valueKey: e.target.value } as any })
-                    }
+                    value={config.valueKey || 'placeholder'}
+                    onChange={e => {
+                      if (e.target.value !== 'placeholder') {
+                        handleConfigChange({ config: { valueKey: e.target.value } as any });
+                      }
+                    }}
                     className="w-full p-2 text-sm border rounded-md bg-background mt-1 h-10"
-                    disabled={
-                      !currentDataset ||
-                      !currentDataset.headers ||
-                      currentDataset.headers.length === 0
-                    }
+                    disabled={!currentDataset || headers.length === 0}
                   >
-                    <option value="" disabled>
-                      {!currentDataset ||
-                      !currentDataset.headers ||
-                      currentDataset.headers.length === 0
-                        ? 'No dataset or columns available'
+                    <option value="placeholder" disabled>
+                      {validValueHeaders.length === 0
+                        ? 'No valid columns available'
                         : 'Select a column'}
                     </option>
-                    {currentDataset &&
-                      currentDataset.headers &&
-                      currentDataset.headers.length > 0 &&
-                      currentDataset.headers.map((header: any) => (
-                        <option key={header.id || header.name} value={header.id || header.name}>
-                          {header.name || header.id}
-                        </option>
-                      ))}
+                    {validValueHeaders.map((header: any) => (
+                      <option key={header.id || header.name} value={header.id || header.name}>
+                        {header.name || header.id} ({header.type})
+                      </option>
+                    ))}
                   </select>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 italic">
+                    {roleRules.value.description}
+                  </p>
                 </div>
 
                 <div>

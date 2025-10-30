@@ -189,6 +189,59 @@ function analyzeColumn(columnData: string[]): {
     }
   }
 
+  // 🔎 Heuristic fallback for custom separators (e.g., '#' thousands and '@' decimal)
+  if (numberScore <= 0.6) {
+    // Collect non-digit separators present in samples
+    const candidateSet = new Set<string>();
+    samples.forEach(s => {
+      const chars = s.replace(/[-\d]/g, '').split('');
+      chars.forEach(c => candidateSet.add(c));
+    });
+    // Reasonable candidates only
+    const CANDIDATES = Array.from(candidateSet).filter(c => " ,._'#@".includes(c));
+    // Try to infer decimal as rightmost separator with 1-3 digits on the right
+    let inferredDecimal: string | null = null;
+    let inferredThousands: string | null = null;
+    for (const s of samples) {
+      for (const c of CANDIDATES.sort((a, b) => s.lastIndexOf(b) - s.lastIndexOf(a))) {
+        const idx = s.lastIndexOf(c);
+        if (idx > 0) {
+          const right = s.slice(idx + c.length);
+          if (/^\d{1,3}$/.test(right)) {
+            inferredDecimal = c;
+            break;
+          }
+        }
+      }
+      if (inferredDecimal) break;
+    }
+    if (inferredDecimal) {
+      // Infer thousands as any other candidate on left side
+      const example = samples.find(v => v.includes(inferredDecimal!)) || samples[0];
+      const left = example.split(inferredDecimal)[0];
+      const others = CANDIDATES.filter(c => c !== inferredDecimal);
+      inferredThousands = others.find(c => left.includes(c)) || '';
+
+      // Build a validating regex using inferred separators
+      const esc = (ch: string) => (ch ? ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '');
+      const thou = inferredThousands ? `(${esc(inferredThousands)}\\d{3})*` : '';
+      const dec = inferredDecimal ? `(${esc(inferredDecimal)}\\d+)?` : '';
+      const dyn = new RegExp(`^-?\\d{1,3}${thou}${dec}$`);
+
+      const dynMatches = samples.filter(v => dyn.test(v.trim()));
+      const ratio = dynMatches.length / samples.length;
+      if (ratio >= 0.6) {
+        numberScore = ratio * 0.9; // assign high confidence for consistent matches
+        bestNumberPattern = {
+          thousandsSeparator: inferredThousands || '',
+          decimalSeparator: inferredDecimal,
+          regex: dyn,
+          confidence: 0.9,
+        } as any;
+      }
+    }
+  }
+
   // Debug logging
   // console.log('🔍 Column analysis:', {
   //   samples: samples.slice(0, 3),

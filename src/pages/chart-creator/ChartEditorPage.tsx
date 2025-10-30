@@ -3,7 +3,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
-import UnifiedChartEditor from '@/components/charts/UnifiedChartEditor';
+// UnifiedChartEditor is used inside ChartTab
+import ChartTab from './ChartTab';
+import DataTab from './DataTab';
+import type { DataHeader } from '@/utils/dataProcessors';
+import type { NumberFormat, DateFormat } from '@/contexts/DatasetContext';
 import { useDataset } from '@/features/dataset/useDataset';
 import { convertToChartData } from '@/utils/dataConverter';
 import { useCharts } from '@/features/charts/useCharts';
@@ -22,10 +26,19 @@ import { getDefaultChartConfig } from '@/utils/chartDefaults';
 import type { ChartRequest, ChartType } from '@/features/charts';
 // ChartType is imported in ChartEditorWithProviders
 import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import {
+  setWorkingDataset,
+  updateWorkingData,
+  setChartData as setChartDataAction,
+} from '@/features/chartEditor/chartEditorSlice';
+import { selectWorkingDataset } from '@/features/chartEditor/chartEditorSelectors';
 import { clearCurrentChartNotes } from '@/features/chartNotes/chartNoteSlice';
 import { useChartEditor } from '@/features/chartEditor';
 import type { MainChartConfig } from '@/types/chart';
+import { CHART_DATA_BINDING_PATHS } from '@/types/chart';
 import ChartEditorHeader from './ChartEditorHeader';
+import { resetBindings } from '@/utils/chartBindings';
 
 const ChartEditorPage: React.FC = () => {
   const { t } = useTranslation();
@@ -34,6 +47,7 @@ const ChartEditorPage: React.FC = () => {
   const { getDatasetById, currentDataset, loading: isDatasetLoading } = useDataset();
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
+  const dispatch = useAppDispatch();
 
   // Chart editor context (now includes validation)
   const {
@@ -86,20 +100,136 @@ const ChartEditorPage: React.FC = () => {
   // State for dataset selection modal
   const [showDatasetModal, setShowDatasetModal] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<'chart' | 'data'>('chart');
+  // Receive current grid sort from CustomExcel via DataTab
+  const [gridSort, setGridSort] = useState<{ column: number; direction: 'asc' | 'desc' } | null>(
+    null
+  );
+
+  const excelInitial = React.useMemo(() => {
+    const headers: any[] = (currentDataset?.headers as any[]) || [];
+    let initialColumns: DataHeader[] | undefined;
+    let initialData: string[][] | undefined;
+
+    if (headers.length) {
+      initialColumns = headers.map((h, idx) => ({
+        id: (h as any).id,
+        name: h.name ?? `Column ${idx + 1}`,
+        type: (h.type as 'text' | 'number' | 'date') ?? 'text',
+        index: idx,
+        width: h.width ?? 200,
+      }));
+
+      const maxLen = Math.max(0, ...headers.map(h => (Array.isArray(h.data) ? h.data.length : 0)));
+      initialData = Array.from({ length: Math.max(maxLen, 0) }).map((_, r) =>
+        headers.map(h => String((h.data && h.data[r]) ?? ''))
+      );
+    } else if (Array.isArray((currentDataset as any)?.rows)) {
+      const rows = (currentDataset as any).rows as any[];
+      const headerNames = headers.length
+        ? headers.map(h => h.name)
+        : Array.from({ length: (rows[0] as any[])?.length || 0 }).map((_, i) => `Column ${i + 1}`);
+      initialColumns = headerNames.map((name, idx) => ({
+        name,
+        type: 'text',
+        index: idx,
+        width: 200,
+      }));
+      initialData = rows.map((r: any[]) => r.map(v => String(v ?? '')));
+    }
+
+    return { initialColumns, initialData };
+  }, [currentDataset?.headers, (currentDataset as any)?.rows]);
+
+  const excelFormats = React.useMemo(() => {
+    const ds: any = currentDataset || {};
+    const initialNumberFormat: NumberFormat | undefined =
+      ds.detectedNumberFormat ||
+      (ds.decimalSeparator && ds.thousandsSeparator
+        ? { decimalSeparator: ds.decimalSeparator, thousandsSeparator: ds.thousandsSeparator }
+        : ds.numberFormat || undefined);
+    const initialDateFormat: DateFormat | undefined =
+      ds.detectedDateFormat || ds.dateFormat || undefined;
+    return { initialNumberFormat, initialDateFormat };
+  }, [currentDataset]);
+
+  // Working dataset from Redux (preferred source for editor)
+  const working = useAppSelector(selectWorkingDataset);
+
+  // Derive used header IDs from chart config by mapping names -> ids from dataset headers
+  const { highlightHeaderIds, highlightColumnNames } = React.useMemo(() => {
+    const dsHeaders: any[] = (currentDataset?.headers as any[]) || [];
+    if (!dsHeaders.length || !chartConfig)
+      return { highlightHeaderIds: [] as string[], highlightColumnNames: [] as string[] };
+    const nameToId = new Map<string, string>();
+    const idSet = new Set<string>();
+    dsHeaders.forEach(h => {
+      if (h?.name && h?.id) nameToId.set(h.name, h.id);
+      if (h?.id) idSet.add(h.id);
+    });
+    const cfg: any = chartConfig;
+    const chartType = cfg?.chartType as keyof typeof CHART_DATA_BINDING_PATHS;
+    const paths = CHART_DATA_BINDING_PATHS[chartType] || [];
+    const names: string[] = [];
+    for (const p of paths) {
+      if (p === 'axisConfigs.xAxisKey') {
+        const x = cfg?.axisConfigs?.xAxisKey;
+        if (x) names.push(x);
+      } else if (p === 'axisConfigs.seriesConfigs') {
+        const series = cfg?.axisConfigs?.seriesConfigs || [];
+        for (const s of series) {
+          if (s?.dataColumn) names.push(s.dataColumn);
+        }
+      } else if (p === 'config.labelKey') {
+        const label = cfg?.config?.labelKey;
+        if (label) names.push(label);
+      } else if (p === 'config.valueKey') {
+        const value = cfg?.config?.valueKey;
+        if (value) names.push(value);
+      }
+    }
+    // Accept either names or IDs. If token is an existing header.id, keep as-is; otherwise map name->id.
+    const ids = names
+      .map(tok => (idSet.has(tok) ? tok : nameToId.get(tok)))
+      .filter((v): v is string => Boolean(v));
+
+    return {
+      highlightHeaderIds: Array.from(new Set(ids)),
+      highlightColumnNames: Array.from(new Set(names)),
+    };
+  }, [currentDataset?.headers, chartConfig]);
+
+  // Initialize workingDataset after dataset changes (do not reset on config changes)
+  useEffect(() => {
+    if (!excelInitial.initialColumns || !excelInitial.initialData) return;
+    const formats = {
+      number: excelFormats.initialNumberFormat,
+      date: excelFormats.initialDateFormat,
+    };
+    dispatch(
+      setWorkingDataset({
+        headers: excelInitial.initialColumns,
+        data: excelInitial.initialData,
+        formats,
+      })
+    );
+    // Chart data will be derived by the working-dataset sync effect
+  }, [
+    excelInitial.initialColumns,
+    excelInitial.initialData,
+    excelFormats.initialNumberFormat,
+    excelFormats.initialDateFormat,
+    dispatch,
+  ]);
+
   //Run once on mount
   // useEffect #1: Clear current chart, dataset, notes on mount
   useEffect(() => {
-    console.log(
-      'useEffect #1: mount - clearCurrentChart, clearCurrentDataset, clearCurrentChartNotes'
-    );
-    // Clear current chart and notes on mount. Only clear current dataset if there is
-    // no dataset context provided. This avoids wiping `currentDataset` when the
-    // user navigates to the chart editor immediately after creating a dataset
-    // (the dataset creation flow may have set `currentDataset` already).
+    // console.log(
+    //   'useEffect #1: mount - clearCurrentChart, clearCurrentDataset, clearCurrentChartNotes'
+    // );
     clearCurrentChart();
-    if (!contextDatasetId) {
-      clearCurrentDataset();
-    }
+    clearCurrentDataset();
     clearCurrentChartNotes();
   }, []);
 
@@ -108,7 +238,7 @@ const ChartEditorPage: React.FC = () => {
   // ============================================================
   // useEffect #2: Sync datasetId with context
   useEffect(() => {
-    console.log('useEffect #2: contextDatasetId changed', contextDatasetId);
+    // console.log('useEffect #2: contextDatasetId changed', contextDatasetId);
     setDatasetId(contextDatasetId || '');
   }, [contextDatasetId]);
 
@@ -117,15 +247,26 @@ const ChartEditorPage: React.FC = () => {
   // ============================================================
   // useEffect #3: Load chart in edit mode
   useEffect(() => {
-    console.log('useEffect #3: mode or chartId changed', {
-      mode,
-      chartId,
-      isChartLoading,
-      currentChart,
-    });
+    // console.log('useEffect #3: mode or chartId changed', {
+    //   mode,
+    //   chartId,
+    //   isChartLoading,
+    //   currentChart,
+    // });
     if (mode === 'edit' && chartId && !isChartLoading && !currentChart) {
-      console.log('useEffect #3: getChartById', chartId);
-      getChartById(chartId);
+      (async () => {
+        try {
+          const res = await getChartById(chartId);
+          const ok = (res as any)?.meta?.requestStatus === 'fulfilled';
+          if (!ok) {
+            const msg = (res as any)?.payload?.message || 'Error loading chart';
+            showError(msg);
+          }
+        } catch (e: any) {
+          const msg = e?.message || 'Error loading chart';
+          showError(msg);
+        }
+      })();
     }
   }, [mode, chartId]);
 
@@ -134,7 +275,7 @@ const ChartEditorPage: React.FC = () => {
   // ============================================================
   // useEffect #4: Initialize form fields when chart loads (edit mode)
   useEffect(() => {
-    console.log('useEffect #4: mode or currentChart?.id changed', { mode, currentChart });
+    // console.log('useEffect #4: mode or currentChart?.id changed', { mode, currentChart });
     if (mode === 'edit' && currentChart) {
       setEditableName(currentChart.name || '');
       setEditableDescription(currentChart.description || '');
@@ -154,7 +295,7 @@ const ChartEditorPage: React.FC = () => {
   // ============================================================
   // useEffect #5: Initialize form fields in create mode
   useEffect(() => {
-    console.log('useEffect #5: mode or currentChartType changed', { mode, currentChartType });
+    // console.log('useEffect #5: mode or currentChartType changed', { mode, currentChartType });
     if (mode === 'create') {
       // Only initialize if not already set
       if (!chartConfig) {
@@ -170,48 +311,97 @@ const ChartEditorPage: React.FC = () => {
   // ============================================================
   // useEffect #6: Load dataset based on datasetId
   useEffect(() => {
-    console.log('useEffect #6: datasetId changed', datasetId);
+    // console.log('useEffect #6: datasetId changed', datasetId);
     if (!datasetId) {
       setChartData([]);
       return;
     }
+    (async () => {
+      try {
+        const res = await getDatasetById(datasetId);
+        const ok = (res as any)?.meta?.requestStatus === 'fulfilled';
+        if (!ok) {
+          const msg = (res as any)?.payload?.message || 'Error loading dataset';
+          showError(msg);
+        }
+      } catch (e: any) {
+        const msg = e?.message || 'Error loading dataset';
+        showError(msg);
+      }
+    })();
+  }, [datasetId, getDatasetById]);
 
-    getDatasetById(datasetId);
-  }, [datasetId, getDatasetById]); // Depend on getDatasetById too
+  // working already declared above for initialization guard
 
-  // ============================================================
-  // EFFECT 6: Convert dataset to chart data (independent)
-  // ============================================================
+  // Keep chartData in sync when working dataset, config or grid sort changes
   useEffect(() => {
-    if (!currentDataset?.headers?.length) {
-      setChartData([]);
+    if (!working?.headers || !working?.data) {
+      dispatch(setChartDataAction([]));
       return;
     }
-
     try {
-      const validHeaders = currentDataset.headers.map((h: any) => ({
-        id: h.id || '',
-        datasetId: h.datasetId || '',
-        name: h.name,
-        type: h.type,
-        index: h.index,
-        data: h.data as (string | number)[],
-      }));
-
-      let convertedData = convertToChartData(validHeaders);
-
-      if (!convertedData.length && Array.isArray((currentDataset as any).rows)) {
-        const headerNames = currentDataset.headers.map((h: any) => h.name);
-        const arrayFormat = [headerNames, ...(currentDataset as any).rows];
-        convertedData = convertToChartData(arrayFormat);
-      }
-
-      setChartData(convertedData);
-    } catch (error) {
-      console.error('⚠️ [Dataset] Error processing dataset:', error);
-      setChartData([]);
+      const headerNames = working.headers.map(h => h.name);
+      const sortedRows = (() => {
+        if (!gridSort) return working.data;
+        const { column, direction } = gridSort;
+        const type = working.headers[column]?.type ?? 'text';
+        const rowsCopy = [...working.data];
+        rowsCopy.sort((a, b) => {
+          const aVal = a[column] || '';
+          const bVal = b[column] || '';
+          if (!aVal && !bVal) return 0;
+          if (!aVal) return direction === 'asc' ? 1 : -1;
+          if (!bVal) return direction === 'asc' ? -1 : 1;
+          if (type === 'number') {
+            const aNum = Number.parseFloat(aVal);
+            const bNum = Number.parseFloat(bVal);
+            const aSafe = Number.isNaN(aNum) ? 0 : aNum;
+            const bSafe = Number.isNaN(bNum) ? 0 : bNum;
+            return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
+          }
+          if (type === 'date') {
+            const aT = new Date(aVal).getTime();
+            const bT = new Date(bVal).getTime();
+            const aSafe = Number.isNaN(aT) ? -Infinity : aT;
+            const bSafe = Number.isNaN(bT) ? -Infinity : bT;
+            return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
+          }
+          const aStr = String(aVal).toLowerCase();
+          const bStr = String(bVal).toLowerCase();
+          return direction === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+        });
+        return rowsCopy;
+      })();
+      const arrayData: (string | number)[][] = [headerNames, ...sortedRows];
+      const converted = convertToChartData(arrayData);
+      console.log('[ChartEditorPage] Working convertToChartData ->', { arrayData, converted });
+      dispatch(setChartDataAction(converted));
+    } catch (e) {
+      dispatch(setChartDataAction([]));
     }
-  }, [currentDataset]); // Only depend on currentDataset
+  }, [working?.version, chartConfig, gridSort, dispatch]);
+
+  // Handle live grid edits from DataTab/CustomExcel
+  const handleGridDataChange = React.useCallback(
+    (nextData: string[][], nextCols: DataHeader[]) => {
+      // Update working dataset in Redux
+      dispatch(updateWorkingData({ data: nextData, headers: nextCols }));
+      // Recompute chart data from array format
+      try {
+        const headerNames = nextCols.map(h => h.name);
+        const arrayData: (string | number)[][] = [headerNames, ...nextData];
+        const converted = convertToChartData(arrayData);
+        console.log('[ChartEditorPage] Grid change convertToChartData ->', {
+          arrayData,
+          converted,
+        });
+        dispatch(setChartDataAction(converted));
+      } catch {
+        dispatch(setChartDataAction([]));
+      }
+    },
+    [dispatch]
+  );
 
   // Thông báo rằng là chart chưa lưu -> người dùng lưu hoặc cancel
   useBeforeUnload({
@@ -306,6 +496,10 @@ const ChartEditorPage: React.FC = () => {
     setDatasetId(datasetId);
     setShowDatasetModal(false);
     try {
+      // Reset data-bound fields based on current chart type
+      if (chartConfig) {
+        setChartConfig(resetBindings(chartConfig as MainChartConfig));
+      }
       showSuccess('Dataset selected successfully');
     } catch (error) {
       showError('Failed to load selected dataset');
@@ -431,24 +625,49 @@ const ChartEditorPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex flex-col">
       {/* Header Section */}
       <ChartEditorHeader
         onReset={handleReset}
         onSave={handleSave}
         onBack={handleBack}
         onOpenDatasetModal={() => setShowDatasetModal(true)}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
 
       {/* Main Content - Full Width Chart Area */}
-      <div className="flex-1 bg-gray-900">
+      <div className="flex-1 min-h-0 min-w-0 bg-gray-900">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="h-full"
+          className="h-full min-h-0 min-w-0 flex"
         >
-          <UnifiedChartEditor />
+          <div
+            style={{ display: activeTab === 'chart' ? 'block' : 'none' }}
+            className="flex-1 min-h-0 min-w-0"
+          >
+            <ChartTab />
+          </div>
+          <div
+            style={{ display: activeTab === 'data' ? 'block' : 'none' }}
+            className="flex-1 min-h-0 min-w-0"
+          >
+            <DataTab
+              initialColumns={working?.headers || excelInitial.initialColumns}
+              initialData={working?.data || excelInitial.initialData}
+              loading={isDatasetLoading}
+              onOpenDatasetModal={() => setShowDatasetModal(true)}
+              initialNumberFormat={excelFormats.initialNumberFormat}
+              initialDateFormat={excelFormats.initialDateFormat}
+              onDataChange={handleGridDataChange}
+              onSorting={setGridSort}
+              datasetName={currentDataset?.name || ''}
+              highlightHeaderIds={highlightHeaderIds}
+              highlightColumnNames={highlightColumnNames}
+            />
+          </div>
         </motion.div>
       </div>
       <ToastContainer toasts={toasts} onRemoveToast={removeToast} />

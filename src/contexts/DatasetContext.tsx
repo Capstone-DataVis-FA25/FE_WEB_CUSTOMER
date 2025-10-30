@@ -27,43 +27,43 @@ export type DateFormat =
 const dateParsers: Record<DateFormat, { regex: RegExp; parse: (m: RegExpMatchArray) => string }> = {
   'YYYY-MM-DD': {
     regex: /^(\d{4})-(\d{2})-(\d{2})$/,
-    parse: m => `${m[1]}-${m[2]}-${m[3]}`,
+    parse: m => `${m[1]}-${m[2]}-${m[3]}T00:00:00`,
   },
   'DD/MM/YYYY': {
     regex: /^(\d{2})\/(\d{2})\/(\d{4})$/,
-    parse: m => `${m[3]}-${m[2]}-${m[1]}`,
+    parse: m => `${m[3]}-${m[2]}-${m[1]}T00:00:00`,
   },
   'MM/DD/YYYY': {
     regex: /^(\d{2})\/(\d{2})\/(\d{4})$/,
-    parse: m => `${m[3]}-${m[1]}-${m[2]}`,
+    parse: m => `${m[3]}-${m[1]}-${m[2]}T00:00:00`,
   },
   'YYYY/MM/DD': {
     regex: /^(\d{4})\/(\d{2})\/(\d{2})$/,
-    parse: m => `${m[1]}-${m[2]}-${m[3]}`,
+    parse: m => `${m[1]}-${m[2]}-${m[3]}T00:00:00`,
   },
   'DD-MM-YYYY': {
     regex: /^(\d{2})-(\d{2})-(\d{4})$/,
-    parse: m => `${m[3]}-${m[2]}-${m[1]}`,
+    parse: m => `${m[3]}-${m[2]}-${m[1]}T00:00:00`,
   },
   'MM-DD-YYYY': {
     regex: /^(\d{2})-(\d{2})-(\d{4})$/,
-    parse: m => `${m[3]}-${m[1]}-${m[2]}`,
+    parse: m => `${m[3]}-${m[1]}-${m[2]}T00:00:00`,
   },
   'YYYY-MM': {
     regex: /^(\d{4})-(\d{2})$/,
-    parse: m => `${m[1]}-${m[2]}-01`,
+    parse: m => `${m[1]}-${m[2]}-01T00:00:00`,
   },
   'YY-MM': {
     regex: /^(\d{2})-(\d{2})$/,
-    parse: m => `20${m[1]}-${m[2]}-01`,
+    parse: m => `20${m[1]}-${m[2]}-01T00:00:00`,
   },
   'MM/YY': {
     regex: /^(\d{2})\/(\d{2})$/,
-    parse: m => `20${m[2]}-${m[1]}-01`,
+    parse: m => `20${m[2]}-${m[1]}-01T00:00:00`,
   },
   'MM/YYYY': {
     regex: /^(\d{2})\/(\d{4})$/,
-    parse: m => `${m[2]}-${m[1]}-01`,
+    parse: m => `${m[2]}-${m[1]}-01T00:00:00`,
   },
   'DD Month YYYY': {
     regex: /^(\d{2}) ([A-Za-z]+) (\d{4})$/,
@@ -71,7 +71,7 @@ const dateParsers: Record<DateFormat, { regex: RegExp; parse: (m: RegExpMatchArr
   },
   YYYY: {
     regex: /^(\d{4})$/,
-    parse: m => `${m[1]}-01-01`,
+    parse: m => `${m[1]}-01-01T00:00:00`,
   },
   'YYYY-MM-DD HH:mm:ss': {
     regex: /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/,

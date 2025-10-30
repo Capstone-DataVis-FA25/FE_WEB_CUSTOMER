@@ -4,6 +4,8 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
 import type { MainChartConfig } from '@/types/chart';
 import { ChartType } from '@/features/charts';
+import type { NumberFormat, DateFormat } from '@/contexts/DatasetContext';
+import type { DataHeader } from '@/utils/dataProcessors';
 
 // Deep partial utility type for nested optional properties
 type DeepPartial<T> = {
@@ -29,6 +31,14 @@ export interface ChartEditorState {
   chartData: ChartDataPoint[];
   chartConfig: MainChartConfig | null;
   currentChartType: ChartType;
+
+  // Local working dataset for the editor (decoupled from fetched entity)
+  workingDataset: {
+    headers: DataHeader[];
+    data: string[][];
+    formats: { number?: NumberFormat; date?: DateFormat };
+    version: number;
+  } | null;
 
   // Edit states (local to header, won't cause global rerenders)
   editableName: string;
@@ -56,6 +66,7 @@ const initialState: ChartEditorState = {
   chartData: [],
   chartConfig: null,
   currentChartType: ChartType.Line,
+  workingDataset: null,
   editableName: '',
   editableDescription: '',
   isEditingName: false,
@@ -106,6 +117,7 @@ const chartEditorSlice = createSlice({
       state.originalChartType = action.payload.initialChartType || ChartType.Line;
       state.resetTrigger = 0;
       state.validationErrors = initialState.validationErrors;
+      state.workingDataset = null;
     },
 
     // Chart data & config
@@ -198,6 +210,52 @@ const chartEditorSlice = createSlice({
       state.chartConfig = newConfig;
     },
 
+    // Working dataset management
+    setWorkingDataset: (
+      state,
+      action: PayloadAction<{
+        headers: DataHeader[];
+        data: string[][];
+        formats?: { number?: NumberFormat; date?: DateFormat };
+      }>
+    ) => {
+      state.workingDataset = {
+        headers: action.payload.headers,
+        data: action.payload.data,
+        formats: action.payload.formats || {},
+        version: (state.workingDataset?.version || 0) + 1,
+      };
+    },
+    updateWorkingData: (
+      state,
+      action: PayloadAction<{ data: string[][]; headers?: DataHeader[] }>
+    ) => {
+      if (!state.workingDataset) return;
+      state.workingDataset = {
+        headers: action.payload.headers || state.workingDataset.headers,
+        data: action.payload.data,
+        formats: state.workingDataset.formats,
+        version: state.workingDataset.version + 1,
+      };
+    },
+    updateWorkingFormats: (
+      state,
+      action: PayloadAction<{ number?: NumberFormat; date?: DateFormat }>
+    ) => {
+      if (!state.workingDataset) return;
+      state.workingDataset = {
+        ...state.workingDataset,
+        formats: {
+          number: action.payload.number ?? state.workingDataset.formats.number,
+          date: action.payload.date ?? state.workingDataset.formats.date,
+        },
+        version: state.workingDataset.version + 1,
+      };
+    },
+    clearWorkingDataset: state => {
+      state.workingDataset = null;
+    },
+
     // Reset to original values
     resetToOriginal: state => {
       state.editableName = state.originalName;
@@ -271,6 +329,10 @@ export const {
   setIsEditingName,
   setIsEditingDescription,
   updateChartConfig,
+  setWorkingDataset,
+  updateWorkingData,
+  updateWorkingFormats,
+  clearWorkingDataset,
   resetToOriginal,
   updateOriginals,
   triggerReset,

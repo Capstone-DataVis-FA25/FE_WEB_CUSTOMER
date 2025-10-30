@@ -11,6 +11,7 @@ import {
   FORMAT_APPLICATION_CONFIDENCE_THRESHOLD,
 } from './smartColumnDetector';
 import type { DateFormat, NumberFormat } from '@/contexts/DatasetContext';
+import { formatDateUsingDayjs } from '@/utils/dateFormat';
 
 // File validation configuration constants
 export const ALLOWED_TYPES = [
@@ -42,6 +43,7 @@ export interface FileProcessingOptions {
 }
 
 export interface DataHeader {
+  id?: string;
   name: string;
   type: 'text' | 'number' | 'date';
   index: number;
@@ -55,6 +57,49 @@ export interface ParsedDataResult {
   detectedDateFormat?: DateFormat | null; // Auto-detected date format
   detectedNumberFormat?: NumberFormat | null; // Auto-detected number format
 }
+
+export const formatNumberString = (raw: string, nf: NumberFormat): string => {
+  const num = Number(String(raw).replace(/[^0-9+\-\.]/g, '.'));
+  if (!isFinite(num)) return raw;
+  const neg = num < 0 ? '-' : '';
+  const abs = Math.abs(num);
+  const [intPart, fracPart] = abs.toString().split('.');
+  const withThousands = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, nf.thousandsSeparator || '');
+  if (fracPart && fracPart.length > 0) {
+    return `${neg}${withThousands}${nf.decimalSeparator}${fracPart}`;
+  }
+  return `${neg}${withThousands}`;
+};
+
+// Map our DateFormat tokens to Day.js-compatible patterns where needed
+const toDayjsPattern = (df: DateFormat): string => {
+  if (df === 'DD Month YYYY') return 'DD MMMM YYYY';
+  return df;
+};
+
+export const normalizeDateString = (raw: string, df: DateFormat): string => {
+  if (!raw) return raw;
+  const pattern = toDayjsPattern(df);
+  return formatDateUsingDayjs(raw, pattern);
+};
+
+export const preformatDataToFormats = (
+  data: string[][],
+  columns: DataHeader[],
+  nf?: NumberFormat,
+  df?: DateFormat
+): string[][] => {
+  if (!data || !columns || columns.length === 0) return data;
+  return data.map(row =>
+    row.map((v, ci) => {
+      const col = columns[ci];
+      if (!col) return v;
+      if (col.type === 'number' && v !== '' && nf) return formatNumberString(v, nf);
+      if (col.type === 'date' && v !== '' && df) return normalizeDateString(v, df);
+      return v;
+    })
+  );
+};
 
 /**
  * Determine the appropriate delimiter for a file

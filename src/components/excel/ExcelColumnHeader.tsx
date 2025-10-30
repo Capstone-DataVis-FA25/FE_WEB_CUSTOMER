@@ -32,6 +32,9 @@ interface ExcelColumnHeaderProps {
   mode: 'edit' | 'view';
   onTypeChange: (columnIndex: number, newType: 'text' | 'number' | 'date') => void;
   // sort/filter now read from Redux
+  allowHeaderEdit?: boolean;
+  isHighlighted?: boolean;
+  showDeselect?: boolean;
 }
 
 const ExcelColumnHeader = memo(
@@ -40,6 +43,9 @@ const ExcelColumnHeader = memo(
     mode,
     onTypeChange,
     // sort/filter via Redux
+    allowHeaderEdit = true,
+    isHighlighted,
+    showDeselect = true,
   }: ExcelColumnHeaderProps) {
     const dispatch = useAppDispatch();
     const isSelected = useAppSelector(selectIsColumnSelected(columnIndex));
@@ -131,43 +137,83 @@ const ExcelColumnHeader = memo(
           isDuplicate || isEmpty
             ? 'bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-600 hover:bg-red-200 dark:hover:bg-red-800/50'
             : 'border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
-        } ${isSelected ? 'bg-blue-100 dark:bg-blue-900/50' : ''}`}
+        } ${isSelected ? 'bg-blue-100 dark:bg-blue-900/50' : ''} ${
+          typeof isHighlighted !== 'undefined' && isHighlighted
+            ? 'ring-2 ring-amber-500 dark:ring-amber-500 ring-offset-1 ring-offset-white dark:ring-offset-gray-800 bg-amber-200 dark:bg-amber-900/40'
+            : ''
+        }`}
         style={{ width: column?.width ?? 150, minWidth: 150 }}
         onClick={handleHeaderClick}
       >
+        {(isDuplicate || isEmpty) && (
+          <span className="absolute left-0 -top-px -bottom-px w-[2px] bg-red-500 pointer-events-none z-10" />
+        )}
+        {/* Selection stripe (only when no error). Renders above highlight. */}
+        {!isDuplicate && !isEmpty && isSelected && (
+          <span className="absolute left-0 -top-px -bottom-px w-[2px] bg-blue-400 pointer-events-none z-10" />
+        )}
+        {/* Highlight stripe (only when no error and not selected) */}
+        {!isDuplicate && !isEmpty && !isSelected && isHighlighted && (
+          <span className="absolute left-0 -top-px -bottom-px w-[2px] bg-amber-500 pointer-events-none z-10" />
+        )}
         <div className="flex items-center gap-1">
-          {mode === 'edit' && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 px-1 text-xs hover:bg-gray-300 dark:hover:bg-gray-600"
-                  onClick={e => e.stopPropagation()}
-                >
-                  {COLUMN_TYPES.find(t => t.value === (column?.type ?? 'text'))?.icon}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {COLUMN_TYPES.map(t => (
-                  <DropdownMenuItem
-                    key={t.value}
-                    onClick={() => handleTypeChange(t.value as DataHeader['type'])}
-                    className="gap-2"
-                  >
-                    {t.icon} {t.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          {(() => {
+            const current = COLUMN_TYPES.find(t => t.value === (column?.type ?? 'text'));
+            const title = current ? `Type: ${current.label}` : 'Type';
+            if (mode === 'edit' && allowHeaderEdit) {
+              return (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-1 text-xs hover:bg-gray-300 dark:hover:bg-gray-600"
+                      onClick={e => e.stopPropagation()}
+                      title={title}
+                    >
+                      {current?.icon}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {COLUMN_TYPES.map(t => (
+                      <DropdownMenuItem
+                        key={t.value}
+                        onClick={() => handleTypeChange(t.value as DataHeader['type'])}
+                        className="gap-2"
+                      >
+                        {t.icon} {t.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            }
+            return (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-1 text-xs opacity-70 cursor-default"
+                title={title}
+                onClick={e => e.stopPropagation()}
+                disabled
+              >
+                {current?.icon}
+              </Button>
+            );
+          })()}
 
-          <input
-            value={column?.name ?? ''}
-            onChange={handleHeaderNameChange}
-            className="flex-1 min-w-0 bg-transparent border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 hover:bg-gray-50 dark:hover:bg-gray-600"
-            onClick={e => e.stopPropagation()}
-          />
+          {mode === 'edit' && allowHeaderEdit ? (
+            <input
+              value={column?.name ?? ''}
+              onChange={handleHeaderNameChange}
+              className="flex-1 min-w-0 bg-transparent border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 hover:bg-gray-50 dark:hover:bg-gray-600"
+              onClick={e => e.stopPropagation()}
+            />
+          ) : (
+            <span className="flex-1 min-w-0 px-2 py-1 text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
+              {column?.name ?? ''}
+            </span>
+          )}
 
           {mode === 'edit' && (
             <Button
@@ -188,7 +234,7 @@ const ExcelColumnHeader = memo(
             </Button>
           )}
 
-          {isSelected && (
+          {isSelected && showDeselect && (
             <Button
               size="icon"
               variant="ghost"
@@ -215,7 +261,8 @@ const ExcelColumnHeader = memo(
     return (
       prev.columnIndex === next.columnIndex &&
       prev.mode === next.mode &&
-      prev.onTypeChange === next.onTypeChange
+      prev.onTypeChange === next.onTypeChange &&
+      prev.isHighlighted === next.isHighlighted
     );
   }
 );
