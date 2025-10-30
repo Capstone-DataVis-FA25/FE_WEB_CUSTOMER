@@ -332,6 +332,13 @@ const ChartDisplaySection: React.FC = () => {
 
               // Colors
               colors: colors,
+              // Explicit series colors mapping keyed by header/display name
+              seriesColors: Object.fromEntries(
+                (axisConfigs.seriesConfigs || []).map((series: any) => [
+                  getHeaderName(series.dataColumn),
+                  series.color || '#3b82f6',
+                ])
+              ),
               // Series display names mapping
               seriesNames: Object.fromEntries(
                 (axisConfigs.seriesConfigs || []).map((series: any) => [
