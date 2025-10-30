@@ -36,9 +36,9 @@ const ChartSettingsPieSection: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6, delay: 0.12 }}
+      transition={{ duration: 0.6, delay: 0.15 }}
     >
-      <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
+      <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-hidden rounded-lg">
         <CardHeader
           className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
           onClick={toggleSection}
@@ -55,152 +55,166 @@ const ChartSettingsPieSection: React.FC = () => {
             )}
           </div>
         </CardHeader>
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {!isCollapsed && isPieDonutConfig(config) && (
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                {/* Label Column Selection */}
-                <div>
-                  <Label className="text-xs">{'Label Column'}</Label>
-                  <select
-                    value={config.labelKey || ''}
-                    onChange={e =>
-                      handleConfigChange({ config: { labelKey: e.target.value } as any })
-                    }
-                    className="w-full p-2 text-sm border rounded-md bg-background mt-1 h-10"
-                    disabled={
-                      !currentDataset ||
-                      !currentDataset.headers ||
-                      currentDataset.headers.length === 0
-                    }
-                  >
-                    <option value="" disabled>
-                      {!currentDataset ||
-                      !currentDataset.headers ||
-                      currentDataset.headers.length === 0
-                        ? 'No dataset or columns available'
-                        : 'Select a column'}
-                    </option>
-                    {currentDataset &&
-                      currentDataset.headers &&
-                      currentDataset.headers.length > 0 &&
-                      currentDataset.headers.map((header: any) => (
-                        <option key={header.id || header.name} value={header.id || header.name}>
-                          {header.name || header.id}
-                        </option>
-                      ))}
-                  </select>
-                </div>
+            <motion.div
+              key="basic-settings-content"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              <CardContent className="space-y-4 mt-4">
+                <div className="space-y-3">
+                  {/* Label Column Selection */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {'Label Column'}
+                    </Label>
+                    <select
+                      value={config.labelKey || ''}
+                      onChange={e =>
+                        handleConfigChange({ config: { labelKey: e.target.value } as any })
+                      }
+                      className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      disabled={
+                        !currentDataset ||
+                        !currentDataset.headers ||
+                        currentDataset.headers.length === 0
+                      }
+                    >
+                      <option value="" disabled>
+                        {!currentDataset ||
+                        !currentDataset.headers ||
+                        currentDataset.headers.length === 0
+                          ? 'No dataset or columns available'
+                          : 'Select a column'}
+                      </option>
+                      {currentDataset &&
+                        currentDataset.headers &&
+                        currentDataset.headers.length > 0 &&
+                        currentDataset.headers.map((header: any) => (
+                          <option key={header.id || header.name} value={header.id || header.name}>
+                            {header.name || header.id}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
 
-                {/* Value Column Selection */}
-                <div>
-                  <Label className="text-xs">{'Value Column'}</Label>
-                  <select
-                    value={config.valueKey || ''}
-                    onChange={e =>
-                      handleConfigChange({ config: { valueKey: e.target.value } as any })
-                    }
-                    className="w-full p-2 text-sm border rounded-md bg-background mt-1 h-10"
-                    disabled={
-                      !currentDataset ||
-                      !currentDataset.headers ||
-                      currentDataset.headers.length === 0
-                    }
-                  >
-                    <option value="" disabled>
-                      {!currentDataset ||
-                      !currentDataset.headers ||
-                      currentDataset.headers.length === 0
-                        ? 'No dataset or columns available'
-                        : 'Select a column'}
-                    </option>
-                    {currentDataset &&
-                      currentDataset.headers &&
-                      currentDataset.headers.length > 0 &&
-                      currentDataset.headers.map((header: any) => (
-                        <option key={header.id || header.name} value={header.id || header.name}>
-                          {header.name || header.id}
-                        </option>
-                      ))}
-                  </select>
-                </div>
+                  {/* Value Column Selection */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {'Value Column'}
+                    </Label>
+                    <select
+                      value={config.valueKey || ''}
+                      onChange={e =>
+                        handleConfigChange({ config: { valueKey: e.target.value } as any })
+                      }
+                      className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      disabled={
+                        !currentDataset ||
+                        !currentDataset.headers ||
+                        currentDataset.headers.length === 0
+                      }
+                    >
+                      <option value="" disabled>
+                        {!currentDataset ||
+                        !currentDataset.headers ||
+                        currentDataset.headers.length === 0
+                          ? 'No dataset or columns available'
+                          : 'Select a column'}
+                      </option>
+                      {currentDataset &&
+                        currentDataset.headers &&
+                        currentDataset.headers.length > 0 &&
+                        currentDataset.headers.map((header: any) => (
+                          <option key={header.id || header.name} value={header.id || header.name}>
+                            {header.name || header.id}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
 
-                <div>
-                  <Label className="text-xs">
-                    {'Inner Radius (Donut)'}: {((config.innerRadius ?? 0) * 100).toFixed(0)}%
-                  </Label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={config.innerRadius ?? 0}
-                    onChange={e =>
-                      handleConfigChange({
-                        config: { innerRadius: parseFloat(e.target.value) } as any,
-                      })
-                    }
-                    className="w-full mt-1"
-                  />
-                </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {'Inner Radius (Donut)'}: {((config.innerRadius ?? 0) * 100).toFixed(0)}%
+                    </Label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={config.innerRadius ?? 0}
+                      onChange={e =>
+                        handleConfigChange({
+                          config: { innerRadius: parseFloat(e.target.value) } as any,
+                        })
+                      }
+                      className="w-full mt-1"
+                    />
+                  </div>
 
-                <div>
-                  <Label className="text-xs">
-                    {'Corner Radius'}: {config.cornerRadius}
-                  </Label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="20"
-                    value={config.cornerRadius}
-                    onChange={e =>
-                      handleConfigChange({
-                        config: { cornerRadius: parseInt(e.target.value) } as any,
-                      })
-                    }
-                    className="w-full mt-1"
-                  />
-                </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {'Corner Radius'}: {config.cornerRadius}
+                    </Label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="20"
+                      value={config.cornerRadius}
+                      onChange={e =>
+                        handleConfigChange({
+                          config: { cornerRadius: parseInt(e.target.value) } as any,
+                        })
+                      }
+                      className="w-full mt-1"
+                    />
+                  </div>
 
-                <div>
-                  <Label className="text-xs">
-                    {'Pad Angle'}: {(config.padAngle ?? 0).toFixed(2)}
-                  </Label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="0.1"
-                    step="0.01"
-                    value={config.padAngle ?? 0}
-                    onChange={e =>
-                      handleConfigChange({
-                        config: { padAngle: parseFloat(e.target.value) } as any,
-                      })
-                    }
-                    className="w-full mt-1"
-                  />
-                </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {'Pad Angle'}: {(config.padAngle ?? 0).toFixed(2)}
+                    </Label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="0.1"
+                      step="0.01"
+                      value={config.padAngle ?? 0}
+                      onChange={e =>
+                        handleConfigChange({
+                          config: { padAngle: parseFloat(e.target.value) } as any,
+                        })
+                      }
+                      className="w-full mt-1"
+                    />
+                  </div>
 
-                <div>
-                  <Label className="text-xs">{'Sort Slices'}</Label>
-                  <select
-                    value={config.sortSlices}
-                    onChange={e =>
-                      handleConfigChange({
-                        config: {
-                          sortSlices: e.target.value as 'ascending' | 'descending' | 'none',
-                        } as any,
-                      })
-                    }
-                    className="w-full p-2 text-sm border rounded-md bg-background mt-1 h-10 "
-                  >
-                    <option value="descending">Descending</option>
-                    <option value="ascending">Ascending</option>
-                    <option value="none">None</option>
-                  </select>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {'Sort Slices'}
+                    </Label>
+                    <select
+                      value={config.sortSlices}
+                      onChange={e =>
+                        handleConfigChange({
+                          config: {
+                            sortSlices: e.target.value as 'ascending' | 'descending' | 'none',
+                          } as any,
+                        })
+                      }
+                      className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="descending">Descending</option>
+                      <option value="ascending">Ascending</option>
+                      <option value="none">None</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
+              </CardContent>
+            </motion.div>
           )}
         </AnimatePresence>
       </Card>

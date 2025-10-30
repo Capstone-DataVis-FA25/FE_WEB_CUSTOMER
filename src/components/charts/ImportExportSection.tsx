@@ -15,11 +15,11 @@ const ImportExportSection = () => {
   const { chartConfig } = useChartEditorRead();
   const { currentChartType: chartType } = useChartEditorRead();
   const { setCurrentChartType, setChartConfig } = useChartEditor();
-  const [importExportSection, setImportExportSection] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Toggle import/export section visibility
   const toggleSection = () => {
-    setImportExportSection(prev => !prev);
+    setIsCollapsed(prev => !prev);
   };
 
   // Export chart as image (PNG, JPEG, SVG)
@@ -267,9 +267,9 @@ const ImportExportSection = () => {
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6, delay: 0.12 }}
+      transition={{ duration: 0.6, delay: 0.15 }}
     >
-      <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
+      <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-hidden rounded-lg">
         <CardHeader
           className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg"
           onClick={toggleSection}
@@ -279,81 +279,89 @@ const ImportExportSection = () => {
               <Settings className="h-5 w-5" />
               {t('chart_editor_chart_actions', 'Import / Export & More')}
             </h3>
-            {importExportSection ? (
+            {isCollapsed ? (
               <ChevronUp className="h-5 w-5 text-gray-500" />
             ) : (
               <ChevronDown className="h-5 w-5 text-gray-500" />
             )}
           </div>
         </CardHeader>
-        <AnimatePresence>
-          {importExportSection && (
-            <CardContent className="space-y-4 mt-4">
-              {/* Export Image Section */}
-              <div>
-                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                  <Camera className="h-4 w-4" />
-                  {t('chart_editor_export_image', 'Export Image')}
-                </Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <Button
-                    onClick={() => exportChartAsImage('png')}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1 text-xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
-                  >
-                    <Download className="h-3 w-3" />
-                    PNG
-                  </Button>
-                  <Button
-                    onClick={() => exportChartAsImage('jpeg')}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1 text-xs bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border-green-200 dark:border-green-800"
-                  >
-                    <Download className="h-3 w-3" />
-                    JPEG
-                  </Button>
-                  <Button
-                    onClick={() => exportChartAsImage('svg')}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1 text-xs bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 border-purple-200 dark:border-purple-800"
-                  >
-                    <Download className="h-3 w-3" />
-                    SVG
-                  </Button>
+        <AnimatePresence mode="wait">
+          {isCollapsed && (
+            <motion.div
+              key="basic-settings-content"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              <CardContent className="space-y-4 mt-4">
+                {/* Export Image Section */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                    <Camera className="h-4 w-4" />
+                    {t('chart_editor_export_image', 'Export Image')}
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button
+                      onClick={() => exportChartAsImage('png')}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1 text-xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
+                    >
+                      <Download className="h-3 w-3" />
+                      PNG
+                    </Button>
+                    <Button
+                      onClick={() => exportChartAsImage('jpeg')}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1 text-xs bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border-green-200 dark:border-green-800"
+                    >
+                      <Download className="h-3 w-3" />
+                      JPEG
+                    </Button>
+                    <Button
+                      onClick={() => exportChartAsImage('svg')}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1 text-xs bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 border-purple-200 dark:border-purple-800"
+                    >
+                      <Download className="h-3 w-3" />
+                      SVG
+                    </Button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Config Management Section */}
-              <div>
-                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  {t('chart_editor_config_management', 'Config Management')}
-                </Label>
-                <div className="grid grid-cols-1 gap-2">
-                  <Button
-                    onClick={exportConfigToJSON}
-                    variant="outline"
-                    size="sm"
-                    className="w-full flex items-center gap-2 text-xs justify-start bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 border-orange-200 dark:border-orange-400"
-                  >
-                    <Download className="h-3 w-3" />
-                    {t('chart_editor_export_config', 'Export Config JSON')}
-                  </Button>
-                  <Button
-                    onClick={importConfigFromJSON}
-                    variant="outline"
-                    size="sm"
-                    className="w-full flex items-center gap-2 text-xs justify-start bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
-                  >
-                    <Upload className="h-3 w-3" />
-                    {t('chart_editor_import_config', 'Import Config JSON')}
-                  </Button>
+                {/* Config Management Section */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    {t('chart_editor_config_management', 'Config Management')}
+                  </Label>
+                  <div className="grid grid-cols-1 gap-2">
+                    <Button
+                      onClick={exportConfigToJSON}
+                      variant="outline"
+                      size="sm"
+                      className="w-full flex items-center gap-2 text-xs justify-start bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 border-orange-200 dark:border-orange-400"
+                    >
+                      <Download className="h-3 w-3" />
+                      {t('chart_editor_export_config', 'Export Config JSON')}
+                    </Button>
+                    <Button
+                      onClick={importConfigFromJSON}
+                      variant="outline"
+                      size="sm"
+                      className="w-full flex items-center gap-2 text-xs justify-start bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
+                    >
+                      <Upload className="h-3 w-3" />
+                      {t('chart_editor_import_config', 'Import Config JSON')}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
+              </CardContent>
+            </motion.div>
           )}
         </AnimatePresence>
       </Card>
