@@ -110,6 +110,9 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [paddingVersion, setPaddingVersion] = React.useState(0);
+  const extraMarginsRef = React.useRef({ left: 0, right: 0, top: 0, bottom: 0 });
+  const adjustmentAppliedRef = React.useRef(false);
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [dimensions, setDimensions] = React.useState({ width, height });
 
@@ -200,11 +203,18 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     const svg = d3.select(svgRef.current);
 
     // Responsive margin adjustments
-    const responsiveMargin = {
+    const baseResponsiveMargin = {
       top: currentWidth < 640 ? margin.top * 0.8 : margin.top,
       right: currentWidth < 640 ? margin.right * 0.7 : margin.right,
       bottom: currentWidth < 640 ? margin.bottom * 0.8 : margin.bottom,
       left: currentWidth < 640 ? margin.left * 0.8 : margin.left,
+    };
+
+    const responsiveMargin = {
+      top: baseResponsiveMargin.top + (extraMarginsRef.current.top || 0),
+      right: baseResponsiveMargin.right + (extraMarginsRef.current.right || 0),
+      bottom: baseResponsiveMargin.bottom + (extraMarginsRef.current.bottom || 0),
+      left: baseResponsiveMargin.left + (extraMarginsRef.current.left || 0),
     };
 
     // Reserve space for legend when positioned top/bottom to avoid overlap (match LineChart behavior)
@@ -523,7 +533,11 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       .tickSizeInner(showAxisTicks ? 6 : 0)
       .tickSizeOuter(showAxisTicks ? 6 : 0);
 
-    const xAxisGroup = g.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis);
+    const xAxisGroup = g
+      .append('g')
+      .attr('class', 'x-axis')
+      .attr('transform', `translate(0,${innerHeight})`)
+      .call(xAxis);
 
     xAxisGroup
       .selectAll('text')
@@ -553,7 +567,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       .tickSizeOuter(showAxisTicks ? 6 : 0)
       .tickPadding(8);
 
-    const yAxisGroup = g.append('g').call(yAxis);
+    const yAxisGroup = g.append('g').attr('class', 'y-axis').call(yAxis);
 
     yAxisGroup
       .selectAll('text')
@@ -577,6 +591,86 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         .attr('stroke', axisColor)
         .attr('stroke-width', 1)
         .attr('opacity', 0.6);
+    }
+
+    // Auto-detect tick label overflow (post-axis render) and nudge the main group
+    // so tick labels aren't clipped. Measure axis text bboxes and apply a one-time
+    // transform adjustment to the main group `g` if needed.
+    try {
+      let extraShiftX = 0;
+      let extraShiftY = 0;
+      let extraShiftRight = 0;
+
+      const xAxisNode = g.select('.x-axis').node() as SVGGElement | null;
+      const yAxisNode = g.select('.y-axis').node() as SVGGElement | null;
+
+      if (xAxisNode) {
+        const texts = Array.from(xAxisNode.querySelectorAll('text')) as SVGGraphicsElement[];
+        let maxBottom = -Infinity;
+        texts.forEach(t => {
+          try {
+            const bb = t.getBBox();
+            const textBottom = bb.y + bb.height;
+            if (textBottom > maxBottom) maxBottom = textBottom;
+            if (bb.x < 0) {
+              extraShiftX = Math.max(extraShiftX, Math.ceil(Math.abs(bb.x)) + 6);
+            }
+            // detect right overflow
+            if (bb.x + bb.width > innerWidth) {
+              extraShiftRight = Math.max(
+                extraShiftRight,
+                Math.ceil(bb.x + bb.width - innerWidth) + 6
+              );
+            }
+          } catch (e) {
+            /* ignore individual text bbox errors */
+          }
+        });
+        if (maxBottom > innerHeight) {
+          extraShiftY = Math.max(extraShiftY, Math.ceil(maxBottom - innerHeight) + 6);
+        }
+      }
+
+      if (yAxisNode) {
+        const ytexts = Array.from(yAxisNode.querySelectorAll('text')) as SVGGraphicsElement[];
+        ytexts.forEach(t => {
+          try {
+            const bb = t.getBBox();
+            if (bb.x < 0) {
+              extraShiftX = Math.max(extraShiftX, Math.ceil(Math.abs(bb.x)) + 6);
+            }
+            if (bb.x + bb.width > innerWidth) {
+              extraShiftRight = Math.max(
+                extraShiftRight,
+                Math.ceil(bb.x + bb.width - innerWidth) + 6
+              );
+            }
+          } catch (e) {
+            /* ignore */
+          }
+        });
+      }
+
+      if (extraShiftX !== 0 || extraShiftY !== 0 || extraShiftRight !== 0) {
+        if (!adjustmentAppliedRef.current) {
+          // Store extra margins and trigger a re-render so margins are applied before drawing
+          extraMarginsRef.current.left = extraShiftX;
+          extraMarginsRef.current.right = extraShiftRight;
+          extraMarginsRef.current.bottom = extraShiftY;
+          adjustmentAppliedRef.current = true;
+          // Trigger effect re-run with updated margins
+          setPaddingVersion(v => v + 1);
+          // Abort this render; next effect run will use the expanded margins
+          return;
+        }
+
+        // Fallback: if we've already tried margin adjustment, apply a small transform
+        let finalTranslateX = responsiveMargin.left + extraShiftX - extraShiftRight;
+        finalTranslateX = Math.max(8, Math.floor(finalTranslateX));
+        g.attr('transform', `translate(${finalTranslateX},${responsiveMargin.top + extraShiftY})`);
+      }
+    } catch (e) {
+      // measurement failed (e.g., SSR) — ignore gracefully
     }
 
     // Add axis labels
@@ -1093,6 +1187,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     labelFontSize,
     legendFontSize,
     showPointValues,
+    paddingVersion,
   ]);
 
   return (
