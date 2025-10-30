@@ -113,6 +113,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
   const [paddingVersion, setPaddingVersion] = React.useState(0);
   const extraMarginsRef = React.useRef({ left: 0, right: 0, top: 0, bottom: 0 });
   const adjustmentAppliedRef = React.useRef(false);
+  const prevConfigRef = React.useRef('');
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [dimensions, setDimensions] = React.useState({ width, height });
 
@@ -176,6 +177,14 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     const currentWidth = dimensions.width;
     const currentHeight = dimensions.height;
 
+    // Reset auto-adjust state only when key chart inputs change (avoid infinite loops)
+    const configKey = `${data.length}-${dimensions.width}-${dimensions.height}-${xAxisKey}-${yAxisKeys.join(',')}-${xAxisRotation}-${yAxisRotation}`;
+    if (prevConfigRef.current !== configKey) {
+      prevConfigRef.current = configKey;
+      adjustmentAppliedRef.current = false;
+      extraMarginsRef.current = { left: 0, right: 0, top: 0, bottom: 0 };
+    }
+
     // Get current theme colors for enabled areas only
     const getCurrentColors = () => {
       const theme = isDarkMode ? 'dark' : 'light';
@@ -209,6 +218,9 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       bottom: currentWidth < 640 ? margin.bottom * 0.8 : margin.bottom,
       left: currentWidth < 640 ? margin.left * 0.8 : margin.left,
     };
+
+    // (Removed left-bias cap) Keep base responsive margins symmetric so
+    // any automatic extra padding can be distributed evenly to center the plot.
 
     const responsiveMargin = {
       top: baseResponsiveMargin.top + (extraMarginsRef.current.top || 0),
@@ -259,10 +271,13 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       .attr('fill', isDarkMode ? '#111827' : '#f8fafc')
       .attr('opacity', 0.3);
 
-    // Create main group
+    // Create main group and center the plotting area horizontally by computing
+    // the left translate such that the inner plotting area is centered inside
+    // the overall SVG width. This is more accurate than averaging margins.
+    const centeredLeft = Math.max(8, Math.floor((currentWidth - innerWidth) / 2));
     const g = svg
       .append('g')
-      .attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top})`);
+      .attr('transform', `translate(${centeredLeft},${responsiveMargin.top})`);
 
     // Scales
     const xScale = d3
@@ -652,22 +667,35 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       }
 
       if (extraShiftX !== 0 || extraShiftY !== 0 || extraShiftRight !== 0) {
+        // Combine left/right overflow and distribute evenly so the plotting
+        // area remains centered. Cap the total extra padding to a reasonable
+        // value relative to width to avoid huge shifts.
+        const totalRequested = extraShiftX + extraShiftRight;
+        const totalCap = Math.max(40, Math.floor(currentWidth * 0.12));
+        const totalExtra = Math.min(totalRequested, totalCap);
+
+        // Split evenly (left/right). If odd, right gets the remainder.
+        const leftShare = Math.floor(totalExtra / 2);
+        const rightShare = totalExtra - leftShare;
+
+        const cappedBottom = Math.min(extraShiftY, Math.max(20, Math.floor(currentHeight * 0.08)));
+
         if (!adjustmentAppliedRef.current) {
-          // Store extra margins and trigger a re-render so margins are applied before drawing
-          extraMarginsRef.current.left = extraShiftX;
-          extraMarginsRef.current.right = extraShiftRight;
-          extraMarginsRef.current.bottom = extraShiftY;
+          // Apply symmetric extra margins and re-run the effect so axes/layout
+          // are re-calculated with the new margins.
+          extraMarginsRef.current.left = leftShare;
+          extraMarginsRef.current.right = rightShare;
+          extraMarginsRef.current.bottom = cappedBottom;
           adjustmentAppliedRef.current = true;
-          // Trigger effect re-run with updated margins
           setPaddingVersion(v => v + 1);
-          // Abort this render; next effect run will use the expanded margins
-          return;
+          return; // abort this render — next run will include new margins
         }
 
-        // Fallback: if we've already tried margin adjustment, apply a small transform
-        let finalTranslateX = responsiveMargin.left + extraShiftX - extraShiftRight;
-        finalTranslateX = Math.max(8, Math.floor(finalTranslateX));
-        g.attr('transform', `translate(${finalTranslateX},${responsiveMargin.top + extraShiftY})`);
+        // Fallback: we've already tried applying symmetric margins but still
+        // have a remaining overflow — nudge the main group while preserving
+        // exact centering as much as possible.
+        const finalTranslateX = Math.max(8, Math.floor((currentWidth - innerWidth) / 2));
+        g.attr('transform', `translate(${finalTranslateX},${responsiveMargin.top})`);
       }
     } catch (e) {
       // measurement failed (e.g., SSR) — ignore gracefully
