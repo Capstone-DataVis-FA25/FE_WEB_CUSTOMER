@@ -29,6 +29,8 @@ export interface D3ScatterChartProps {
   colorKey?: string; // Key for color grouping
   sizeKey?: string; // Key for bubble size
   colors?: Record<string, { light: string; dark: string }>;
+  // Optional explicit series colors mapping (keyed by header/display name)
+  seriesColors?: Record<string, string>;
 
   // Styling props
   pointRadius?: number;
@@ -194,6 +196,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   colorKey,
   sizeKey,
   colors = defaultColorsChart,
+  seriesColors,
 
   // Styling props
   pointRadius = 5,
@@ -285,6 +288,11 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
       {} as Record<string, string>
     );
   }, [colors, isDarkMode]);
+
+  // Series colors passed from chart config (direct hex values keyed by header name)
+  const seriesColorsMap = React.useMemo(() => {
+    return seriesColors || {};
+  }, [seriesColors]);
 
   // Detect theme changes
   useEffect(() => {
@@ -537,7 +545,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     if (colorKey) {
       const uniqueCategories = Array.from(new Set(processedData.map(d => String(d[colorKey]))));
       const categoryColors = uniqueCategories.map(
-        (cat, i) => themeColors[cat] || d3.schemeCategory10[i % 10]
+        (cat, i) => seriesColorsMap[cat] || themeColors[cat] || d3.schemeCategory10[i % 10]
       );
       colorScale = d3.scaleOrdinal<string>().domain(uniqueCategories).range(categoryColors);
     }
@@ -672,7 +680,11 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     if (keysToRender && keysToRender.length > 1) {
       keysToRender.forEach((key, idx) => {
         const seriesLabel = (seriesNames && seriesNames[key]) || key;
-        const seriesColor = themeColors[key] || Object.values(themeColors)[idx] || '#3b82f6';
+        const seriesColor =
+          (seriesColorsMap && seriesColorsMap[key]) ||
+          themeColors[key] ||
+          Object.values(themeColors)[idx] ||
+          '#3b82f6';
 
         const validPoints = processedData.filter(d => !isNaN(+d[xAxisKey]) && !isNaN(+d[key]));
 
@@ -744,7 +756,10 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
         .attr('fill', (d: ScatterDataPoint) =>
           colorKey && colorScale
             ? colorScale(String(d[colorKey]))
-            : themeColors['default'] || '#3b82f6'
+            : (seriesColorsMap && seriesColorsMap[seriesName || yAxisKey]) ||
+              themeColors[seriesName || yAxisKey] ||
+              themeColors['color1'] ||
+              '#3b82f6'
         )
         .attr('opacity', pointOpacity)
         .style('cursor', showTooltip ? 'pointer' : 'default')
@@ -799,7 +814,11 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
       if (keysToRender && keysToRender.length > 1) {
         items = keysToRender.map((k, idx) => ({
           label: (seriesNames && seriesNames[k]) || k,
-          color: themeColors[k] || Object.values(themeColors)[idx] || '#3b82f6',
+          color:
+            (seriesColorsMap && seriesColorsMap[k]) ||
+            themeColors[k] ||
+            Object.values(themeColors)[idx] ||
+            '#3b82f6',
         }));
       } else if (colorKey && colorScale) {
         const categories = colorScale.domain();
@@ -809,7 +828,11 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
         }));
       } else {
         const label = seriesName || yAxisKey || 'Series';
-        const color = themeColors[label] || themeColors['color1'] || '#3b82f6';
+        const color =
+          (seriesColorsMap && seriesColorsMap[label]) ||
+          themeColors[label] ||
+          themeColors['color1'] ||
+          '#3b82f6';
         items = [{ label, color }];
       }
 
@@ -851,7 +874,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
 
       // Render items horizontally inside the pill
       let cursorX = pillX + paddingX;
-      items.forEach((it, idx) => {
+      items.forEach(it => {
         // color square (rounded)
         legendGroup
           .append('rect')

@@ -1,10 +1,26 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import type { ColorConfig } from '../../types/chart';
 import { defaultColorsChart } from '@/utils/Utils';
+import {
+  MOBILE_BREAKPOINT,
+  TABLET_BREAKPOINT,
+  MOBILE_MARGIN_TOP_FACTOR,
+  MOBILE_MARGIN_RIGHT_FACTOR,
+  MOBILE_MARGIN_BOTTOM_FACTOR,
+  MOBILE_MARGIN_LEFT_FACTOR,
+} from '@/constants/response-breakpoint';
 
 export interface ChartDataPoint {
   [key: string]: number | string;
+}
+
+// Small helper types
+interface ExtraMargins {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
 }
 
 export interface D3AreaChartProps {
@@ -108,10 +124,17 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
   legendFontSize = 11,
   showPointValues = false,
 }) => {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isDarkMode, setIsDarkMode] = React.useState(false);
-  const [dimensions, setDimensions] = React.useState({ width, height });
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [paddingVersion, setPaddingVersion] = useState<number>(0);
+  const extraMarginsRef = useRef<ExtraMargins>({ left: 0, right: 0, top: 0, bottom: 0 });
+  const adjustmentAppliedRef = useRef<boolean>(false);
+  const prevConfigRef = useRef<string>('');
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
+    width,
+    height,
+  });
 
   // Monitor container size for responsiveness
   useEffect(() => {
@@ -120,9 +143,9 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         const containerWidth = containerRef.current.offsetWidth;
         let aspectRatio = height / width;
 
-        if (containerWidth < 640) {
+        if (containerWidth < MOBILE_BREAKPOINT) {
           aspectRatio = Math.min(aspectRatio * 1.2, 0.75);
-        } else if (containerWidth < 1024) {
+        } else if (containerWidth < TABLET_BREAKPOINT) {
           aspectRatio = Math.min(aspectRatio, 0.6);
         } else {
           aspectRatio = Math.min(aspectRatio, 0.5);
@@ -173,6 +196,14 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     const currentWidth = dimensions.width;
     const currentHeight = dimensions.height;
 
+    // Reset auto-adjust state only when key chart inputs change (avoid infinite loops)
+    const configKey = `${data.length}-${dimensions.width}-${dimensions.height}-${xAxisKey}-${yAxisKeys.join(',')}-${xAxisRotation}-${yAxisRotation}`;
+    if (prevConfigRef.current !== configKey) {
+      prevConfigRef.current = configKey;
+      adjustmentAppliedRef.current = false;
+      extraMarginsRef.current = { left: 0, right: 0, top: 0, bottom: 0 };
+    }
+
     // Get current theme colors for enabled areas only
     const getCurrentColors = () => {
       const theme = isDarkMode ? 'dark' : 'light';
@@ -200,17 +231,32 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     const svg = d3.select(svgRef.current);
 
     // Responsive margin adjustments
+    const baseResponsiveMargin = {
+      top: currentWidth < MOBILE_BREAKPOINT ? margin.top * MOBILE_MARGIN_TOP_FACTOR : margin.top,
+      right:
+        currentWidth < MOBILE_BREAKPOINT ? margin.right * MOBILE_MARGIN_RIGHT_FACTOR : margin.right,
+      bottom:
+        currentWidth < MOBILE_BREAKPOINT
+          ? margin.bottom * MOBILE_MARGIN_BOTTOM_FACTOR
+          : margin.bottom,
+      left:
+        currentWidth < MOBILE_BREAKPOINT ? margin.left * MOBILE_MARGIN_LEFT_FACTOR : margin.left,
+    };
+
+    // (Removed left-bias cap) Keep base responsive margins symmetric so
+    // any automatic extra padding can be distributed evenly to center the plot.
+
     const responsiveMargin = {
-      top: currentWidth < 640 ? margin.top * 0.8 : margin.top,
-      right: currentWidth < 640 ? margin.right * 0.7 : margin.right,
-      bottom: currentWidth < 640 ? margin.bottom * 0.8 : margin.bottom,
-      left: currentWidth < 640 ? margin.left * 0.8 : margin.left,
+      top: baseResponsiveMargin.top + (extraMarginsRef.current.top || 0),
+      right: baseResponsiveMargin.right + (extraMarginsRef.current.right || 0),
+      bottom: baseResponsiveMargin.bottom + (extraMarginsRef.current.bottom || 0),
+      left: baseResponsiveMargin.left + (extraMarginsRef.current.left || 0),
     };
 
     // Reserve space for legend when positioned top/bottom to avoid overlap (match LineChart behavior)
     if (showLegend && (legendPosition === 'top' || legendPosition === 'bottom')) {
-      const isMobile = currentWidth < 640;
-      const isTablet = currentWidth < 1024;
+      const isMobile = currentWidth < MOBILE_BREAKPOINT;
+      const isTablet = currentWidth < TABLET_BREAKPOINT;
       const itemHeight = isMobile ? 18 : 20;
       const padding = isMobile ? 8 : 10;
       const legendBlock = itemHeight + padding * 2;
@@ -249,16 +295,32 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       .attr('fill', isDarkMode ? '#111827' : '#f8fafc')
       .attr('opacity', 0.3);
 
-    // Create main group
+    // Create main group and center the plotting area horizontally by computing
+    // the left translate such that the inner plotting area is centered inside
+    // the overall SVG width. This is more accurate than averaging margins.
+    const centeredLeft = Math.max(8, Math.floor((currentWidth - innerWidth) / 2));
     const g = svg
       .append('g')
-      .attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top})`);
+      .attr('transform', `translate(${centeredLeft},${responsiveMargin.top})`);
 
     // Scales
-    const xScale = d3
-      .scaleLinear()
-      .domain(d3.extent(data, d => d[xAxisKey] as number) as [number, number])
-      .range([0, innerWidth]);
+    // Detect whether X values are numeric or categorical. If categorical (e.g. "Platform"),
+    // use a point scale so positions are generated for each category instead of numeric values.
+    const rawXValues = data.map(d => d[xAxisKey]);
+    const xAreNumbers = rawXValues.every(
+      v => typeof v === 'number' || (!isNaN(Number(v)) && v !== null && v !== '')
+    );
+
+    let xScale: any;
+    if (xAreNumbers) {
+      xScale = d3
+        .scaleLinear()
+        .domain(d3.extent(data, d => Number(d[xAxisKey])) as [number, number])
+        .range([0, innerWidth]);
+    } else {
+      const categories = Array.from(new Set(rawXValues.map(v => String(v))));
+      xScale = d3.scalePoint().domain(categories).range([0, innerWidth]).padding(0.5);
+    }
 
     let yScale: d3.ScaleLinear<number, number>;
 
@@ -283,7 +345,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         // Area generator for stacked data
         const area = d3
           .area<d3.SeriesPoint<ChartDataPoint>>()
-          .x((_d, i) => xScale(data[i][xAxisKey] as number))
+          .x((_d, i) => xScale(xAreNumbers ? Number(data[i][xAxisKey]) : String(data[i][xAxisKey])))
           .y0(d => yScale(d[0]))
           .y1(d => yScale(d[1]))
           .curve(curve);
@@ -293,7 +355,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
           .append('path')
           .datum(layer)
           .attr('fill', currentColors[key])
-          .attr('opacity', 0)
+          .attr('stroke', 'none')
+          .attr('fill-opacity', 0)
           .attr('d', area)
           .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))');
 
@@ -301,7 +364,9 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         if (showStroke) {
           const line = d3
             .line<d3.SeriesPoint<ChartDataPoint>>()
-            .x((_d, i) => xScale(data[i][xAxisKey] as number))
+            .x((_d, i) =>
+              xScale(xAreNumbers ? Number(data[i][xAxisKey]) : String(data[i][xAxisKey]))
+            )
             .y(d => yScale(d[1]))
             .curve(curve);
 
@@ -326,7 +391,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
           .delay(index * 200)
           .duration(animationDuration)
           .ease(d3.easeQuadInOut)
-          .attr('opacity', opacity);
+          .attr('fill-opacity', opacity);
       });
     } else {
       // For overlapping areas
@@ -344,7 +409,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         // Area generator
         const area = d3
           .area<ChartDataPoint>()
-          .x(d => xScale(d[xAxisKey] as number))
+          .x(d => xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey])))
           .y0(yScale(0))
           .y1(d => yScale(d[key] as number))
           .curve(curve);
@@ -354,7 +419,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
           .append('path')
           .datum(data)
           .attr('fill', currentColors[key])
-          .attr('opacity', 0)
+          .attr('stroke', 'none')
+          .attr('fill-opacity', 0)
           .attr('d', area)
           .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))');
 
@@ -362,7 +428,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         if (showStroke) {
           const line = d3
             .line<ChartDataPoint>()
-            .x(d => xScale(d[xAxisKey] as number))
+            .x(d => xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey])))
             .y(d => yScale(d[key] as number))
             .curve(curve);
 
@@ -401,7 +467,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
           .delay(index * 200)
           .duration(animationDuration)
           .ease(d3.easeQuadInOut)
-          .attr('opacity', opacity);
+          .attr('fill-opacity', opacity);
 
         // Add data points if enabled
         if (showPoints) {
@@ -410,7 +476,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             .enter()
             .append('circle')
             .attr('class', `point-${index}`)
-            .attr('cx', d => xScale(d[xAxisKey] as number))
+            .attr('cx', d => xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey])))
             .attr('cy', d => yScale(d[key] as number))
             .attr('r', 0)
             .attr('fill', currentColors[key])
@@ -421,7 +487,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
               d3.select(this)
                 .transition()
                 .duration(200)
-                .attr('r', currentWidth < 640 ? 5 : 6)
+                .attr('r', currentWidth < MOBILE_BREAKPOINT ? 5 : 6)
                 .attr('stroke-width', 3);
 
               // Create tooltip
@@ -430,7 +496,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
                 .attr('class', 'tooltip')
                 .attr(
                   'transform',
-                  `translate(${xScale(d[xAxisKey] as number)}, ${yScale(d[key] as number) - 15})`
+                  `translate(${xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey]))}, ${yScale(d[key] as number) - 15})`
                 );
 
               tooltip
@@ -496,7 +562,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
 
       // Vertical grid lines
       g.selectAll('.grid-line-vertical')
-        .data(xScale.ticks())
+        .data(xAreNumbers ? xScale.ticks() : (xScale.domain() as any[]))
         .enter()
         .append('line')
         .attr('class', 'grid-line-vertical')
@@ -513,17 +579,23 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     // X Axis
     const xAxis = d3
       .axisBottom(xScale)
-      .tickFormat(d => {
-        const value = d.valueOf();
+      .tickFormat((d: any) => {
+        // d can be a number (for linear) or a string/category (for point scale)
         if (xAxisFormatter) {
-          return xAxisFormatter(value);
+          if (xAreNumbers) return xAxisFormatter(Number(d));
+          return String(d);
         }
-        return d3.format('d')(value);
+        if (xAreNumbers) return d3.format('d')(Number(d));
+        return String(d);
       })
       .tickSizeInner(showAxisTicks ? 6 : 0)
       .tickSizeOuter(showAxisTicks ? 6 : 0);
 
-    const xAxisGroup = g.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis);
+    const xAxisGroup = g
+      .append('g')
+      .attr('class', 'x-axis')
+      .attr('transform', `translate(0,${innerHeight})`)
+      .call(xAxis);
 
     xAxisGroup
       .selectAll('text')
@@ -553,7 +625,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       .tickSizeOuter(showAxisTicks ? 6 : 0)
       .tickPadding(8);
 
-    const yAxisGroup = g.append('g').call(yAxis);
+    const yAxisGroup = g.append('g').attr('class', 'y-axis').call(yAxis);
 
     yAxisGroup
       .selectAll('text')
@@ -577,6 +649,99 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         .attr('stroke', axisColor)
         .attr('stroke-width', 1)
         .attr('opacity', 0.6);
+    }
+
+    // Auto-detect tick label overflow (post-axis render) and nudge the main group
+    // so tick labels aren't clipped. Measure axis text bboxes and apply a one-time
+    // transform adjustment to the main group `g` if needed.
+    try {
+      let extraShiftX = 0;
+      let extraShiftY = 0;
+      let extraShiftRight = 0;
+
+      const xAxisNode = g.select('.x-axis').node() as SVGGElement | null;
+      const yAxisNode = g.select('.y-axis').node() as SVGGElement | null;
+
+      if (xAxisNode) {
+        const texts = Array.from(xAxisNode.querySelectorAll('text')) as SVGGraphicsElement[];
+        let maxBottom = -Infinity;
+        texts.forEach(t => {
+          try {
+            const bb = t.getBBox();
+            const textBottom = bb.y + bb.height;
+            if (textBottom > maxBottom) maxBottom = textBottom;
+            if (bb.x < 0) {
+              extraShiftX = Math.max(extraShiftX, Math.ceil(Math.abs(bb.x)) + 6);
+            }
+            // detect right overflow
+            if (bb.x + bb.width > innerWidth) {
+              extraShiftRight = Math.max(
+                extraShiftRight,
+                Math.ceil(bb.x + bb.width - innerWidth) + 6
+              );
+            }
+          } catch (e) {
+            /* ignore individual text bbox errors */
+          }
+        });
+        if (maxBottom > innerHeight) {
+          extraShiftY = Math.max(extraShiftY, Math.ceil(maxBottom - innerHeight) + 6);
+        }
+      }
+
+      if (yAxisNode) {
+        const ytexts = Array.from(yAxisNode.querySelectorAll('text')) as SVGGraphicsElement[];
+        ytexts.forEach(t => {
+          try {
+            const bb = t.getBBox();
+            if (bb.x < 0) {
+              extraShiftX = Math.max(extraShiftX, Math.ceil(Math.abs(bb.x)) + 6);
+            }
+            if (bb.x + bb.width > innerWidth) {
+              extraShiftRight = Math.max(
+                extraShiftRight,
+                Math.ceil(bb.x + bb.width - innerWidth) + 6
+              );
+            }
+          } catch (e) {
+            /* ignore */
+          }
+        });
+      }
+
+      if (extraShiftX !== 0 || extraShiftY !== 0 || extraShiftRight !== 0) {
+        // Combine left/right overflow and distribute evenly so the plotting
+        // area remains centered. Cap the total extra padding to a reasonable
+        // value relative to width to avoid huge shifts.
+        const totalRequested = extraShiftX + extraShiftRight;
+        const totalCap = Math.max(40, Math.floor(currentWidth * 0.12));
+        const totalExtra = Math.min(totalRequested, totalCap);
+
+        // Split evenly (left/right). If odd, right gets the remainder.
+        const leftShare = Math.floor(totalExtra / 2);
+        const rightShare = totalExtra - leftShare;
+
+        const cappedBottom = Math.min(extraShiftY, Math.max(20, Math.floor(currentHeight * 0.08)));
+
+        if (!adjustmentAppliedRef.current) {
+          // Apply symmetric extra margins and re-run the effect so axes/layout
+          // are re-calculated with the new margins.
+          extraMarginsRef.current.left = leftShare;
+          extraMarginsRef.current.right = rightShare;
+          extraMarginsRef.current.bottom = cappedBottom;
+          adjustmentAppliedRef.current = true;
+          setPaddingVersion(v => v + 1);
+          return; // abort this render — next run will include new margins
+        }
+
+        // Fallback: we've already tried applying symmetric margins but still
+        // have a remaining overflow — nudge the main group while preserving
+        // exact centering as much as possible.
+        const finalTranslateX = Math.max(8, Math.floor((currentWidth - innerWidth) / 2));
+        g.attr('transform', `translate(${finalTranslateX},${responsiveMargin.top})`);
+      }
+    } catch (e) {
+      // measurement failed (e.g., SSR) — ignore gracefully
     }
 
     // Add axis labels
@@ -609,7 +774,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
 
       // Responsive legend sizing based on screen width and position
       const getResponsiveLegendSizes = () => {
-        const isMobile = currentWidth < 640;
+        const isMobile = currentWidth < MOBILE_BREAKPOINT;
 
         return {
           itemHeight: isMobile ? 20 : 22,
@@ -630,7 +795,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       // Responsive legend positioning based on screen size and position
       const getResponsiveLegendPosition = () => {
         const isMobile = currentWidth < 640;
-        const isTablet = currentWidth < 1024;
+        const isTablet = currentWidth < TABLET_BREAKPOINT;
 
         switch (legendPosition) {
           case 'top':
@@ -682,11 +847,13 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
 
       // Calculate optimal width for horizontal legends with even spacing
       const calculateLegendWidth = () => {
-        if (!isHorizontal) return (currentWidth < 640 ? 100 : 120) + 2 * legendSizes.padding;
+        if (!isHorizontal)
+          return (currentWidth < MOBILE_BREAKPOINT ? 100 : 120) + 2 * legendSizes.padding;
 
         // Calculate total text width for all items
         const totalTextWidth = enabledAreas.reduce((total, key) => {
-          const maxTextLength = currentWidth < 640 ? 8 : currentWidth < 1024 ? 10 : 12;
+          const maxTextLength =
+            currentWidth < MOBILE_BREAKPOINT ? 8 : currentWidth < TABLET_BREAKPOINT ? 10 : 12;
           const displayName =
             key.length > maxTextLength ? key.substring(0, maxTextLength) + '...' : key;
           return (
@@ -698,7 +865,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         }, 0);
 
         // Add minimum spacing between items
-        const minSpacingBetweenItems = currentWidth < 640 ? 20 : 30;
+        const minSpacingBetweenItems = currentWidth < MOBILE_BREAKPOINT ? 20 : 30;
         const totalSpacing = (enabledAreas.length - 1) * minSpacingBetweenItems;
 
         return Math.max(totalTextWidth + totalSpacing + 2 * legendSizes.padding, 200);
@@ -709,7 +876,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         y: legendY - legendSizes.padding,
         width: isHorizontal
           ? calculateLegendWidth()
-          : (currentWidth < 640 ? 100 : 120) + 2 * legendSizes.padding,
+          : (currentWidth < MOBILE_BREAKPOINT ? 100 : 120) + 2 * legendSizes.padding,
         height: isHorizontal ? legendSizes.itemHeight + 2 * legendSizes.padding : totalLegendHeight,
       };
 
@@ -723,8 +890,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         .attr('fill', isDarkMode ? 'rgba(55, 65, 81, 0.8)' : 'rgba(248, 250, 252, 0.9)')
         .attr('stroke', isDarkMode ? 'rgba(107, 114, 128, 0.3)' : 'rgba(209, 213, 219, 0.3)')
         .attr('stroke-width', 1)
-        .attr('rx', currentWidth < 640 ? 8 : 12)
-        .attr('ry', currentWidth < 640 ? 8 : 12)
+        .attr('rx', currentWidth < MOBILE_BREAKPOINT ? 8 : 12)
+        .attr('ry', currentWidth < MOBILE_BREAKPOINT ? 8 : 12)
         .style('filter', 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))')
         .style('backdrop-filter', 'blur(10px)')
         .style('transition', 'all 0.3s ease');
@@ -1093,6 +1260,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     labelFontSize,
     legendFontSize,
     showPointValues,
+    paddingVersion,
   ]);
 
   return (
