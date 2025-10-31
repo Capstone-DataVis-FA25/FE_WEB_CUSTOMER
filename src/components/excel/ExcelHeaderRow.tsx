@@ -6,11 +6,17 @@ import { selectColumns } from '@/features/excelUI';
 interface ExcelHeaderRowProps {
   mode: 'edit' | 'view';
   onTypeChange: (columnIndex: number, newType: 'text' | 'number' | 'date') => void;
+  allowHeaderEdit?: boolean;
+  highlightedColumns?: Set<number>;
+  showColumnDeselect?: boolean;
 }
 
 const ExcelHeaderRow: React.FC<ExcelHeaderRowProps> = memo(function ExcelHeaderRow({
   mode,
   onTypeChange,
+  allowHeaderEdit = true,
+  highlightedColumns,
+  showColumnDeselect = true,
 }) {
   const columns = useAppSelector(selectColumns);
 
@@ -21,7 +27,15 @@ const ExcelHeaderRow: React.FC<ExcelHeaderRowProps> = memo(function ExcelHeaderR
           #
         </th>
         {columns.map((_, ci) => (
-          <ExcelColumnHeader key={ci} columnIndex={ci} mode={mode} onTypeChange={onTypeChange} />
+          <ExcelColumnHeader
+            key={ci}
+            columnIndex={ci}
+            mode={mode}
+            onTypeChange={onTypeChange}
+            allowHeaderEdit={allowHeaderEdit}
+            isHighlighted={highlightedColumns?.has(ci)}
+            showDeselect={showColumnDeselect}
+          />
         ))}
       </tr>
     </thead>

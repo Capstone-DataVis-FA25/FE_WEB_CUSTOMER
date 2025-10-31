@@ -47,6 +47,11 @@ interface CustomExcelProps {
   onDataChange?: (d: string[][], c: DataHeader[]) => void;
   className?: string;
   mode?: 'edit' | 'view';
+  allowHeaderEdit?: boolean;
+  allowColumnEdit?: boolean;
+  onSorting?: (s: { column: number; direction: 'asc' | 'desc' } | null) => void;
+  highlightHeaderIds?: string[];
+  highlightColumnNames?: string[];
 }
 const DEFAULT_WIDTH = 180;
 
@@ -69,6 +74,11 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   onDataChange,
   className = '',
   mode = 'edit',
+  allowHeaderEdit = true,
+  allowColumnEdit = true,
+  onSorting,
+  highlightHeaderIds,
+  highlightColumnNames,
 }) => {
   // Core state
   const columns = useAppSelector(selectColumns);
@@ -87,6 +97,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   const initializedRef = useRef(false);
 
   const [ready, setReady] = useState(false);
+  // Flag and timestamp to indicate an internal structure change (add/remove row/column)
+  const pendingStructureChangeRef = useRef(false);
+  const lastStructureChangeAtRef = useRef<number>(0);
   // Track last initialized dimensions to detect real Change Data
   const lastInitRowsRef = useRef<number>(0);
   const lastInitColsRef = useRef<number>(0);
@@ -110,6 +123,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     clearExcelErrors,
     setExcelErrors,
   } = useDataset();
+
+  // Debounce timer for propagating onDataChange upstream
+  const onChangeDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync dateFormat to Redux when it changes
   useEffect(() => {
@@ -145,6 +161,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     const initData = initialData.length
       ? initialData
       : DEFAULT_ROWS.map(() => Array(initCols.length).fill(''));
+    // Sync formats to Redux immediately to ensure error messages show correct expected format
+    dispatch(setDateFormat(dateFormat));
+    dispatch(setNumberFormat(numberFormat));
     dispatch(setColumnsRedux(initCols));
     setData(initData);
     dispatch(setFilters(Array(initCols.length).fill('')));
@@ -211,6 +230,17 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     const rowsChanged = incomingRows !== lastInitRowsRef.current;
     const colsChanged = incomingCols !== lastInitColsRef.current;
     if (!rowsChanged && !colsChanged) return;
+    // If the dimension change originated from this component (add/remove),
+    // skip the heavy hard reset to preserve scroll and focus.
+    const now = Date.now();
+    // Skip if flagged or very recent internal change (within 400ms)
+    if (pendingStructureChangeRef.current || now - lastStructureChangeAtRef.current < 400) {
+      pendingStructureChangeRef.current = false;
+      // Update the last known dimensions so we don't loop
+      lastInitRowsRef.current = incomingRows;
+      lastInitColsRef.current = incomingCols;
+      return;
+    }
     // hard reset due to dataset dimensions change
     // Allow init effect to run again
     clearExcelErrors();
@@ -230,6 +260,13 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   useEffect(() => {
     setExcelErrors({ parseErrors: reduxParseErrors || {} });
   }, [reduxParseErrors, setExcelErrors]);
+
+  // Expose sorting changes to parent for chart synchronization
+  useEffect(() => {
+    if (onSorting) {
+      onSorting(sortConfig);
+    }
+  }, [sortConfig, onSorting]);
 
   // Recompute parseErrors when number/date formats or typed column sets change (quiet on name-only changes)
   const prevNumberColsRef = useRef<number[] | null>(null);
@@ -289,6 +326,19 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     }
     dispatch(setParseErrors(nextErrors));
   }, [numberFormat, dateFormat, columns, data, tryConvert, dispatch]);
+
+  // Recompute duplicate/empty column errors whenever column names or count change
+  const prevColSigRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!columns || columns.length === 0) return;
+    const signature = columns.map(c => `${c.name}|${c.type}`).join('||');
+    if (prevColSigRef.current === signature) return;
+    prevColSigRef.current = signature;
+    const { duplicateNames, duplicateColumnIndices, emptyColumnIndices } =
+      validateDuplicateColumns(columns);
+    dispatch(setDuplicateColumns({ duplicateNames, duplicateColumnIndices }));
+    dispatch(setEmptyColumns(emptyColumnIndices));
+  }, [columns, dispatch, validateDuplicateColumns]);
 
   // Unified commit (no history). Backward-compatible with previous call shapes.
   const commit = useCallback(
@@ -358,15 +408,15 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         dispatch(setColumnsRedux(nextCols));
       }
 
-      // Notify parent only on structural changes
-      if (onDataChange && changes.columnsChanged) {
-        if (isLarge) {
-          const fn = onDataChange as unknown as { _timer?: NodeJS.Timeout };
-          if (fn._timer) clearTimeout(fn._timer);
-          fn._timer = setTimeout(() => onDataChange(nextData, nextCols), 150);
-        } else {
-          onDataChange(nextData, nextCols);
-        }
+      // Notify parent on any data or column changes so working dataset stays in sync (debounced)
+      if (onDataChange && (changes.dataChanged || changes.columnsChanged)) {
+        if (onChangeDebounceRef.current) clearTimeout(onChangeDebounceRef.current);
+        onChangeDebounceRef.current = setTimeout(
+          () => {
+            onDataChange(nextData, nextCols);
+          },
+          isLarge ? 150 : 100
+        );
       }
 
       // Revalidate entire sheet for non-keystroke commits
@@ -494,6 +544,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // Add/remove
   const addRow = () => {
     if (mode === 'view') return;
+    pendingStructureChangeRef.current = true;
+    lastStructureChangeAtRef.current = Date.now();
     const nd = [...data, Array(columns.length).fill('')];
     // Adding row changes both data and columns (new row added)
     commit(nd, columns, {
@@ -501,9 +553,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       columnsChanged: false, // Do not notify parent; columns unchanged
       scheduleRevalidate: true,
     });
-    // Select and scroll to the new row
+    // Scroll to the new row (do not auto-select to avoid flashing in delete controls)
     const newIndex = nd.length - 1;
-    dispatch(setSelectedRow(newIndex));
     // Scroll after layout so virtualization has updated
     setTimeout(() => {
       const el = scrollRef.current;
@@ -536,6 +587,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   };
   const addColumn = () => {
     if (mode === 'view') return;
+    pendingStructureChangeRef.current = true;
+    lastStructureChangeAtRef.current = Date.now();
     const nc: DataHeader[] = [
       ...columns,
       {
@@ -570,6 +623,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
 
   const removeRow = (r: number) => {
     if (mode === 'view' || data.length <= 1) return;
+    pendingStructureChangeRef.current = true;
+    lastStructureChangeAtRef.current = Date.now();
     const nd = data.filter((_, i) => i !== r);
     // Removing row changes both data and columns
     commit(nd, columns, {
@@ -578,10 +633,36 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       removedRowIndex: r,
       scheduleRevalidate: true,
     });
+    // Keep selection at the same visual position: select the row that shifted up (same index),
+    // or the last row if we deleted the last one.
+    const nextIndex = Math.min(r, nd.length - 1);
+    if (nextIndex >= 0) {
+      dispatch(setSelectedRow(nextIndex));
+      // Scroll into view after layout updates
+      setTimeout(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const target = el.querySelector(`input[data-cell='${nextIndex}-0']`) as HTMLElement | null;
+        if (target) {
+          const containerRect = el.getBoundingClientRect();
+          const targetRect = target.getBoundingClientRect();
+          const thead = el.querySelector('thead') as HTMLElement | null;
+          const headerH = thead ? thead.getBoundingClientRect().height : 0;
+          const current = el.scrollTop;
+          const offsetWithin = targetRect.top - containerRect.top;
+          const desiredTop = Math.max(0, current + offsetWithin - headerH - 8);
+          el.scrollTo({ top: desiredTop, behavior: 'auto' });
+        }
+      }, 0);
+    } else {
+      dispatch(setSelectedRow(null));
+    }
   };
 
   const removeColumn = (c: number) => {
     if (mode === 'view' || columns.length <= 1) return;
+    pendingStructureChangeRef.current = true;
+    lastStructureChangeAtRef.current = Date.now();
     const nc = columns.filter((_, i) => i !== c);
     const nd = data.map(r => r.filter((_, i) => i !== c));
     dispatch(setSelectedColumn(null));
@@ -738,8 +819,17 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     ? Math.min(sortedFilteredData.length, startIndex + visibleCount)
     : sortedFilteredData.length;
   const rowsToRender = sortedFilteredData.slice(startIndex, endIndex);
-  const topSpacer = startIndex * ROW_HEIGHT;
-  const bottomSpacer = (sortedFilteredData.length - endIndex) * ROW_HEIGHT;
+  const totalRowsCount = sortedFilteredData.length;
+  const topSpacerHeight = isLarge ? startIndex * ROW_HEIGHT : 0;
+  const bottomSpacerHeight = isLarge ? Math.max(0, (totalRowsCount - endIndex) * ROW_HEIGHT) : 0;
+  useEffect(() => {
+    console.log('[CustomExcel] rows debug', {
+      dataLength: data.length,
+      filteredLength: filteredData.length,
+      rowsToRender: rowsToRender.length,
+      isLarge,
+    });
+  }, [data.length, filteredData.length, rowsToRender.length, isLarge]);
 
   // If data length shrinks while scrolled far, clamp scrollTop to keep viewport filled
   useEffect(() => {
@@ -757,6 +847,38 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     columns.reduce((s, c) => s + (c.width || DEFAULT_WIDTH), 0),
     600
   );
+
+  // Compute highlighted columns by matching current column ids, fallback to names when needed
+  const highlightedColumns = useMemo(() => {
+    const out = new Set<number>();
+    // First try IDs if provided
+    if (highlightHeaderIds && highlightHeaderIds.length) {
+      const idSet = new Set<string>(highlightHeaderIds);
+      columns.forEach((c, i) => {
+        if (c?.id && idSet.has(c.id)) out.add(i);
+      });
+    }
+    // If nothing matched by id, try by column name as a fallback
+    if (out.size === 0 && highlightColumnNames && highlightColumnNames.length) {
+      const nameSet = new Set<string>(highlightColumnNames);
+      columns.forEach((c, i) => {
+        if (c?.name && nameSet.has(c.name)) out.add(i);
+      });
+    }
+    return out;
+  }, [columns, highlightHeaderIds, highlightColumnNames]);
+
+  // Version string to force shallow-prop change when highlight set changes
+  const highlightVersion = useMemo(() => {
+    return Array.from(highlightedColumns.values())
+      .sort((a, b) => a - b)
+      .join(',');
+  }, [highlightedColumns]);
+
+  // Read highlightVersion to satisfy lints about unused var in rows; keeps stable prop churn minimal
+  useEffect(() => {
+    void highlightVersion;
+  }, [highlightVersion]);
 
   // ===== Clipboard & Export Helpers =====
   const copyAll = useCallback(() => {
@@ -816,7 +938,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         }
         // (Optional) grow columns if needed
         const colsNeeded = baseCol + Math.max(...rows.map(r => r.length));
-        if (colsNeeded > columns.length) {
+        if (allowColumnEdit && colsNeeded > columns.length) {
           // Add new columns automatically (text type) if paste exceeds width
           const added: DataHeader[] = [];
           for (let ci = columns.length; ci < colsNeeded; ci++) {
@@ -836,13 +958,16 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         }
         // Apply pasted cells
         rows.forEach((prow, ri) => {
-          const tr = next[baseRow + ri];
+          // Clone the target row before mutating to avoid writing into a frozen array
+          const original = next[baseRow + ri] ?? Array(columns.length).fill('');
+          const tr = Array.isArray(original) ? [...original] : Array(columns.length).fill('');
           prow.forEach((val, ci) => {
+            // When column edits are disabled, do not write beyond current width
             if (baseCol + ci < tr.length) {
               tr[baseCol + ci] = val;
             }
           });
-          next[baseRow + ri] = [...tr];
+          next[baseRow + ri] = tr;
         });
         // Commit via helper (columns state may have been updated asynchronously if columns grew)
         commit(next, columns);
@@ -874,20 +999,24 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
             <Button size="sm" onClick={addRow} className="gap-1">
               <Plus size={14} /> Row
             </Button>
-            <Button size="sm" onClick={addColumn} className="gap-1">
-              <Plus size={14} /> Col
-            </Button>
+            {allowColumnEdit && (
+              <Button size="sm" onClick={addColumn} className="gap-1">
+                <Plus size={14} /> Col
+              </Button>
+            )}
             <div className="h-5 w-px bg-gray-300 dark:bg-gray-600" />
             <DeleteRowButton onDelete={deleteSelectedRow} dataLength={data.length} />
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={deleteSelectedColumn}
-              disabled={selectedColumn === null || columns.length <= 1}
-              className="gap-1"
-            >
-              Delete Col {selectedColumn !== null ? `"${columns[selectedColumn]?.name}"` : ''}
-            </Button>
+            {allowColumnEdit && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={deleteSelectedColumn}
+                disabled={selectedColumn === null || columns.length <= 1}
+                className="gap-1"
+              >
+                Delete Col {selectedColumn !== null ? `"${columns[selectedColumn]?.name}"` : ''}
+              </Button>
+            )}
             <div className="h-5 w-px bg-gray-300 dark:bg-gray-600" />
             <Button size="sm" variant="outline" onClick={copyAll} className="gap-1 bg-transparent">
               <Copy size={14} /> Copy
@@ -903,6 +1032,27 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
               Virtualized view: showing {rowsToRender.length} of {filteredData.length} rows
             </span>
           )}
+        </div>
+        <div className="ml-auto flex items-center gap-3 text-xs">
+          <span className="text-gray-600 dark:text-gray-300">Thousand separator:</span>
+          {numberFormat.thousandsSeparator === '' ? (
+            <span
+              className="inline-block w-5 h-5 rounded-sm border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700"
+              title="Empty (no thousands separator)"
+            />
+          ) : (
+            <span className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-mono">
+              {numberFormat.thousandsSeparator}
+            </span>
+          )}
+          <span className="text-gray-600 dark:text-gray-300">Decimal separator:</span>
+          <span className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-mono">
+            {numberFormat.decimalSeparator}
+          </span>
+          <span className="text-gray-600 dark:text-gray-300">Date format:</span>
+          <span className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-mono">
+            {dateFormat}
+          </span>
         </div>
       </div>
 
@@ -924,11 +1074,19 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
             }}
             onPaste={handlePaste}
           >
-            <ExcelHeaderRow mode={mode} onTypeChange={setType} />
+            <ExcelHeaderRow
+              mode={mode}
+              onTypeChange={setType}
+              allowHeaderEdit={allowHeaderEdit}
+              highlightedColumns={highlightedColumns}
+              showColumnDeselect={allowColumnEdit}
+            />
             <tbody>
-              {isLarge && topSpacer > 0 && (
-                <tr style={{ height: topSpacer }}>
-                  <td colSpan={columns.length + 1} />
+              {isLarge && topSpacerHeight > 0 && (
+                <tr>
+                  <td colSpan={columns.length} style={{ padding: 0, border: 'none' }}>
+                    <div style={{ height: topSpacerHeight }} />
+                  </td>
                 </tr>
               )}
               {rowsToRender.map(({ row, i }) => (
@@ -941,11 +1099,15 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
                   onCellChange={handleCellChange}
                   onCellFocus={handleCellFocus}
                   onDataChange={onDataChange}
+                  highlightedColumns={highlightedColumns}
+                  highlightVersion={highlightVersion}
                 />
               ))}
-              {isLarge && bottomSpacer > 0 && (
-                <tr style={{ height: bottomSpacer }}>
-                  <td colSpan={columns.length + 1} />
+              {isLarge && bottomSpacerHeight > 0 && (
+                <tr>
+                  <td colSpan={columns.length} style={{ padding: 0, border: 'none' }}>
+                    <div style={{ height: bottomSpacerHeight }} />
+                  </td>
                 </tr>
               )}
             </tbody>

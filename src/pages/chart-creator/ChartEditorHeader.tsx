@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
@@ -31,6 +31,8 @@ interface ChartEditorHeaderProps {
   onSave: () => void;
   onBack: () => void;
   onOpenDatasetModal: () => void;
+  activeTab?: 'chart' | 'data';
+  onTabChange?: (tab: 'chart' | 'data') => void;
 }
 
 const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
@@ -38,6 +40,8 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
   onSave,
   onBack,
   onOpenDatasetModal,
+  activeTab,
+  onTabChange,
 }) => {
   const { t } = useTranslation();
   const { currentChart, creating } = useCharts();
@@ -115,6 +119,13 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
     } else {
       validateField('description', editableDescription);
     }
+  };
+
+  const [internalTab, setInternalTab] = useState<'chart' | 'data'>('chart');
+  const currentTab = activeTab ?? internalTab;
+  const setTab = (tab: 'chart' | 'data') => {
+    if (onTabChange) onTabChange(tab);
+    else setInternalTab(tab);
   };
 
   return (
@@ -327,19 +338,6 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {mode === 'create' && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onOpenDatasetModal}
-                  className="flex items-center gap-2"
-                >
-                  <Database className="w-4 h-4" />
-                  Select Dataset
-                </Button>
-              </>
-            )}
             <Button
               variant="outline"
               size="sm"
@@ -382,6 +380,57 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                   </>
                 )}
               </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+        <div className="px-6">
+          <div className="flex justify-center">
+            <div className="relative inline-flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setTab('chart')}
+                className={`relative w-28 h-[42px] px-3 text-sm font-medium cursor-pointer transition-colors ${
+                  currentTab === 'chart'
+                    ? 'text-gray-900 dark:text-white'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+                aria-selected={currentTab === 'chart'}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  {t('tab_chart', 'Chart')}
+                </span>
+                {currentTab === 'chart' && (
+                  <motion.div
+                    layoutId="tab-underline"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900 dark:bg-white"
+                  />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab('data')}
+                className={`relative w-28 h-[42px] px-3 text-sm font-medium cursor-pointer transition-colors ${
+                  currentTab === 'data'
+                    ? 'text-gray-900 dark:text-white'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+                aria-selected={currentTab === 'data'}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Database className="w-4 h-4" />
+                  {t('tab_data', 'Data')}
+                </span>
+                {currentTab === 'data' && (
+                  <motion.div
+                    layoutId="tab-underline"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900 dark:bg-white"
+                  />
+                )}
+              </button>
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gray-200 dark:bg-gray-700" />
             </div>
           </div>
         </div>

@@ -6,8 +6,11 @@ import { Send, X, Loader2 } from 'lucide-react';
 import chatbotLottie from '@/assets/lottie/chatbot_model.json';
 import { useAiChat } from '@/features/ai/useAiChat';
 import Lottie from 'lottie-react';
+import { useLocation } from 'react-router-dom';
 
 const ChatBot: React.FC = () => {
+  const { pathname } = useLocation();
+  if (pathname.startsWith('/chart-editor')) return null;
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);

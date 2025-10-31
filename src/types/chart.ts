@@ -121,6 +121,33 @@ export interface AxisConfig {
   seriesConfigs?: SeriesConfig[];
 }
 
+export type DataBoundField = 'xAxisKey' | 'seriesConfigs' | 'labelKey' | 'valueKey';
+
+export const CHART_DATA_BINDING_KEYS: Record<MainChartConfig['chartType'], DataBoundField[]> = {
+  line: ['xAxisKey', 'seriesConfigs'],
+  bar: ['xAxisKey', 'seriesConfigs'],
+  area: ['xAxisKey', 'seriesConfigs'],
+  scatter: ['xAxisKey', 'seriesConfigs'],
+  pie: ['labelKey', 'valueKey'],
+  donut: ['labelKey', 'valueKey'],
+};
+
+// Path-based definition that reflects actual nesting
+export type DataBindingPath =
+  | 'axisConfigs.xAxisKey'
+  | 'axisConfigs.seriesConfigs'
+  | 'config.labelKey'
+  | 'config.valueKey';
+
+export const CHART_DATA_BINDING_PATHS: Record<MainChartConfig['chartType'], DataBindingPath[]> = {
+  line: ['axisConfigs.xAxisKey', 'axisConfigs.seriesConfigs'],
+  bar: ['axisConfigs.xAxisKey', 'axisConfigs.seriesConfigs'],
+  area: ['axisConfigs.xAxisKey', 'axisConfigs.seriesConfigs'],
+  scatter: ['axisConfigs.xAxisKey', 'axisConfigs.seriesConfigs'],
+  pie: ['config.labelKey', 'config.valueKey'],
+  donut: ['config.labelKey', 'config.valueKey'],
+};
+
 // Series configuration interface for Data Series management
 export interface SeriesConfig {
   id: string;

@@ -51,6 +51,21 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
     }
   }, [open, currentDatasetId, datasets.length, getDatasets, hasLoadedOnce]);
 
+  // Auto-scroll to the current/selected dataset item when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    const targetId = selectedDatasetId || currentDatasetId;
+    if (!targetId) return;
+    // Allow content to render first
+    const timer = setTimeout(() => {
+      const el = document.getElementById(targetId);
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'auto', block: 'center' });
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [open, selectedDatasetId, currentDatasetId, datasets.length]);
+
   const handleConfirm = () => {
     if (selectedDatasetId) {
       const selectedDataset = datasets.find(ds => ds.id === selectedDatasetId);
