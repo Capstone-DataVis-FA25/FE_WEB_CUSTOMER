@@ -210,6 +210,39 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     }
   };
 
+  // Small helper: compute responsive margins (extracted to improve readability)
+  const computeResponsiveMargin = (
+    currentWidth: number,
+    baseMargin: { top: number; right: number; bottom: number; left: number }
+  ) => {
+    const responsiveMargin = {
+      top: currentWidth < 640 ? baseMargin.top * 0.8 : baseMargin.top,
+      right: currentWidth < 640 ? baseMargin.right * 0.7 : baseMargin.right,
+      bottom: currentWidth < 640 ? baseMargin.bottom * 0.8 : baseMargin.bottom,
+      left: currentWidth < 640 ? baseMargin.left * 0.8 : baseMargin.left,
+    };
+
+    // Reserve space for legend when positioned top/bottom to avoid overlap (matching LineChart behavior)
+    if (showLegend && (legendPosition === 'top' || legendPosition === 'bottom')) {
+      const isMobile = currentWidth < 640;
+      const isTablet = currentWidth < 1024;
+      const itemHeight = isMobile ? 18 : 20;
+      const padding = isMobile ? 8 : 10;
+      const legendBlock = itemHeight + padding * 2;
+      const xLabelSpacing =
+        xAxisLabel && showAxisLabels ? (isMobile ? 30 : isTablet ? 35 : 40) : isMobile ? 15 : 20;
+
+      if (legendPosition === 'top') {
+        responsiveMargin.top += legendBlock + 10;
+      } else {
+        const minBottom = isMobile ? 100 : 110;
+        responsiveMargin.bottom = Math.max(baseMargin.bottom * 2.0, minBottom) + xLabelSpacing;
+      }
+    }
+
+    return responsiveMargin;
+  };
+
   // Helper functions for tooltip management (matching LineChart implementation)
   const clearTooltipTimeout = () => {
     if (tooltipTimeoutRef.current) {
@@ -348,12 +381,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     d3.select(svgRef.current).selectAll('*').remove();
     const svg = d3.select(svgRef.current);
 
-    const responsiveMargin = {
-      top: currentWidth < 640 ? margin.top * 0.8 : margin.top,
-      right: currentWidth < 640 ? margin.right * 0.7 : margin.right,
-      bottom: currentWidth < 640 ? margin.bottom * 0.8 : margin.bottom,
-      left: currentWidth < 640 ? margin.left * 0.8 : margin.left,
-    };
+    const responsiveMargin = computeResponsiveMargin(currentWidth, margin);
 
     // Calculate legend height for top/bottom positioning
     const isMobile = currentWidth < 640;

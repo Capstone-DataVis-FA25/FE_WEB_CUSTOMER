@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import Routers from '@/router/routers';
+import { useDataset } from '@/features/dataset/useDataset';
 import type { ChartCategory, ChartTemplate } from '@/types/chart-gallery-types';
 import ChartTemplateCard from './ChartTemplateCard';
 
@@ -58,6 +59,19 @@ export default function ChooseTemplateTab() {
 
   // Use local state instead of location state
   const datasetId = currentDatasetId;
+
+  // Dataset hook - keep selection in global store so it persists across navigation
+  const { currentDataset, getDatasetById } = useDataset();
+
+  // Sync local display state from global currentDataset so selection persists when navigating back
+  useEffect(() => {
+    if (currentDataset && currentDataset.id) {
+      // Only update if local state differs to avoid overwriting selection in dialog flows
+      if (currentDatasetId !== currentDataset.id) setCurrentDatasetId(currentDataset.id);
+      if (currentDatasetName !== currentDataset.name)
+        setCurrentDatasetName(currentDataset.name || '');
+    }
+  }, [currentDataset, currentDatasetId, currentDatasetName]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<ChartCategory[]>([]);
@@ -90,6 +104,15 @@ export default function ChooseTemplateTab() {
       // Update current dataset state
       setCurrentDatasetId(selectedDatasetId);
       setCurrentDatasetName(selectedDatasetName);
+
+      // Also populate global currentDataset so selection persists across pages
+      if (selectedDatasetId) {
+        try {
+          await getDatasetById(selectedDatasetId);
+        } catch (e) {
+          // ignore - getDatasetById will set errors in store if necessary
+        }
+      }
 
       // If we have a template selected, continue with it
       if (selectedTemplate) {

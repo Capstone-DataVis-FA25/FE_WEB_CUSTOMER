@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
-import ChartPreview from '@/components/charts/preview/ChartPreview';
+import ChartPreview from '@/components/charts/gallery-chart-preview/ChartPreview';
 import type { ChartTemplate } from '@/types/chart-gallery-types';
 
 interface ChartTemplateCardProps {

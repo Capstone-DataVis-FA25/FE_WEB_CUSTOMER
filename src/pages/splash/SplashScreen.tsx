@@ -16,7 +16,7 @@ export default function SplashScreen({ onDone }: SplashScreenProps) {
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 90) return prev;
-        return prev + Math.random() * 30;
+        return Math.min(prev + Math.random() * 30, 100);
       });
     }, 300);
 

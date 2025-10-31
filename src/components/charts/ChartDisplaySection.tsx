@@ -20,9 +20,6 @@ const ChartDisplaySection: React.FC = () => {
   const { chartData, chartConfig, currentChartType: chartType } = useChartEditorRead();
   const { currentDataset } = useDataset();
 
-  console.log('chartType 1234:', chartType);
-  console.log('chartConfig 1234: ', chartConfig);
-
   // Helper: Map DataHeader ID to name
   const dataHeaders = currentDataset?.headers || [];
   const getHeaderName = (id: string) => {
@@ -320,7 +317,9 @@ const ChartDisplaySection: React.FC = () => {
               height: safeChartConfig.height,
               margin: safeChartConfig.margin,
               xAxisKey: xAxisKeyName,
+              // Support multiple series: pass all visible series as yAxisKeys
               yAxisKey: yKey,
+              yAxisKeys: yAxisKeysNames as string[],
 
               // Optional: colorKey for grouping by category
               colorKey: scatterConfig.colorKey, // Should be a column name from dataset
@@ -330,6 +329,13 @@ const ChartDisplaySection: React.FC = () => {
 
               // Colors
               colors: colors,
+              // Series display names mapping
+              seriesNames: Object.fromEntries(
+                (axisConfigs.seriesConfigs || []).map((series: any) => [
+                  getHeaderName(series.dataColumn),
+                  series.name,
+                ])
+              ),
 
               // Title and labels
               title: safeChartConfig.title,

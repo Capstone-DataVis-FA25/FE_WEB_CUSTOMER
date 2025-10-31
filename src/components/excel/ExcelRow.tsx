@@ -13,6 +13,8 @@ interface ExcelRowProps {
   onCellChange: (rowIndex: number, columnIndex: number, newValue: string) => void;
   onCellFocus: (rowIndex: number, columnIndex: number) => void;
   onDataChange?: (data: string[][], columns: any[]) => void;
+  highlightedColumns?: Set<number>;
+  highlightVersion?: string;
 }
 
 const ExcelRow = memo(
@@ -24,6 +26,8 @@ const ExcelRow = memo(
     onCellChange,
     onCellFocus,
     onDataChange,
+    highlightedColumns,
+    highlightVersion,
   }: ExcelRowProps) {
     const isSelected = useAppSelector(selectIsRowSelected(rowIndex));
     const dispatch = useAppDispatch();
@@ -33,15 +37,15 @@ const ExcelRow = memo(
       renderCountRef.current += 1;
     }, []);
 
-    useEffect(() => {
-      console.log('ExcelRow render', {
-        rowIndex,
-        rowLength: rowData.length,
-        columnsLength,
-        isSelected,
-        renderCount: renderCountRef.current,
-      });
-    }, [rowIndex, rowData, columnsLength, isSelected]);
+    // useEffect(() => {
+    //   console.log('ExcelRow render', {
+    //     rowIndex,
+    //     rowLength: rowData.length,
+    //     columnsLength,
+    //     isSelected,
+    //     renderCount: renderCountRef.current,
+    //   });
+    // }, [rowIndex, rowData, columnsLength, isSelected]);
 
     // Reset both row and column selection when data changes
     useEffect(() => {
@@ -65,14 +69,16 @@ const ExcelRow = memo(
 
     return (
       <tr
-        className={`hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+        className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
           isSelected ? 'bg-blue-100 dark:bg-blue-900/50' : ''
         }`}
-        onClick={handleRowClick}
       >
         {/* Row number cell */}
         <td className="sticky left-0 z-20 bg-gray-100 dark:bg-gray-700 border-r border-b border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-2 text-xs">
-          <div className="flex flex-col items-center min-h-[2rem] justify-between py-1">
+          <div
+            className="flex flex-col items-center min-h-[2rem] justify-between py-1 cursor-pointer"
+            onClick={handleRowClick}
+          >
             <span>{rowIndex + 1}</span>
             {isSelected && (
               <Button size="icon" variant="ghost" onClick={handleDeselect} className="w-4 h-4">
@@ -92,6 +98,7 @@ const ExcelRow = memo(
             mode={mode}
             onCellChange={onCellChange}
             onCellFocus={onCellFocus}
+            isHighlighted={highlightedColumns?.has(columnIndex)}
           />
         ))}
       </tr>
@@ -105,7 +112,9 @@ const ExcelRow = memo(
       prevProps.onCellChange === nextProps.onCellChange &&
       prevProps.onCellFocus === nextProps.onCellFocus &&
       prevProps.onDataChange === nextProps.onDataChange &&
-      prevProps.rowData === nextProps.rowData
+      prevProps.rowData === nextProps.rowData &&
+      prevProps.highlightedColumns === nextProps.highlightedColumns &&
+      prevProps.highlightVersion === nextProps.highlightVersion
     );
   }
 );

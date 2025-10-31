@@ -11,22 +11,27 @@ export type DataType = 'string' | 'number' | 'date' | 'text';
 // Axis type
 export type AxisType = 'x' | 'y';
 
+// Role type for non-Cartesian charts (e.g., Pie, Donut)
+export type RoleType = 'label' | 'value';
+
 /**
  * Chart type validation rules
  * Defines which data types are acceptable for X and Y axes for each chart type
  */
-export const CHART_VALIDATION_RULES: Record<
-  ChartType,
-  {
-    xAxis: {
-      allowedTypes: DataType[];
-      description: string;
-    };
-    yAxis: {
-      allowedTypes: DataType[];
-      description: string;
-    };
-  }
+export const CHART_VALIDATION_RULES: Partial<
+  Record<
+    ChartType,
+    {
+      xAxis: {
+        allowedTypes: DataType[];
+        description: string;
+      };
+      yAxis: {
+        allowedTypes: DataType[];
+        description: string;
+      };
+    }
+  >
 > = {
   [ChartType.Line]: {
     xAxis: {
@@ -60,13 +65,65 @@ export const CHART_VALIDATION_RULES: Record<
   },
   [ChartType.Scatter]: {
     xAxis: {
-      allowedTypes: ['number', 'date', 'string', 'text'],
-      description:
-        'X-axis can be number (continuous), date/time (timeline), or string (categorical)',
+      allowedTypes: ['number'],
+      description: 'X-axis must be numeric (continuous) for scatter charts',
     },
     yAxis: {
       allowedTypes: ['number'],
       description: 'Y-axis must be numeric values',
+    },
+  },
+  [ChartType.Pie]: {
+    xAxis: {
+      allowedTypes: [],
+      description: '',
+    },
+    yAxis: {
+      allowedTypes: [],
+      description: '',
+    },
+  },
+  [ChartType.Donut]: {
+    xAxis: {
+      allowedTypes: [],
+      description: '',
+    },
+    yAxis: {
+      allowedTypes: [],
+      description: '',
+    },
+  },
+};
+
+/**
+ * Role-based validation for charts that do not use x/y axes
+ * Keyed by chart type name (lowercase) to avoid hard enum coupling.
+ */
+export const CHART_ROLE_VALIDATION_RULES: Record<
+  string,
+  {
+    label: { allowedTypes: DataType[]; description: string };
+    value: { allowedTypes: DataType[]; description: string };
+  }
+> = {
+  pie: {
+    label: {
+      allowedTypes: ['string', 'text', 'date'],
+      description: 'Label should be categorical or date text',
+    },
+    value: {
+      allowedTypes: ['number'],
+      description: 'Value must be numeric',
+    },
+  },
+  donut: {
+    label: {
+      allowedTypes: ['string', 'text', 'date'],
+      description: 'Label should be categorical or date text',
+    },
+    value: {
+      allowedTypes: ['number'],
+      description: 'Value must be numeric',
     },
   },
 };
@@ -99,20 +156,28 @@ export const isDataTypeValidForAxis = (
 /**
  * Convert chart type string to enum key
  */
-const getChartTypeKey = (chartType: ChartType | string): ChartType => {
-  if (typeof chartType === 'object') return chartType; // Already enum
+export const getChartTypeKey = (chartType: ChartType | string): ChartType => {
+  // If caller passed the enum value directly (number), return it
+  if (typeof chartType === 'number') return chartType as ChartType;
 
-  // Map string values to enum
-  switch (chartType.toLowerCase()) {
-    case 'line':
-      return ChartType.Line;
-    case 'bar':
-      return ChartType.Bar;
-    case 'area':
-      return ChartType.Area;
-    default:
-      return ChartType.Line; // Default fallback
+  // If it's a string, map common names to enum
+  if (typeof chartType === 'string') {
+    switch (chartType.toLowerCase()) {
+      case 'line':
+        return ChartType.Line;
+      case 'bar':
+        return ChartType.Bar;
+      case 'area':
+        return ChartType.Area;
+      case 'scatter':
+        return ChartType.Scatter;
+      default:
+        return ChartType.Line; // Default fallback
+    }
   }
+
+  // Fallback - return Line
+  return ChartType.Line;
 };
 
 /**

@@ -51,6 +51,21 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
     }
   }, [open, currentDatasetId, datasets.length, getDatasets, hasLoadedOnce]);
 
+  // Auto-scroll to the current/selected dataset item when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    const targetId = selectedDatasetId || currentDatasetId;
+    if (!targetId) return;
+    // Allow content to render first
+    const timer = setTimeout(() => {
+      const el = document.getElementById(targetId);
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'auto', block: 'center' });
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [open, selectedDatasetId, currentDatasetId, datasets.length]);
+
   const handleConfirm = () => {
     if (selectedDatasetId) {
       const selectedDataset = datasets.find(ds => ds.id === selectedDatasetId);
@@ -63,12 +78,6 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
   const handleCancel = () => {
     onOpenChange(false);
     setSelectedDatasetId(currentDatasetId || '');
-  };
-
-  const handleSkip = () => {
-    onSelectDataset('', ''); // Pass empty string to indicate skip
-    onOpenChange(false);
-    setSelectedDatasetId('');
   };
 
   const handleRefresh = () => {
@@ -221,14 +230,6 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
             className="rounded-lg pointer-events-auto"
           >
             Cancel
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleSkip}
-            className="rounded-lg pointer-events-auto"
-          >
-            Skip & Use Sample Data
           </Button>
           <Button
             type="button"

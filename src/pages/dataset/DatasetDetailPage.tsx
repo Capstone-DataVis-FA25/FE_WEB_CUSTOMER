@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SlideInUp } from '@/theme/animation';
+import { formatDateUsingDayjs } from '@/utils/dateFormat';
 import {
   ArrowLeft,
   Trash2,
@@ -669,24 +670,7 @@ const DatasetDetailPage: React.FC = () => {
 
     const formatDateCustom = (val: string): string => {
       if (!val) return '';
-      // attempt to parse YYYY-MM-DD or ISO
-      let y: string, m: string, d: string;
-      const isoMatch = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (isoMatch) {
-        y = isoMatch[1];
-        m = isoMatch[2];
-        d = isoMatch[3];
-      } else {
-        const dt = new Date(val);
-        if (isNaN(dt.getTime())) return val;
-        y = String(dt.getFullYear());
-        m = String(dt.getMonth() + 1).padStart(2, '0');
-        d = String(dt.getDate()).padStart(2, '0');
-      }
-      let out = dateFmt;
-      // Replace tokens (order matters)
-      out = out.replace(/YYYY/g, y).replace(/MM/g, m).replace(/DD/g, d);
-      return out;
+      return formatDateUsingDayjs(val, dateFmt);
     };
 
     bodyRows = rows.map(r =>

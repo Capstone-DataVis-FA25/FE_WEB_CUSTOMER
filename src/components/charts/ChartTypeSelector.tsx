@@ -139,6 +139,12 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
     if (chartConfig) {
       const mergedConfig = mergeConfigs(chartConfig, newChartType);
       setChartConfig(mergedConfig);
+    } else {
+      // If there's no existing config (e.g. fresh create flow), immediately set a
+      // sensible default config for the selected chart type so downstream UI does
+      // not observe a transient null `chartConfig` value.
+      const defaultConfig = getDefaultChartConfig(newChartType);
+      setChartConfig(defaultConfig);
     }
 
     setCurrentChartType(newChartType);

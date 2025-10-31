@@ -32,7 +32,7 @@ import {
   repeatableVariants,
   viewportConfigs,
 } from '@/theme/animation/animation.config';
-import { datasets } from '@/components/charts/data/data';
+import { datasets } from '@/components/charts/data/home-page-chart-data';
 import Lottie from 'lottie-react';
 import ChartAnimationData from '../../assets/lottie/line-chart.json';
 import BannerVideo from '../../assets/videos/video_demo.mp4';
@@ -41,6 +41,11 @@ import { useTranslation } from 'react-i18next';
 import LineChartPage from '@/components/charts/page.example/LineChartPage';
 import BarChartPage from '@/components/charts/page.example/BarChartPage';
 import AreaChartPage from '@/components/charts/page.example/AreaChartPage';
+import BarPreview from '@/components/charts/home-chart-preview/BarPreview';
+import LinePreview from '@/components/charts/home-chart-preview/LinePreview';
+import AreaPreview from '@/components/charts/home-chart-preview/AreaPreview';
+import PiePreview from '@/components/charts/home-chart-preview/PiePreview';
+import ScatterPreview from '@/components/charts/home-chart-preview/ScatterPreview';
 import Routers from '@/router/routers';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -185,7 +190,7 @@ const HomePage: React.FC = () => {
     if (chartType.id === 'bar') {
       return (
         <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
-          <ChartComponent />
+          <BarPreview arrayData={dataset} />
         </div>
       );
     }
@@ -193,7 +198,7 @@ const HomePage: React.FC = () => {
     if (chartType.id === 'line') {
       return (
         <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
-          <ChartComponent />
+          <LinePreview arrayData={dataset} />
         </div>
       );
     }
@@ -201,7 +206,7 @@ const HomePage: React.FC = () => {
     if (chartType.id === 'pie') {
       return (
         <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg h-full min-h-[600px] flex items-center justify-center">
-          <ChartComponent />
+          <PiePreview arrayData={dataset} />
         </div>
       );
     }
@@ -209,7 +214,7 @@ const HomePage: React.FC = () => {
     if (chartType.id === 'scatter') {
       return (
         <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
-          <ChartComponent />
+          <ScatterPreview arrayData={dataset} />
         </div>
       );
     }
@@ -217,7 +222,7 @@ const HomePage: React.FC = () => {
     if (chartType.id === 'area') {
       return (
         <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
-          <ChartComponent />
+          <AreaPreview arrayData={dataset} />
         </div>
       );
     }
@@ -229,7 +234,7 @@ const HomePage: React.FC = () => {
             className="w-full h-full flex items-center justify-center"
             style={{ minHeight: 500 }}
           >
-            <ChartComponent />
+            <ChartComponent arrayData={dataset} />
           </div>
         </div>
       );
@@ -238,7 +243,7 @@ const HomePage: React.FC = () => {
     if (chartType.id === 'map') {
       return (
         <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
-          <ChartComponent />
+          <ChartComponent arrayData={dataset} />
         </div>
       );
     }
@@ -246,7 +251,7 @@ const HomePage: React.FC = () => {
     if (chartType.id === 'table') {
       return (
         <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
-          <ChartComponent />
+          <ChartComponent arrayData={dataset} />
         </div>
       );
     }
@@ -519,7 +524,7 @@ const HomePage: React.FC = () => {
                         transition={{ duration: 0.4, ease: 'easeInOut' }}
                         className="w-full min-h-[600px] bg-[#18181b] flex items-center justify-center"
                       >
-                        <div className="w-fit h-fit">{renderChartPreview(selectedChartData)}</div>
+                        <div className="w-full h-full">{renderChartPreview(selectedChartData)}</div>
                       </motion.div>
                     </AnimatePresence>
                   </CardContent>

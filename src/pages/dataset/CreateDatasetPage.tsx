@@ -1,3 +1,5 @@
+'use client';
+
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -28,8 +30,9 @@ import {
   readExcelAsText,
   validateFileSize,
 } from '@/utils/dataProcessors';
+import CleanDatasetWithAI from '@/components/dataset/CleanDatasetWithAi';
 
-type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view';
+type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'cleanDataset' | 'view';
 
 // Inner component that uses the context
 function CreateDatasetPageContent() {
@@ -79,6 +82,37 @@ function CreateDatasetPageContent() {
       setViewMode(mode);
     },
     [setOriginalTextContent, setCurrentParsedData]
+  );
+
+  const handleCleanDatasetComplete = useCallback(
+    (cleanedData: string | any[][]) => {
+      try {
+        // Nếu là CSV string, xử lý như text
+        if (typeof cleanedData === 'string') {
+          handleTextProcess(cleanedData);
+        } else if (Array.isArray(cleanedData)) {
+          // Nếu là matrix (từ Excel), chuyển đổi thành CSV format
+          const csvContent = cleanedData
+            .map(row =>
+              row
+                .map(cell => {
+                  // Escape quotes và wrap nếu cần
+                  const cellStr = String(cell ?? '');
+                  return cellStr.includes(',') || cellStr.includes('"')
+                    ? `"${cellStr.replace(/"/g, '""')}"`
+                    : cellStr;
+                })
+                .join(',')
+            )
+            .join('\n');
+          handleTextProcess(csvContent);
+        }
+        showSuccess('Dữ liệu đã được làm sạch', 'Dữ liệu sẵn sàng để tạo dataset');
+      } catch (error) {
+        showError('Lỗi xử lý dữ liệu', 'Không thể xử lý dữ liệu đã làm sạch');
+      }
+    },
+    [showSuccess, showError]
   );
 
   // Process file content and switch to view mode
@@ -499,9 +533,17 @@ function CreateDatasetPageContent() {
                 <SlideInUp key="text-upload" delay={0.2}>
                   <TextUpload onTextProcess={handleTextProcess} isProcessing={isProcessing} />
                 </SlideInUp>
-              ) : (
+              ) : viewMode === 'sampleData' ? (
                 <SlideInUp key="sample-data" delay={0.2}>
                   <SampleDataUpload onSampleSelect={handleTextProcess} />
+                </SlideInUp>
+              ) : (
+                <SlideInUp key="cleanDataset" delay={0.2}>
+                  <CleanDatasetWithAI
+                    onCleanComplete={handleCleanDatasetComplete}
+                    isProcessing={isProcessing}
+                    onProcessingChange={setIsProcessing}
+                  />
                 </SlideInUp>
               )}
             </div>
