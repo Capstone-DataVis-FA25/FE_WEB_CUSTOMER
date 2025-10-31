@@ -158,16 +158,31 @@ const D3PieChart: React.FC<D3PieChartProps> = ({
       }
 
       // Validate required keys (treat labelKey and valueKey as IDs)
-      const hasValidData = dataToProcess.every(
-        d =>
-          Object.prototype.hasOwnProperty.call(d, labelKey) &&
-          Object.prototype.hasOwnProperty.call(d, valueKey) &&
-          typeof d[valueKey] === 'number' &&
-          !isNaN(d[valueKey] as number)
+      const hasMissingdLabelKey = dataToProcess.every(d =>
+        Object.prototype.hasOwnProperty.call(d, labelKey)
       );
 
-      if (!hasValidData) {
-        setError(`Invalid data: missing or invalid column id '${labelKey}' or '${valueKey}'`);
+      if (!hasMissingdLabelKey) {
+        setError(`Invalid data: missing column id '${labelKey}'`);
+        return [];
+      }
+
+      const hasMissingdValueKey = dataToProcess.every(d =>
+        Object.prototype.hasOwnProperty.call(d, valueKey)
+      );
+
+      if (!hasMissingdValueKey) {
+        setError(`Invalid data: missing column id '${valueKey}'`);
+        return [];
+      }
+
+      const hasValidValues = dataToProcess.every(d => {
+        const num = Number(d[valueKey]); // hoặc parseInt(d[valueKey], 10)
+        return !isNaN(num);
+      });
+
+      if (!hasValidValues) {
+        setError(`Invalid data: column id '${valueKey}' must contain numeric values`);
         return [];
       }
 

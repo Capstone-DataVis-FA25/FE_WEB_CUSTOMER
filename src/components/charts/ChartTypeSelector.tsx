@@ -172,10 +172,10 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6, delay: 0.1 }}
+      transition={{ duration: 0.6, delay: 0.15 }}
       className={`relative z-50 ${className}`}
     >
-      <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-visible">
+      <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-hidden rounded-lg">
         <CardHeader className="pb-3">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <Settings className="h-5 w-5" />
