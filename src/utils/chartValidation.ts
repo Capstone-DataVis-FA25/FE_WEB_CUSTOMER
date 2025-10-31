@@ -5,8 +5,8 @@
 
 import { ChartType } from '@/features/charts/chartTypes';
 
-// Data type from dataset headers
-export type DataType = 'string' | 'number' | 'date' | 'text';
+// Data type from dataset headers (standardized)
+export type DataType = 'text' | 'number' | 'date';
 
 // Axis type
 export type AxisType = 'x' | 'y';
@@ -35,8 +35,8 @@ export const CHART_VALIDATION_RULES: Partial<
 > = {
   [ChartType.Line]: {
     xAxis: {
-      allowedTypes: ['text', 'date', 'string'],
-      description: 'X-axis should be time series or categorical data (text/date)',
+      allowedTypes: ['text', 'date', 'number'],
+      description: 'X-axis can be time series, categorical, or numeric (text/date/number)',
     },
     yAxis: {
       allowedTypes: ['number'],
@@ -45,7 +45,7 @@ export const CHART_VALIDATION_RULES: Partial<
   },
   [ChartType.Bar]: {
     xAxis: {
-      allowedTypes: ['text', 'string'],
+      allowedTypes: ['text', 'date', 'number'],
       description: 'X-axis should be categorical data (text)',
     },
     yAxis: {
@@ -55,7 +55,7 @@ export const CHART_VALIDATION_RULES: Partial<
   },
   [ChartType.Area]: {
     xAxis: {
-      allowedTypes: ['text', 'date', 'string'],
+      allowedTypes: ['text', 'date'],
       description: 'X-axis should be time series or categorical data (text/date)',
     },
     yAxis: {
@@ -108,7 +108,7 @@ export const CHART_ROLE_VALIDATION_RULES: Record<
 > = {
   pie: {
     label: {
-      allowedTypes: ['string', 'text', 'date'],
+      allowedTypes: ['text', 'date'],
       description: 'Label should be categorical or date text',
     },
     value: {
@@ -118,7 +118,7 @@ export const CHART_ROLE_VALIDATION_RULES: Record<
   },
   donut: {
     label: {
-      allowedTypes: ['string', 'text', 'date'],
+      allowedTypes: ['text', 'date'],
       description: 'Label should be categorical or date text',
     },
     value: {
@@ -189,9 +189,10 @@ const normalizeDataType = (dataType: string): string => {
 
   // Map common variations to standard types
   const typeMap: Record<string, string> = {
-    str: 'string',
-    varchar: 'string',
-    char: 'string',
+    str: 'text',
+    varchar: 'text',
+    char: 'text',
+    string: 'text',
     int: 'number',
     integer: 'number',
     float: 'number',
@@ -235,7 +236,7 @@ export const getAllowedDataTypes = (
 ): DataType[] => {
   const chartTypeKey = getChartTypeKey(chartType);
   const rules = CHART_VALIDATION_RULES[chartTypeKey];
-  if (!rules) return ['string', 'number', 'date', 'text']; // Allow all by default
+  if (!rules) return ['text', 'number', 'date']; // Allow all by default (standardized)
 
   return axisType === 'x' ? rules.xAxis.allowedTypes : rules.yAxis.allowedTypes;
 };
