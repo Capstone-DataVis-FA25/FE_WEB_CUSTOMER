@@ -20,7 +20,6 @@ import {
   selectInfoMessage,
   selectSortConfig,
   selectDuplicateColumns,
-  selectEmptyColumns,
   selectParseErrors,
   clearUIState,
   setColumns as setColumnsRedux,
@@ -51,7 +50,6 @@ interface CustomExcelProps {
   allowColumnEdit?: boolean;
   onSorting?: (s: { column: number; direction: 'asc' | 'desc' } | null) => void;
   highlightHeaderIds?: string[];
-  highlightColumnNames?: string[];
 }
 const DEFAULT_WIDTH = 180;
 
@@ -78,7 +76,6 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   allowColumnEdit = true,
   onSorting,
   highlightHeaderIds,
-  highlightColumnNames,
 }) => {
   // Core state
   const columns = useAppSelector(selectColumns);
@@ -156,6 +153,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     // init from incoming props
     const initCols = (initialColumns.length ? initialColumns : DEFAULT_COLS).map(c => ({
       ...c,
+      id: (c as any).id ?? (c as any).headerId ?? undefined,
       width: c.width || DEFAULT_WIDTH,
     }));
     const initData = initialData.length
@@ -254,6 +252,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       initializeFromProps();
     }, 0);
   }, [initialData, initialColumns, dispatch, clearExcelErrors]);
+
+  // Removed internal header metadata sync; parent controls remount via key
 
   // Keep DatasetContext excelErrors map in sync with Redux parseErrors for Create button validation
   const reduxParseErrors = useAppSelector(selectParseErrors);
@@ -625,6 +625,19 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     if (mode === 'view' || data.length <= 1) return;
     pendingStructureChangeRef.current = true;
     lastStructureChangeAtRef.current = Date.now();
+    // Measure the pre-delete visual offset of the row so we can preserve it post-delete
+    let anchorOffset = 0;
+    const containerBefore = scrollRef.current;
+    if (containerBefore) {
+      const beforeEl = containerBefore.querySelector(
+        `input[data-cell='${r}-0']`
+      ) as HTMLElement | null;
+      if (beforeEl) {
+        const containerRect = containerBefore.getBoundingClientRect();
+        const targetRect = beforeEl.getBoundingClientRect();
+        anchorOffset = targetRect.top - containerRect.top;
+      }
+    }
     const nd = data.filter((_, i) => i !== r);
     // Removing row changes both data and columns
     commit(nd, columns, {
@@ -646,11 +659,10 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         if (target) {
           const containerRect = el.getBoundingClientRect();
           const targetRect = target.getBoundingClientRect();
-          const thead = el.querySelector('thead') as HTMLElement | null;
-          const headerH = thead ? thead.getBoundingClientRect().height : 0;
           const current = el.scrollTop;
           const offsetWithin = targetRect.top - containerRect.top;
-          const desiredTop = Math.max(0, current + offsetWithin - headerH - 8);
+          // Preserve the pre-delete visual offset by applying the delta
+          const desiredTop = Math.max(0, current + (offsetWithin - anchorOffset));
           el.scrollTo({ top: desiredTop, behavior: 'auto' });
         }
       }, 0);
@@ -665,6 +677,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     lastStructureChangeAtRef.current = Date.now();
     const nc = columns.filter((_, i) => i !== c);
     const nd = data.map(r => r.filter((_, i) => i !== c));
+    // Determine next convenient selection before state updates
+    const nextColIndex = Math.min(c, nc.length - 1);
+    // Clear selection momentarily to avoid stale highlights during update
     dispatch(setSelectedColumn(null));
     setSortConfig(null);
     // Update columns locally without notifying parent
@@ -683,6 +698,26 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       scheduleRevalidate: true,
     });
     dispatch(setFilters((filters || []).filter((_, i) => i !== c)));
+    // Reselect and scroll into view similar to row deletion behavior
+    if (nextColIndex >= 0 && nc.length > 0) {
+      dispatch(setSelectedColumn(nextColIndex));
+      setTimeout(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        // Try to find a cell in the first row for the target column
+        const target = el.querySelector(
+          `input[data-cell='0-${nextColIndex}']`
+        ) as HTMLElement | null;
+        if (target) {
+          const containerRect = el.getBoundingClientRect();
+          const targetRect = target.getBoundingClientRect();
+          const currentLeft = el.scrollLeft;
+          const offsetWithin = targetRect.left - containerRect.left;
+          const desiredLeft = Math.max(0, currentLeft + offsetWithin - 16);
+          el.scrollTo({ left: desiredLeft, behavior: 'auto' });
+        }
+      }, 0);
+    }
   };
 
   const deleteSelectedRow = (rowIndex: number) => {
@@ -823,12 +858,12 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   const topSpacerHeight = isLarge ? startIndex * ROW_HEIGHT : 0;
   const bottomSpacerHeight = isLarge ? Math.max(0, (totalRowsCount - endIndex) * ROW_HEIGHT) : 0;
   useEffect(() => {
-    console.log('[CustomExcel] rows debug', {
-      dataLength: data.length,
-      filteredLength: filteredData.length,
-      rowsToRender: rowsToRender.length,
-      isLarge,
-    });
+    // console.log('[CustomExcel] rows debug', {
+    //   dataLength: data.length,
+    //   filteredLength: filteredData.length,
+    //   rowsToRender: rowsToRender.length,
+    //   isLarge,
+    // });
   }, [data.length, filteredData.length, rowsToRender.length, isLarge]);
 
   // If data length shrinks while scrolled far, clamp scrollTop to keep viewport filled
@@ -851,22 +886,14 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // Compute highlighted columns by matching current column ids, fallback to names when needed
   const highlightedColumns = useMemo(() => {
     const out = new Set<number>();
-    // First try IDs if provided
     if (highlightHeaderIds && highlightHeaderIds.length) {
       const idSet = new Set<string>(highlightHeaderIds);
       columns.forEach((c, i) => {
         if (c?.id && idSet.has(c.id)) out.add(i);
       });
     }
-    // If nothing matched by id, try by column name as a fallback
-    if (out.size === 0 && highlightColumnNames && highlightColumnNames.length) {
-      const nameSet = new Set<string>(highlightColumnNames);
-      columns.forEach((c, i) => {
-        if (c?.name && nameSet.has(c.name)) out.add(i);
-      });
-    }
     return out;
-  }, [columns, highlightHeaderIds, highlightColumnNames]);
+  }, [columns, highlightHeaderIds]);
 
   // Version string to force shallow-prop change when highlight set changes
   const highlightVersion = useMemo(() => {
@@ -874,6 +901,15 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       .sort((a, b) => a - b)
       .join(',');
   }, [highlightedColumns]);
+
+  // Debug: log highlight resolution details
+  useEffect(() => {
+    console.log('[HighlightDebug][CustomExcel] resolve', {
+      incomingIds: highlightHeaderIds || [],
+      columnIds: columns.map(c => (c as any)?.id ?? (c as any)?.headerId ?? null),
+      highlightedIndices: Array.from(highlightedColumns.values()),
+    });
+  }, [columns, highlightHeaderIds, highlightedColumns]);
 
   // Read highlightVersion to satisfy lints about unused var in rows; keeps stable prop churn minimal
   useEffect(() => {
@@ -1098,7 +1134,6 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
                   mode={mode}
                   onCellChange={handleCellChange}
                   onCellFocus={handleCellFocus}
-                  onDataChange={onDataChange}
                   highlightedColumns={highlightedColumns}
                   highlightVersion={highlightVersion}
                 />

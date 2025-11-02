@@ -23,7 +23,6 @@ interface DataTabProps {
   onSorting?: (s: { column: number; direction: 'asc' | 'desc' } | null) => void;
   datasetName?: string;
   highlightHeaderIds?: string[];
-  highlightColumnNames?: string[];
 }
 
 const ApplyFormats: React.FC<{ nf?: NumberFormat; df?: DateFormat }> = ({ nf, df }) => {
@@ -46,7 +45,6 @@ const DataTab: React.FC<DataTabProps> = ({
   onSorting,
   datasetName,
   highlightHeaderIds,
-  highlightColumnNames,
 }) => {
   // Removed artificial padding rows; render exactly what dataset provides
 
@@ -60,6 +58,26 @@ const DataTab: React.FC<DataTabProps> = ({
       initialDateFormat
     );
   }, [initialData, initialColumns, initialNumberFormat, initialDateFormat]);
+
+  // Stable key to remount grid when headers or highlight inputs change
+  const excelKey = React.useMemo(() => {
+    const colsSig = (initialColumns || [])
+      .map(c => `${c.id ?? ''}|${c.name ?? ''}|${c.type ?? 'text'}`)
+      .join('||');
+    const hlSig = `${(highlightHeaderIds || []).join(',')}`;
+    return `${colsSig}__${hlSig}`;
+  }, [initialColumns, highlightHeaderIds]);
+
+  React.useEffect(() => {
+    console.log('[HighlightDebug][DataTab] excelKey & props', {
+      excelKey,
+      highlightHeaderIds: highlightHeaderIds || [],
+      headers: (initialColumns || []).map(c => ({
+        id: (c as any).id ?? (c as any).headerId,
+        name: c.name,
+      })),
+    });
+  }, [excelKey, highlightHeaderIds, initialColumns]);
 
   return (
     <div className="w-full h-full min-h-0 flex bg-white dark:bg-gray-900">
@@ -88,6 +106,7 @@ const DataTab: React.FC<DataTabProps> = ({
           <DatasetProvider>
             <ApplyFormats nf={initialNumberFormat} df={initialDateFormat} />
             <CustomExcel
+              key={excelKey}
               initialData={formattedData}
               initialColumns={initialColumns}
               allowHeaderEdit={false}
@@ -95,7 +114,6 @@ const DataTab: React.FC<DataTabProps> = ({
               onDataChange={onDataChange}
               onSorting={onSorting}
               highlightHeaderIds={highlightHeaderIds}
-              highlightColumnNames={highlightColumnNames}
             />
           </DatasetProvider>
         ) : (

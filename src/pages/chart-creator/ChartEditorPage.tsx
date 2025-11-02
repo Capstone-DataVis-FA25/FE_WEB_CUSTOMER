@@ -156,48 +156,94 @@ const ChartEditorPage: React.FC = () => {
   // Working dataset from Redux (preferred source for editor)
   const working = useAppSelector(selectWorkingDataset);
 
-  // Derive used header IDs from chart config by mapping names -> ids from dataset headers
-  const { highlightHeaderIds, highlightColumnNames } = React.useMemo(() => {
-    const dsHeaders: any[] = (currentDataset?.headers as any[]) || [];
-    if (!dsHeaders.length || !chartConfig)
-      return { highlightHeaderIds: [] as string[], highlightColumnNames: [] as string[] };
+  // Derive used header IDs from chart config
+  const { highlightHeaderIds } = React.useMemo(() => {
+    if (!chartConfig) return { highlightHeaderIds: [] as string[] };
+    const ids = new Set<string>();
     const nameToId = new Map<string, string>();
     const idSet = new Set<string>();
-    dsHeaders.forEach(h => {
-      if (h?.name && h?.id) nameToId.set(h.name, h.id);
-      if (h?.id) idSet.add(h.id);
-    });
-    const cfg: any = chartConfig;
-    const chartType = cfg?.chartType as keyof typeof CHART_DATA_BINDING_PATHS;
-    const paths = CHART_DATA_BINDING_PATHS[chartType] || [];
-    const names: string[] = [];
-    for (const p of paths) {
-      if (p === 'axisConfigs.xAxisKey') {
-        const x = cfg?.axisConfigs?.xAxisKey;
-        if (x) names.push(x);
-      } else if (p === 'axisConfigs.seriesConfigs') {
-        const series = cfg?.axisConfigs?.seriesConfigs || [];
-        for (const s of series) {
-          if (s?.dataColumn) names.push(s.dataColumn);
+    const collect = (arr?: any[]) => {
+      (arr || []).forEach(h => {
+        if (h?.name && (h?.id || h?.headerId)) {
+          const key = String(h.name).trim().toLowerCase();
+          const val = (h.id ?? h.headerId) as string;
+          if (key && val && !nameToId.has(key)) nameToId.set(key, val);
         }
-      } else if (p === 'config.labelKey') {
-        const label = cfg?.config?.labelKey;
-        if (label) names.push(label);
-      } else if (p === 'config.valueKey') {
-        const value = cfg?.config?.valueKey;
-        if (value) names.push(value);
-      }
-    }
-    // Accept either names or IDs. If token is an existing header.id, keep as-is; otherwise map name->id.
-    const ids = names
-      .map(tok => (idSet.has(tok) ? tok : nameToId.get(tok)))
-      .filter((v): v is string => Boolean(v));
-
-    return {
-      highlightHeaderIds: Array.from(new Set(ids)),
-      highlightColumnNames: Array.from(new Set(names)),
+        const hid = (h?.id ?? h?.headerId) as string | undefined;
+        if (hid) idSet.add(hid);
+      });
     };
-  }, [currentDataset?.headers, chartConfig]);
+    const headersFromDataset = (currentDataset?.headers as any[]) || [];
+    const headersFromWorking = (working?.headers as any[]) || [];
+    const headersFromInitial = excelInitial.initialColumns || [];
+    collect(headersFromDataset);
+    collect(headersFromWorking);
+    collect(headersFromInitial as any[]);
+
+    const visit = (node: any) => {
+      if (!node || typeof node !== 'object') return;
+      if (Array.isArray(node)) {
+        node.forEach(visit);
+        return;
+      }
+      for (const [k, v] of Object.entries(node)) {
+        if (k === 'headerId' && typeof v === 'string' && v) {
+          ids.add(v);
+        } else if (k.endsWith('Key') && typeof v === 'string' && v) {
+          const raw = String(v).trim();
+          const mapped = nameToId.get(raw.toLowerCase());
+          if (mapped) ids.add(mapped);
+          else if (idSet.has(raw)) ids.add(raw);
+        } else if (k === 'dataColumn' && typeof v === 'string' && v) {
+          const raw = String(v).trim();
+          const mapped = nameToId.get(raw.toLowerCase());
+          if (mapped) ids.add(mapped);
+          else if (idSet.has(raw)) ids.add(raw);
+        } else if (k.endsWith('ColumnId') && typeof v === 'string' && v) {
+          const raw = String(v).trim();
+          if (idSet.has(raw)) ids.add(raw);
+        } else if (v && typeof v === 'object') {
+          visit(v);
+        }
+      }
+    };
+    visit(chartConfig);
+    const outAll = Array.from(ids);
+    const out = outAll.filter(id => idSet.has(id));
+    const ax = (chartConfig as any)?.axisConfigs;
+    const ser = Array.isArray(ax?.seriesConfigs) ? ax.seriesConfigs : [];
+    console.log('[HighlightDebug] axis/series inspection', {
+      xAxisKey: ax?.xAxisKey,
+      xAxisKeyMapped:
+        typeof ax?.xAxisKey === 'string'
+          ? nameToId.get(String(ax.xAxisKey).trim().toLowerCase()) ||
+            (idSet.has(String(ax.xAxisKey).trim()) ? String(ax.xAxisKey).trim() : null)
+          : null,
+      seriesConfigs: ser.map((s: any) => ({
+        dataColumn: s?.dataColumn,
+        mapped:
+          typeof s?.dataColumn === 'string'
+            ? nameToId.get(String(s.dataColumn).trim().toLowerCase()) ||
+              (idSet.has(String(s.dataColumn).trim()) ? String(s.dataColumn).trim() : null)
+            : null,
+        headerId: s?.headerId ?? null,
+      })),
+    });
+    console.log('[HighlightDebug] derived ids from chartConfig', {
+      count: out.length,
+      ids: out,
+      rawIds: outAll,
+      nameMapSize: nameToId.size,
+      idSetSize: idSet.size,
+      datasetHeaders: headersFromDataset.map(h => ({ id: h?.id ?? h?.headerId, name: h?.name })),
+      workingHeaders: headersFromWorking.map(h => ({ id: h?.id ?? h?.headerId, name: h?.name })),
+      initialHeaders: (headersFromInitial as any[]).map(h => ({
+        id: h?.id ?? h?.headerId,
+        name: h?.name,
+      })),
+    });
+    return { highlightHeaderIds: out };
+  }, [chartConfig, currentDataset?.headers, working?.headers, excelInitial.initialColumns]);
 
   // Initialize workingDataset after dataset changes (do not reset on config changes)
   useEffect(() => {
@@ -665,7 +711,6 @@ const ChartEditorPage: React.FC = () => {
               onSorting={setGridSort}
               datasetName={currentDataset?.name || ''}
               highlightHeaderIds={highlightHeaderIds}
-              highlightColumnNames={highlightColumnNames}
             />
           </div>
         </motion.div>

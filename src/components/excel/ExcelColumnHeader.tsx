@@ -67,15 +67,15 @@ const ExcelColumnHeader = memo(
     const renderCountRef = useRef(0);
     useEffect(() => {
       renderCountRef.current += 1;
-      console.log('ExcelColumnHeader render', {
-        columnIndex,
-        name: column?.name,
-        type: column?.type,
-        isSelected,
-        isSorting,
-        sortDirection,
-        renderCount: renderCountRef.current,
-      });
+      // console.log('ExcelColumnHeader render', {
+      //   columnIndex,
+      //   name: column?.name,
+      //   type: column?.type,
+      //   isSelected,
+      //   isSorting,
+      //   sortDirection,
+      //   renderCount: renderCountRef.current,
+      // });
     });
 
     const handleHeaderClick = useCallback(() => {
