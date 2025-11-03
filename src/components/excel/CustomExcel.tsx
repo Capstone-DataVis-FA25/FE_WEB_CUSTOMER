@@ -34,7 +34,7 @@ import ValidationDisplay from './ValidationDisplay';
 import { Button } from '@/components/ui/button';
 import * as XLSX from 'xlsx';
 import saveAs from 'file-saver';
-import { Plus, Copy, FileDown } from 'lucide-react';
+import { Plus, Copy, FileDown, RotateCcw } from 'lucide-react';
 // removed unused dropdown menu imports
 
 // =============== Types & Helpers =================
@@ -100,6 +100,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // Track last initialized dimensions to detect real Change Data
   const lastInitRowsRef = useRef<number>(0);
   const lastInitColsRef = useRef<number>(0);
+  // Snapshot of the original dataset (first init or Change Data re-init)
+  const originalColsRef = useRef<DataHeader[] | null>(null);
+  const originalDataRef = useRef<string[][] | null>(null);
   // Redux dispatch and selectors
   const dispatch = useAppDispatch();
   // Only subscribe to selectors that CustomExcel actually needs for its own rendering
@@ -159,6 +162,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     const initData = initialData.length
       ? initialData
       : DEFAULT_ROWS.map(() => Array(initCols.length).fill(''));
+    // Capture original snapshot (deep-ish copy) for Reset
+    originalColsRef.current = initCols.map(c => ({ ...c }));
+    originalDataRef.current = initData.map(r => [...r]);
     // Sync formats to Redux immediately to ensure error messages show correct expected format
     dispatch(setDateFormat(dateFormat));
     dispatch(setNumberFormat(numberFormat));
@@ -969,10 +975,20 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // ===== Clipboard & Export Helpers =====
   const copyAll = useCallback(() => {
     try {
-      const header = columns.map(c => c.name);
-      const body = data.map(r => r.map(v => v ?? ''));
-      const text = [header, ...body].map(row => row.join('\t')).join('\n');
-      void navigator.clipboard.writeText(text);
+      const escapeCSV = (val: unknown): string => {
+        const s = val == null ? '' : String(val);
+        // Escape double quotes by doubling them
+        const escaped = s.replace(/"/g, '""');
+        // If contains comma, quote, or newline, wrap in quotes
+        if (/[",\n]/.test(escaped)) {
+          return `"${escaped}"`;
+        }
+        return escaped;
+      };
+      const header = columns.map(c => escapeCSV(c.name));
+      const body = data.map(r => r.map(v => escapeCSV(v)));
+      const csv = [header, ...body].map(row => row.join(',')).join('\n');
+      void navigator.clipboard.writeText(csv);
     } catch (e) {
       console.error('Copy failed', e);
     }
@@ -991,6 +1007,48 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       console.error('Export failed', e);
     }
   }, [columns, data]);
+
+  // Reset to original dataset snapshot captured on init
+  const handleResetOriginal = useCallback(() => {
+    try {
+      const origCols = originalColsRef.current;
+      const origData = originalDataRef.current;
+      if (!origCols || !origData) {
+        // Fallback if snapshot missing
+        initializeFromProps();
+        return;
+      }
+      clearExcelErrors();
+      dispatch(clearUIState());
+      // Apply originals directly without remount
+      dispatch(setColumnsRedux(origCols.map(c => ({ ...c }))));
+      setData(origData.map(r => [...r]));
+      dispatch(setFilters(Array(origCols.length).fill('')));
+      // Recompute parse errors on the restored sheet
+      const nextErrors: Record<number, number[]> = {};
+      for (let ri = 0; ri < origData.length; ri++) {
+        for (let ci = 0; ci < origCols.length; ci++) {
+          const colType = origCols[ci]?.type ?? 'text';
+          const v = origData[ri]?.[ci] ?? '';
+          const conv = tryConvert(
+            colType as any,
+            ci,
+            ri,
+            v,
+            colType === 'number' ? numberFormat : undefined,
+            colType === 'date' ? dateFormat : undefined
+          );
+          if (!conv.ok) {
+            if (!nextErrors[ri]) nextErrors[ri] = [];
+            nextErrors[ri].push(ci);
+          }
+        }
+      }
+      dispatch(setParseErrors(nextErrors));
+    } catch (e) {
+      console.error('Reset failed', e);
+    }
+  }, [dispatch, clearExcelErrors, initializeFromProps, tryConvert, numberFormat, dateFormat]);
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTableElement>) => {
@@ -1111,6 +1169,14 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         )}
         <Button size="sm" variant="outline" onClick={exportXlsx} className="gap-1 bg-transparent">
           <FileDown size={14} /> Export
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleResetOriginal}
+          className="gap-1 bg-transparent"
+        >
+          <RotateCcw size={14} /> Reset
         </Button>
         <div className="flex-grow text-xs text-gray-500 dark:text-gray-400">
           {isLarge && (

@@ -71,6 +71,87 @@ export const formatNumberString = (raw: string, nf: NumberFormat): string => {
   return `${neg}${withThousands}`;
 };
 
+// ================= Dataset payload helpers =================
+
+export type DatasetCell = string | number | boolean | null;
+
+export interface HeaderLike {
+  name: string;
+  type: string;
+  index: number;
+  data: DatasetCell[];
+}
+
+// Build headers array from parsed page state
+// - currentParsedData: { headers: { name, type }[], data: any[][] }
+// - parsedValues: Record<columnIndex, (string|number|boolean|null|undefined)[]>
+export const buildHeadersFromParsed = (
+  currentParsedData: any,
+  parsedValues: Record<number, (string | number | boolean | null | undefined)[] | undefined>
+): HeaderLike[] => {
+  const headers: HeaderLike[] = [];
+  if (!currentParsedData || !Array.isArray(currentParsedData.headers)) return headers;
+
+  for (let columnIndex = 0; columnIndex < currentParsedData.headers.length; columnIndex++) {
+    const header = currentParsedData.headers[columnIndex];
+    const parsedCol = parsedValues[columnIndex];
+    let columnData: DatasetCell[];
+    if (parsedCol && Array.isArray(parsedCol)) {
+      // Convert undefined to null; for non-text columns also convert '' to null
+      columnData = parsedCol.map(v => {
+        if (header.type !== 'text') {
+          if (v === undefined || v === '') return null;
+        }
+        return v === undefined ? null : (v as DatasetCell);
+      });
+    } else {
+      columnData = (currentParsedData.data || []).map((row: any[]) => {
+        const raw = row?.[columnIndex];
+        if (header.type !== 'text') {
+          return raw === '' || raw === undefined ? null : (raw as DatasetCell);
+        }
+        return (raw ?? null) as DatasetCell;
+      });
+    }
+    headers.push({ name: header.name, type: header.type, index: columnIndex, data: columnData });
+  }
+  return headers;
+};
+
+// Remove fully empty rows anywhere and align column lengths
+// - A row is considered empty if every column is null/''/undefined (text nulls are normalized to '')
+// - For text columns, null/undefined becomes ''
+// - For non-text columns, undefined becomes null
+export const cleanHeadersRemoveEmptyRows = (headers: HeaderLike[]): HeaderLike[] => {
+  if (!headers || headers.length === 0) return headers;
+  const colCount = headers.length;
+  const rowCount = Math.max(...headers.map(h => h.data?.length || 0));
+  const keepIndices: number[] = [];
+  for (let r = 0; r < rowCount; r++) {
+    let allEmpty = true;
+    for (let c = 0; c < colCount; c++) {
+      const h = headers[c];
+      const v = h.data?.[r] as any;
+      const norm = h.type === 'text' ? (v == null ? '' : v) : v;
+      if (!(norm === null || norm === '' || norm === undefined)) {
+        allEmpty = false;
+        break;
+      }
+    }
+    if (!allEmpty) keepIndices.push(r);
+  }
+  return headers.map(h => ({
+    ...h,
+    data: keepIndices.map(i => {
+      const v = h.data?.[i] as any;
+      if (h.type === 'text') return v == null ? '' : (v as DatasetCell);
+      // For number/date: coerce '' and undefined to null
+      if (v === '' || v === undefined) return null;
+      return v as DatasetCell;
+    }),
+  }));
+};
+
 // Map our DateFormat tokens to Day.js-compatible patterns where needed
 const toDayjsPattern = (df: DateFormat): string => {
   if (df === 'DD Month YYYY') return 'DD MMMM YYYY';

@@ -17,6 +17,7 @@ import { useAppDispatch } from '@/store/hooks';
 import { createDatasetThunk } from '@/features/dataset/datasetThunk';
 import { SlideInUp } from '@/theme/animation';
 import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
+import { setSelectedColumn, setSelectedRow } from '@/features/excelUI';
 import {
   getFileDelimiter,
   detectDelimiter,
@@ -29,6 +30,8 @@ import {
   processFileContent,
   readExcelAsText,
   validateFileSize,
+  buildHeadersFromParsed,
+  cleanHeadersRemoveEmptyRows,
 } from '@/utils/dataProcessors';
 import CleanDatasetWithAI from '@/components/dataset/CleanDatasetWithAi';
 
@@ -242,35 +245,9 @@ function CreateDatasetPageContent() {
     }
 
     try {
-      // Transform currentParsedData to headers format for the new API
-      const headers = [];
-
-      if (currentParsedData && currentParsedData.headers.length > 0) {
-        // Use the current working data (includes user modifications)
-        for (let columnIndex = 0; columnIndex < currentParsedData.headers.length; columnIndex++) {
-          const header = currentParsedData.headers[columnIndex];
-
-          // Use parsed values if available for this column, otherwise use original data
-          let columnData: (string | number | boolean | null)[];
-
-          if (parsedValues[columnIndex] && Array.isArray(parsedValues[columnIndex])) {
-            // Use parsed values from the map, converting undefined to null for API compatibility
-            columnData = parsedValues[columnIndex].map(value =>
-              value === undefined ? null : value
-            );
-          } else {
-            // Fallback to original data
-            columnData = currentParsedData.data.map(row => row[columnIndex] || null);
-          }
-
-          headers.push({
-            name: header.name,
-            type: header.type, // Use the actual column type from user's working data
-            index: columnIndex,
-            data: columnData, // This will be the parsed values or original data
-          });
-        }
-      }
+      // Build headers from current parsed state and drop fully empty rows anywhere
+      const builtHeaders = buildHeadersFromParsed(currentParsedData, parsedValues as any);
+      const headers = cleanHeadersRemoveEmptyRows(builtHeaders);
 
       // Prepare the data to send in the new format
       const requestData = {
@@ -370,6 +347,9 @@ function CreateDatasetPageContent() {
   // Handle change data (go back to previous upload method and reset shared state)
   const handleChangeData = useCallback(() => {
     const prevText = originalTextContent;
+    // Clear any row/column selection in the grid when changing data
+    dispatch(setSelectedRow(null));
+    dispatch(setSelectedColumn(null));
     // Reset all shared dataset state back to initial
     resetState();
     // Reset form fields (name/description)
@@ -389,6 +369,7 @@ function CreateDatasetPageContent() {
   }, [
     originalTextContent,
     previousViewMode,
+    dispatch,
     resetState,
     setOriginalTextContent,
     resetForm,
