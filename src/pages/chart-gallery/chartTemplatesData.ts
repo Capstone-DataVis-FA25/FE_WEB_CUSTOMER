@@ -74,6 +74,15 @@ const chartTemplatesData: ChartCategory[] = [
         configuration: { type: 'scatter' },
       },
       {
+        id: 'cycleplot-advanced',
+        name: 'Cycle Plot',
+        description:
+          'Compare cyclical patterns across multiple periods (e.g., monthly trends by year)',
+        type: 'cycleplot',
+        category: 'advanced',
+        configuration: { type: 'cycleplot' },
+      },
+      {
         id: 'heatmap-advanced',
         name: 'Heatmap',
         description: 'Specialized heatmap chart',

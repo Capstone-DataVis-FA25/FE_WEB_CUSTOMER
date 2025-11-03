@@ -36,7 +36,6 @@ import { selectWorkingDataset } from '@/features/chartEditor/chartEditorSelector
 import { clearCurrentChartNotes } from '@/features/chartNotes/chartNoteSlice';
 import { useChartEditor } from '@/features/chartEditor';
 import type { MainChartConfig } from '@/types/chart';
-import { CHART_DATA_BINDING_PATHS } from '@/types/chart';
 import ChartEditorHeader from './ChartEditorHeader';
 import { resetBindings } from '@/utils/chartBindings';
 
@@ -660,7 +659,10 @@ const ChartEditorPage: React.FC = () => {
   }, []);
 
   // Loading state
-  if (isDatasetLoading || isChartLoading) {
+  // Show full-page loading only when chart is loading, or when dataset is loading
+  // AND the dataset selection dialog is not open. This prevents the dialog's
+  // internal fetch from blocking the entire page.
+  if (isChartLoading || (isDatasetLoading && !showDatasetModal)) {
     return (
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
         <div className="text-center">

@@ -358,6 +358,102 @@ const ChartIcon: React.FC<ChartIconProps> = ({ type, className = '', size = 120 
           </svg>
         );
 
+      case 'cycleplot':
+        return (
+          <svg viewBox="0 0 120 80" className={`w-full h-full ${className}`}>
+            {/* Grid lines */}
+            <defs>
+              <pattern id="cyclePlotGrid" width="20" height="16" patternUnits="userSpaceOnUse">
+                <path
+                  d="M 20 0 L 0 0 0 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="0.5"
+                  opacity="0.2"
+                />
+              </pattern>
+            </defs>
+            <rect width="120" height="80" fill="url(#cyclePlotGrid)" />
+
+            {/* Axes */}
+            <line
+              x1="15"
+              y1="65"
+              x2="105"
+              y2="65"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              opacity="0.6"
+            />
+            <line
+              x1="15"
+              y1="65"
+              x2="15"
+              y2="15"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              opacity="0.6"
+            />
+
+            {/* Multiple cycle lines (3 cycles showing pattern comparison) */}
+            {/* Cycle 1 - 2021 */}
+            <path
+              d="M 20 50 L 30 48 L 40 45 L 50 42 L 60 40 L 70 38 L 80 35 L 90 33 L 100 30"
+              fill="none"
+              stroke="#3b82f6"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.8"
+            />
+            {[20, 30, 40, 50, 60, 70, 80, 90, 100].map((x, i) => (
+              <circle key={`c1-${i}`} cx={x} cy={50 - i * 2.5} r="2" fill="#3b82f6" opacity="0.8" />
+            ))}
+
+            {/* Cycle 2 - 2022 */}
+            <path
+              d="M 20 55 L 30 52 L 40 48 L 50 44 L 60 38 L 70 34 L 80 30 L 90 28 L 100 25"
+              fill="none"
+              stroke="#10b981"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.8"
+            />
+            {[20, 30, 40, 50, 60, 70, 80, 90, 100].map((x, i) => (
+              <circle key={`c2-${i}`} cx={x} cy={55 - i * 3.3} r="2" fill="#10b981" opacity="0.8" />
+            ))}
+
+            {/* Cycle 3 - 2023 */}
+            <path
+              d="M 20 58 L 30 54 L 40 49 L 50 43 L 60 36 L 70 30 L 80 26 L 90 23 L 100 20"
+              fill="none"
+              stroke="#f59e0b"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.8"
+            />
+            {[20, 30, 40, 50, 60, 70, 80, 90, 100].map((x, i) => (
+              <circle key={`c3-${i}`} cx={x} cy={58 - i * 4.2} r="2" fill="#f59e0b" opacity="0.8" />
+            ))}
+
+            {/* Period markers (representing months/quarters on X-axis) */}
+            {[20, 30, 40, 50, 60, 70, 80, 90, 100].map((x, i) => (
+              <line
+                key={`marker-${i}`}
+                x1={x}
+                y1="65"
+                x2={x}
+                y2="67"
+                stroke="currentColor"
+                strokeWidth="1"
+                opacity="0.4"
+              />
+            ))}
+          </svg>
+        );
+
       case 'heatmap':
         return (
           <svg viewBox="0 0 120 80" className={`w-full h-full ${className}`}>

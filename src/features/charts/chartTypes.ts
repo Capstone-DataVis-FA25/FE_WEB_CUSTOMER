@@ -35,6 +35,7 @@ export enum ChartType {
   Scatter = 'scatter',
   Pie = 'pie',
   Donut = 'donut',
+  CyclePlot = 'cycleplot',
 }
 
 // Chart configuration interfaces
