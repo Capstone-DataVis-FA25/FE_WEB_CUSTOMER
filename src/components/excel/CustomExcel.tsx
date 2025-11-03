@@ -780,6 +780,56 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     return out;
   }, [deferredFilteredData, sortConfig, columns]);
 
+  // In view mode, also persist sorting to the base dataset so charts use the same order
+  useEffect(() => {
+    if (mode !== 'view') return;
+    if (!sortConfig) return;
+    const { column, direction } = sortConfig;
+    const type = columns[column]?.type ?? 'text';
+    // Build sorted copy of the entire base data (not filtered)
+    const baseIndexed = data.map((row, i) => ({ row, i }));
+    const sorted = [...baseIndexed].sort((a, b) => {
+      const aVal = a.row[column] || '';
+      const bVal = b.row[column] || '';
+      if (!aVal && !bVal) return 0;
+      if (!aVal) return direction === 'asc' ? 1 : -1;
+      if (!bVal) return direction === 'asc' ? -1 : 1;
+      if (type === 'number') {
+        const aNum = Number.parseFloat(aVal) || 0;
+        const bNum = Number.parseFloat(bVal) || 0;
+        return direction === 'asc' ? aNum - bNum : bNum - aNum;
+      }
+      if (type === 'date') {
+        const aDate = new Date(aVal);
+        const bDate = new Date(bVal);
+        const aT = aDate.getTime();
+        const bT = bDate.getTime();
+        if (Number.isNaN(aT) && Number.isNaN(bT)) return 0;
+        if (Number.isNaN(aT)) return direction === 'asc' ? 1 : -1;
+        if (Number.isNaN(bT)) return direction === 'asc' ? -1 : 1;
+        return direction === 'asc' ? aT - bT : bT - aT;
+      }
+      return direction === 'asc'
+        ? String(aVal).toLowerCase().localeCompare(String(bVal).toLowerCase())
+        : String(bVal).toLowerCase().localeCompare(String(aVal).toLowerCase());
+    });
+    const nextData = sorted.map(s => s.row);
+    // Skip commit if order is unchanged
+    let changed = false;
+    for (let i = 0; i < nextData.length; i++) {
+      if (nextData[i] !== data[i]) {
+        changed = true;
+        break;
+      }
+    }
+    if (!changed) return;
+    commit(nextData, columns, {
+      dataChanged: true,
+      columnsChanged: false,
+      scheduleRevalidate: false,
+    });
+  }, [mode, sortConfig, columns, data, commit]);
+
   // Virtualization calculations: robustly measure visible height
   useEffect(() => {
     const el = scrollRef.current;

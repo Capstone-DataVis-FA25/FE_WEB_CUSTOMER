@@ -109,6 +109,7 @@ const DataTab: React.FC<DataTabProps> = ({
               key={excelKey}
               initialData={formattedData}
               initialColumns={initialColumns}
+              mode="view"
               allowHeaderEdit={false}
               allowColumnEdit={false}
               onDataChange={onDataChange}

@@ -175,7 +175,7 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
       transition={{ duration: 0.6, delay: 0.15 }}
       className={`relative z-50 ${className}`}
     >
-      <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-hidden rounded-lg">
+      <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl rounded-lg">
         <CardHeader className="pb-3">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -190,7 +190,7 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
                 <div className="flex items-center gap-2 min-h-[20px]">{renderSelectedValue()}</div>
               </SelectTrigger>
 
-              <SelectContent>
+              <SelectContent className="z-[60]">
                 {chartTypeOptions.map(option => {
                   const IconComponent = option.icon;
                   return (

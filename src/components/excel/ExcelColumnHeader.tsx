@@ -215,24 +215,22 @@ const ExcelColumnHeader = memo(
             </span>
           )}
 
-          {mode === 'edit' && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0 hover:bg-gray-300 dark:hover:bg-gray-600"
-              onClick={handleSort}
-            >
-              {isSorting ? (
-                sortDirection === 'asc' ? (
-                  <ArrowUp size={12} />
-                ) : (
-                  <ArrowDown size={12} />
-                )
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 w-6 p-0 hover:bg-gray-300 dark:hover:bg-gray-600"
+            onClick={handleSort}
+          >
+            {isSorting ? (
+              sortDirection === 'asc' ? (
+                <ArrowUp size={12} />
               ) : (
-                <ArrowUpDown size={12} />
-              )}
-            </Button>
-          )}
+                <ArrowDown size={12} />
+              )
+            ) : (
+              <ArrowUpDown size={12} />
+            )}
+          </Button>
 
           {isSelected && showDeselect && (
             <Button
