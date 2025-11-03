@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import ChartHistoryPanel from '@/components/charts/ChartHistoryPanel';
 
 // UnifiedChartEditor is used inside ChartTab
 import ChartTab from './ChartTab';
@@ -48,6 +49,14 @@ const ChartEditorPage: React.FC = () => {
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
   const dispatch = useAppDispatch();
+  const [currentModalAction, setCurrentModalAction] = useState<'save' | 'reset' | null>(null);
+  // Chart history sidebar state
+  const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState(false);
+  const handleToggleHistorySidebar = () => setIsHistorySidebarOpen(v => !v);
+  // Unsaved changes modal state
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+  const [isSavingBeforeLeave, setIsSavingBeforeLeave] = useState(false);
 
   // Chart editor context (now includes validation)
   const {
@@ -71,7 +80,6 @@ const ChartEditorPage: React.FC = () => {
   // Helper to set originals from external data (for future use)
   // const setOriginalValues = useSetChartEditorOriginals();
   // const [dataset, setDataset] = useState<Dataset | undefined>(undefined);
-  const [currentModalAction, setCurrentModalAction] = useState<'save' | 'reset' | null>(null);
   const {
     currentChart,
     loading: isChartLoading,
@@ -88,11 +96,6 @@ const ChartEditorPage: React.FC = () => {
   const handleToggleNotesSidebar = () => {
     setIsNotesSidebarOpen(!isNotesSidebarOpen);
   };
-
-  // Unsaved changes modal state
-  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
-  const [isSavingBeforeLeave, setIsSavingBeforeLeave] = useState(false);
 
   // Use datasetId from context, with local state for selection changes
   const [datasetId, setDatasetId] = useState<string>(contextDatasetId || '');
@@ -403,7 +406,7 @@ const ChartEditorPage: React.FC = () => {
     [dispatch]
   );
 
-  // Thông báo rằng là chart chưa lưu -> người dùng lưu hoặc cancel
+  // Thông báo rằng là chart chưa lưu -> người dùng lưu hoặc cancel (reload/close tab)
   useBeforeUnload({
     hasUnsavedChanges: hasChanges && mode === 'edit',
     message: t(
@@ -411,6 +414,30 @@ const ChartEditorPage: React.FC = () => {
       'You have unsaved changes to your chart. Are you sure you want to leave?'
     ),
   });
+
+  // Chặn back trên trình duyệt khi đang chỉnh sửa (edit mode) và hiện modal xác nhận
+  useEffect(() => {
+    if (mode !== 'edit') return;
+    const handlePopState = (event: PopStateEvent) => {
+      if (hasChanges && mode === 'edit') {
+        event.preventDefault();
+        window.history.pushState(null, '', window.location.href);
+        setPendingNavigation(() => () => {
+          clearCurrentChart();
+          navigate('/workspace', { state: { tab: 'charts' } });
+        });
+        setShowUnsavedModal(true);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    // Push dummy state to prevent immediate back
+    if (hasChanges && mode === 'edit') {
+      window.history.pushState(null, '', window.location.href);
+    }
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [hasChanges, mode, navigate, clearCurrentChart]);
 
   // Handle create new chart
   const handleCreateChart = async () => {
@@ -631,9 +658,10 @@ const ChartEditorPage: React.FC = () => {
         onReset={handleReset}
         onSave={handleSave}
         onBack={handleBack}
-        onOpenDatasetModal={() => setShowDatasetModal(true)}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        chartId={chartId}
+        onToggleHistorySidebar={handleToggleHistorySidebar}
       />
 
       {/* Main Content - Full Width Chart Area */}
@@ -734,6 +762,26 @@ const ChartEditorPage: React.FC = () => {
           chartId={chartId}
           isOpen={isNotesSidebarOpen}
           onToggle={handleToggleNotesSidebar}
+        />
+      )}
+
+      {/* Chart History Sidebar */}
+      {mode === 'edit' && chartId && isHistorySidebarOpen && (
+        <ChartHistoryPanel
+          chartId={chartId}
+          isOpen={true}
+          onToggle={handleToggleHistorySidebar}
+          onRestoreSuccess={async () => {
+            // Reload chart data after restore (name, description, type, config all updated)
+            if (chartId) {
+              try {
+                await getChartById(chartId);
+                showSuccess(t('chart_restore_success', 'Chart restored successfully'));
+              } catch (error) {
+                console.error('[ChartEditorPage] Failed to reload chart after restore:', error);
+              }
+            }
+          }}
         />
       )}
     </div>
