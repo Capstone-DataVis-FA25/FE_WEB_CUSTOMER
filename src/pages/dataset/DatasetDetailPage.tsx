@@ -1,4 +1,3 @@
-'use client';
 import type React from 'react';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';

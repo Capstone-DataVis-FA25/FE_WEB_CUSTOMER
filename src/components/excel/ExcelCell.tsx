@@ -1,5 +1,3 @@
-'use client';
-
 import React, { memo, useCallback, useState, useRef, useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
