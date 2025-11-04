@@ -70,6 +70,79 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
     </button>
   );
 
+  // Helper: render JSON with highlight for diff keys
+  const renderHighlightedJson = (obj: any, diffKeys: string[], side: 'current' | 'historical') => {
+    // Convert object to lines with dot notation path
+    const lines: string[] = [];
+    const highlights: boolean[] = [];
+    function walk(val: any, path: string, indent: number) {
+      if (typeof val !== 'object' || val === null) {
+        // primitive
+        const keyPath = path;
+        const highlight = diffKeys.some(k => k === keyPath || k.startsWith(keyPath + '.'));
+        lines.push(`${'  '.repeat(indent)}${JSON.stringify(val)}`);
+        highlights.push(highlight && diffKeys.includes(keyPath));
+        return;
+      }
+      if (Array.isArray(val)) {
+        lines.push(`${'  '.repeat(indent)}[`);
+        highlights.push(false);
+        val.forEach((item, idx) => walk(item, path + '[' + idx + ']', indent + 1));
+        lines.push(`${'  '.repeat(indent)}]`);
+        highlights.push(false);
+        return;
+      }
+      lines.push(`${'  '.repeat(indent)}{`);
+      highlights.push(false);
+      for (const key of Object.keys(val)) {
+        const keyPath = path ? path + '.' + key : key;
+        const highlight = diffKeys.some(k => k === keyPath || k.startsWith(keyPath + '.'));
+        const value = val[key];
+        if (typeof value === 'object' && value !== null) {
+          lines.push(`${'  '.repeat(indent + 1)}"${key}": `);
+          highlights.push(highlight && diffKeys.includes(keyPath));
+          walk(value, keyPath, indent + 2);
+        } else {
+          lines.push(`${'  '.repeat(indent + 1)}"${key}": ${JSON.stringify(value)}`);
+          highlights.push(highlight && diffKeys.includes(keyPath));
+        }
+      }
+      lines.push(`${'  '.repeat(indent)}}`);
+      highlights.push(false);
+    }
+    walk(obj, '', 0);
+    return (
+      <pre
+        className={
+          side === 'current'
+            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-3 text-xs overflow-auto'
+            : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 text-xs overflow-auto'
+        }
+      >
+        {lines.map((line, i) => {
+          // Detect dark mode by checking document.documentElement.classList
+          let isDark = false;
+          if (typeof window !== 'undefined' && window.document?.documentElement?.classList) {
+            isDark = window.document.documentElement.classList.contains('dark');
+          }
+          const highlightStyle = highlights[i]
+            ? {
+                background: isDark ? '#665c00' : '#fffbe6', // darker yellow for dark mode
+                borderColor: '#faad14',
+                borderTop: '1px solid #ffffff',
+                borderBottom: '1px solid #ffffff',
+              }
+            : {};
+          return (
+            <div key={i} style={highlightStyle}>
+              {line}
+            </div>
+          );
+        })}
+      </pre>
+    );
+  };
+
   const renderJsonDiff = () => {
     if (!comparisonResult) return null;
     const { current, historical, differences } = comparisonResult;
@@ -106,7 +179,7 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
         </div>
       </li>
     );
-    // Hiển thị chart historical phía trên, mapping config/headers/data đúng chuẩn ChartDisplaySection
+
     return (
       <div className="space-y-6">
         {/* Chart Preview Section */}
@@ -134,11 +207,7 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
               onClick={() => setShowCurrentHistory(v => !v)}
               label={t('chartHistory.comparison.current', 'Current Version')}
             />
-            {showCurrentHistory && (
-              <pre className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-3 text-xs overflow-auto">
-                {JSON.stringify(current, null, 2)}
-              </pre>
-            )}
+            {showCurrentHistory && renderHighlightedJson(current, diffKeys, 'current')}
           </div>
           <div>
             <SectionToggle
@@ -146,11 +215,7 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
               onClick={() => setShowCurrentHistory(v => !v)}
               label={t('chartHistory.comparison.historical', 'Historical Version')}
             />
-            {showCurrentHistory && (
-              <pre className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 text-xs overflow-auto">
-                {JSON.stringify(historical, null, 2)}
-              </pre>
-            )}
+            {showCurrentHistory && renderHighlightedJson(historical, diffKeys, 'historical')}
           </div>
         </div>
         {/* Differences Section */}
@@ -161,7 +226,7 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
             label={t('chartHistory.comparison.differences', 'Key Differences')}
           />
           {showDiffs && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3 max-h-96 overflow-auto">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3 overflow-auto">
               <ul className="list-disc list-inside space-y-2 text-xs">
                 {/* Other differences */}
                 {otherDiffs.map(key => renderDiffItem(key))}

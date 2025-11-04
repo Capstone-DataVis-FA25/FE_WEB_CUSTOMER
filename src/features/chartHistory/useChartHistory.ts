@@ -50,8 +50,17 @@ export const useChartHistory = () => {
     return dispatch(restoreFromHistoryThunk({ chartId, restoreData }));
   };
 
-  const compareVersions = (chartId: string, historyId: string) => {
-    return dispatch(compareVersionsThunk({ chartId, historyId }));
+  const compareVersions = (
+    historyId: string,
+    currentChart: {
+      name: string;
+      description?: string;
+      type: string;
+      config: any;
+      updatedAt: string;
+    }
+  ) => {
+    return dispatch(compareVersionsThunk({ historyId, currentChart }));
   };
 
   const deleteHistory = (chartId: string, historyId: string) => {
