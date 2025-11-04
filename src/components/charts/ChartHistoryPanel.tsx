@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, History, RotateCcw, Trash2, GitCompare, Clock } from 'lucide-react';
+import { X, History, RotateCcw, GitCompare, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { useChartHistory } from '@/features/chartHistory';
@@ -48,6 +48,10 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
     setEditableName,
     setEditableDescription,
     updateOriginals,
+    chartConfig,
+    currentChartType,
+    editableName,
+    editableDescription,
   } = useChartEditor();
 
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
@@ -99,7 +103,16 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
       return;
     }
     try {
-      const result = await compareVersions(chartId, historyId).unwrap();
+      // Get current chart data
+      const currentChart = {
+        name: editableName,
+        description: editableDescription,
+        type: currentChartType,
+        config: chartConfig,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const result = await compareVersions(historyId, currentChart).unwrap();
       const flatDiffs = flattenDifferences(result?.differences || {});
       const hasDiff = Object.keys(flatDiffs).length > 0;
       if (!hasDiff) {
@@ -146,7 +159,16 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
     if (!chartId) return;
 
     try {
-      await compareVersions(chartId, historyId).unwrap();
+      // Get current chart data
+      const currentChart = {
+        name: editableName,
+        description: editableDescription,
+        type: currentChartType,
+        config: chartConfig,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await compareVersions(historyId, currentChart).unwrap();
       setCompareModalOpen(true);
     } catch (error) {
       console.error('[ChartHistoryPanel] Failed to compare:', error);
@@ -372,7 +394,16 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
           setUnsavedAlert(false);
           if (pendingRestoreId && chartId) {
             try {
-              const result = await compareVersions(chartId, pendingRestoreId).unwrap();
+              // Get current chart data
+              const currentChart = {
+                name: editableName,
+                description: editableDescription,
+                type: currentChartType,
+                config: chartConfig,
+                updatedAt: new Date().toISOString(),
+              };
+
+              const result = await compareVersions(pendingRestoreId, currentChart).unwrap();
               const flatDiffs = flattenDifferences(result?.differences || {});
               const hasDiff = Object.keys(flatDiffs).length > 0;
               if (!hasDiff) {
