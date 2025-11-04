@@ -10,6 +10,7 @@ import {
   Calendar,
   Clock,
   Pencil,
+  History,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,22 +27,23 @@ interface ChartInfo {
 }
 
 interface ChartEditorHeaderProps {
-  // External actions
   onReset: () => void;
   onSave: () => void;
   onBack: () => void;
-  onOpenDatasetModal: () => void;
   activeTab?: 'chart' | 'data';
   onTabChange?: (tab: 'chart' | 'data') => void;
+  chartId?: string;
+  onToggleHistorySidebar?: () => void;
 }
 
 const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
   onReset,
   onSave,
   onBack,
-  onOpenDatasetModal,
   activeTab,
   onTabChange,
+  chartId,
+  onToggleHistorySidebar,
 }) => {
   const { t } = useTranslation();
   const { currentChart, creating } = useCharts();
@@ -135,6 +137,8 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
       transition={{ duration: 0.5 }}
       className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex-shrink-0"
     >
+      {/* Chart History Button - Only show in edit mode when chartId exists */}
+
       <div className="w-full px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -347,6 +351,18 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
               <ArrowLeft className="w-4 h-4" />
               {t('common_back', 'Back')}
             </Button>
+            {mode === 'edit' && chartId && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                type="button"
+                onClick={onToggleHistorySidebar}
+              >
+                <History className="w-5 h-5" />
+                <span>{t('chart_history', 'History')}</span>
+              </Button>
+            )}
             <div className="flex items-center gap-2">
               {mode === 'edit' && (
                 <Button

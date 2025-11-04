@@ -537,6 +537,19 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .attr('fill', chartBackgroundColor)
       .attr('rx', 8);
 
+    // Add SVG title at the top, centered (like D3PieChart)
+    if (title && title.trim() !== '') {
+      svg
+        .append('text')
+        .attr('x', currentWidth / 2)
+        .attr('y', Math.max(20, (titleFontSize || 16) * 1.2))
+        .attr('text-anchor', 'middle')
+        .attr('fill', textColor)
+        .style('font-size', `${titleFontSize || 16}px`)
+        .style('font-weight', 700)
+        .text(title);
+    }
+
     // Create main group
     const g = svg
       .append('g')
@@ -1630,16 +1643,6 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
   return (
     <div ref={containerRef} className="w-full">
-      {title && title.trim() !== '' && (
-        <h3
-          className="font-bold text-gray-900 dark:text-white text-center mb-4"
-          style={{ fontSize: `${responsiveFontSize.title}px` }}
-        >
-          {title}
-        </h3>
-      )}
-
-      {/* Chart Container with integrated legend */}
       <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
         <svg
           ref={svgRef}
@@ -1647,9 +1650,25 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           height={dimensions.height}
           className="w-full h-auto chart-svg"
           viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-          style={{ display: 'block' }} // Ensure proper block display
+          style={{ display: 'block' }}
           preserveAspectRatio="xMidYMid meet"
-        />
+          role="img"
+          aria-label={`Line chart${title ? `: ${title}` : ''}`}
+        >
+          {/* SVG Title, centered at the top, matching D3PieChart */}
+          {title && title.trim() !== '' && (
+            <text
+              x={dimensions.width / 2}
+              y={Math.max(20, (titleFontSize || 16) * 1.2)}
+              textAnchor="middle"
+              fill={isDarkMode ? '#f3f4f6' : '#1f2937'}
+              style={{ fontSize: `${titleFontSize || 16}px`, fontWeight: 700 }}
+              className="chart-title"
+            >
+              {title}
+            </text>
+          )}
+        </svg>
       </div>
     </div>
   );

@@ -18,7 +18,7 @@ import { useCharts } from '@/features/charts/useCharts';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import type { Dataset } from '@/features/dataset/datasetAPI';
-import type { Chart as BaseChart } from '@/features/charts/chartTypes';
+import { ChartType, type Chart as BaseChart } from '@/features/charts/chartTypes';
 
 // Extended Chart type for UI with additional optional fields
 type Chart = BaseChart & {
@@ -447,9 +447,12 @@ const WorkspacePage: React.FC = () => {
                           {(() => {
                             const labels: Record<string, string> = {
                               all: 'All types',
-                              line: 'Line',
-                              bar: 'Bar',
-                              area: 'Area',
+                              line: ChartType.Line,
+                              bar: ChartType.Bar,
+                              area: ChartType.Area,
+                              scatter: ChartType.Scatter,
+                              pie: ChartType.Pie,
+                              donut: ChartType.Donut,
                             };
                             return labels[chartTypeFilter] || 'Filter by type';
                           })()}
@@ -494,6 +497,24 @@ const WorkspacePage: React.FC = () => {
                         onClick={() => setChartTypeFilter('area')}
                       >
                         Area
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={() => setChartTypeFilter('scatter')}
+                      >
+                        Scatter
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={() => setChartTypeFilter('pie')}
+                      >
+                        Pie
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={() => setChartTypeFilter('donut')}
+                      >
+                        Donut
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
