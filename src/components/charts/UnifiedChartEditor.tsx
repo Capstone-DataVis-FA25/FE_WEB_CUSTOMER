@@ -10,6 +10,7 @@ import { ChartType } from '@/features/charts';
 import ImportExportSection from './ImportExportSection';
 import ChartSettingsPieSection from './ChartSettingsPieSection';
 import DisplayOptionsPieSection from './DisplayOptionsPieSection';
+import CyclePlotSettingsSection from './CyclePlotSettingsSection';
 
 export interface UnifiedChartEditorProps {}
 
@@ -52,6 +53,16 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = () => {
 
                   {/* Display Options Section */}
                   <DisplayOptionsPieSection />
+                </>
+              )}
+
+              {chartType == ChartType.CyclePlot && (
+                <>
+                  {/* Basic Chart Settings Section */}
+                  <BasicChartSettingsSection />
+
+                  {/* Cycle Plot Specific Settings */}
+                  <CyclePlotSettingsSection />
                 </>
               )}
 

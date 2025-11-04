@@ -85,6 +85,11 @@ export interface D3ScatterChartProps {
   // Optional series name for single-series scatter (used for legend)
   seriesName?: string;
   seriesNames?: Record<string, string>;
+
+  // Zoom and Pan
+  enableZoom?: boolean;
+  enablePan?: boolean;
+  zoomExtent?: number;
 }
 
 // Convert array data to scatter data format
@@ -250,6 +255,11 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   seriesName,
   seriesNames,
   // legendPosition = 'top',
+
+  // Zoom and Pan
+  enableZoom = false,
+  enablePan = false,
+  zoomExtent = 10,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -272,6 +282,39 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     () => convertArrayToScatterData(arrayData || []),
     [arrayData]
   );
+
+  // Determine if current selection is valid for scatter and prepare a clearer error UI
+  const validationInfo = React.useMemo(() => {
+    if (!processedData || processedData.length === 0 || !xAxisKey || !yAxisKey) {
+      return {
+        isInvalid: true,
+        validCount: 0,
+        total: processedData?.length || 0,
+        invalidRows: [],
+        suggestions: [] as Array<[string, string]>,
+        xReq: getAxisRequirementDescription('scatter', 'x'),
+        yReq: getAxisRequirementDescription('scatter', 'y'),
+      };
+    }
+    const val = validateScatterDataObjects(processedData, xAxisKey, yAxisKey);
+    if (val.validCount < 2) {
+      const suggestions = suggestNumericPairsFromObjects(processedData, 2).slice(0, 4);
+      return {
+        isInvalid: true,
+        ...val,
+        suggestions,
+        xReq: getAxisRequirementDescription('scatter', 'x'),
+        yReq: getAxisRequirementDescription('scatter', 'y'),
+      };
+    }
+    return {
+      isInvalid: false,
+      ...val,
+      suggestions: [] as Array<[string, string]>,
+      xReq: '',
+      yReq: '',
+    };
+  }, [processedData, xAxisKey, yAxisKey]);
 
   // Get theme-specific colors
   const themeColors = React.useMemo(() => {
@@ -443,34 +486,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
       }
     }
     if (validation.validCount < 2) {
-      // Suggest alternative numeric column pairs (up to 3 suggestions)
-      const suggestions = suggestNumericPairsFromObjects(processedData, 2).slice(0, 3);
-      console.warn(
-        '[D3ScatterChart] not enough numeric pairs for',
-        xAxisKey,
-        '/',
-        yAxisKey,
-        validation
-      );
-      if (suggestions.length > 0) console.debug('[D3ScatterChart] suggestions=', suggestions);
-
-      const xReq = getAxisRequirementDescription('scatter', 'x');
-      const yReq = getAxisRequirementDescription('scatter', 'y');
-
-      let message = `Scatter chart requires: ${xReq}; ${yReq}.`;
-      if (suggestions.length > 0) {
-        message += ` Try pairs: ${suggestions.map(p => p.join('/')).join(', ')}`;
-      }
-
-      svg
-        .append('text')
-        .attr('x', chartWidth / 2)
-        .attr('y', chartHeight / 2)
-        .attr('text-anchor', 'middle')
-        .attr('fill', isDarkMode ? '#e5e7eb' : '#374151')
-        .style('font-size', '14px')
-        .style('font-weight', '600')
-        .text(message);
+      // We'll show a nicer HTML overlay in the JSX; skip SVG text here
       return;
     }
 
@@ -650,21 +666,10 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
       }
     }
 
-    // Title
-    if (title) {
-      svg
-        .append('text')
-        .attr('x', chartWidth / 2)
-        .attr('y', margin.top / 2 + 5)
-        .attr('text-anchor', 'middle')
-        .attr('fill', textColor)
-        .style('font-size', `${titleFontSize || 18}px`)
-        .style('font-weight', 'bold')
-        .text(title);
-    }
+    // Title is rendered above the chart, not inside SVG
 
-    // Tooltip group
-    const tooltipGroup = svg.append('g').attr('class', 'scatter-tooltip-group');
+    // Tooltip group (inside chartGroup for consistent coordinates)
+    const tooltipGroup = chartGroup.append('g').attr('class', 'scatter-tooltip-group');
 
     // Draw points with support for multiple Y-series
     // Prefer explicit prop `yAxisKeys`, then keys from `seriesNames`, then fallback to single `yAxisKey`
@@ -703,35 +708,43 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
           .on('mouseover', function (event, d) {
             if (!showTooltip) return;
             tooltipGroup.selectAll('*').remove();
-            const tooltipContent = `${xAxisKey}: ${d[xAxisKey]}\n${seriesLabel}: ${d[key]}`;
-            const mouse = d3.pointer(event, svg.node());
+
+            const xVal = xAxisFormatter ? xAxisFormatter(+d[xAxisKey]) : String(d[xAxisKey]);
+            const yVal = yAxisFormatter ? yAxisFormatter(+d[key]) : String(d[key]);
+            const lines = [`${xAxisKey}: ${xVal}`, `${seriesLabel}: ${yVal}`];
+
+            const textColorLocal = isDarkMode ? '#fff' : '#222';
+
+            const textEl = tooltipGroup
+              .append('text')
+              .attr('fill', textColorLocal)
+              .style('font-size', '13px');
+
+            lines.forEach((line, i) => {
+              textEl
+                .append('tspan')
+                .attr('x', 10)
+                .attr('y', 15 + i * 16)
+                .text(line);
+            });
+
+            const bbox = (textEl.node() as SVGTextElement).getBBox();
+
             tooltipGroup
-              .append('rect')
-              .attr('x', mouse[0] + 10)
-              .attr('y', mouse[1] - 10)
-              .attr('width', 200)
-              .attr('height', 40)
+              .insert('rect', 'text')
+              .attr('width', bbox.width + 20)
+              .attr('height', bbox.height + 10)
               .attr('fill', isDarkMode ? '#222' : '#fff')
               .attr('stroke', isDarkMode ? '#eee' : '#333')
               .attr('rx', 8)
               .attr('opacity', 0.95);
-            tooltipGroup
-              .append('text')
-              .attr('x', mouse[0] + 20)
-              .attr('y', mouse[1] + 8)
-              .attr('fill', isDarkMode ? '#fff' : '#222')
-              .style('font-size', '13px')
-              .text(tooltipContent)
-              .call(text => {
-                const lines = tooltipContent.split('\n');
-                lines.forEach((line, i) => {
-                  text
-                    .append('tspan')
-                    .attr('x', mouse[0] + 20)
-                    .attr('y', mouse[1] + 8 + i * 16)
-                    .text(line);
-                });
-              });
+
+            const mouse = d3.pointer(event, chartGroup.node());
+            let tx = mouse[0] + 10;
+            let ty = mouse[1] - 10;
+            if (tx + bbox.width + 20 > innerWidth) tx = mouse[0] - (bbox.width + 30);
+            if (ty < 0) ty = mouse[1] + 20;
+            tooltipGroup.attr('transform', `translate(${tx},${ty})`);
           })
           .on('mouseout', function () {
             tooltipGroup.selectAll('*').remove();
@@ -766,36 +779,41 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
         .on('mouseover', function (event, d) {
           if (!showTooltip) return;
           tooltipGroup.selectAll('*').remove();
-          const tooltipContent = `${xAxisKey}: ${d[xAxisKey]}\n${yAxisKey}: ${d[yAxisKey]}`;
-          const mouse = d3.pointer(event, svg.node());
+
+          const xVal = xAxisFormatter ? xAxisFormatter(+d[xAxisKey]) : String(d[xAxisKey]);
+          const yVal = yAxisFormatter ? yAxisFormatter(+d[yAxisKey]) : String(d[yAxisKey]);
+          const lines = [`${xAxisKey}: ${xVal}`, `${yAxisKey}: ${yVal}`];
+
+          const textColorLocal = isDarkMode ? '#fff' : '#222';
+          const textEl = tooltipGroup
+            .append('text')
+            .attr('fill', textColorLocal)
+            .style('font-size', '13px');
+
+          lines.forEach((line, i) => {
+            textEl
+              .append('tspan')
+              .attr('x', 10)
+              .attr('y', 15 + i * 16)
+              .text(line);
+          });
+
+          const bbox = (textEl.node() as SVGTextElement).getBBox();
           tooltipGroup
-            .append('rect')
-            .attr('x', mouse[0] + 10)
-            .attr('y', mouse[1] - 10)
-            .attr('width', 180)
-            .attr('height', 60)
+            .insert('rect', 'text')
+            .attr('width', bbox.width + 20)
+            .attr('height', bbox.height + 10)
             .attr('fill', isDarkMode ? '#222' : '#fff')
             .attr('stroke', isDarkMode ? '#eee' : '#333')
             .attr('rx', 8)
             .attr('opacity', 0.95);
-          tooltipGroup
-            .append('text')
-            .attr('x', mouse[0] + 20)
-            .attr('y', mouse[1] + 10)
-            .attr('fill', isDarkMode ? '#fff' : '#222')
-            .style('font-size', '14px')
-            .style('font-family', 'monospace')
-            .text(tooltipContent)
-            .call(text => {
-              const lines = tooltipContent.split('\n');
-              lines.forEach((line, i) => {
-                text
-                  .append('tspan')
-                  .attr('x', mouse[0] + 20)
-                  .attr('y', mouse[1] + 10 + i * 18)
-                  .text(line);
-              });
-            });
+
+          const mouse = d3.pointer(event, chartGroup.node());
+          let tx = mouse[0] + 10;
+          let ty = mouse[1] - 10;
+          if (tx + bbox.width + 20 > innerWidth) tx = mouse[0] - (bbox.width + 30);
+          if (ty < 0) ty = mouse[1] + 20;
+          tooltipGroup.attr('transform', `translate(${tx},${ty})`);
         })
         .on('mouseout', function () {
           tooltipGroup.selectAll('*').remove();
@@ -919,6 +937,32 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
         .attr('stroke-dasharray', '5,5')
         .attr('opacity', 0.7);
     }
+
+    // Zoom and Pan
+    if (enableZoom || enablePan) {
+      const zoom = d3
+        .zoom<SVGSVGElement, unknown>()
+        .scaleExtent([1, zoomExtent])
+        .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+          const transform = event.transform;
+          chartGroup.attr(
+            'transform',
+            `translate(${responsiveMargin.left},${responsiveMargin.top}) scale(${transform.k}) translate(${transform.x},${transform.y})`
+          );
+        });
+
+      if (!enableZoom) {
+        zoom.scaleExtent([1, 1]); // Disable zoom
+      }
+      if (!enablePan) {
+        zoom.translateExtent([
+          [0, 0],
+          [0, 0],
+        ]); // Disable pan
+      }
+
+      svg.call(zoom as any);
+    }
   }, [
     processedData,
     dimensions,
@@ -956,6 +1000,9 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     regressionLineWidth,
     themeColors,
     isDarkMode,
+    enableZoom,
+    enablePan,
+    zoomExtent,
   ]);
 
   // NOTE: To ensure the scatter chart is always as large as LineChart, BarChart, and AreaChart,
@@ -973,6 +1020,40 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
       )}
 
       <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+        {/* Error overlay for invalid numeric selection */}
+        {validationInfo.isInvalid && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center p-4">
+            <div className="max-w-[90%] md:max-w-[70%] rounded-xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 shadow-lg px-4 py-3 md:px-6 md:py-5">
+              <div className="text-sm md:text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                Scatter chart requirements
+              </div>
+              <ul className="text-xs md:text-sm text-gray-700 dark:text-gray-200 list-disc pl-5 space-y-1 mb-2">
+                <li>X-axis must be numeric (continuous)</li>
+                <li>Y-axis must be numeric values</li>
+              </ul>
+              {validationInfo.suggestions && validationInfo.suggestions.length > 0 && (
+                <div className="text-xs md:text-sm text-gray-700 dark:text-gray-300">
+                  <span className="font-medium">Try pairs:</span>
+                  <span className="ml-2 inline-flex flex-wrap gap-2 align-middle">
+                    {validationInfo.suggestions.map((p, i) => (
+                      <span
+                        key={`${p[0]}-${p[1]}-${i}`}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200 border border-blue-200/70 dark:border-blue-800/60"
+                      >
+                        {p[0]}
+                        <span className="opacity-70">/</span>
+                        {p[1]}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              )}
+              <div className="mt-2 text-[11px] md:text-xs text-gray-600 dark:text-gray-400">
+                Selected: X = {xAxisKey || '—'}, Y = {yAxisKey || '—'}
+              </div>
+            </div>
+          </div>
+        )}
         <svg
           ref={svgRef}
           width={dimensions.width}

@@ -98,32 +98,30 @@ const DataTab: React.FC<DataTabProps> = ({
             <span>Invalid cell</span>
           </div>
         </div>
-        {loading ? (
-          <div className="h-full min-h-[60vh] flex items-center justify-center">
-            <LoadingSpinner />
-          </div>
-        ) : initialColumns && initialColumns.length > 0 ? (
-          <DatasetProvider>
-            <ApplyFormats nf={initialNumberFormat} df={initialDateFormat} />
-            <CustomExcel
-              key={excelKey}
-              initialData={formattedData}
-              initialColumns={initialColumns}
-              mode="view"
-              allowHeaderEdit={false}
-              allowColumnEdit={false}
-              onDataChange={onDataChange}
-              onSorting={onSorting}
-              highlightHeaderIds={highlightHeaderIds}
-            />
-          </DatasetProvider>
-        ) : (
-          <div className="w-full max-w-full p-4 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
-            <div className="border rounded-md bg-white dark:bg-gray-800 h-[60vh] relative overflow-hidden flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-              No dataset selected yet
+        <div className="relative h-full min-h-[60vh]">
+          {initialColumns && initialColumns.length > 0 ? (
+            <DatasetProvider>
+              <ApplyFormats nf={initialNumberFormat} df={initialDateFormat} />
+              <CustomExcel
+                key={excelKey}
+                initialData={formattedData}
+                initialColumns={initialColumns}
+                mode="view"
+                allowHeaderEdit={false}
+                allowColumnEdit={false}
+                onDataChange={onDataChange}
+                onSorting={onSorting}
+                highlightHeaderIds={highlightHeaderIds}
+              />
+            </DatasetProvider>
+          ) : (
+            <div className="w-full max-w-full p-4 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+              <div className="border rounded-md bg-white dark:bg-gray-800 h-[60vh] relative overflow-hidden flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                No dataset selected yet
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Right: Operation panel (placeholder, keep as-is for now) */}
