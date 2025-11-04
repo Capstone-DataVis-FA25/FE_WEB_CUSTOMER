@@ -15,6 +15,7 @@ export interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButto
 
 export interface SelectContentProps {
   children: React.ReactNode;
+  className?: string;
 }
 
 export interface SelectItemProps {
@@ -103,7 +104,7 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
 );
 SelectTrigger.displayName = 'SelectTrigger';
 
-const SelectContent: React.FC<SelectContentProps> = ({ children }) => {
+const SelectContent: React.FC<SelectContentProps> = ({ children, className }) => {
   const { open, contentRef } = React.useContext(SelectContext);
 
   if (!open) return null;
@@ -112,7 +113,10 @@ const SelectContent: React.FC<SelectContentProps> = ({ children }) => {
     <div
       ref={contentRef}
       data-select-content
-      className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95"
+      className={cn(
+        'absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95',
+        className
+      )}
     >
       <div className="p-1 space-y-1">{children}</div>
     </div>
