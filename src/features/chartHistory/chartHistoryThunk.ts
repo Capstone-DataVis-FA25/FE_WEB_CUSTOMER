@@ -1,6 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import * as chartHistoryAPI from './chartHistoryAPI';
-import type { RestoreChartRequest } from './chartHistoryTypes';
+import type { RestoreChartRequest, ChartHistory } from './chartHistoryTypes';
+import { compareChartVersions } from '@/utils/compareVersions';
 
 // Fetch all history versions for a chart
 export const fetchChartHistory = createAsyncThunk(
@@ -60,12 +61,50 @@ export const restoreFromHistoryThunk = createAsyncThunk(
   }
 );
 
-// Compare versions
+// Compare versions (Frontend comparison)
 export const compareVersionsThunk = createAsyncThunk(
   'chartHistory/compareVersions',
-  async ({ chartId, historyId }: { chartId: string; historyId: string }, { rejectWithValue }) => {
+  async (
+    {
+      historyId,
+      currentChart,
+    }: {
+      historyId: string;
+      currentChart: {
+        name: string;
+        description?: string;
+        type: string;
+        config: any;
+        updatedAt: string;
+      };
+    },
+    { rejectWithValue, getState }
+  ) => {
     try {
-      return await chartHistoryAPI.compareVersions(chartId, historyId);
+      // Get historical version from state or fetch it
+      const state = getState() as any;
+      let historicalVersion: ChartHistory | undefined =
+        state.chartHistory.currentChartHistories.find((h: ChartHistory) => h.id === historyId);
+
+      // If not in state, fetch it
+      if (!historicalVersion) {
+        historicalVersion = await chartHistoryAPI.getHistoryById(historyId);
+      }
+
+      if (!historicalVersion) {
+        return rejectWithValue('Historical version not found');
+      }
+
+      // Compare on frontend
+      const comparisonResult = compareChartVersions(currentChart, {
+        name: historicalVersion.name,
+        description: historicalVersion.description,
+        type: historicalVersion.type,
+        config: historicalVersion.config,
+        createdAt: historicalVersion.createdAt,
+      });
+
+      return comparisonResult;
     } catch (error) {
       const err = error as { response?: { data?: { message?: string } } };
       return rejectWithValue(err.response?.data?.message || 'Failed to compare versions');
