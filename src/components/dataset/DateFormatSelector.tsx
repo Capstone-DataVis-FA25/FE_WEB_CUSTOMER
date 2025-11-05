@@ -33,7 +33,7 @@ export const DateFormatSelector: React.FC<DateFormatSelectorProps> = ({
     { value: 'YY-MM', label: 'YY-MM', example: '23-12' },
     { value: 'MM/YY', label: 'MM/YY', example: '12/23' },
     { value: 'MM/YYYY', label: 'MM/YYYY', example: '12/2023' },
-    { value: 'DD Month YYYY', label: 'DD Month YYYY', example: '31 December 2023' },
+    { value: 'DD Month YYYY', label: 'DD Month YYYY', example: '05 December 2023' },
     { value: 'YYYY', label: 'YYYY', example: '2023' },
     { value: 'YYYY-MM-DD HH:mm:ss', label: 'YYYY-MM-DD HH:mm:ss', example: '2023-12-31 23:59:59' },
     { value: 'YYYY-MM-DDTHH:mm:ss', label: 'YYYY-MM-DDTHH:mm:ss', example: '2023-12-31T23:59:59' },

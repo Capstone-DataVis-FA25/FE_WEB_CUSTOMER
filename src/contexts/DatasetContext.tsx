@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { DataHeader, ParsedDataResult } from '@/utils/dataProcessors';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+
+dayjs.extend(customParseFormat);
 
 // Types
 export interface NumberFormat {
@@ -434,58 +438,59 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
 
       if (type === 'number') {
         const { thousandsSeparator, decimalSeparator } = numberFormat || state.numberFormat;
-
-        // Build regex dynamically
         const escThousand = thousandsSeparator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const escDecimal = decimalSeparator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-        // Pattern: optional sign, digits in groups of 1–3 separated by thousand sep, optional decimal part
         const pattern = new RegExp(
           `^[-+]?\\d{1,3}(?:${escThousand}\\d{3})*(?:${escDecimal}\\d+)?$`
         );
-
         if (!pattern.test(v)) {
-          // Store undefined for invalid number
           updateParsedValue(colIndex, rowIndex, undefined);
           return { ok: false, value: original, changed: false };
         }
-
-        // Convert: remove thousands, replace decimal with dot
         let cleaned = v.replace(new RegExp(escThousand, 'g'), '');
         cleaned = cleaned.replace(new RegExp(escDecimal, 'g'), '.');
-
         const parsedNumber = parseFloat(cleaned);
         if (isNaN(parsedNumber)) {
-          // Store undefined for invalid number
           updateParsedValue(colIndex, rowIndex, undefined);
           return { ok: false, value: original, changed: false };
         }
-
-        // Store parsed number
         updateParsedValue(colIndex, rowIndex, parsedNumber);
-
-        return {
-          ok: true,
-          value: String(parsedNumber),
-          changed: cleaned !== original,
-        };
+        return { ok: true, value: String(parsedNumber), changed: cleaned !== original };
       }
 
       if (type === 'date') {
         const fmt = dateFormat || 'YYYY-MM-DD';
-        const parser = dateParsers[fmt];
-        if (parser) {
-          const match = v.match(parser.regex); // <- use match instead of exec
-          if (match) {
-            const iso = parser.parse(match);
-            // Store parsed date as string
-            updateParsedValue(colIndex, rowIndex, iso);
-            return { ok: true, value: iso, changed: iso !== original };
-          }
+        const formatMap: Record<string, string> = {
+          'YYYY-MM-DD': 'YYYY-MM-DD',
+          'DD/MM/YYYY': 'DD/MM/YYYY',
+          'MM/DD/YYYY': 'MM/DD/YYYY',
+          'YYYY/MM/DD': 'YYYY/MM/DD',
+          'DD-MM-YYYY': 'DD-MM-YYYY',
+          'MM-DD-YYYY': 'MM-DD-YYYY',
+          'YYYY-MM': 'YYYY-MM',
+          'YY-MM': 'YY-MM',
+          'MM/YY': 'MM/YY',
+          'MM/YYYY': 'MM/YYYY',
+          'DD Month YYYY': 'DD MMMM YYYY',
+          YYYY: 'YYYY',
+          'YYYY-MM-DD HH:mm:ss': 'YYYY-MM-DD HH:mm:ss',
+          'YYYY-MM-DDTHH:mm:ss': 'YYYY-MM-DDTHH:mm:ss',
+        };
+        const djFormat = formatMap[fmt] || 'YYYY-MM-DD';
+        const d = dayjs(v, djFormat, true);
+        if (!d.isValid()) {
+          updateParsedValue(colIndex, rowIndex, undefined);
+          return { ok: false, value: original, changed: false };
         }
-        // Store undefined for invalid date
-        updateParsedValue(colIndex, rowIndex, undefined);
-        return { ok: false, value: original, changed: false };
+        let iso: string;
+        if (fmt === 'YYYY-MM-DD HH:mm:ss' || fmt === 'YYYY-MM-DDTHH:mm:ss') {
+          iso = d.format('YYYY-MM-DD[T]HH:mm:ss');
+        } else {
+          const datePart = d.format('YYYY-MM-DD');
+          iso = `${datePart}T00:00:00`;
+        }
+        updateParsedValue(colIndex, rowIndex, iso);
+        return { ok: true, value: iso, changed: iso !== original };
       }
 
       return { ok: true, value: original, changed: false };
@@ -508,27 +513,6 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
         clearParsedValuesForColumn(colIndex);
       }
 
-      // if (targetType === 'number') {
-      //   console.log(
-      //     'tryConvertColumn run with colIndex',
-      //     colIndex,
-      //     'and targetType',
-      //     targetType,
-      //     'and thousandsSeparator',
-      //     currentNumberFormat.thousandsSeparator,
-      //     'and decimalSeparator',
-      //     currentNumberFormat.decimalSeparator
-      //   );
-      // } else if (targetType === 'date') {
-      //   console.log(
-      //     'tryConvertColumn run with colIndex',
-      //     colIndex,
-      //     'and targetType',
-      //     targetType,
-      //     'and format',
-      //     currentDateFormat
-      //   );
-      // }
       const data = state.currentParsedData?.data || [];
       const columns = state.currentParsedData?.headers || [];
 
@@ -539,9 +523,9 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
         const raw = data[ri][colIndex] ?? '';
         let result: ConvertResult = { ok: true, value: '', changed: false };
         if (targetType === 'number') {
-          result = tryConvert(targetType, colIndex, ri, raw, currentNumberFormat, undefined);
+          result = tryConvert('number', colIndex, ri, raw, currentNumberFormat, undefined);
         } else if (targetType === 'date') {
-          result = tryConvert(targetType, colIndex, ri, raw, undefined, currentDateFormat);
+          result = tryConvert('date', colIndex, ri, raw, undefined, currentDateFormat);
         }
 
         if (!result.ok) {

@@ -8,6 +8,10 @@
 
 import type { DateFormat, NumberFormat } from '@/contexts/DatasetContext';
 import type { DataHeader } from '@/utils/dataProcessors';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+
+dayjs.extend(customParseFormat);
 
 // Confidence thresholds for smart detection
 export const COLUMN_TYPE_CONFIDENCE_THRESHOLD = 0.6; // For column type detection (text/number/date)
@@ -30,71 +34,57 @@ const DATE_PATTERNS = [
     format: 'YYYY-MM-DD HH:mm:ss' as DateFormat,
     regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/,
     confidence: 0.95,
-    validate: undefined,
+    validate: (val: string) => dayjs(val, 'YYYY-MM-DD HH:mm:ss', true).isValid(),
   },
   {
     format: 'YYYY-MM-DD' as DateFormat,
     regex: /^\d{4}-\d{2}-\d{2}$/,
     confidence: 0.9,
-    validate: undefined,
+    validate: (val: string) => dayjs(val, 'YYYY-MM-DD', true).isValid(),
   },
   {
     format: 'YYYY/MM/DD' as DateFormat,
     regex: /^\d{4}\/\d{2}\/\d{2}$/,
     confidence: 0.9,
-    validate: undefined,
+    validate: (val: string) => dayjs(val, 'YYYY/MM/DD', true).isValid(),
   },
   {
     format: 'DD Month YYYY' as DateFormat,
     regex: /^\d{2} [A-Za-z]+ \d{4}$/,
     confidence: 0.85,
-    validate: undefined,
+    validate: (val: string) => dayjs(val, 'DD MMMM YYYY', true).isValid(),
   },
-  // Ambiguous patterns - need validation
+  // Ambiguous patterns - now validated strictly
   {
     format: 'DD/MM/YYYY' as DateFormat,
     regex: /^\d{2}\/\d{2}\/\d{4}$/,
     confidence: 0.8,
-    validate: (val: string) => {
-      const [d, m] = val.split('/').map(Number);
-      return d > 12 || m <= 12; // If day > 12, likely DD/MM format
-    },
+    validate: (val: string) => dayjs(val, 'DD/MM/YYYY', true).isValid(),
   },
   {
     format: 'MM/DD/YYYY' as DateFormat,
     regex: /^\d{2}\/\d{2}\/\d{4}$/,
     confidence: 0.8,
-    validate: (val: string) => {
-      const [first, second] = val.split('/').map(Number);
-      return first <= 12 && second > 12; // If first <= 12 and second > 12, likely MM/DD
-    },
+    validate: (val: string) => dayjs(val, 'MM/DD/YYYY', true).isValid(),
   },
   {
     format: 'DD-MM-YYYY' as DateFormat,
     regex: /^\d{2}-\d{2}-\d{4}$/,
     confidence: 0.8,
-    validate: (val: string) => {
-      const [d, m] = val.split('-').map(Number);
-      return d > 12 || m <= 12;
-    },
+    validate: (val: string) => dayjs(val, 'DD-MM-YYYY', true).isValid(),
   },
   {
     format: 'MM-DD-YYYY' as DateFormat,
     regex: /^\d{2}-\d{2}-\d{4}$/,
     confidence: 0.8,
-    validate: (val: string) => {
-      const [first, second] = val.split('-').map(Number);
-      return first <= 12 && second > 12;
-    },
+    validate: (val: string) => dayjs(val, 'MM-DD-YYYY', true).isValid(),
   },
   {
     format: 'YYYY' as DateFormat,
     regex: /^\d{4}$/,
     confidence: 0.6, // Lower confidence to avoid matching plain numbers
-    validate: (val: string) => {
-      const year = Number(val);
-      return year >= 1900 && year <= 2100; // Reasonable year range
-    },
+    validate: (val: string) =>
+      dayjs(val, 'YYYY', true).isValid() && Number(val) >= 1900 && Number(val) <= 2100,
   },
 ];
 
