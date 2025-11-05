@@ -21,6 +21,7 @@ export interface DetectionResult {
   dateFormat: DateFormat;
   numberFormat: NumberFormat;
   columnTypes: Array<'text' | 'number' | 'date'>;
+  perColumnDateFormat?: Array<DateFormat | null>;
   confidence: {
     dateFormat: number;
     numberFormat: number;
@@ -47,6 +48,30 @@ const DATE_PATTERNS = [
     regex: /^\d{4}\/\d{2}\/\d{2}$/,
     confidence: 0.9,
     validate: (val: string) => dayjs(val, 'YYYY/MM/DD', true).isValid(),
+  },
+  {
+    format: 'YYYY-MM' as DateFormat,
+    regex: /^\d{4}-\d{2}$/,
+    confidence: 0.85,
+    validate: (val: string) => dayjs(val, 'YYYY-MM', true).isValid(),
+  },
+  {
+    format: 'YY-MM' as DateFormat,
+    regex: /^\d{2}-\d{2}$/,
+    confidence: 0.8,
+    validate: (val: string) => dayjs(val, 'YY-MM', true).isValid(),
+  },
+  {
+    format: 'MM/YY' as DateFormat,
+    regex: /^\d{2}\/\d{2}$/,
+    confidence: 0.8,
+    validate: (val: string) => dayjs(val, 'MM/YY', true).isValid(),
+  },
+  {
+    format: 'MM/YYYY' as DateFormat,
+    regex: /^\d{2}\/\d{4}$/,
+    confidence: 0.85,
+    validate: (val: string) => dayjs(val, 'MM/YYYY', true).isValid(),
   },
   {
     format: 'DD Month YYYY' as DateFormat,
@@ -82,9 +107,15 @@ const DATE_PATTERNS = [
   {
     format: 'YYYY' as DateFormat,
     regex: /^\d{4}$/,
-    confidence: 0.6, // Lower confidence to avoid matching plain numbers
+    confidence: 0.8, // Prefer year-only as date over plain number
     validate: (val: string) =>
       dayjs(val, 'YYYY', true).isValid() && Number(val) >= 1900 && Number(val) <= 2100,
+  },
+  {
+    format: 'YYYY-MM-DDTHH:mm:ss' as DateFormat,
+    regex: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/,
+    confidence: 0.95,
+    validate: (val: string) => dayjs(val, 'YYYY-MM-DDTHH:mm:ss', true).isValid(),
   },
 ];
 
@@ -296,7 +327,7 @@ function detectDateFormat(
   let bestFormat = 'YYYY-MM-DD';
   let bestConfidence = 0;
 
-  Object.entries(formatCounts).forEach(([format, count]) => {
+  Object.entries(formatCounts).forEach(([format]) => {
     const avgConfidence =
       formatConfidences[format].reduce((a, b) => a + b, 0) / formatConfidences[format].length;
 
@@ -448,6 +479,11 @@ export function detectColumnFormats(data: string[][], maxRows: number = 20): Det
   const dateFormatResult = detectDateFormat(columnAnalyses, analysisData);
   const numberFormatResult = detectNumberFormat(columnAnalyses, analysisData);
 
+  // Build per-column date format list (null for non-date columns)
+  const perColumnDateFormat: Array<DateFormat | null> = columnAnalyses.map(col =>
+    col.type === 'date' && col.detectedFormat ? (col.detectedFormat.format as DateFormat) : null
+  );
+
   // console.log('🎯 Final detection results:', {
   //   dateFormat: dateFormatResult.format,
   //   dateConfidence: dateFormatResult.confidence,
@@ -460,6 +496,7 @@ export function detectColumnFormats(data: string[][], maxRows: number = 20): Det
     dateFormat: dateFormatResult.format,
     numberFormat: numberFormatResult.format,
     columnTypes: columnAnalyses.map(col => col.type),
+    perColumnDateFormat,
     confidence: {
       dateFormat: dateFormatResult.confidence,
       numberFormat: numberFormatResult.confidence,
@@ -479,12 +516,18 @@ export function applyDetectedFormats(
     const detectedType = detectionResult.columnTypes[index];
     const confidence = detectionResult.confidence.columnTypes[index] || 0;
 
-    // Only apply detected type if confidence is high enough
     if (confidence > COLUMN_TYPE_CONFIDENCE_THRESHOLD) {
-      return {
-        ...header,
-        type: detectedType,
-      };
+      // Apply type, and if date, attach a per-column dateFormat when available
+      if (detectedType === 'date') {
+        const formatFromDetection =
+          detectionResult.perColumnDateFormat?.[index] || detectionResult.dateFormat;
+        return {
+          ...header,
+          type: 'date',
+          dateFormat: formatFromDetection,
+        } as DataHeader;
+      }
+      return { ...header, type: detectedType } as DataHeader;
     }
 
     return header;

@@ -48,6 +48,7 @@ export interface DataHeader {
   type: 'text' | 'number' | 'date';
   index: number;
   width?: number;
+  dateFormat?: DateFormat; // per-column date format (when type = 'date')
 }
 
 export interface ParsedDataResult {
@@ -80,6 +81,7 @@ export interface HeaderLike {
   type: string;
   index: number;
   data: DatasetCell[];
+  dateFormat?: string;
 }
 
 // Build headers array from parsed page state
@@ -113,7 +115,13 @@ export const buildHeadersFromParsed = (
         return (raw ?? null) as DatasetCell;
       });
     }
-    headers.push({ name: header.name, type: header.type, index: columnIndex, data: columnData });
+    headers.push({
+      name: header.name,
+      type: header.type,
+      index: columnIndex,
+      data: columnData,
+      dateFormat: header.type === 'date' ? header.dateFormat || 'YYYY-MM-DD' : undefined,
+    });
   }
   return headers;
 };

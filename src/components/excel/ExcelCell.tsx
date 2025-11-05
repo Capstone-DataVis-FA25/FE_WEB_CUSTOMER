@@ -40,9 +40,9 @@ const ExcelCell = memo(
     //   });
     // }, [rowIndex, columnIndex, hasParseError]);
     const dispatch = useAppDispatch();
-    const { dateFormat, numberFormat } = useDataset();
+    const { numberFormat } = useDataset();
     const col = useAppSelector(selectColumnByIndex(columnIndex)) as
-      | { type?: 'text' | 'number' | 'date'; width?: number }
+      | { type?: 'text' | 'number' | 'date'; width?: number; dateFormat?: string }
       | undefined;
     const columnType = (col?.type ?? 'text') as 'text' | 'number' | 'date';
     const { tryConvert } = useDataset();
@@ -92,7 +92,7 @@ const ExcelCell = memo(
           rowIndex,
           tempValue,
           columnType === 'number' ? numberFormat : undefined,
-          columnType === 'date' ? dateFormat : undefined
+          columnType === 'date' ? (col?.dateFormat as any) : undefined
         );
         dispatch(
           updateParseError({
@@ -110,7 +110,7 @@ const ExcelCell = memo(
       onCellChange,
       tryConvert,
       columnType,
-      dateFormat,
+      col?.dateFormat,
       numberFormat,
       dispatch,
     ]);
@@ -126,7 +126,7 @@ const ExcelCell = memo(
           rowIndex,
           next,
           columnType === 'number' ? numberFormat : undefined,
-          columnType === 'date' ? dateFormat : undefined
+          columnType === 'date' ? (col?.dateFormat as any) : undefined
         );
         const nextErr = !conv.ok;
         setLiveHasError(nextErr);
@@ -142,7 +142,7 @@ const ExcelCell = memo(
           );
         }
       },
-      [columnType, columnIndex, rowIndex, tryConvert, numberFormat, dateFormat, dispatch]
+      [columnType, columnIndex, rowIndex, tryConvert, numberFormat, col?.dateFormat, dispatch]
     );
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

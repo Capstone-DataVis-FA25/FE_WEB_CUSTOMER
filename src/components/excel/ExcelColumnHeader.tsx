@@ -1,25 +1,39 @@
-import React, { memo, useCallback, useEffect, useRef } from 'react';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   setSelectedColumn,
-  selectIsColumnSelected,
-  selectColumnValidation,
-  selectColumnByIndex,
   setColumnName,
+  setColumnType,
   setSortConfig,
-  setFilter,
-  selectFilterByIndex,
+  selectIsColumnSelected,
+  selectColumnByIndex,
   selectSortDirectionForColumn,
+  selectColumnValidation,
 } from '@/features/excelUI';
+import { setColumnDateFormat, updateParseError } from '@/features/excelUI/excelUISlice';
 import { Button } from '@/components/ui/button';
-import { X, ArrowUpDown, ArrowUp, ArrowDown, FileText, FileDigit, Calendar } from 'lucide-react';
+import {
+  X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  FileText,
+  FileDigit,
+  Calendar,
+  Check,
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
+import { DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu';
 import type { DataHeader } from '@/utils/dataProcessors';
+import { useDataset, DATE_FORMATS } from '@/contexts/DatasetContext';
 
 const COLUMN_TYPES = [
   { label: 'Text', value: 'text', icon: <FileText size={14} /> },
@@ -48,13 +62,16 @@ const ExcelColumnHeader = memo(
     showDeselect = true,
   }: ExcelColumnHeaderProps) {
     const dispatch = useAppDispatch();
+    const { tryConvertColumn, tryConvert, currentParsedData } = useDataset();
+    const [dateSubOpen, setDateSubOpen] = useState(false);
+    const [isTypeIconHover, setIsTypeIconHover] = useState(false);
     const isSelected = useAppSelector(selectIsColumnSelected(columnIndex));
     const column = useAppSelector(selectColumnByIndex(columnIndex)) as DataHeader | undefined;
     const sortDirection = useAppSelector(selectSortDirectionForColumn(columnIndex)) as
       | 'asc'
       | 'desc'
       | null;
-    const filterValue = useAppSelector(selectFilterByIndex(columnIndex)) as string;
+    // removed filter UI and state
 
     // Get validation state for this specific column - only re-renders when this column's validation changes
     const { isDuplicate, isEmpty } = useAppSelector(selectColumnValidation(columnIndex)) as {
@@ -108,6 +125,26 @@ const ExcelColumnHeader = memo(
       [columnIndex, onTypeChange]
     );
 
+    // Date formats menu provided by context (single source of truth)
+
+    const handlePickDateFormat = useCallback(
+      async (fmt: string) => {
+        // Update Redux header state
+        dispatch(setColumnType({ index: columnIndex, type: 'date' }));
+        dispatch(setColumnDateFormat({ index: columnIndex, dateFormat: fmt }));
+        // Trigger conversion/validation for this column only
+        tryConvertColumn(columnIndex, 'date', undefined, fmt as any);
+        // Targeted revalidation into Redux parseErrors for this column only
+        const rows = currentParsedData?.data || [];
+        for (let ri = 0; ri < rows.length; ri++) {
+          const raw = rows[ri]?.[columnIndex] ?? '';
+          const conv = tryConvert('date', columnIndex, ri, raw, undefined, fmt as any);
+          dispatch(updateParseError({ row: ri, column: columnIndex, hasError: !conv.ok }));
+        }
+      },
+      [columnIndex, dispatch, tryConvertColumn, tryConvert, currentParsedData]
+    );
+
     const handleSort = useCallback(
       (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -124,19 +161,18 @@ const ExcelColumnHeader = memo(
       [columnIndex, dispatch, sortDirection]
     );
 
-    const handleFilterChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        dispatch(setFilter({ index: columnIndex, value: e.target.value }));
-      },
-      [columnIndex, dispatch]
-    );
+    // removed filter change handler
 
     return (
       <th
         className={`relative group border-b border-r p-2 align-top font-semibold text-gray-700 dark:text-gray-200 cursor-pointer ${
           isDuplicate || isEmpty
-            ? 'bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-600 hover:bg-red-200 dark:hover:bg-red-800/50'
-            : 'border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
+            ? `bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-600${
+                isTypeIconHover ? '' : ' hover:bg-red-200 dark:hover:bg-red-800/50'
+              }`
+            : `border-gray-300 dark:border-gray-600${
+                isTypeIconHover ? '' : ' hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`
         } ${isSelected ? 'bg-blue-100 dark:bg-blue-900/50' : ''} ${
           typeof isHighlighted !== 'undefined' && isHighlighted
             ? 'ring-2 ring-amber-500 dark:ring-amber-500 ring-offset-1 ring-offset-white dark:ring-offset-gray-800 bg-amber-200 dark:bg-amber-900/40'
@@ -159,31 +195,89 @@ const ExcelColumnHeader = memo(
         <div className="flex items-center gap-1">
           {(() => {
             const current = COLUMN_TYPES.find(t => t.value === (column?.type ?? 'text'));
-            const title = current ? `Type: ${current.label}` : 'Type';
+            const title =
+              column?.type === 'date'
+                ? `Type: Date — ${((column as any)?.dateFormat as string) || 'YYYY-MM-DD'}`
+                : current
+                  ? `Type: ${current.label}`
+                  : 'Type';
             if (mode === 'edit' && allowHeaderEdit) {
               return (
-                <DropdownMenu>
+                <DropdownMenu
+                  onOpenChange={open => {
+                    if (!open) setDateSubOpen(false);
+                  }}
+                >
                   <DropdownMenuTrigger asChild>
                     <Button
                       size="sm"
                       variant="ghost"
                       className="h-6 px-1 text-xs hover:bg-gray-300 dark:hover:bg-gray-600"
                       onClick={e => e.stopPropagation()}
+                      onMouseEnter={() => setIsTypeIconHover(true)}
+                      onMouseLeave={() => setIsTypeIconHover(false)}
                       title={title}
                     >
                       {current?.icon}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    {COLUMN_TYPES.map(t => (
-                      <DropdownMenuItem
-                        key={t.value}
-                        onClick={() => handleTypeChange(t.value as DataHeader['type'])}
-                        className="gap-2"
+                    {/* Text */}
+                    <DropdownMenuItem
+                      onClick={() => handleTypeChange('text')}
+                      className="gap-2 justify-between"
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <FileText size={14} /> Text
+                      </span>
+                      {column?.type === 'text' && <Check size={14} className="opacity-80" />}
+                    </DropdownMenuItem>
+                    {/* Number */}
+                    <DropdownMenuItem
+                      onClick={() => handleTypeChange('number')}
+                      className="gap-2 justify-between"
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <FileDigit size={14} /> Number
+                      </span>
+                      {column?.type === 'number' && <Check size={14} className="opacity-80" />}
+                    </DropdownMenuItem>
+                    {/* Date with submenu */}
+                    <DropdownMenuSub open={dateSubOpen}>
+                      <DropdownMenuSubTrigger
+                        className="gap-2 justify-between"
+                        onPointerMove={e => e.stopPropagation()}
+                        onMouseEnter={e => e.stopPropagation()}
+                        onClick={e => {
+                          e.stopPropagation();
+                          setDateSubOpen(prev => !prev);
+                        }}
                       >
-                        {t.icon} {t.label}
-                      </DropdownMenuItem>
-                    ))}
+                        <span className="inline-flex items-center gap-2">
+                          <Calendar size={14} /> Date
+                        </span>
+                        {column?.type === 'date' && <Check size={14} className="opacity-80" />}
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuRadioGroup
+                          value={
+                            column?.type === 'date'
+                              ? (column?.dateFormat as string) || 'YYYY-MM-DD'
+                              : ''
+                          }
+                          onValueChange={val => {
+                            handlePickDateFormat(val);
+                            setDateSubOpen(false);
+                          }}
+                        >
+                          {DATE_FORMATS.map(fmt => (
+                            <DropdownMenuRadioItem key={fmt} value={fmt}>
+                              {fmt}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
                   </DropdownMenuContent>
                 </DropdownMenu>
               );
@@ -192,10 +286,17 @@ const ExcelColumnHeader = memo(
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-6 px-1 text-xs opacity-70 cursor-default"
+                className="h-6 px-1 text-xs opacity-70 cursor-default relative z-10 hover:bg-gray-300 dark:hover:bg-gray-600"
                 title={title}
-                onClick={e => e.stopPropagation()}
-                disabled
+                onClick={e => {
+                  // prevent header click/select and keep non-interactive behavior
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+                tabIndex={-1}
+                aria-disabled="true"
+                onMouseEnter={() => setIsTypeIconHover(true)}
+                onMouseLeave={() => setIsTypeIconHover(false)}
               >
                 {current?.icon}
               </Button>
@@ -243,14 +344,7 @@ const ExcelColumnHeader = memo(
             </Button>
           )}
         </div>
-        {mode === 'edit' && (
-          <input
-            value={filterValue}
-            onChange={handleFilterChange}
-            placeholder="Filter..."
-            className="w-full text-xs border rounded px-2 py-1 mt-1 bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
-          />
-        )}
+        {/* filter input removed */}
       </th>
     );
   },

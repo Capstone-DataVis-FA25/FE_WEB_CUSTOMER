@@ -3,22 +3,10 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SlideInUp } from '@/theme/animation';
-import { formatDateUsingDayjs } from '@/utils/dateFormat';
-import {
-  ArrowLeft,
-  Trash2,
-  Database,
-  BarChart3,
-  Settings,
-  Save,
-  RotateCcw,
-  Download,
-} from 'lucide-react';
+import { ArrowLeft, Database, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
+// removed inline inputs/badge; now inside modular components
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useDataset } from '@/features/dataset/useDataset';
 import { useToastContext } from '@/components/providers/ToastProvider';
@@ -28,7 +16,9 @@ import { useBeforeUnload } from '@/hooks/useBeforeUnload';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal';
 
 import Routers from '@/router/routers';
-import DatasetViewerTable from '@/components/dataset/DatasetViewerTable';
+import DatasetPreviewCard from '@/components/dataset/DatasetPreviewCard';
+import DatasetInfoCard from '@/components/dataset/DatasetInfoCard';
+import DatasetActionsCard from '@/components/dataset/DatasetActionsCard';
 
 // Type for header with data
 interface DatasetHeader {
@@ -618,69 +608,7 @@ const DatasetDetailPage: React.FC = () => {
     );
   }
 
-  // Prepare flat header + body rows for lightweight viewer with custom formatting
-  interface ColumnMetaView {
-    name: string;
-    type: 'text' | 'number' | 'date';
-  }
-  let headerRow: ColumnMetaView[] = [];
-  let bodyRows: (string | number | null)[][] = [];
-  if (currentDataset.headers && currentDataset.headers.length) {
-    headerRow = currentDataset.headers.map((h: any) => ({
-      name: h.name,
-      type: h.type === 'number' || h.type === 'date' ? h.type : 'text',
-    }));
-
-    const rowCount = currentDataset.rowCount || 0;
-    const rows: (string | number | null)[][] = Array.from({ length: rowCount }, () =>
-      Array(headerRow.length).fill('')
-    );
-    currentDataset.headers.forEach((h: DatasetHeader, colIdx: number) => {
-      h.data?.forEach((cell: string | number | null, rowIdx: number) => {
-        if (rows[rowIdx]) rows[rowIdx][colIdx] = cell ?? '';
-      });
-    });
-
-    const thousandsSep = currentDataset.thousandsSeparator || ',';
-    const decimalSep = currentDataset.decimalSeparator || '.';
-    const dateFmt = currentDataset.dateFormat || 'YYYY-MM-DD';
-
-    const alreadyFormattedPattern = /[@#]/; // legacy custom markers from old datasets
-    const formatNumberCustom = (val: number | string): string => {
-      if (val === null || val === undefined || val === '') return '';
-      const raw = String(val).trim();
-      // If data already contains the user-chosen separators exactly, keep it
-      if (
-        raw.includes(thousandsSep) ||
-        raw.includes(decimalSep) ||
-        alreadyFormattedPattern.test(raw)
-      ) {
-        return raw;
-      }
-      const m = raw.replace(/,/g, '').match(/^(-?\d+)(?:[.,](\d+))?$/);
-      if (!m) return raw; // not a plain number -> leave as is
-      const neg = m[1].startsWith('-') ? '-' : '';
-      const intPart = m[1].replace('-', '');
-      const decPart = m[2] || '';
-      // group every 3 digits from right
-      const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, thousandsSep);
-      return neg + grouped + (decPart ? decimalSep + decPart : '');
-    };
-
-    const formatDateCustom = (val: string): string => {
-      if (!val) return '';
-      return formatDateUsingDayjs(val, dateFmt);
-    };
-
-    bodyRows = rows.map(r =>
-      r.map((cell, ci) => {
-        const colType = headerRow[ci]?.type;
-        if (colType === 'number') return formatNumberCustom(cell as any);
-        if (colType === 'date') return typeof cell === 'string' ? formatDateCustom(cell) : '';
-        return cell;
-      })
-    );
-  }
+  // Main preview now handled by DatasetPreviewCard
 
   // Note: unmount cleanup handled in initial data fetch effect above
   return (
@@ -727,316 +655,59 @@ const DatasetDetailPage: React.FC = () => {
         <div className="py-8 relative z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex gap-3 items-start">
-              {/* Left Sidebar - Dataset Information */}
+              {/* Left Sidebar - Modularized */}
               <div className="w-80 shrink-0 space-y-6">
                 <SlideInUp delay={0.15}>
-                  <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/20 shadow-xl rounded-2xl overflow-hidden group hover:shadow-2xl transition-all duration-300">
-                    <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4">
-                      <CardTitle className="flex items-center gap-3 text-white">
-                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                          <Database className="h-4 w-4" />
-                        </div>
-                        <span className="font-semibold">
-                          {t('dataset_information', 'Dataset Information')}
-                        </span>
-                      </CardTitle>
-                    </div>
-                    <CardContent className="p-6 space-y-4">
-                      <div className="space-y-3">
-                        {/* Dataset Name - Inline Editing */}
-                        <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-xl">
-                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            {t('dataset_name', 'Name')}
-                          </label>
-                          {isEditingName ? (
-                            <div className="space-y-2 mt-2">
-                              <Input
-                                value={editableName}
-                                onChange={e => handleNameChange(e.target.value)}
-                                onBlur={handleNameSave}
-                                onKeyDown={handleNameKeyDown}
-                                autoFocus
-                                className={nameInputClass}
-                                placeholder={t('dataset_namePlaceholder', 'Enter dataset name')}
-                              />
-                              {validationErrors.name && (
-                                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                                  <span>⚠</span>
-                                  {validationErrors.name}
-                                </p>
-                              )}
-                            </div>
-                          ) : (
-                            <p
-                              className="text-gray-900 dark:text-white font-medium mt-1 cursor-pointer hover:bg-gray-200/50 dark:hover:bg-gray-700/50 p-2 rounded transition-colors"
-                              onClick={() => setIsEditingName(true)}
-                              title={t('dataset_clickToEdit', 'Click to edit')}
-                            >
-                              {editableName || t('dataset_noName', 'No name')}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Dataset Description - Inline Editing */}
-                        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl">
-                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            {t('dataset_description', 'Description')}
-                          </label>
-                          {isEditingDescription ? (
-                            <div className="space-y-2 mt-2">
-                              <Textarea
-                                value={editableDescription}
-                                onChange={e => handleDescriptionChange(e.target.value)}
-                                onBlur={handleDescriptionSave}
-                                onKeyDown={e => {
-                                  if (e.key === 'Escape') {
-                                    setEditableDescription(originalDescription);
-                                    setIsEditingDescription(false);
-                                    setValidationErrors(prev => ({ ...prev, description: '' }));
-                                  }
-                                }}
-                                autoFocus
-                                className={`font-medium min-h-[100px] ${
-                                  validationErrors.description
-                                    ? 'border-red-500 focus:ring-red-500'
-                                    : ''
-                                }`}
-                                placeholder={t(
-                                  'dataset_descriptionPlaceholder',
-                                  'Enter dataset description'
-                                )}
-                              />
-                              {validationErrors.description && (
-                                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-                                  <span>⚠</span>
-                                  {validationErrors.description}
-                                </p>
-                              )}
-                            </div>
-                          ) : (
-                            <p
-                              className="text-gray-900 dark:text-white font-medium mt-1 leading-relaxed cursor-pointer hover:bg-blue-100/50 dark:hover:bg-blue-900/30 p-2 rounded transition-colors whitespace-pre-wrap"
-                              onClick={() => setIsEditingDescription(true)}
-                              title={t('dataset_clickToEdit', 'Click to edit')}
-                            >
-                              {editableDescription || t('dataset_noDescription', 'No description')}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Created & Last Updated info */}
-                        <div className="grid grid-cols-1 gap-3">
-                          <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200/30 dark:border-green-800/30">
-                            <label className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide flex items-center gap-2">
-                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                              {t('dataset_createdAt', 'Created')}
-                            </label>
-                            <p className="text-gray-900 dark:text-white font-medium mt-2">
-                              {formatDate(currentDataset.createdAt)}
-                            </p>
-                          </div>
-                          <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-100 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl border border-blue-200/30 dark:border-blue-800/30">
-                            <label className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide flex items-center gap-2">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              {t('dataset_updatedAt', 'Last Updated')}
-                            </label>
-                            <p className="text-gray-900 dark:text-white font-medium mt-2">
-                              {formatDate(currentDataset.updatedAt)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <DatasetInfoCard
+                    t={(key: string, fallback?: string) =>
+                      t(key, { defaultValue: fallback ?? key })
+                    }
+                    editableName={editableName}
+                    isEditingName={isEditingName}
+                    setIsEditingName={setIsEditingName}
+                    validationErrors={validationErrors}
+                    handleNameChange={handleNameChange}
+                    handleNameSave={handleNameSave}
+                    handleNameKeyDown={handleNameKeyDown}
+                    nameInputClass={nameInputClass}
+                    editableDescription={editableDescription}
+                    setEditableDescription={setEditableDescription}
+                    isEditingDescription={isEditingDescription}
+                    setIsEditingDescription={setIsEditingDescription}
+                    handleDescriptionChange={handleDescriptionChange}
+                    handleDescriptionSave={handleDescriptionSave}
+                    originalDescription={originalDescription}
+                    setValidationErrors={setValidationErrors}
+                    createdAt={currentDataset.createdAt}
+                    updatedAt={currentDataset.updatedAt}
+                    formatDate={formatDate}
+                  />
                 </SlideInUp>
 
-                {/* Metadata card removed; created/updated info merged into information card above */}
-
                 <SlideInUp delay={0.25}>
-                  <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/20 shadow-xl rounded-2xl overflow-hidden">
-                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4">
-                      <CardTitle className="flex items-center gap-3 text-white">
-                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                          <Settings className="w-4 h-4" />
-                        </div>
-                        <span className="font-semibold">Actions</span>
-                        {hasChanges && (
-                          <Badge className="bg-yellow-500 text-white ml-auto">
-                            {t('unsaved_changes', 'Unsaved changes')}
-                          </Badge>
-                        )}
-                      </CardTitle>
-                    </div>
-                    <CardContent className="p-6 space-y-4">
-                      {/* Save Button - Only show when there are changes */}
-                      {hasChanges && (
-                        <Button
-                          onClick={handleSave}
-                          className="w-full h-12 flex items-center justify-start gap-3 bg-gradient-to-r from-green-400 to-emerald-500 dark:from-green-700/30 dark:to-emerald-800/30 border border-green-300/60 dark:border-green-700/60 hover:from-green-500 hover:to-emerald-600 dark:hover:from-green-800/40 dark:hover:to-emerald-900/40 shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 group"
-                        >
-                          <Save className="w-5 h-5 text-green-700 dark:text-green-300 group-hover:text-white transition-colors flex-shrink-0" />
-                          <span className="text-green-800 dark:text-green-200 font-medium text-left group-hover:text-white">
-                            {t('save', 'Save')}
-                          </span>
-                        </Button>
-                      )}
-
-                      {/* Reset Button - Only show when there are changes */}
-                      {hasChanges && (
-                        <Button
-                          variant="outline"
-                          onClick={handleReset}
-                          className="w-full h-12 flex items-center justify-start gap-3 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-200/50 dark:border-orange-800/50 hover:from-orange-100 hover:to-amber-100 dark:hover:from-orange-800/30 dark:hover:to-amber-800/30 shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 group"
-                        >
-                          <RotateCcw className="w-5 h-5 text-orange-600 dark:text-orange-400 group-hover:text-orange-700 dark:group-hover:text-orange-300 transition-colors flex-shrink-0" />
-                          <span className="text-orange-700 dark:text-orange-300 font-medium text-left">
-                            {t('reset', 'Reset')}
-                          </span>
-                        </Button>
-                      )}
-
-                      <Button
-                        variant="outline"
-                        onClick={handleBack}
-                        className="w-full h-12 flex items-center justify-start gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-800/50 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30 shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 group"
-                      >
-                        <ArrowLeft className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors flex-shrink-0" />
-                        <span className="text-blue-700 dark:text-blue-300 font-medium text-left">
-                          {t('back', 'Back')}
-                        </span>
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={handleDeleteDataset}
-                        disabled={deleting}
-                        className="w-full h-12 flex items-center justify-start gap-3 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border border-red-200/50 dark:border-red-800/50 hover:from-red-500 hover:to-pink-600 hover:text-white dark:hover:from-red-600 dark:hover:to-pink-700 shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 group disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Trash2 className="w-5 h-5 text-red-600 dark:text-white group-hover:text-white transition-colors flex-shrink-0" />
-                        <span className="text-red-700 dark:text-white font-medium group-hover:text-white text-left">
-                          {deleting ? 'Deleting...' : t('dataset_delete', 'Delete')}
-                        </span>
-                      </Button>
-                    </CardContent>
-                  </Card>
+                  <DatasetActionsCard
+                    t={(key: string, fallback?: string) =>
+                      t(key, { defaultValue: fallback ?? key })
+                    }
+                    hasChanges={hasChanges}
+                    deleting={deleting}
+                    onSave={handleSave}
+                    onReset={handleReset}
+                    onBack={handleBack}
+                    onDelete={handleDeleteDataset}
+                  />
                 </SlideInUp>
               </div>
 
-              {/* Main Content Area with Enhanced Layout */}
+              {/* Main Content Area - Modularized Preview */}
               <div className="max-w-5xl flex-1 space-y-6">
                 <SlideInUp delay={0.3}>
-                  <Card className="backdrop-blur-xl bg-white/95 dark:bg-gray-800/95 border border-white/20 dark:border-gray-700/20 shadow-2xl rounded-2xl overflow-hidden">
-                    <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-6">
-                      <CardTitle className="flex items-center justify-between text-white">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                            <BarChart3 className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <h3 className="text-xl font-bold">
-                              {t('dataset_dataPreview', 'Data Preview')}
-                            </h3>
-                          </div>
-                        </div>
-                      </CardTitle>
-                    </div>
-                    <CardContent className="p-6">
-                      {/* Enhanced responsive container with better styling */}
-                      <div className="relative">
-                        {/* Header info bar */}
-                        <div className="mb-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-xl border border-gray-200/50 dark:border-gray-600/50">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                  Columns: {currentDataset.columnCount}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full" />
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                  Rows: {currentDataset.rowCount?.toLocaleString()}
-                                </span>
-                              </div>
-                              <div className="hidden md:flex items-center gap-4 pl-4 ml-2 border-l border-gray-300 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-400">
-                                <span className="flex items-center gap-1">
-                                  <span className="font-semibold">Thousands Separator:</span>
-                                  <code className="px-1.5 py-0.5 rounded bg-gray-200/70 dark:bg-gray-700/70 text-gray-800 dark:text-gray-200 text-[11px] font-mono">
-                                    {(currentDataset.thousandsSeparator || ',') === ' '
-                                      ? '␠'
-                                      : currentDataset.thousandsSeparator || ','}
-                                  </code>
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <span className="font-semibold">Decimal Separator:</span>
-                                  <code className="px-1.5 py-0.5 rounded bg-gray-200/70 dark:bg-gray-700/70 text-gray-800 dark:text-gray-200 text-[11px] font-mono">
-                                    {currentDataset.decimalSeparator || '.'}
-                                  </code>
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <span className="font-semibold">Date:</span>
-                                  <code className="px-1.5 py-0.5 rounded bg-gray-200/70 dark:bg-gray-700/70 text-gray-800 dark:text-gray-200 text-[11px] font-mono">
-                                    {currentDataset.dateFormat || 'YYYY-MM-DD'}
-                                  </code>
-                                </span>
-                              </div>
-                            </div>
-                            {/* Export CSV button */}
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                onClick={() =>
-                                  exportCsv(
-                                    headerRow,
-                                    bodyRows,
-                                    `${(currentDataset?.name || 'dataset').replace(/[^a-z0-9-_\.]/gi, '_')}.csv`
-                                  )
-                                }
-                                className="ml-3"
-                              >
-                                <Download className="w-4 h-4 mr-2" />
-                                Export CSV
-                              </Button>
-                            </div>
-
-                            {/* Mobile format info */}
-                            <div className="md:hidden mt-2 grid grid-cols-1 gap-1 text-[11px] text-gray-600 dark:text-gray-400">
-                              <div className="flex items-center gap-1">
-                                <span className="font-semibold">Hàng nghìn:</span>
-                                <code className="px-1 py-0.5 rounded bg-gray-200/70 dark:bg-gray-700/70 font-mono">
-                                  {(currentDataset.thousandsSeparator || ',') === ' '
-                                    ? '␠'
-                                    : currentDataset.thousandsSeparator || ','}
-                                </code>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="font-semibold">Thập phân:</span>
-                                <code className="px-1 py-0.5 rounded bg-gray-200/70 dark:bg-gray-700/70 font-mono">
-                                  {currentDataset.decimalSeparator || '.'}
-                                </code>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="font-semibold">Ngày:</span>
-                                <code className="px-1 py-0.5 rounded bg-gray-200/70 dark:bg-gray-700/70 font-mono">
-                                  {currentDataset.dateFormat || 'YYYY-MM-DD'}
-                                </code>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Data table container with enhanced styling */}
-                        <div
-                          className="overflow-hidden border-2 border-gray-200/50 dark:border-gray-600/50 rounded-2xl shadow-xl bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-gray-800 dark:via-gray-800 dark:to-gray-700"
-                          style={{ minHeight: '400px', maxHeight: '1000px' }}
-                        >
-                          <div className="overflow-auto h-full">
-                            <DatasetViewerTable columns={headerRow} rows={bodyRows} height="60vh" />
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <DatasetPreviewCard
+                    t={(key: string, fallback?: string) =>
+                      t(key, { defaultValue: fallback ?? key })
+                    }
+                    currentDataset={currentDataset}
+                  />
                 </SlideInUp>
               </div>
             </div>

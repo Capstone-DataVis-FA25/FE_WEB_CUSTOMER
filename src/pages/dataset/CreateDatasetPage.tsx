@@ -59,9 +59,7 @@ function CreateDatasetPageContent() {
     resetState,
     parsedValues,
     numberFormat,
-    dateFormat,
     setNumberFormat,
-    setDateFormat,
   } = useDataset();
 
   // Local state management (non-shareable states)
@@ -146,13 +144,6 @@ function CreateDatasetPageContent() {
         console.log('📊 Setting currentParsedData');
         setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
         console.log('Processed result:', result);
-
-        // Auto-apply detected formats from parsing result
-        if (result.detectedDateFormat) {
-          console.log('🎯 Auto-applying detected date format:', result.detectedDateFormat);
-          setDateFormat(result.detectedDateFormat);
-          console.log('✅ Date format updated to:', result.detectedDateFormat);
-        }
 
         if (result.detectedNumberFormat) {
           console.log('🎯 Auto-applying detected number format:', result.detectedNumberFormat);
@@ -256,7 +247,6 @@ function CreateDatasetPageContent() {
         ...(description && { description: description.trim() }),
         thousandsSeparator: numberFormat.thousandsSeparator,
         decimalSeparator: numberFormat.decimalSeparator,
-        dateFormat: dateFormat,
       };
 
       // Console log the exact request data being sent
@@ -307,7 +297,6 @@ function CreateDatasetPageContent() {
     navigate,
     t,
     setCurrentParsedData,
-    dateFormat,
     numberFormat.decimalSeparator,
     numberFormat.thousandsSeparator,
   ]);
@@ -354,9 +343,8 @@ function CreateDatasetPageContent() {
     resetState();
     // Reset form fields (name/description)
     resetForm();
-    // Reset formats to defaults explicitly (in case any external sync exists)
+    // Reset number format to defaults explicitly (UI display only)
     setNumberFormat({ thousandsSeparator: ',', decimalSeparator: '.' });
-    setDateFormat('DD/MM/YYYY');
     // Clear local file selection
     setSelectedFile(null);
 
@@ -374,7 +362,6 @@ function CreateDatasetPageContent() {
     setOriginalTextContent,
     resetForm,
     setNumberFormat,
-    setDateFormat,
   ]);
 
   // Handle text processing
@@ -397,12 +384,6 @@ function CreateDatasetPageContent() {
           setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
 
           // Auto-apply detected formats from parsing result
-          if (result.detectedDateFormat) {
-            console.log('🎯 Auto-applying detected date format (JSON):', result.detectedDateFormat);
-            setDateFormat(result.detectedDateFormat);
-            console.log('✅ Date format updated to:', result.detectedDateFormat);
-          }
-
           if (result.detectedNumberFormat) {
             console.log(
               '🎯 Auto-applying detected number format (JSON):',
@@ -422,12 +403,6 @@ function CreateDatasetPageContent() {
           setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
 
           // Auto-apply detected formats from parsing result
-          if (result.detectedDateFormat) {
-            // console.log('🎯 Auto-applying detected date format (CSV):', result.detectedDateFormat);
-            setDateFormat(result.detectedDateFormat);
-            // console.log('✅ Date format updated to:', result.detectedDateFormat);
-          }
-
           if (result.detectedNumberFormat) {
             // console.log(
             //   '🎯 Auto-applying detected number format (CSV):',
@@ -471,7 +446,6 @@ function CreateDatasetPageContent() {
       setOriginalParsedData,
       setCurrentParsedData,
       setSelectedDelimiter,
-      setDateFormat,
       setNumberFormat,
     ]
   );

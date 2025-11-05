@@ -186,13 +186,14 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       initData.forEach((row, rowIndex) => {
         row.forEach((cellValue, colIndex) => {
           const colType = initCols[colIndex]?.type ?? 'text';
+          const perColDateFormat = initCols[colIndex]?.dateFormat;
           const conv = tryConvert(
             colType,
             colIndex,
             rowIndex,
             cellValue,
             colType === 'number' ? numberFormat : undefined,
-            colType === 'date' ? dateFormat : undefined
+            colType === 'date' ? (perColDateFormat as any) : undefined
           );
           if (!conv.ok) {
             if (!parseErrors[rowIndex]) parseErrors[rowIndex] = [];
@@ -278,6 +279,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   const prevNumberColsRef = useRef<number[] | null>(null);
   const prevDateColsRef = useRef<number[] | null>(null);
   const prevFormatsRef = useRef<{ dec: string; thou: string; date: string } | null>(null);
+  const prevDataSigRef = useRef<string | null>(null);
   useEffect(() => {
     if (!columns || columns.length === 0) return;
     const numberCols = columns.map((c, i) => (c.type === 'number' ? i : -1)).filter(i => i >= 0);
@@ -287,6 +289,13 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       thou: numberFormat.thousandsSeparator,
       date: dateFormat,
     };
+    // Lightweight data signature: length + first few rows joined
+    const previewRows = 5;
+    const sigRows = data
+      .slice(0, previewRows)
+      .map(r => (r ? r.join('\u001f') : ''))
+      .join('\u001e');
+    const dataSig = `${data.length}|${columns.length}|${sigRows}`;
 
     const sameNumbers =
       prevNumberColsRef.current &&
@@ -301,13 +310,13 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       prevFormatsRef.current.dec === formats.dec &&
       prevFormatsRef.current.thou === formats.thou &&
       prevFormatsRef.current.date === formats.date;
-
-    if (sameNumbers && sameDates && sameFormats) return;
+    if (sameNumbers && sameDates && sameFormats && prevDataSigRef.current === dataSig) return;
 
     // Update refs
     prevNumberColsRef.current = numberCols;
     prevDateColsRef.current = dateCols;
     prevFormatsRef.current = formats;
+    prevDataSigRef.current = dataSig;
 
     if (numberCols.length === 0 && dateCols.length === 0) return;
 
@@ -323,7 +332,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       }
       for (const ci of dateCols) {
         const v = data[ri]?.[ci] ?? '';
-        const conv = tryConvert('date', ci, ri, v, undefined, dateFormat);
+        const perColDateFormat = columns[ci]?.dateFormat;
+        const conv = tryConvert('date', ci, ri, v, undefined, perColDateFormat as any);
         if (!conv.ok) {
           if (!nextErrors[ri]) nextErrors[ri] = [];
           nextErrors[ri].push(ci);
@@ -443,7 +453,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
           }
           for (const ci of dateCols) {
             const v = nextData[ri]?.[ci] ?? '';
-            const conv = tryConvert('date', ci, ri, v, undefined, dateFormat);
+            const perColDateFormat = nextCols[ci]?.dateFormat;
+            const conv = tryConvert('date', ci, ri, v, undefined, perColDateFormat as any);
             if (!conv.ok) {
               if (!nextErrors[ri]) nextErrors[ri] = [];
               nextErrors[ri].push(ci);
@@ -486,13 +497,14 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       const colType = nextColumns[c]?.type ?? 'text';
       for (let ri = 0; ri < nextData.length; ri++) {
         const v = nextData[ri]?.[c] ?? '';
+        const perColDateFormat = nextColumns[c]?.dateFormat;
         const conv = tryConvert(
           colType,
           c,
           ri,
           v,
           colType === 'number' ? numberFormat : undefined,
-          colType === 'date' ? dateFormat : undefined
+          colType === 'date' ? (perColDateFormat as any) : undefined
         );
         dispatch(updateParseError({ row: ri, column: c, hasError: !conv.ok }));
       }
@@ -958,14 +970,14 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       .join(',');
   }, [highlightedColumns]);
 
-  // Debug: log highlight resolution details
-  useEffect(() => {
-    console.log('[HighlightDebug][CustomExcel] resolve', {
-      incomingIds: highlightHeaderIds || [],
-      columnIds: columns.map(c => (c as any)?.id ?? (c as any)?.headerId ?? null),
-      highlightedIndices: Array.from(highlightedColumns.values()),
-    });
-  }, [columns, highlightHeaderIds, highlightedColumns]);
+  // // Debug: log highlight resolution details
+  // useEffect(() => {
+  //   console.log('[HighlightDebug][CustomExcel] resolve', {
+  //     incomingIds: highlightHeaderIds || [],
+  //     columnIds: columns.map(c => (c as any)?.id ?? (c as any)?.headerId ?? null),
+  //     highlightedIndices: Array.from(highlightedColumns.values()),
+  //   });
+  // }, [columns, highlightHeaderIds, highlightedColumns]);
 
   // Read highlightVersion to satisfy lints about unused var in rows; keeps stable prop churn minimal
   useEffect(() => {
@@ -1011,24 +1023,20 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // Reset to original dataset snapshot captured on init
   const handleResetOriginal = useCallback(() => {
     try {
-      const origCols = originalColsRef.current;
       const origData = originalDataRef.current;
-      if (!origCols || !origData) {
+      if (!origData) {
         // Fallback if snapshot missing
         initializeFromProps();
         return;
       }
+      // Reset ONLY data; keep current columns (types/dateFormat) intact
       clearExcelErrors();
-      dispatch(clearUIState());
-      // Apply originals directly without remount
-      dispatch(setColumnsRedux(origCols.map(c => ({ ...c }))));
       setData(origData.map(r => [...r]));
-      dispatch(setFilters(Array(origCols.length).fill('')));
-      // Recompute parse errors on the restored sheet
+      // Recompute parse errors on the restored sheet using CURRENT columns
       const nextErrors: Record<number, number[]> = {};
       for (let ri = 0; ri < origData.length; ri++) {
-        for (let ci = 0; ci < origCols.length; ci++) {
-          const colType = origCols[ci]?.type ?? 'text';
+        for (let ci = 0; ci < columns.length; ci++) {
+          const colType = columns[ci]?.type ?? 'text';
           const v = origData[ri]?.[ci] ?? '';
           const conv = tryConvert(
             colType as any,
@@ -1036,7 +1044,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
             ri,
             v,
             colType === 'number' ? numberFormat : undefined,
-            colType === 'date' ? dateFormat : undefined
+            colType === 'date' ? (columns[ci] as any)?.dateFormat : undefined
           );
           if (!conv.ok) {
             if (!nextErrors[ri]) nextErrors[ri] = [];
@@ -1048,7 +1056,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     } catch (e) {
       console.error('Reset failed', e);
     }
-  }, [dispatch, clearExcelErrors, initializeFromProps, tryConvert, numberFormat, dateFormat]);
+  }, [dispatch, clearExcelErrors, initializeFromProps, tryConvert, numberFormat, columns]);
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTableElement>) => {
@@ -1201,9 +1209,13 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
           <span className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-mono">
             {numberFormat.decimalSeparator}
           </span>
-          <span className="text-gray-600 dark:text-gray-300">Date format:</span>
+          <span className="text-gray-600 dark:text-gray-300">Columns:</span>
           <span className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-mono">
-            {dateFormat}
+            {columns.length}
+          </span>
+          <span className="text-gray-600 dark:text-gray-300">Rows:</span>
+          <span className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-mono">
+            {filteredData.length}
           </span>
         </div>
       </div>
