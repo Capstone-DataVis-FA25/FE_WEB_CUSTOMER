@@ -73,6 +73,16 @@ export const CHART_VALIDATION_RULES: Partial<
       description: 'Y-axis must be numeric values',
     },
   },
+  [ChartType.CyclePlot]: {
+    xAxis: {
+      allowedTypes: ['text', 'number', 'date'],
+      description: 'Period axis (e.g., Month, Quarter, Week) can be text, number, or date',
+    },
+    yAxis: {
+      allowedTypes: ['number'],
+      description: 'Value axis must be numeric values',
+    },
+  },
   [ChartType.Pie]: {
     xAxis: {
       allowedTypes: [],
@@ -171,6 +181,9 @@ export const getChartTypeKey = (chartType: ChartType | string): ChartType => {
         return ChartType.Area;
       case 'scatter':
         return ChartType.Scatter;
+      case 'cycleplot':
+      case 'cycle':
+        return ChartType.CyclePlot;
       default:
         return ChartType.Line; // Default fallback
     }

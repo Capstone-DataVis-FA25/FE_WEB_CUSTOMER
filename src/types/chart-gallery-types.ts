@@ -24,6 +24,7 @@ export type ChartType =
   | 'donut'
   | 'column'
   | 'scatter'
+  | 'cycleplot'
   | 'map'
   | 'heatmap'
   | 'bubble'

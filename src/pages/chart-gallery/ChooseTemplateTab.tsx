@@ -34,6 +34,7 @@ import Routers from '@/router/routers';
 import { useDataset } from '@/features/dataset/useDataset';
 import type { ChartCategory, ChartTemplate } from '@/types/chart-gallery-types';
 import ChartTemplateCard from './ChartTemplateCard';
+import { isSupportedChartType } from '@/constants/chart-types';
 
 export default function ChooseTemplateTab() {
   const { t } = useTranslation();
@@ -133,8 +134,7 @@ export default function ChooseTemplateTab() {
   const continueWithTemplate = (template: ChartTemplate, datasetIdParam?: string) => {
     try {
       // Only allow chart types supported by CreateChartRequest
-      // Extend support to include 'scatter' 'pie' and 'donut'
-      if (!['line', 'bar', 'area', 'scatter', 'pie', 'donut'].includes(template.type)) {
+      if (!isSupportedChartType(template.type)) {
         showError(
           t('chart_create_error', 'Error'),
           t('chart_create_unsupported_type', 'This chart type is not supported for creation.')
