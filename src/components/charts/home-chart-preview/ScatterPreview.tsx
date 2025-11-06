@@ -13,9 +13,10 @@ const ScatterPreview: React.FC<Props> = ({ arrayData }) => {
       height={420}
       xAxisKey="x"
       yAxisKey="y"
-      colorKey="category"
-      showLegend={false}
+      showLegend={true}
+      animationDuration={800}
       showTooltip={true}
+      showAxisLabels={true}
     />
   );
 };
