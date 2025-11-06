@@ -21,6 +21,13 @@ const ChartDisplaySection: React.FC = () => {
   const { chartData, chartConfig, currentChartType: chartType } = useChartEditorRead();
   const { currentDataset } = useDataset();
 
+  console.log('📊 ChartDisplaySection rendering with:', {
+    chartData,
+    chartConfig,
+    currentChartType: chartType,
+    currentDataset,
+  });
+
   // Helper: Map DataHeader ID to name
   const dataHeaders = currentDataset?.headers || [];
   const getHeaderName = (id: string) => {
