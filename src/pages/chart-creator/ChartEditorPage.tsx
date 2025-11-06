@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+dayjs.extend(customParseFormat);
 
 // UnifiedChartEditor is used inside ChartTab
 import ChartTab from './ChartTab';
@@ -406,8 +409,13 @@ const ChartEditorPage: React.FC = () => {
             return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
           }
           if (type === 'date') {
-            const aT = new Date(aVal).getTime();
-            const bT = new Date(bVal).getTime();
+            const fmt = (working.headers[column] as any)?.dateFormat as string | undefined;
+            const aParsed = fmt ? dayjs(aVal, fmt, true) : dayjs(aVal);
+            const bParsed = fmt ? dayjs(bVal, fmt, true) : dayjs(bVal);
+            let aT = aParsed.isValid() ? aParsed.valueOf() : NaN;
+            let bT = bParsed.isValid() ? bParsed.valueOf() : NaN;
+            if (Number.isNaN(aT)) aT = new Date(aVal).getTime();
+            if (Number.isNaN(bT)) bT = new Date(bVal).getTime();
             const aSafe = Number.isNaN(aT) ? -Infinity : aT;
             const bSafe = Number.isNaN(bT) ? -Infinity : bT;
             return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;

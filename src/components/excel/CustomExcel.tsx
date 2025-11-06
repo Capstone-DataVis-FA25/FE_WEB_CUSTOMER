@@ -36,6 +36,12 @@ import * as XLSX from 'xlsx';
 import saveAs from 'file-saver';
 import { Plus, Copy, FileDown, RotateCcw } from 'lucide-react';
 // removed unused dropdown menu imports
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+dayjs.extend(customParseFormat);
+import { ModalConfirm } from '@/components/ui/modal-confirm';
+import { useModalConfirm } from '@/hooks/useModal';
+import { useToastContext } from '@/components/providers/ToastProvider';
 
 // =============== Types & Helpers =================
 import type { DataHeader } from '@/utils/dataProcessors';
@@ -78,6 +84,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   highlightHeaderIds,
 }) => {
   // Core state
+  const modalConfirm = useModalConfirm();
+  const { showSuccess } = useToastContext();
   const columns = useAppSelector(selectColumns);
   // Keep a ref of columns to avoid function identity churn in callbacks that shouldn't care about header name changes
   const columnsRef = useRef(columns);
@@ -782,14 +790,17 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         return direction === 'asc' ? aNum - bNum : bNum - aNum;
       }
       if (type === 'date') {
-        const aDate = new Date(aVal);
-        const bDate = new Date(bVal);
-        const aT = aDate.getTime();
-        const bT = bDate.getTime();
-        if (Number.isNaN(aT) && Number.isNaN(bT)) return 0;
-        if (Number.isNaN(aT)) return direction === 'asc' ? 1 : -1;
-        if (Number.isNaN(bT)) return direction === 'asc' ? -1 : 1;
-        return direction === 'asc' ? aT - bT : bT - aT;
+        const fmt = columns[column]?.dateFormat as string | undefined;
+        const aParsed = fmt ? dayjs(aVal, fmt, true) : dayjs(aVal);
+        const bParsed = fmt ? dayjs(bVal, fmt, true) : dayjs(bVal);
+        let aT = aParsed.isValid() ? aParsed.valueOf() : NaN;
+        let bT = bParsed.isValid() ? bParsed.valueOf() : NaN;
+        // Fallback to native Date if strict parse fails
+        if (Number.isNaN(aT)) aT = new Date(aVal).getTime();
+        if (Number.isNaN(bT)) bT = new Date(bVal).getTime();
+        const aSafe = Number.isNaN(aT) ? Number.NEGATIVE_INFINITY : aT;
+        const bSafe = Number.isNaN(bT) ? Number.NEGATIVE_INFINITY : bT;
+        return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
       }
       return direction === 'asc'
         ? aVal.toLowerCase().localeCompare(bVal.toLowerCase())
@@ -818,14 +829,17 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         return direction === 'asc' ? aNum - bNum : bNum - aNum;
       }
       if (type === 'date') {
-        const aDate = new Date(aVal);
-        const bDate = new Date(bVal);
-        const aT = aDate.getTime();
-        const bT = bDate.getTime();
-        if (Number.isNaN(aT) && Number.isNaN(bT)) return 0;
-        if (Number.isNaN(aT)) return direction === 'asc' ? 1 : -1;
-        if (Number.isNaN(bT)) return direction === 'asc' ? -1 : 1;
-        return direction === 'asc' ? aT - bT : bT - aT;
+        const fmt = columns[column]?.dateFormat as string | undefined;
+        const aParsed = fmt ? dayjs(aVal, fmt, true) : dayjs(aVal);
+        const bParsed = fmt ? dayjs(bVal, fmt, true) : dayjs(bVal);
+        let aT = aParsed.isValid() ? aParsed.valueOf() : NaN;
+        let bT = bParsed.isValid() ? bParsed.valueOf() : NaN;
+        // Fallback to native Date if strict parse fails
+        if (Number.isNaN(aT)) aT = new Date(aVal).getTime();
+        if (Number.isNaN(bT)) bT = new Date(bVal).getTime();
+        const aSafe = Number.isNaN(aT) ? Number.NEGATIVE_INFINITY : aT;
+        const bSafe = Number.isNaN(bT) ? Number.NEGATIVE_INFINITY : bT;
+        return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
       }
       return direction === 'asc'
         ? String(aVal).toLowerCase().localeCompare(String(bVal).toLowerCase())
@@ -985,7 +999,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   }, [highlightVersion]);
 
   // ===== Clipboard & Export Helpers =====
-  const copyAll = useCallback(() => {
+  const copyAll = useCallback(async () => {
     try {
       const escapeCSV = (val: unknown): string => {
         const s = val == null ? '' : String(val);
@@ -1000,11 +1014,12 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       const header = columns.map(c => escapeCSV(c.name));
       const body = data.map(r => r.map(v => escapeCSV(v)));
       const csv = [header, ...body].map(row => row.join(',')).join('\n');
-      void navigator.clipboard.writeText(csv);
+      await navigator.clipboard.writeText(csv);
+      showSuccess('Copied to clipboard');
     } catch (e) {
       console.error('Copy failed', e);
     }
-  }, [columns, data]);
+  }, [columns, data, showSuccess]);
 
   const exportXlsx = useCallback(() => {
     try {
@@ -1020,31 +1035,44 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     }
   }, [columns, data]);
 
-  // Reset to original dataset snapshot captured on init
+  // Reset to original dataset snapshot captured on init (rows, columns, and data)
   const handleResetOriginal = useCallback(() => {
     try {
       const origData = originalDataRef.current;
-      if (!origData) {
+      const origCols = originalColsRef.current;
+      if (!origData || !origCols) {
         // Fallback if snapshot missing
         initializeFromProps();
         return;
       }
-      // Reset ONLY data; keep current columns (types/dateFormat) intact
+
+      // Restore columns first to ensure widths/types/format match snapshot
+      const restoredCols = origCols.map(c => ({ ...c }));
+      dispatch(setColumnsRedux(restoredCols));
+
+      // Clear UI state tied to current edits
+      dispatch(setSortConfig(null));
+      dispatch(setFilters(Array(restoredCols.length).fill('')));
+
+      // Restore data
       clearExcelErrors();
-      setData(origData.map(r => [...r]));
-      // Recompute parse errors on the restored sheet using CURRENT columns
+      const restoredData = origData.map(r => [...r]);
+      setData(restoredData);
+
+      // Recompute parse errors on the restored sheet using RESTORED columns
       const nextErrors: Record<number, number[]> = {};
-      for (let ri = 0; ri < origData.length; ri++) {
-        for (let ci = 0; ci < columns.length; ci++) {
-          const colType = columns[ci]?.type ?? 'text';
-          const v = origData[ri]?.[ci] ?? '';
+      for (let ri = 0; ri < restoredData.length; ri++) {
+        for (let ci = 0; ci < restoredCols.length; ci++) {
+          const col = restoredCols[ci];
+          const colType = col?.type ?? 'text';
+          const v = restoredData[ri]?.[ci] ?? '';
           const conv = tryConvert(
             colType as any,
             ci,
             ri,
             v,
             colType === 'number' ? numberFormat : undefined,
-            colType === 'date' ? (columns[ci] as any)?.dateFormat : undefined
+            colType === 'date' ? (col as any)?.dateFormat : undefined
           );
           if (!conv.ok) {
             if (!nextErrors[ri]) nextErrors[ri] = [];
@@ -1056,7 +1084,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     } catch (e) {
       console.error('Reset failed', e);
     }
-  }, [dispatch, clearExcelErrors, initializeFromProps, tryConvert, numberFormat, columns]);
+  }, [dispatch, clearExcelErrors, initializeFromProps, tryConvert, numberFormat]);
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTableElement>) => {
@@ -1181,7 +1209,12 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         <Button
           size="sm"
           variant="outline"
-          onClick={handleResetOriginal}
+          onClick={() =>
+            modalConfirm.openConfirm(async () => {
+              handleResetOriginal();
+              showSuccess('Reset successful');
+            })
+          }
           className="gap-1 bg-transparent"
         >
           <RotateCcw size={14} /> Reset
@@ -1318,6 +1351,21 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
           </p>
         </div>
       )}
+
+      <ModalConfirm
+        isOpen={modalConfirm.isOpen}
+        onClose={modalConfirm.close}
+        onConfirm={modalConfirm.confirm}
+        loading={modalConfirm.isLoading}
+        type="danger"
+        title={t('reset_confirm_title', 'Reset data')}
+        message={t(
+          'reset_confirm_message',
+          'Restore original rows, columns, and data. Sorting and filters will be cleared. This cannot be undone.'
+        )}
+        confirmText={t('reset_confirm_yes', 'Reset')}
+        cancelText={t('reset_confirm_no', 'Cancel')}
+      />
     </div>
   );
 };
