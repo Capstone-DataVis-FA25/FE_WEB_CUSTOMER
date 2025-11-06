@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 interface ColumnMeta {
   name: string;
   type?: 'text' | 'number' | 'date';
+  /** Optional per-column date format for date-type columns */
+  dateFormat?: string;
 }
 interface DatasetViewerTableProps {
   // Can pass simple array of names or array of objects with name + type
@@ -34,7 +36,9 @@ interface DatasetViewerTableProps {
 // Helper to normalize columns
 const normalizeColumns = (cols: (string | ColumnMeta)[]): Required<ColumnMeta>[] =>
   cols.map(c =>
-    typeof c === 'string' ? { name: c, type: 'text' } : { name: c.name, type: c.type || 'text' }
+    typeof c === 'string'
+      ? { name: c, type: 'text', dateFormat: undefined }
+      : { name: c.name, type: c.type || 'text', dateFormat: c.dateFormat }
   );
 
 const typeIcon = (type: ColumnMeta['type']) => {
@@ -181,7 +185,7 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
                               {col.type === 'number'
                                 ? 'Number'
                                 : col.type === 'date'
-                                  ? 'Date'
+                                  ? `Date${col.dateFormat ? ` — ${col.dateFormat}` : ''}`
                                   : 'Text'}
                             </DropdownMenuItem>
                           </DropdownMenuContent>

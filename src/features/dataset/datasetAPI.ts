@@ -26,6 +26,7 @@ export interface CreateDatasetRequest {
     type: string;
     index: number;
     data: (string | number | boolean | null)[];
+    dateFormat?: string;
   }[];
 }
 
@@ -37,6 +38,7 @@ export interface UpdateDatasetRequest {
     type: string;
     index: number;
     data: (string | number | boolean | null)[];
+    dateFormat?: string;
   }[];
 }
 

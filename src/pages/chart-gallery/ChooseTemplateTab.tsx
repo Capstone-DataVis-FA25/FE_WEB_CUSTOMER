@@ -35,12 +35,14 @@ import { useDataset } from '@/features/dataset/useDataset';
 import type { ChartCategory, ChartTemplate } from '@/types/chart-gallery-types';
 import ChartTemplateCard from './ChartTemplateCard';
 import { isSupportedChartType } from '@/constants/chart-types';
+import { useChartEditor } from '@/features/chartEditor';
 
 export default function ChooseTemplateTab() {
   const { t } = useTranslation();
   const location = useLocation();
   const { showError, showSuccess } = useToastContext();
   const navigate = useNavigate();
+  const { clearChartEditor } = useChartEditor();
 
   // Extract data from both location state AND query parameters
   const locationState = location.state as {
@@ -62,17 +64,18 @@ export default function ChooseTemplateTab() {
   const datasetId = currentDatasetId;
 
   // Dataset hook - keep selection in global store so it persists across navigation
-  const { currentDataset, getDatasetById } = useDataset();
+  // const { currentDataset, getDatasetById } = useDataset();
+  const { getDatasetById } = useDataset();
 
   // Sync local display state from global currentDataset so selection persists when navigating back
-  useEffect(() => {
-    if (currentDataset && currentDataset.id) {
-      // Only update if local state differs to avoid overwriting selection in dialog flows
-      if (currentDatasetId !== currentDataset.id) setCurrentDatasetId(currentDataset.id);
-      if (currentDatasetName !== currentDataset.name)
-        setCurrentDatasetName(currentDataset.name || '');
-    }
-  }, [currentDataset, currentDatasetId, currentDatasetName]);
+  // useEffect(() => {
+  //   if (currentDataset && currentDataset.id) {
+  //     // Only update if local state differs to avoid overwriting selection in dialog flows
+  //     if (currentDatasetId !== currentDataset.id) setCurrentDatasetId(currentDataset.id);
+  //     if (currentDatasetName !== currentDataset.name)
+  //       setCurrentDatasetName(currentDataset.name || '');
+  //   }
+  // }, [currentDataset, currentDatasetId, currentDatasetName]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<ChartCategory[]>([]);
@@ -170,6 +173,7 @@ export default function ChooseTemplateTab() {
 
   // Check if user has datasetId or needs to select one
   const handleContinueWithTemplate = (template: ChartTemplate) => {
+    clearChartEditor();
     if (!template) {
       showError(
         t('chart_create_error', 'Error'),

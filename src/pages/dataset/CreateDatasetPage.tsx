@@ -17,6 +17,7 @@ import { useAppDispatch } from '@/store/hooks';
 import { createDatasetThunk } from '@/features/dataset/datasetThunk';
 import { SlideInUp } from '@/theme/animation';
 import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
+import { setSelectedColumn, setSelectedRow } from '@/features/excelUI';
 import {
   getFileDelimiter,
   detectDelimiter,
@@ -29,6 +30,8 @@ import {
   processFileContent,
   readExcelAsText,
   validateFileSize,
+  buildHeadersFromParsed,
+  cleanHeadersRemoveEmptyRows,
 } from '@/utils/dataProcessors';
 import CleanDatasetWithAI from '@/components/dataset/CleanDatasetWithAi';
 
@@ -56,9 +59,7 @@ function CreateDatasetPageContent() {
     resetState,
     parsedValues,
     numberFormat,
-    dateFormat,
     setNumberFormat,
-    setDateFormat,
   } = useDataset();
 
   // Local state management (non-shareable states)
@@ -143,13 +144,6 @@ function CreateDatasetPageContent() {
         console.log('📊 Setting currentParsedData');
         setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
         console.log('Processed result:', result);
-
-        // Auto-apply detected formats from parsing result
-        if (result.detectedDateFormat) {
-          console.log('🎯 Auto-applying detected date format:', result.detectedDateFormat);
-          setDateFormat(result.detectedDateFormat);
-          console.log('✅ Date format updated to:', result.detectedDateFormat);
-        }
 
         if (result.detectedNumberFormat) {
           console.log('🎯 Auto-applying detected number format:', result.detectedNumberFormat);
@@ -242,35 +236,9 @@ function CreateDatasetPageContent() {
     }
 
     try {
-      // Transform currentParsedData to headers format for the new API
-      const headers = [];
-
-      if (currentParsedData && currentParsedData.headers.length > 0) {
-        // Use the current working data (includes user modifications)
-        for (let columnIndex = 0; columnIndex < currentParsedData.headers.length; columnIndex++) {
-          const header = currentParsedData.headers[columnIndex];
-
-          // Use parsed values if available for this column, otherwise use original data
-          let columnData: (string | number | boolean | null)[];
-
-          if (parsedValues[columnIndex] && Array.isArray(parsedValues[columnIndex])) {
-            // Use parsed values from the map, converting undefined to null for API compatibility
-            columnData = parsedValues[columnIndex].map(value =>
-              value === undefined ? null : value
-            );
-          } else {
-            // Fallback to original data
-            columnData = currentParsedData.data.map(row => row[columnIndex] || null);
-          }
-
-          headers.push({
-            name: header.name,
-            type: header.type, // Use the actual column type from user's working data
-            index: columnIndex,
-            data: columnData, // This will be the parsed values or original data
-          });
-        }
-      }
+      // Build headers from current parsed state and drop fully empty rows anywhere
+      const builtHeaders = buildHeadersFromParsed(currentParsedData, parsedValues as any);
+      const headers = cleanHeadersRemoveEmptyRows(builtHeaders);
 
       // Prepare the data to send in the new format
       const requestData = {
@@ -279,7 +247,6 @@ function CreateDatasetPageContent() {
         ...(description && { description: description.trim() }),
         thousandsSeparator: numberFormat.thousandsSeparator,
         decimalSeparator: numberFormat.decimalSeparator,
-        dateFormat: dateFormat,
       };
 
       // Console log the exact request data being sent
@@ -330,7 +297,6 @@ function CreateDatasetPageContent() {
     navigate,
     t,
     setCurrentParsedData,
-    dateFormat,
     numberFormat.decimalSeparator,
     numberFormat.thousandsSeparator,
   ]);
@@ -370,13 +336,15 @@ function CreateDatasetPageContent() {
   // Handle change data (go back to previous upload method and reset shared state)
   const handleChangeData = useCallback(() => {
     const prevText = originalTextContent;
+    // Clear any row/column selection in the grid when changing data
+    dispatch(setSelectedRow(null));
+    dispatch(setSelectedColumn(null));
     // Reset all shared dataset state back to initial
     resetState();
     // Reset form fields (name/description)
     resetForm();
-    // Reset formats to defaults explicitly (in case any external sync exists)
+    // Reset number format to defaults explicitly (UI display only)
     setNumberFormat({ thousandsSeparator: ',', decimalSeparator: '.' });
-    setDateFormat('DD/MM/YYYY');
     // Clear local file selection
     setSelectedFile(null);
 
@@ -389,11 +357,11 @@ function CreateDatasetPageContent() {
   }, [
     originalTextContent,
     previousViewMode,
+    dispatch,
     resetState,
     setOriginalTextContent,
     resetForm,
     setNumberFormat,
-    setDateFormat,
   ]);
 
   // Handle text processing
@@ -416,12 +384,6 @@ function CreateDatasetPageContent() {
           setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
 
           // Auto-apply detected formats from parsing result
-          if (result.detectedDateFormat) {
-            console.log('🎯 Auto-applying detected date format (JSON):', result.detectedDateFormat);
-            setDateFormat(result.detectedDateFormat);
-            console.log('✅ Date format updated to:', result.detectedDateFormat);
-          }
-
           if (result.detectedNumberFormat) {
             console.log(
               '🎯 Auto-applying detected number format (JSON):',
@@ -441,12 +403,6 @@ function CreateDatasetPageContent() {
           setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
 
           // Auto-apply detected formats from parsing result
-          if (result.detectedDateFormat) {
-            // console.log('🎯 Auto-applying detected date format (CSV):', result.detectedDateFormat);
-            setDateFormat(result.detectedDateFormat);
-            // console.log('✅ Date format updated to:', result.detectedDateFormat);
-          }
-
           if (result.detectedNumberFormat) {
             // console.log(
             //   '🎯 Auto-applying detected number format (CSV):',
@@ -490,7 +446,6 @@ function CreateDatasetPageContent() {
       setOriginalParsedData,
       setCurrentParsedData,
       setSelectedDelimiter,
-      setDateFormat,
       setNumberFormat,
     ]
   );

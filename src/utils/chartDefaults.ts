@@ -17,6 +17,9 @@ import type {
   PieChartConfig,
   PieDonutFormatterConfig,
   DonutChartConfig,
+  CyclePlotConfig,
+  SubCyclePlotChartConfig,
+  CyclePlotAxisConfig,
 } from '@/types/chart';
 
 // Default Sub configs
@@ -202,11 +205,48 @@ export const defaultDonutChartConfig: DonutChartConfig = {
   chartType: 'donut',
 };
 
+// Tạo config default cho cycle plot
+const defaultSubCyclePlotConfig: SubCyclePlotChartConfig = {
+  ...defaultBaseChartConfig,
+  showPoints: true,
+  curve: 'curveMonotoneX',
+  lineWidth: 2,
+  pointRadius: 4,
+};
+
+// Default axis configs for cycle plot
+const defaultCyclePlotAxisConfigs: CyclePlotAxisConfig = {
+  xAxisKey: undefined,
+  xAxisLabel: '',
+  yAxisLabel: '',
+  xAxisStart: 'auto',
+  yAxisStart: 'auto',
+  xAxisRotation: 0,
+  yAxisRotation: 0,
+  showAxisLabels: true,
+  showAxisTicks: true,
+  seriesConfigs: [],
+  cycleKey: undefined,
+  periodKey: undefined,
+  valueKey: undefined,
+  cycleColors: {},
+  showAverageLine: false,
+  emphasizeLatestCycle: false,
+  showRangeBand: false,
+  periodOrdering: 'auto',
+  showTooltipDelta: false,
+};
+
+export const defaultCyclePlotConfig: CyclePlotConfig = {
+  config: defaultSubCyclePlotConfig,
+  formatters: defaultFormatterConfig,
+  axisConfigs: defaultCyclePlotAxisConfigs,
+  chartType: 'cycleplot',
+};
+
 // Returns a consistent default StructuredChartConfig for given chart type and optional dataset name
 export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => {
   const log = (cfg: MainChartConfig) => {
-    // console.log('[getDefaultChartConfig] type ->', chartType);
-    // console.log('[getDefaultChartConfig] result:', cfg);
     return cfg;
   };
   switch (chartType) {
@@ -222,5 +262,7 @@ export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => 
       return log(defaultPieChartConfig);
     case ChartType.Donut:
       return log(defaultDonutChartConfig);
+    case ChartType.CyclePlot:
+      return log(defaultCyclePlotConfig);
   }
 };

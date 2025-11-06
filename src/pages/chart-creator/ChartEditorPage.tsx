@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+dayjs.extend(customParseFormat);
 import ChartHistoryPanel from '@/components/charts/ChartHistoryPanel';
 
 // UnifiedChartEditor is used inside ChartTab
@@ -24,7 +27,7 @@ import ChartNoteSidebar from '@/components/charts/ChartNoteSidebar';
 import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
 import { getDefaultChartConfig } from '@/utils/chartDefaults';
 // MainChartConfig now handled by contexts
-import type { ChartRequest, ChartType } from '@/features/charts';
+import { ChartType, type ChartRequest } from '@/features/charts';
 // ChartType is imported in ChartEditorWithProviders
 import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -43,6 +46,7 @@ import { resetBindings } from '@/utils/chartBindings';
 const ChartEditorPage: React.FC = () => {
   const { t } = useTranslation();
   const location = useLocation();
+  const params = new URLSearchParams(location.search);
   const navigate = useNavigate();
   const { getDatasetById, currentDataset, loading: isDatasetLoading } = useDataset();
   const { showSuccess, showError, toasts, removeToast } = useToast();
@@ -90,14 +94,13 @@ const ChartEditorPage: React.FC = () => {
 
   // Chart notes sidebar state
   const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(false);
+  // Use datasetId from context, with local state for selection changes
+  const [datasetId, setDatasetId] = useState<string>(contextDatasetId || '');
 
   // Handle notes sidebar
   const handleToggleNotesSidebar = () => {
     setIsNotesSidebarOpen(!isNotesSidebarOpen);
   };
-
-  // Use datasetId from context, with local state for selection changes
-  const [datasetId, setDatasetId] = useState<string>(contextDatasetId || '');
 
   // State for dataset selection modal
   const [showDatasetModal, setShowDatasetModal] = useState(false);
@@ -408,8 +411,13 @@ const ChartEditorPage: React.FC = () => {
             return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
           }
           if (type === 'date') {
-            const aT = new Date(aVal).getTime();
-            const bT = new Date(bVal).getTime();
+            const fmt = (working.headers[column] as any)?.dateFormat as string | undefined;
+            const aParsed = fmt ? dayjs(aVal, fmt, true) : dayjs(aVal);
+            const bParsed = fmt ? dayjs(bVal, fmt, true) : dayjs(bVal);
+            let aT = aParsed.isValid() ? aParsed.valueOf() : NaN;
+            let bT = bParsed.isValid() ? bParsed.valueOf() : NaN;
+            if (Number.isNaN(aT)) aT = new Date(aVal).getTime();
+            if (Number.isNaN(bT)) bT = new Date(bVal).getTime();
             const aSafe = Number.isNaN(aT) ? -Infinity : aT;
             const bSafe = Number.isNaN(bT) ? -Infinity : bT;
             return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
@@ -534,7 +542,7 @@ const ChartEditorPage: React.FC = () => {
         const updateData = {
           name: editableName.trim() || currentChart.name,
           description: editableDescription.trim() || currentChart.description,
-          type: currentChartType ?? 'line',
+          type: currentChartType ?? ChartType.Line,
           config: chartConfig || undefined,
         };
 
@@ -632,7 +640,7 @@ const ChartEditorPage: React.FC = () => {
         const updateData = {
           name: editableName.trim() || currentChart.name,
           description: editableDescription.trim() || currentChart.description,
-          type: currentChartType ?? 'line',
+          type: currentChartType ?? ChartType.Line,
           config: chartConfig || undefined,
         };
 

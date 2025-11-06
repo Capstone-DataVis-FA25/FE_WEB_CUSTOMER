@@ -14,9 +14,10 @@ const ScatterPreview: React.FC<Props> = ({ arrayData }) => {
       xAxisKey="x"
       yAxisKey="y"
       showLegend={true}
-      animationDuration={800}
+      animationDuration={300}
       showTooltip={true}
       showAxisLabels={true}
+      variant="preview"
     />
   );
 };
