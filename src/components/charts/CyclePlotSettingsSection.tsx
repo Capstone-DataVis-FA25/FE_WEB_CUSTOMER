@@ -76,6 +76,10 @@ const CyclePlotSettingsSection: React.FC = () => {
     handleConfigChange({ axisConfigs: { showTooltipDelta: checked } });
   };
 
+  const toggleShowPoints = (checked: boolean) => {
+    handleConfigChange({ config: { showPoints: checked } });
+  };
+
   const setPeriodOrdering = (value: string) => {
     handleConfigChange({ axisConfigs: { periodOrdering: value as 'auto' | 'custom' } });
   };
@@ -254,6 +258,25 @@ const CyclePlotSettingsSection: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-start gap-3 p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/60">
                     <Checkbox
+                      checked={!!cyclePlotConfig?.config?.showPoints}
+                      onCheckedChange={(v: any) => toggleShowPoints(Boolean(v))}
+                      id="show-points"
+                    />
+                    <div>
+                      <Label htmlFor="show-points" className="text-sm font-medium">
+                        {t('cycle_show_points', 'Show data points')}
+                      </Label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {t(
+                          'cycle_show_points_hint',
+                          'Display interactive points on the lines (required for tooltips)'
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/60">
+                    <Checkbox
                       checked={!!cyclePlotConfig?.axisConfigs?.showAverageLine}
                       onCheckedChange={(v: any) => toggleShowAverageLine(Boolean(v))}
                       id="show-average-line"
@@ -371,7 +394,7 @@ const CyclePlotSettingsSection: React.FC = () => {
                         placeholder={t('select_cycle_column', 'Select cycle column (e.g., Year)')}
                       />
                     </SelectTrigger>
-                    <SelectContent className="z-[60]">
+                    <SelectContent className="z-[150]">
                       {availableColumns.map(col => (
                         <SelectItem key={col} value={col}>
                           {col}
@@ -402,7 +425,7 @@ const CyclePlotSettingsSection: React.FC = () => {
                         )}
                       />
                     </SelectTrigger>
-                    <SelectContent className="z-[60]">
+                    <SelectContent className="z-[150]">
                       {availableColumns.map(col => (
                         <SelectItem key={col} value={col}>
                           {col}

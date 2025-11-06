@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import * as d3 from 'd3';
 import { getAxisRequirementDescription } from '../../utils/chartValidation';
 
@@ -90,6 +90,8 @@ export interface D3ScatterChartProps {
   enableZoom?: boolean;
   enablePan?: boolean;
   zoomExtent?: number;
+  // Preview variant: render without frame/background card
+  variant?: 'default' | 'preview';
 }
 
 // Convert array data to scatter data format
@@ -260,6 +262,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   enableZoom = false,
   enablePan = false,
   zoomExtent = 10,
+  variant = 'default',
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -268,7 +271,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   const [dimensions, setDimensions] = useState({ width, height });
 
   // Responsive font sizes (match LineChart)
-  const responsiveFontSize = React.useMemo(
+  const responsiveFontSize = useMemo(
     () => ({
       axis: fontSize.axis,
       label: labelFontSize,
@@ -278,13 +281,32 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   );
 
   // Process data
-  const processedData = React.useMemo(
-    () => convertArrayToScatterData(arrayData || []),
-    [arrayData]
-  );
+  const processedData = useMemo(() => convertArrayToScatterData(arrayData || []), [arrayData]);
+
+  // Adaptive styling based on data size for performance
+  const adaptiveStyles = useMemo(() => {
+    const dataSize = processedData?.length || 0;
+
+    // For large datasets, reduce point size and increase opacity
+    let adaptiveRadius = pointRadius;
+    let adaptiveOpacity = pointOpacity;
+
+    if (dataSize > 2000) {
+      adaptiveRadius = Math.max(minPointRadius, pointRadius * 0.4);
+      adaptiveOpacity = Math.min(pointOpacity, 0.3);
+    } else if (dataSize > 1000) {
+      adaptiveRadius = Math.max(minPointRadius, pointRadius * 0.6);
+      adaptiveOpacity = Math.min(pointOpacity, 0.5);
+    } else if (dataSize > 500) {
+      adaptiveRadius = Math.max(minPointRadius, pointRadius * 0.8);
+      adaptiveOpacity = Math.min(pointOpacity, 0.6);
+    }
+
+    return { radius: adaptiveRadius, opacity: adaptiveOpacity };
+  }, [processedData, pointRadius, minPointRadius, pointOpacity]);
 
   // Determine if current selection is valid for scatter and prepare a clearer error UI
-  const validationInfo = React.useMemo(() => {
+  const validationInfo = useMemo(() => {
     if (!processedData || processedData.length === 0 || !xAxisKey || !yAxisKey) {
       return {
         isInvalid: true,
@@ -317,7 +339,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   }, [processedData, xAxisKey, yAxisKey]);
 
   // Get theme-specific colors
-  const themeColors = React.useMemo(() => {
+  const themeColors = useMemo(() => {
     const colorEntries = Object.entries(colors);
     return colorEntries.reduce(
       (acc, [key, value]) => {
@@ -365,6 +387,22 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     const updateDimensions = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
+        const dataSize = processedData?.length || 0;
+
+        // Calculate size multiplier based on data density
+        let sizeMultiplier = 1;
+        if (dataSize > 5000) {
+          sizeMultiplier = 2.5; // Significantly larger for very dense data
+        } else if (dataSize > 3000) {
+          sizeMultiplier = 2.0;
+        } else if (dataSize > 2000) {
+          sizeMultiplier = 1.7;
+        } else if (dataSize > 1000) {
+          sizeMultiplier = 1.4;
+        } else if (dataSize > 500) {
+          sizeMultiplier = 1.2;
+        }
+
         let aspectRatio = height / width;
 
         if (containerWidth < 640) {
@@ -375,8 +413,10 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
           aspectRatio = Math.min(aspectRatio, 0.5);
         }
 
-        const newWidth = Math.min(containerWidth - 16, width);
-        let newHeight = newWidth * aspectRatio;
+        // Apply size multiplier to both dimensions for large datasets
+        const baseWidth = Math.min(containerWidth - 16, width);
+        const newWidth = baseWidth * Math.min(sizeMultiplier, 2); // Cap at 2x to avoid too large
+        let newHeight = newWidth * aspectRatio * Math.min(sizeMultiplier, 2);
 
         const hasXAxisLabel = xAxisLabel && showAxisLabels;
         if (hasXAxisLabel) {
@@ -402,7 +442,17 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     const resizeObserver = new ResizeObserver(updateDimensions);
     if (containerRef.current) resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
-  }, [width, height, showLegend, showAxisLabels, xAxisLabel]);
+  }, [
+    width,
+    height,
+    showLegend,
+    showAxisLabels,
+    xAxisLabel,
+    yAxisLabel,
+    xAxisKey,
+    yAxisKey,
+    processedData,
+  ]);
   // Helper: Calculate linear regression
   const calculateLinearRegression = (xVals: number[], yVals: number[]) => {
     const n = xVals.length;
@@ -432,13 +482,44 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     // Responsive margin adjustments (match LineChart behavior) so axis labels and
     // left Y axis ticks are not clipped. Calculate a responsive margin based on
     // container width and whether axis labels/legend are present.
-    const hasXAxisLabel = xAxisLabel && showAxisLabels;
-    const hasYAxisLabel = yAxisLabel && showAxisLabels;
+    // Check if labels will be displayed (either explicit prop or fallback to key name)
+    const hasXAxisLabel = showAxisLabels && (xAxisLabel || xAxisKey);
+    const hasYAxisLabel = showAxisLabels && (yAxisLabel || yAxisKey);
     // Legend position isn't passed explicitly for scatter props in some flows;
     // default to 'top' which matches the defaultBaseChartConfig.
     const legendPosition: string = 'top';
 
-    const responsiveMargin = {
+    // Calculate dynamic bottom margin based on X-axis label length
+    let xAxisLabelExtraSpace = 0;
+    if (hasXAxisLabel) {
+      const displayLabel = xAxisLabel || xAxisKey;
+      const labelLength = displayLabel.length;
+      // For very long labels, add more space
+      if (labelLength > 50) {
+        xAxisLabelExtraSpace = 40;
+      } else if (labelLength > 30) {
+        xAxisLabelExtraSpace = 20;
+      } else if (labelLength > 20) {
+        xAxisLabelExtraSpace = 10;
+      }
+    }
+
+    // Calculate dynamic left margin based on Y-axis label length
+    let yAxisLabelExtraSpace = 0;
+    if (hasYAxisLabel) {
+      const displayLabel = yAxisLabel || yAxisKey;
+      const labelLength = displayLabel.length;
+      // For very long labels, add more space
+      if (labelLength > 50) {
+        yAxisLabelExtraSpace = 30;
+      } else if (labelLength > 30) {
+        yAxisLabelExtraSpace = 20;
+      } else if (labelLength > 20) {
+        yAxisLabelExtraSpace = 10;
+      }
+    }
+
+    let responsiveMargin = {
       top: chartWidth < 640 ? Math.max(margin.top * 0.8, 15) : margin.top,
       right: chartWidth < 640 ? Math.max(margin.right * 0.7, 20) : margin.right,
       bottom:
@@ -448,22 +529,22 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
             : Math.max(margin.bottom * 2.0, 100)
           : hasXAxisLabel
             ? chartWidth < 640
-              ? Math.max(margin.bottom + 30, 50)
-              : Math.max(margin.bottom + 35, 55)
+              ? Math.max(margin.bottom + 30 + xAxisLabelExtraSpace, 50)
+              : Math.max(margin.bottom + 35 + xAxisLabelExtraSpace, 55)
             : chartWidth < 640
               ? Math.max(margin.bottom * 0.8, 25)
               : Math.max(margin.bottom, 30),
       left: hasYAxisLabel
         ? chartWidth < 640
-          ? Math.max(margin.left * 0.7 + 20, 60)
-          : Math.max(margin.left + 25, 70)
+          ? Math.max(margin.left * 0.7 + 20 + yAxisLabelExtraSpace, 60)
+          : Math.max(margin.left + 25 + yAxisLabelExtraSpace, 70)
         : chartWidth < 640
           ? Math.max(margin.left * 0.7, 40)
           : Math.max(margin.left, 50),
     };
 
-    const innerWidth = Math.max(chartWidth - responsiveMargin.left - responsiveMargin.right, 100);
-    const innerHeight = Math.max(chartHeight - responsiveMargin.top - responsiveMargin.bottom, 100);
+    let innerWidth = Math.max(chartWidth - responsiveMargin.left - responsiveMargin.right, 100);
+    let innerHeight = Math.max(chartHeight - responsiveMargin.top - responsiveMargin.bottom, 100);
 
     if (innerWidth <= 0 || innerHeight <= 0) return;
 
@@ -526,6 +607,45 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
       } catch (e) {
         /* ignore */
       }
+    }
+
+    // Before drawing, expand left margin if Y tick labels are very long
+    try {
+      const yExt = d3.extent(yValues) as [number, number];
+      const yDomain: [number, number] = [yAxisStart === 'zero' ? 0 : yExt[0], yExt[1]];
+      const yScaleForMeasure = d3.scaleLinear().domain(yDomain).nice().range([innerHeight, 0]);
+      const fontPx = fontSize.axis || 12;
+      const formatter = (v: number) => (yAxisFormatter ? yAxisFormatter(v) : `${v}`);
+
+      const measureSvgText = (text: string, fontSizePx: number) => {
+        const m = svg
+          .append('text')
+          .attr('x', -9999)
+          .attr('y', -9999)
+          .style('font-size', `${fontSizePx}px`)
+          .style('font-family', 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif')
+          .text(text);
+        const w = (m.node() as SVGTextElement).getBBox().width;
+        m.remove();
+        return w;
+      };
+
+      let maxTickWidth = 0;
+      yScaleForMeasure.ticks(8).forEach(t => {
+        const label = formatter(+t);
+        const w = measureSvgText(label, fontPx);
+        if (w > maxTickWidth) maxTickWidth = w;
+      });
+
+      const extraForYAxisLabel = hasYAxisLabel ? 24 : 0;
+      const neededLeft = Math.ceil(maxTickWidth + 16 + extraForYAxisLabel);
+      if (neededLeft > responsiveMargin.left) {
+        responsiveMargin = { ...responsiveMargin, left: neededLeft };
+        innerWidth = Math.max(chartWidth - responsiveMargin.left - responsiveMargin.right, 100);
+        innerHeight = Math.max(chartHeight - responsiveMargin.top - responsiveMargin.bottom, 100);
+      }
+    } catch (_) {
+      /* keep base margins */
     }
 
     // Set background
@@ -627,49 +747,133 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
         .attr('transform', `rotate(${xAxisRotation})`)
         .style('text-anchor', xAxisRotation !== 0 ? 'end' : 'middle');
 
-      // Y Axis
-      const yAxis = d3.axisLeft(yScale).ticks(8);
+      // Y Axis (dynamic tick density to prevent overlap)
+      const minTickSpacing = (fontSize.axis || 12) * 1.6;
+      const approxMaxTicks = Math.max(2, Math.floor(innerHeight / Math.max(8, minTickSpacing)));
+      const yAxis = d3.axisLeft(yScale).ticks(Math.min(10, approxMaxTicks));
       if (yAxisFormatter) {
         yAxis.tickFormat(d => yAxisFormatter(+d));
       }
       const yAxisGroup = chartGroup.append('g').call(yAxis);
-      yAxisGroup
+      const yTickText = yAxisGroup
         .selectAll('text')
         .attr('fill', textColor)
         .attr('font-size', fontSize.axis || 12);
+
+      // Add full value tooltip for long labels
+      try {
+        yTickText.each(function (d: any) {
+          const el = d3.select(this);
+          const full = yAxisFormatter ? yAxisFormatter(+d) : `${d}`;
+          el.append('title').text(full);
+        });
+      } catch (_) {
+        /* noop */
+      }
     }
 
     // Axis labels (match LineChart)
     if (showAxisLabels) {
-      if (xAxisLabel) {
-        chartGroup
+      // Use xAxisLabel if provided, otherwise use xAxisKey as fallback
+      const displayXLabel = xAxisLabel || xAxisKey;
+      if (displayXLabel) {
+        // Calculate Y position with extra padding outside the chart
+        // Add 15px padding for better spacing
+        const yOffset = Math.min(margin.bottom - 10, 100) + 15;
+
+        const xLabelText = chartGroup
           .append('text')
           .attr('x', innerWidth / 2)
-          .attr('y', innerHeight + (dimensions.width < 768 ? 40 : 50))
+          .attr('y', innerHeight + yOffset)
           .attr('text-anchor', 'middle')
           .attr('fill', textColor)
           .style('font-size', `${responsiveFontSize.label}px`)
           .style('font-weight', '600')
-          .text(xAxisLabel);
+          .text(displayXLabel);
+
+        // Check if label is too long and needs wrapping
+        const textNode = xLabelText.node() as SVGTextElement;
+        if (textNode) {
+          const bbox = textNode.getBBox();
+          // If label is wider than available space, wrap it
+          if (bbox.width > innerWidth - 40) {
+            xLabelText.remove();
+
+            // Split text into multiple lines
+            const words = displayXLabel.split(/\s+/);
+            const lineHeight = responsiveFontSize.label * 1.2;
+            const maxWidth = innerWidth - 40;
+
+            const textElement = chartGroup
+              .append('text')
+              .attr('x', innerWidth / 2)
+              .attr('y', innerHeight + yOffset - lineHeight / 2)
+              .attr('text-anchor', 'middle')
+              .attr('fill', textColor)
+              .style('font-size', `${responsiveFontSize.label}px`)
+              .style('font-weight', '600');
+
+            let line: string[] = [];
+            let lineNumber = 0;
+
+            words.forEach((word, i) => {
+              line.push(word);
+              const testLine = line.join(' ');
+
+              const tspan = textElement.append('tspan').text(testLine);
+              const tspanNode = tspan.node() as SVGTSpanElement;
+
+              if (tspanNode && tspanNode.getComputedTextLength() > maxWidth && line.length > 1) {
+                line.pop();
+                tspan.text(line.join(' '));
+
+                line = [word];
+                lineNumber++;
+
+                textElement
+                  .append('tspan')
+                  .attr('x', innerWidth / 2)
+                  .attr('dy', lineHeight)
+                  .text(word);
+              } else if (i === words.length - 1) {
+                // Last word
+              } else {
+                tspan.remove();
+              }
+            });
+          }
+        }
       }
-      if (yAxisLabel) {
+      // Use yAxisLabel if provided, otherwise use yAxisKey as fallback
+      const displayYLabel = yAxisLabel || yAxisKey;
+      if (displayYLabel) {
+        // Calculate X position based on label length
+        const labelLength = displayYLabel.length;
+        let xOffset = dimensions.width < 768 ? -55 : -65;
+
+        // Add more space for longer labels
+        if (labelLength > 50) {
+          xOffset -= 20;
+        } else if (labelLength > 30) {
+          xOffset -= 10;
+        } else if (labelLength > 20) {
+          xOffset -= 5;
+        }
+
         chartGroup
           .append('text')
           .attr('transform', `rotate(-90)`)
           .attr('x', -innerHeight / 2)
-          .attr('y', dimensions.width < 768 ? -55 : -65)
+          .attr('y', xOffset)
           .attr('text-anchor', 'middle')
           .attr('fill', textColor)
           .style('font-size', `${responsiveFontSize.label}px`)
           .style('font-weight', '600')
-          .text(yAxisLabel);
+          .text(displayYLabel);
       }
     }
 
     // Title is rendered above the chart, not inside SVG
-
-    // Tooltip group (inside chartGroup for consistent coordinates)
-    const tooltipGroup = chartGroup.append('g').attr('class', 'scatter-tooltip-group');
 
     // Draw points with support for multiple Y-series
     // Prefer explicit prop `yAxisKeys`, then keys from `seriesNames`, then fallback to single `yAxisKey`
@@ -703,29 +907,112 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
           .attr('cy', (d: ScatterDataPoint) => yScale(+d[key]))
           .attr('r', 0)
           .attr('fill', seriesColor)
-          .attr('opacity', pointOpacity)
+          .attr('opacity', adaptiveStyles.opacity)
           .style('cursor', showTooltip ? 'pointer' : 'default')
+          .style('transition', 'all 0.2s ease')
           .on('mouseover', function (event, d) {
             if (!showTooltip) return;
+
+            // Bring hovered point to front and enlarge
+            d3.select(this)
+              .raise()
+              .transition()
+              .duration(150)
+              .attr(
+                'r',
+                (sizeKey && sizeScale ? sizeScale(+d[sizeKey]) : adaptiveStyles.radius) * 1.5
+              )
+              .attr('opacity', 1)
+              .attr('stroke', isDarkMode ? '#fff' : '#000')
+              .attr('stroke-width', 2);
+
+            // Dim other points
+            chartGroup
+              .selectAll('.scatter-point')
+              .filter(function () {
+                return this !== event.currentTarget;
+              })
+              .transition()
+              .duration(150)
+              .attr('opacity', adaptiveStyles.opacity * 0.3);
+
             tooltipGroup.selectAll('*').remove();
 
             const xVal = xAxisFormatter ? xAxisFormatter(+d[xAxisKey]) : String(d[xAxisKey]);
             const yVal = yAxisFormatter ? yAxisFormatter(+d[key]) : String(d[key]);
-            const lines = [`${xAxisKey}: ${xVal}`, `${seriesLabel}: ${yVal}`];
+
+            // Build comprehensive tooltip with all available data
+            const lines: string[] = [];
+
+            // Add series label as header if available
+            if (seriesLabel && seriesLabel !== key) {
+              lines.push(`📊 ${seriesLabel}`);
+            }
+
+            // Add X and Y values with clear labels
+            lines.push(`📈 ${xAxisKey}: ${xVal}`);
+            lines.push(`📉 ${seriesLabel}: ${yVal}`);
+
+            // Add other important columns (non-numeric or identifier columns)
+            const allKeys = Object.keys(d);
+            const otherKeys = allKeys
+              .filter(
+                k =>
+                  k !== xAxisKey &&
+                  k !== key &&
+                  k !== colorKey &&
+                  k !== sizeKey &&
+                  d[k] !== undefined &&
+                  d[k] !== null &&
+                  d[k] !== ''
+              )
+              .slice(0, 3); // Limit to 3 additional fields
+
+            if (otherKeys.length > 0) {
+              lines.push(''); // Empty line as separator
+              otherKeys.forEach(k => {
+                const val = typeof d[k] === 'number' ? d[k].toLocaleString() : String(d[k]);
+                lines.push(`• ${k}: ${val}`);
+              });
+            }
+
+            // Add color category if available
+            if (colorKey && d[colorKey]) {
+              lines.push(''); // Empty line as separator
+              lines.push(`🏷️ ${colorKey}: ${d[colorKey]}`);
+            }
+
+            // Add size value if available
+            if (sizeKey && d[sizeKey]) {
+              const sizeVal =
+                typeof d[sizeKey] === 'number' ? d[sizeKey].toLocaleString() : String(d[sizeKey]);
+              lines.push(`📏 ${sizeKey}: ${sizeVal}`);
+            }
 
             const textColorLocal = isDarkMode ? '#fff' : '#222';
 
             const textEl = tooltipGroup
               .append('text')
               .attr('fill', textColorLocal)
-              .style('font-size', '13px');
+              .style('font-size', '12px')
+              .style('font-family', 'system-ui, -apple-system, sans-serif');
 
             lines.forEach((line, i) => {
-              textEl
+              const tspan = textEl
                 .append('tspan')
-                .attr('x', 10)
-                .attr('y', 15 + i * 16)
+                .attr('x', 12)
+                .attr('y', 14 + i * 18)
                 .text(line);
+
+              // Make first line (header) bold
+              if (i === 0 && seriesLabel && seriesLabel !== key) {
+                tspan.style('font-weight', '600').style('font-size', '13px');
+              }
+
+              // Reduce spacing for empty lines
+              if (line === '') {
+                tspan.attr('y', 14 + i * 18 - 6);
+              }
             });
 
             const bbox = (textEl.node() as SVGTextElement).getBBox();
@@ -740,19 +1027,51 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
               .attr('opacity', 0.95);
 
             const mouse = d3.pointer(event, chartGroup.node());
-            let tx = mouse[0] + 10;
-            let ty = mouse[1] - 10;
-            if (tx + bbox.width + 20 > innerWidth) tx = mouse[0] - (bbox.width + 30);
-            if (ty < 0) ty = mouse[1] + 20;
+            const tooltipWidth = bbox.width + 20;
+            const tooltipHeight = bbox.height + 10;
+
+            // Always position tooltip above the point
+            let tx = mouse[0] - tooltipWidth / 2; // Center horizontally on point
+            let ty = mouse[1] - tooltipHeight - 15; // Position above with 15px gap
+
+            // Adjust horizontal position if tooltip goes off left/right edges
+            if (tx < 0) {
+              tx = 5; // Minimum left padding
+            } else if (tx + tooltipWidth > innerWidth) {
+              tx = innerWidth - tooltipWidth - 5; // Maximum right padding
+            }
+
+            // If tooltip would go off top, position below the point instead
+            if (ty < 0) {
+              ty = mouse[1] + 15; // Position below with 15px gap
+            }
+
             tooltipGroup.attr('transform', `translate(${tx},${ty})`);
           })
           .on('mouseout', function () {
+            // Restore point size and opacity
+            d3.select(this)
+              .transition()
+              .duration(150)
+              .attr('r', (d: any) =>
+                sizeKey && sizeScale ? sizeScale(+d[sizeKey]) : adaptiveStyles.radius
+              )
+              .attr('opacity', adaptiveStyles.opacity)
+              .attr('stroke', 'none');
+
+            // Restore all points opacity
+            chartGroup
+              .selectAll('.scatter-point')
+              .transition()
+              .duration(150)
+              .attr('opacity', adaptiveStyles.opacity);
+
             tooltipGroup.selectAll('*').remove();
           })
           .transition()
           .duration(animationDuration)
           .attr('r', (d: ScatterDataPoint) =>
-            sizeKey && sizeScale ? sizeScale(+d[sizeKey]) : pointRadius
+            sizeKey && sizeScale ? sizeScale(+d[sizeKey]) : adaptiveStyles.radius
           );
       });
     } else {
@@ -774,28 +1093,110 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
               themeColors['color1'] ||
               '#3b82f6'
         )
-        .attr('opacity', pointOpacity)
+        .attr('opacity', adaptiveStyles.opacity)
         .style('cursor', showTooltip ? 'pointer' : 'default')
         .on('mouseover', function (event, d) {
           if (!showTooltip) return;
+
+          // Bring hovered point to front and enlarge
+          d3.select(this)
+            .raise()
+            .transition()
+            .duration(150)
+            .attr(
+              'r',
+              (sizeKey && sizeScale ? sizeScale(+d[sizeKey]) : adaptiveStyles.radius) * 1.5
+            )
+            .attr('opacity', 1)
+            .attr('stroke', isDarkMode ? '#fff' : '#000')
+            .attr('stroke-width', 2);
+
+          // Dim other points
+          chartGroup
+            .selectAll('.scatter-point')
+            .filter(function () {
+              return this !== event.currentTarget;
+            })
+            .transition()
+            .duration(150)
+            .attr('opacity', adaptiveStyles.opacity * 0.3);
+
           tooltipGroup.selectAll('*').remove();
 
           const xVal = xAxisFormatter ? xAxisFormatter(+d[xAxisKey]) : String(d[xAxisKey]);
           const yVal = yAxisFormatter ? yAxisFormatter(+d[yAxisKey]) : String(d[yAxisKey]);
-          const lines = [`${xAxisKey}: ${xVal}`, `${yAxisKey}: ${yVal}`];
+
+          // Build comprehensive tooltip with all available data
+          const lines: string[] = [];
+
+          // Add series name as header if available
+          if (seriesName && seriesName !== yAxisKey) {
+            lines.push(`📊 ${seriesName}`);
+          }
+
+          // Add X and Y values with clear labels
+          lines.push(`📈 ${xAxisKey}: ${xVal}`);
+          lines.push(`📉 ${yAxisKey}: ${yVal}`);
+
+          // Add other important columns (non-numeric or identifier columns)
+          const allKeys = Object.keys(d);
+          const otherKeys = allKeys
+            .filter(
+              k =>
+                k !== xAxisKey &&
+                k !== yAxisKey &&
+                k !== colorKey &&
+                k !== sizeKey &&
+                d[k] !== undefined &&
+                d[k] !== null &&
+                d[k] !== ''
+            )
+            .slice(0, 3); // Limit to 3 additional fields
+
+          if (otherKeys.length > 0) {
+            lines.push(''); // Empty line as separator
+            otherKeys.forEach(k => {
+              const val = typeof d[k] === 'number' ? d[k].toLocaleString() : String(d[k]);
+              lines.push(`• ${k}: ${val}`);
+            });
+          }
+
+          // Add color category if available
+          if (colorKey && d[colorKey]) {
+            lines.push(''); // Empty line as separator
+            lines.push(`🏷️ ${colorKey}: ${d[colorKey]}`);
+          }
+
+          // Add size value if available
+          if (sizeKey && d[sizeKey]) {
+            const sizeVal =
+              typeof d[sizeKey] === 'number' ? d[sizeKey].toLocaleString() : String(d[sizeKey]);
+            lines.push(`📏 ${sizeKey}: ${sizeVal}`);
+          }
 
           const textColorLocal = isDarkMode ? '#fff' : '#222';
           const textEl = tooltipGroup
             .append('text')
             .attr('fill', textColorLocal)
-            .style('font-size', '13px');
+            .style('font-size', '12px')
+            .style('font-family', 'system-ui, -apple-system, sans-serif');
 
           lines.forEach((line, i) => {
-            textEl
+            const tspan = textEl
               .append('tspan')
-              .attr('x', 10)
-              .attr('y', 15 + i * 16)
+              .attr('x', 12)
+              .attr('y', 14 + i * 18)
               .text(line);
+
+            // Make first line (header) bold
+            if (i === 0 && seriesName && seriesName !== yAxisKey) {
+              tspan.style('font-weight', '600').style('font-size', '13px');
+            }
+
+            // Reduce spacing for empty lines
+            if (line === '') {
+              tspan.attr('y', 14 + i * 18 - 6);
+            }
           });
 
           const bbox = (textEl.node() as SVGTextElement).getBBox();
@@ -809,26 +1210,60 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
             .attr('opacity', 0.95);
 
           const mouse = d3.pointer(event, chartGroup.node());
-          let tx = mouse[0] + 10;
-          let ty = mouse[1] - 10;
-          if (tx + bbox.width + 20 > innerWidth) tx = mouse[0] - (bbox.width + 30);
-          if (ty < 0) ty = mouse[1] + 20;
+          const tooltipWidth = bbox.width + 20;
+          const tooltipHeight = bbox.height + 10;
+
+          // Always position tooltip above the point
+          let tx = mouse[0] - tooltipWidth / 2; // Center horizontally on point
+          let ty = mouse[1] - tooltipHeight - 15; // Position above with 15px gap
+
+          // Adjust horizontal position if tooltip goes off left/right edges
+          if (tx < 0) {
+            tx = 5; // Minimum left padding
+          } else if (tx + tooltipWidth > innerWidth) {
+            tx = innerWidth - tooltipWidth - 5; // Maximum right padding
+          }
+
+          // If tooltip would go off top, position below the point instead
+          if (ty < 0) {
+            ty = mouse[1] + 15; // Position below with 15px gap
+          }
+
           tooltipGroup.attr('transform', `translate(${tx},${ty})`);
         })
         .on('mouseout', function () {
+          // Restore point size and opacity
+          d3.select(this)
+            .transition()
+            .duration(150)
+            .attr('r', (d: any) =>
+              sizeKey && sizeScale ? sizeScale(+d[sizeKey]) : adaptiveStyles.radius
+            )
+            .attr('opacity', adaptiveStyles.opacity)
+            .attr('stroke', 'none');
+
+          // Restore all points opacity
+          chartGroup
+            .selectAll('.scatter-point')
+            .transition()
+            .duration(150)
+            .attr('opacity', adaptiveStyles.opacity);
+
           tooltipGroup.selectAll('*').remove();
         })
         .transition()
         .duration(animationDuration)
         .attr('r', (d: ScatterDataPoint) =>
-          sizeKey && sizeScale ? sizeScale(+d[sizeKey]) : pointRadius
+          sizeKey && sizeScale ? sizeScale(+d[sizeKey]) : adaptiveStyles.radius
         );
     }
 
     // Legend (top-centered pill style like the screenshot)
     if (showLegend) {
-      // Build legend items based on series keys (multi-series), fallback to color grouping, otherwise single series
+      // Build legend items - always show X and Y axis labels for scatter chart
       let items: Array<{ label: string; color: string }> = [];
+
+      // For multi-series scatter, show series names
       if (keysToRender && keysToRender.length > 1) {
         items = keysToRender.map((k, idx) => ({
           label: (seriesNames && seriesNames[k]) || k,
@@ -838,20 +1273,45 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
             Object.values(themeColors)[idx] ||
             '#3b82f6',
         }));
-      } else if (colorKey && colorScale) {
+      }
+      // For single series with color categories, show categories only if > 1
+      else if (colorKey && colorScale) {
         const categories = colorScale.domain();
-        items = categories.map(cat => ({
-          label: cat,
-          color: colorScale ? colorScale(cat) : '#3b82f6',
-        }));
-      } else {
-        const label = seriesName || yAxisKey || 'Series';
-        const color =
-          (seriesColorsMap && seriesColorsMap[label]) ||
-          themeColors[label] ||
-          themeColors['color1'] ||
-          '#3b82f6';
-        items = [{ label, color }];
+        // If only 1 category or want to show X/Y instead, show X/Y labels
+        if (categories.length <= 1) {
+          const xLabel = xAxisLabel || xAxisKey;
+          const yLabel = yAxisLabel || yAxisKey;
+          items = [
+            {
+              label: `${xLabel}`,
+              color: themeColors['color1'] || '#3b82f6',
+            },
+            {
+              label: `${yLabel}`,
+              color: themeColors['color2'] || '#10b981',
+            },
+          ];
+        } else {
+          items = categories.map(cat => ({
+            label: cat,
+            color: colorScale ? colorScale(cat) : '#3b82f6',
+          }));
+        }
+      }
+      // Default: always show X and Y axis column names
+      else {
+        const xLabel = xAxisLabel || xAxisKey;
+        const yLabel = yAxisLabel || yAxisKey;
+        items = [
+          {
+            label: `${xLabel}`,
+            color: themeColors['color1'] || '#3b82f6',
+          },
+          {
+            label: `${yLabel}`,
+            color: themeColors['color2'] || '#10b981',
+          },
+        ];
       }
 
       // Measure approximate widths (chars * factor) to compute pill width
@@ -938,6 +1398,9 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
         .attr('opacity', 0.7);
     }
 
+    // Tooltip group created AFTER all points/lines so it renders on top
+    const tooltipGroup = chartGroup.append('g').attr('class', 'scatter-tooltip-group');
+
     // Zoom and Pan
     if (enableZoom || enablePan) {
       const zoom = d3
@@ -1003,11 +1466,17 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     enableZoom,
     enablePan,
     zoomExtent,
+    adaptiveStyles,
   ]);
 
   // NOTE: To ensure the scatter chart is always as large as LineChart, BarChart, and AreaChart,
   // make sure the parent container does NOT restrict width/height. This div uses 100% width/height.
   // If the chart appears small, check parent CSS/layout.
+
+  // Info banner for large datasets
+  const dataSize = processedData?.length || 0;
+  const showDataSizeInfo = dataSize > 1000;
+
   return (
     <div ref={containerRef} className="w-full">
       {title && title.trim() !== '' && (
@@ -1019,7 +1488,33 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
         </h3>
       )}
 
-      <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+      {showDataSizeInfo && (
+        <div className="mb-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>
+              Displaying <strong>{dataSize.toLocaleString()}</strong> points. Chart size has been
+              automatically expanded for better visibility.
+              {(enableZoom || enablePan) && ' Use zoom/pan for detailed exploration.'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={
+          variant === 'preview'
+            ? 'relative overflow-hidden'
+            : 'chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-auto'
+        }
+      >
         {/* Error overlay for invalid numeric selection */}
         {validationInfo.isInvalid && (
           <div className="absolute inset-0 z-20 flex items-center justify-center p-4">

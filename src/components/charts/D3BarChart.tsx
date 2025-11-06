@@ -113,6 +113,8 @@ export interface D3BarChartProps {
   labelFontSize?: number;
   legendFontSize?: number;
   showPointValues?: boolean; // Show values on bars (similar to LineChart showPointValues)
+  // Preview variant: render without frame/background card
+  variant?: 'default' | 'preview';
 }
 
 const D3BarChart: React.FC<D3BarChartProps> = ({
@@ -172,6 +174,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   labelFontSize = 12,
   legendFontSize = 11,
   showPointValues = false, // Show values on bars (similar to LineChart showPointValues)
+  variant = 'default',
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1363,7 +1366,13 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       )}
 
       {/* Chart Container with integrated legend */}
-      <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+      <div
+        className={
+          variant === 'preview'
+            ? 'relative overflow-hidden'
+            : 'chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden'
+        }
+      >
         <svg
           ref={svgRef}
           width={dimensions.width}

@@ -166,13 +166,18 @@ const HomePage: React.FC = () => {
     },
   ];
 
-  // Function to render chart preview
+  // Function to render chart preview (uniform size, no dark/extra background)
   const renderChartPreview = (chartType: ChartDataPoint) => {
     const dataset = datasets[chartType.dataKey as keyof typeof datasets];
+    const PREVIEW_W = 420;
+    const PREVIEW_H = 420;
 
     if (!chartType.component || !dataset) {
       return (
-        <div className="bg-gradient-to-br from-white to-muted/50 rounded-lg shadow-lg flex items-center justify-center w-full h-full min-h-[600px] p-4">
+        <div
+          className="flex items-center justify-center"
+          style={{ width: PREVIEW_W, height: PREVIEW_H }}
+        >
           <div className="text-center">
             <div
               className={`w-16 h-16 ${chartType.color} rounded-lg flex items-center justify-center mx-auto mb-4`}
@@ -187,72 +192,78 @@ const HomePage: React.FC = () => {
 
     const ChartComponent = chartType.component;
 
+    const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+      <div
+        className="flex items-center justify-center rounded-2xl border-2 border-gray-700/40 dark:border-gray-700/50 bg-white/5 dark:bg-gray-900/40 shadow-xl overflow-hidden"
+        style={{ width: PREVIEW_W, height: PREVIEW_H }}
+      >
+        {children}
+      </div>
+    );
+
     if (chartType.id === 'bar') {
       return (
-        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
+        <Frame>
           <BarPreview arrayData={dataset} />
-        </div>
+        </Frame>
       );
     }
 
     if (chartType.id === 'line') {
       return (
-        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
+        <Frame>
           <LinePreview arrayData={dataset} />
-        </div>
+        </Frame>
       );
     }
 
     if (chartType.id === 'pie') {
       return (
-        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg h-full min-h-[600px] flex items-center justify-center">
+        <Frame>
           <PiePreview arrayData={dataset} />
-        </div>
+        </Frame>
       );
     }
 
     if (chartType.id === 'scatter') {
       return (
-        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
+        <Frame>
           <ScatterPreview arrayData={dataset} />
-        </div>
+        </Frame>
       );
     }
 
     if (chartType.id === 'area') {
       return (
-        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
+        <Frame>
           <AreaPreview arrayData={dataset} />
-        </div>
+        </Frame>
       );
     }
 
     if (chartType.id === 'trend') {
       return (
-        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
-          <div
-            className="w-full h-full flex items-center justify-center"
-            style={{ minHeight: 500 }}
-          >
+        <Frame>
+          <div className="w-full h-full flex items-center justify-center">
             <ChartComponent arrayData={dataset} />
           </div>
-        </div>
+        </Frame>
       );
     }
 
     if (chartType.id === 'map') {
       return (
-        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
+        <Frame>
           <ChartComponent arrayData={dataset} />
-        </div>
+        </Frame>
       );
     }
 
     if (chartType.id === 'table') {
       return (
-        <div className="bg-white dark:bg-[#18181b] rounded-lg p-4 shadow-lg w-full h-full min-h-[600px] flex items-center justify-center">
+        <Frame>
           <ChartComponent arrayData={dataset} />
-        </div>
+        </Frame>
       );
     }
 
@@ -513,22 +524,18 @@ const HomePage: React.FC = () => {
                 viewport={viewportConfigs.repeat}
                 className="lg:sticky lg:top-8"
               >
-                <Card className="overflow-hidden border-0">
-                  <CardContent className="p-0">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={selectedChart}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 1.05 }}
-                        transition={{ duration: 0.4, ease: 'easeInOut' }}
-                        className="w-full min-h-[600px] bg-[#18181b] flex items-center justify-center"
-                      >
-                        <div className="w-full h-full">{renderChartPreview(selectedChartData)}</div>
-                      </motion.div>
-                    </AnimatePresence>
-                  </CardContent>
-                </Card>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={selectedChart}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.02 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    className="w-full flex items-center justify-center py-4"
+                  >
+                    {renderChartPreview(selectedChartData)}
+                  </motion.div>
+                </AnimatePresence>
               </motion.div>
             </div>
           </div>

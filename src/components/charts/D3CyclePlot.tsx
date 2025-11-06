@@ -86,6 +86,113 @@ export interface D3CyclePlotProps {
   zoomExtent?: number;
 }
 
+// Validate cycle plot data and suggest appropriate column combinations
+function validateCyclePlotData(
+  data: ChartDataPoint[],
+  cycleKey: string,
+  periodKey: string,
+  valueKey: string
+): {
+  isValid: boolean;
+  validCount: number;
+  total: number;
+  issues: string[];
+  suggestions: Array<{ cycle: string; period: string; value: string }>;
+} {
+  if (!data || data.length === 0) {
+    return {
+      isValid: false,
+      validCount: 0,
+      total: 0,
+      issues: ['No data available'],
+      suggestions: [],
+    };
+  }
+
+  const issues: string[] = [];
+  let validCount = 0;
+
+  // Check if keys exist
+  const firstRow = data[0];
+  const availableKeys = Object.keys(firstRow);
+
+  if (!availableKeys.includes(cycleKey)) {
+    issues.push(`Cycle key "${cycleKey}" not found in data`);
+  }
+  if (!availableKeys.includes(periodKey)) {
+    issues.push(`Period key "${periodKey}" not found in data`);
+  }
+  if (!availableKeys.includes(valueKey)) {
+    issues.push(`Value key "${valueKey}" not found in data`);
+  }
+
+  // Count valid rows
+  data.forEach(d => {
+    const hasValidCycle = d[cycleKey] !== undefined && d[cycleKey] !== null && d[cycleKey] !== '';
+    const hasValidPeriod =
+      d[periodKey] !== undefined && d[periodKey] !== null && d[periodKey] !== '';
+    const hasValidValue = !isNaN(Number(d[valueKey]));
+
+    if (hasValidCycle && hasValidPeriod && hasValidValue) {
+      validCount++;
+    }
+  });
+
+  const isValid = validCount >= 2 && issues.length === 0;
+
+  // Generate suggestions if invalid
+  const suggestions: Array<{ cycle: string; period: string; value: string }> = [];
+  if (!isValid && data.length > 0) {
+    const keys = Object.keys(data[0]);
+
+    // Find categorical keys (for cycle/period)
+    const categoricalKeys = keys.filter(k => {
+      const values = data.map(d => d[k]);
+      const uniqueCount = new Set(values).size;
+      return uniqueCount >= 2 && uniqueCount < data.length * 0.8;
+    });
+
+    // Find numeric keys (for value)
+    const numericKeys = keys.filter(k => {
+      const numericCount = data.filter(d => !isNaN(Number(d[k]))).length;
+      return numericCount >= data.length * 0.8;
+    });
+
+    // Generate combinations
+    categoricalKeys.forEach(cycle => {
+      categoricalKeys.forEach(period => {
+        if (cycle !== period) {
+          numericKeys.forEach(value => {
+            const testValid = data.filter(
+              d =>
+                d[cycle] !== undefined &&
+                d[cycle] !== null &&
+                d[period] !== undefined &&
+                d[period] !== null &&
+                !isNaN(Number(d[value]))
+            ).length;
+
+            if (testValid >= 2) {
+              suggestions.push({ cycle, period, value });
+            }
+          });
+        }
+      });
+    });
+
+    // Limit suggestions
+    suggestions.splice(4);
+  }
+
+  return {
+    isValid,
+    validCount,
+    total: data.length,
+    issues,
+    suggestions,
+  };
+}
+
 // Convert array data to chart data format
 function convertArrayToCyclePlotData(arrayData: (string | number)[][]): ChartDataPoint[] {
   if (!arrayData || arrayData.length === 0) return [];
@@ -193,6 +300,20 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
     () => convertArrayToCyclePlotData(arrayData || []),
     [arrayData]
   );
+
+  // Validate data
+  const validation = React.useMemo(() => {
+    if (!processedData || processedData.length === 0 || !cycleKey || !periodKey || !valueKey) {
+      return {
+        isValid: false,
+        validCount: 0,
+        total: 0,
+        issues: ['Missing required keys or data'],
+        suggestions: [],
+      };
+    }
+    return validateCyclePlotData(processedData, cycleKey, periodKey, valueKey);
+  }, [processedData, cycleKey, periodKey, valueKey]);
 
   // Helpers: ordering for periods and cycles
   const monthOrder = [
@@ -375,13 +496,34 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
   // Main rendering effect
   useEffect(() => {
     if (!processedData || processedData.length === 0 || !svgRef.current) {
+      console.log('[CyclePlot] No data or SVG ref:', {
+        hasData: !!processedData,
+        dataLength: processedData?.length || 0,
+        hasSvgRef: !!svgRef.current,
+      });
       return;
     }
 
     if (!cycleKey || !periodKey || !valueKey) {
+      console.warn('[CyclePlot] Missing required keys:', { cycleKey, periodKey, valueKey });
       console.warn('CyclePlot requires cycleKey, periodKey, and valueKey');
       return;
     }
+
+    // Check validation before rendering
+    if (!validation.isValid) {
+      console.warn('[CyclePlot] Data validation failed:', validation);
+      return;
+    }
+
+    console.log('[CyclePlot] Starting chart render with:', {
+      cycleKey,
+      periodKey,
+      valueKey,
+      dataPoints: processedData.length,
+      showPoints,
+      showTooltip,
+    });
 
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
@@ -389,8 +531,8 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
     const chartWidth = dimensions.width;
     const chartHeight = dimensions.height;
 
-    // Responsive margins
-    const responsiveMargin = {
+    // Responsive margins (base). We'll refine left later based on Y tick label widths.
+    let responsiveMargin = {
       top:
         chartWidth < MOBILE_BREAKPOINT
           ? Math.max(margin.top * MOBILE_MARGIN_TOP_FACTOR, 40)
@@ -421,8 +563,9 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
             : margin.left,
     };
 
-    const innerWidth = Math.max(chartWidth - responsiveMargin.left - responsiveMargin.right, 100);
-    const innerHeight = Math.max(chartHeight - responsiveMargin.top - responsiveMargin.bottom, 100);
+    // First-pass inner size to estimate tick labels
+    let innerWidth = Math.max(chartWidth - responsiveMargin.left - responsiveMargin.right, 100);
+    let innerHeight = Math.max(chartHeight - responsiveMargin.top - responsiveMargin.bottom, 100);
 
     if (innerWidth <= 0 || innerHeight <= 0) return;
 
@@ -463,7 +606,7 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
       .append('g')
       .attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top})`);
 
-    // Create scales
+    // Create scales (first pass)
     // X scale: period (e.g., Month 1-12, Quarter 1-4)
     const xScale = d3
       .scalePoint()
@@ -478,7 +621,45 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
     const yDomain: [number, number] =
       yAxisStart === 'zero' ? [0, yExtent[1]] : [yExtent[0], yExtent[1]];
 
-    const yScale = d3.scaleLinear().domain(yDomain).nice().range([innerHeight, 0]);
+    let yScale = d3.scaleLinear().domain(yDomain).nice().range([innerHeight, 0]);
+
+    // Measure widest Y tick label and expand left margin if needed
+    try {
+      const fontPx = fontSize.axis || 12;
+      const formatter = (v: number) => (yAxisFormatter ? yAxisFormatter(v) : `${v}`);
+      const ticksSample = yScale.ticks(8);
+
+      const measureSvgText = (text: string, fontSizePx: number) => {
+        const m = svg
+          .append('text')
+          .attr('x', -9999)
+          .attr('y', -9999)
+          .style('font-size', `${fontSizePx}px`)
+          .style('font-family', 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif')
+          .text(text);
+        const w = (m.node() as SVGTextElement).getBBox().width;
+        m.remove();
+        return w;
+      };
+
+      let maxTickWidth = 0;
+      ticksSample.forEach(t => {
+        const label = formatter(+t);
+        const w = measureSvgText(label, fontPx);
+        if (w > maxTickWidth) maxTickWidth = w;
+      });
+
+      const extraForYAxisLabel = showAxisLabels && yAxisLabel ? 24 : 0;
+      const neededLeft = Math.ceil(maxTickWidth + 16 + extraForYAxisLabel);
+      if (neededLeft > responsiveMargin.left) {
+        responsiveMargin = { ...responsiveMargin, left: neededLeft };
+        innerWidth = Math.max(chartWidth - responsiveMargin.left - responsiveMargin.right, 100);
+        innerHeight = Math.max(chartHeight - responsiveMargin.top - responsiveMargin.bottom, 100);
+        yScale = d3.scaleLinear().domain(yDomain).nice().range([innerHeight, 0]);
+      }
+    } catch (e) {
+      // Safe fallback: keep existing margins
+    }
 
     // Colors
     const gridColor = isDarkMode ? '#374151' : '#e5e7eb';
@@ -537,17 +718,30 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
         .attr('transform', `rotate(${xAxisRotation})`)
         .style('text-anchor', xAxisRotation !== 0 ? 'end' : 'middle');
 
-      // Y axis
-      const yAxis = d3.axisLeft(yScale).ticks(8);
+      // Y axis (dynamic tick density to avoid vertical overlap)
+      const minTickSpacing = (fontSize.axis || 12) * 1.6;
+      const approxMaxTicks = Math.max(2, Math.floor(innerHeight / Math.max(8, minTickSpacing)));
+      const yAxis = d3.axisLeft(yScale).ticks(Math.min(10, approxMaxTicks));
       if (yAxisFormatter) {
         yAxis.tickFormat(d => yAxisFormatter(+d));
       }
 
       const yAxisGroup = chartGroup.append('g').call(yAxis);
-      yAxisGroup
+      const yTickText = yAxisGroup
         .selectAll('text')
         .attr('fill', textColor)
         .attr('font-size', fontSize.axis || 12);
+
+      // Add full-value tooltip for long labels
+      try {
+        yTickText.each(function (d: any) {
+          const el = d3.select(this);
+          const full = yAxisFormatter ? yAxisFormatter(+d) : `${d}`;
+          el.append('title').text(full);
+        });
+      } catch (_) {
+        /* noop */
+      }
     }
 
     // Axis labels
@@ -633,13 +827,15 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
       .attr('fill', isDarkMode ? '#1f2937' : 'white')
       .attr('stroke', isDarkMode ? '#4b5563' : '#d1d5db')
       .attr('stroke-width', 1)
-      .attr('rx', 4);
+      .attr('rx', 8)
+      .attr('opacity', 0.95);
 
     const tooltipText = tooltip
       .append('text')
       .attr('fill', textColor)
       .style('font-size', '12px')
-      .style('font-weight', '500');
+      .style('font-weight', '500')
+      .style('font-family', 'system-ui, -apple-system, sans-serif');
 
     // Draw lines for each cycle
     const latestCycle = cycles.length ? cycles[cycles.length - 1] : undefined;
@@ -684,12 +880,21 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
           .attr('stroke-width', 1.5)
           .style('cursor', showTooltip ? 'pointer' : 'default')
           .on('mouseover', function (event, d) {
-            if (!showTooltip) return;
+            if (!showTooltip) {
+              console.log('[CyclePlot] showTooltip is false, skipping tooltip');
+              return;
+            }
 
+            console.log('[CyclePlot] Point hovered:', d);
+
+            // Enlarge and highlight the hovered point
             d3.select(this)
+              .raise() // Bring to front
               .transition()
               .duration(150)
-              .attr('r', pointRadius * 1.5);
+              .attr('r', pointRadius * 2)
+              .attr('stroke-width', 2.5)
+              .attr('opacity', 1);
 
             const baseVal = +d[valueKey];
             const avgEntry = statsByPeriod.find(s => s.period === String(d[periodKey]));
@@ -708,61 +913,121 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
               }
             }
 
-            const tooltipContent: string[] = [
-              `${cycleKey}: ${d[cycleKey]}`,
-              `${periodKey}: ${d[periodKey]}`,
-              `${valueKey}: ${yAxisFormatter ? yAxisFormatter(baseVal) : String(baseVal)}`,
-            ];
+            // Build comprehensive tooltip with all available data and friendly icons
+            const tooltipContent: string[] = [];
+
+            // Add cycle header (bold and larger)
+            tooltipContent.push(`📅 ${cycleKey}: ${d[cycleKey]}`);
+
+            // Add period and value with clear icons
+            tooltipContent.push(`📊 ${periodKey}: ${d[periodKey]}`);
+            tooltipContent.push(
+              `📈 ${valueKey}: ${yAxisFormatter ? yAxisFormatter(baseVal) : String(baseVal)}`
+            );
+
+            // Add comparison insights if enabled
             if (showTooltipDelta && typeof avgVal === 'number') {
+              tooltipContent.push(''); // Empty line as separator
               const delta = baseVal - avgVal;
               const pct = avgVal !== 0 ? (delta / avgVal) * 100 : undefined;
+              const icon = delta >= 0 ? '📈' : '📉';
+              const direction = delta >= 0 ? 'above' : 'below';
               tooltipContent.push(
-                `vs avg: ${yAxisFormatter ? yAxisFormatter(delta) : delta.toFixed(2)}${
-                  typeof pct === 'number' ? ` (${pct.toFixed(1)}%)` : ''
+                `${icon} ${Math.abs(delta).toFixed(0)} ${direction} average${
+                  typeof pct === 'number' ? ` (${Math.abs(pct).toFixed(1)}%)` : ''
                 }`
               );
             }
+
             if (showTooltipDelta && typeof yoyDelta === 'number') {
+              const icon = yoyDelta >= 0 ? '⬆️' : '⬇️';
+              const change = yoyDelta >= 0 ? 'increase' : 'decrease';
               tooltipContent.push(
-                `vs last year: ${yAxisFormatter ? yAxisFormatter(yoyDelta) : yoyDelta.toFixed(2)}${
-                  typeof yoyPct === 'number' ? ` (${yoyPct.toFixed(1)}%)` : ''
+                `${icon} ${Math.abs(yoyDelta).toFixed(0)} ${change} vs last cycle${
+                  typeof yoyPct === 'number' ? ` (${Math.abs(yoyPct).toFixed(1)}%)` : ''
                 }`
               );
+            }
+
+            // Add other data columns if available
+            const allKeys = Object.keys(d);
+            const otherKeys = allKeys
+              .filter(
+                k =>
+                  k !== cycleKey &&
+                  k !== periodKey &&
+                  k !== valueKey &&
+                  d[k] !== undefined &&
+                  d[k] !== null &&
+                  d[k] !== ''
+              )
+              .slice(0, 2); // Limit to 2 additional fields
+
+            if (otherKeys.length > 0) {
+              tooltipContent.push(''); // Empty line as separator
+              otherKeys.forEach(k => {
+                const val = typeof d[k] === 'number' ? d[k].toLocaleString() : String(d[k]);
+                tooltipContent.push(`• ${k}: ${val}`);
+              });
             }
 
             tooltip.style('display', null);
 
             tooltipText.selectAll('tspan').remove();
             tooltipContent.forEach((line, i) => {
-              tooltipText
+              const tspan = tooltipText
                 .append('tspan')
-                .attr('x', 10)
-                .attr('y', 15 + i * 16)
+                .attr('x', 12)
+                .attr('y', 14 + i * 18)
                 .text(line);
+
+              // Make first line (cycle header) bold and larger
+              if (i === 0) {
+                tspan.style('font-weight', '600').style('font-size', '13px');
+              }
+
+              // Reduce spacing for empty lines
+              if (line === '') {
+                tspan.attr('y', 14 + i * 18 - 6);
+              }
             });
 
             const bbox = (tooltipText.node() as SVGTextElement).getBBox();
             tooltip
               .select('rect')
-              .attr('width', bbox.width + 20)
-              .attr('height', bbox.height + 10);
+              .attr('width', bbox.width + 24)
+              .attr('height', bbox.height + 16);
 
             const mouse = d3.pointer(event, chartGroup.node());
-            let tooltipX = mouse[0] + 10;
-            let tooltipY = mouse[1] - 10;
+            const tooltipWidth = bbox.width + 24;
+            const tooltipHeight = bbox.height + 16;
 
-            // Keep tooltip within bounds
-            if (tooltipX + bbox.width + 20 > innerWidth) {
-              tooltipX = mouse[0] - bbox.width - 30;
+            // Always position tooltip above the point (centered horizontally)
+            let tooltipX = mouse[0] - tooltipWidth / 2;
+            let tooltipY = mouse[1] - tooltipHeight - 15;
+
+            // Adjust horizontal position if tooltip goes off left/right edges
+            if (tooltipX < 0) {
+              tooltipX = 5;
+            } else if (tooltipX + tooltipWidth > innerWidth) {
+              tooltipX = innerWidth - tooltipWidth - 5;
             }
+
+            // If tooltip would go off top, position below the point instead
             if (tooltipY < 0) {
-              tooltipY = mouse[1] + 20;
+              tooltipY = mouse[1] + 15;
             }
 
             tooltip.attr('transform', `translate(${tooltipX},${tooltipY})`);
           })
           .on('mouseout', function () {
-            d3.select(this).transition().duration(150).attr('r', pointRadius);
+            // Restore point to original state
+            d3.select(this)
+              .transition()
+              .duration(150)
+              .attr('r', pointRadius)
+              .attr('stroke-width', 1.5)
+              .attr('opacity', 1);
             tooltip.style('display', 'none');
           })
           .transition()
@@ -973,6 +1238,16 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
     zoomExtent,
   ]);
 
+  // Debug: Log render conditions
+  console.log('[CyclePlot] Render conditions:', {
+    showTooltip,
+    showPoints,
+    hasProcessedData: processedData?.length > 0,
+    cycleKey,
+    periodKey,
+    valueKey,
+  });
+
   return (
     <div ref={containerRef} className="w-full">
       {title && title.trim() !== '' && (
@@ -984,17 +1259,97 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
         </h3>
       )}
 
-      <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
-        <svg
-          ref={svgRef}
-          width={dimensions.width}
-          height={dimensions.height}
-          className="w-full h-auto chart-svg"
-          viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-          style={{ display: 'block' }}
-          preserveAspectRatio="xMidYMid meet"
-        />
-      </div>
+      {!validation.isValid && processedData && processedData.length > 0 ? (
+        <div className="flex items-center justify-center min-h-[400px] bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl p-8">
+          <div className="max-w-2xl text-center space-y-6">
+            <div className="text-6xl mb-4">📊</div>
+            <h3 className="text-2xl font-bold text-red-700 dark:text-red-300 mb-2">
+              Invalid Cycle Plot Configuration
+            </h3>
+            <div className="text-left bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                <strong>Data Status:</strong> {validation.validCount} / {validation.total} valid
+                rows
+              </p>
+
+              {validation.issues.length > 0 && (
+                <div className="mb-4">
+                  <p className="font-semibold text-red-600 dark:text-red-400 mb-2">❌ Issues:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                    {validation.issues.map((issue, i) => (
+                      <li key={i}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {validation.suggestions.length > 0 && (
+                <div>
+                  <p className="font-semibold text-blue-600 dark:text-blue-400 mb-3">
+                    💡 Suggested Column Combinations:
+                  </p>
+                  <div className="space-y-2">
+                    {validation.suggestions.map((sug, i) => (
+                      <div
+                        key={i}
+                        className="bg-blue-50 dark:bg-blue-900/30 rounded-md p-3 text-sm"
+                      >
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <span className="font-medium text-blue-700 dark:text-blue-300">
+                              Cycle:
+                            </span>{' '}
+                            <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
+                              {sug.cycle}
+                            </code>
+                          </div>
+                          <div>
+                            <span className="font-medium text-blue-700 dark:text-blue-300">
+                              Period:
+                            </span>{' '}
+                            <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
+                              {sug.period}
+                            </code>
+                          </div>
+                          <div>
+                            <span className="font-medium text-blue-700 dark:text-blue-300">
+                              Value:
+                            </span>{' '}
+                            <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
+                              {sug.value}
+                            </code>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <strong>Requirements:</strong>
+                  <br />• Cycle Key: A column grouping data by cycles (e.g., Year, Season)
+                  <br />• Period Key: A column for periods within each cycle (e.g., Month, Quarter)
+                  <br />• Value Key: A numeric column to plot
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+          <svg
+            ref={svgRef}
+            width={dimensions.width}
+            height={dimensions.height}
+            className="w-full h-auto chart-svg"
+            viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+            style={{ display: 'block' }}
+            preserveAspectRatio="xMidYMid meet"
+          />
+        </div>
+      )}
     </div>
   );
 };
