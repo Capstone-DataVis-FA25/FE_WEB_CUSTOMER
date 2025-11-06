@@ -27,8 +27,10 @@ const AreaPreview: React.FC<Props> = ({ arrayData }) => {
       width={420}
       height={420}
       showLegend={true}
+      animationDuration={800}
       showGrid={true}
       opacity={0.6}
+      variant="preview"
     />
   );
 };

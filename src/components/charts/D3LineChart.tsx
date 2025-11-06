@@ -152,6 +152,8 @@ export interface D3LineChartProps {
   labelFontSize?: number;
   legendFontSize?: number;
   showPointValues?: boolean; // Show values on data points
+  // Preview variant: render without frame/background card
+  variant?: 'default' | 'preview';
 }
 
 const D3LineChart: React.FC<D3LineChartProps> = ({
@@ -209,6 +211,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   labelFontSize = 12,
   legendFontSize = 11,
   showPointValues = false, // Default to not showing values on points
+  variant = 'default',
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -481,7 +484,13 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
     // Use backgroundColor prop or fallback to theme default
     const chartBackgroundColor =
-      backgroundColor !== 'transparent' ? backgroundColor : isDarkMode ? '#111827' : '#ffffff';
+      variant === 'preview'
+        ? 'transparent'
+        : backgroundColor !== 'transparent'
+          ? backgroundColor
+          : isDarkMode
+            ? '#111827'
+            : '#ffffff';
 
     // Clear previous chart
     d3.select(svgRef.current).selectAll('*').remove();
@@ -496,7 +505,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       top: currentWidth < 640 ? Math.max(margin.top * 0.8, 15) : margin.top,
       right: currentWidth < 640 ? Math.max(margin.right * 0.7, 20) : margin.right,
       bottom:
-        legendPosition === 'bottom'
+        showLegend && legendPosition === 'bottom'
           ? currentWidth < 640
             ? Math.max(margin.bottom * 2.5, 120) // Ensure minimum space for legend
             : Math.max(margin.bottom * 2.0, 100)
@@ -529,13 +538,15 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       return;
     }
 
-    // Add background
-    svg
-      .append('rect')
-      .attr('width', currentWidth)
-      .attr('height', currentHeight)
-      .attr('fill', chartBackgroundColor)
-      .attr('rx', 8);
+    // Add background (skip in preview variant)
+    if (variant !== 'preview') {
+      svg
+        .append('rect')
+        .attr('width', currentWidth)
+        .attr('height', currentHeight)
+        .attr('fill', chartBackgroundColor)
+        .attr('rx', 8);
+    }
 
     // Add SVG title at the top, centered (like D3PieChart)
     if (title && title.trim() !== '') {
@@ -563,7 +574,6 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     if (hasStringXValues) {
       // Use ordinal scale for categorical data (like city names)
       const uniqueXValues = [...new Set(xValues)] as string[];
-
       xScale = d3.scaleBand().domain(uniqueXValues).range([0, innerWidth]).padding(0.1);
     } else {
       // Use linear scale for numeric data
@@ -675,12 +685,18 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
     if (hasStringXValues) {
       // For categorical data, use all unique values as ticks
+      const domainVals = (xScale as any).domain() as string[];
+      const approxLabelW = Math.max(48, responsiveFontSize.axis * 3.2);
+      const maxTicks = Math.max(2, Math.floor(innerWidth / approxLabelW));
+      const step = Math.max(1, Math.ceil(domainVals.length / maxTicks));
+      const tickVals = domainVals.filter((_v, i) => i % step === 0);
+
       xAxis = d3
         .axisBottom(xScale)
+        .tickValues(tickVals)
         .tickSizeInner(showAxisTicks ? 6 : 0)
         .tickSizeOuter(showAxisTicks ? 6 : 0)
         .tickFormat((d: any) => {
-          // Use xAxisNames to map ID to display name, fallback to original value
           const displayName = xAxisNames[String(d)] || String(d);
           return displayName;
         });
@@ -689,9 +705,13 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       const uniqueXValues = [...new Set(processedData.map(d => d[xAxisKey] as number))].sort(
         (a, b) => a - b
       );
+      const approxLabelW = Math.max(48, responsiveFontSize.axis * 3.2);
+      const maxTicks = Math.max(2, Math.floor(innerWidth / approxLabelW));
+      const step = Math.max(1, Math.ceil(uniqueXValues.length / maxTicks));
+      const tickVals = uniqueXValues.filter((_v, i) => i % step === 0);
       xAxis = d3
         .axisBottom(xScale)
-        .tickValues(uniqueXValues)
+        .tickValues(tickVals)
         .tickSizeInner(showAxisTicks ? 6 : 0)
         .tickSizeOuter(showAxisTicks ? 6 : 0)
         .tickFormat((d: any) => {
@@ -1639,11 +1659,18 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     yFormatterType,
     xFormatterType,
     showPointValues,
+    variant,
   ]);
 
   return (
     <div ref={containerRef} className="w-full">
-      <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+      <div
+        className={
+          variant === 'preview'
+            ? 'relative overflow-hidden'
+            : 'chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden'
+        }
+      >
         <svg
           ref={svgRef}
           width={dimensions.width}
