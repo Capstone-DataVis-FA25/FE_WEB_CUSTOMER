@@ -16,6 +16,7 @@ const BarPreview: React.FC<Props> = ({ arrayData }) => {
       showLegend={true}
       showGrid={true}
       animationDuration={800}
+      variant="preview"
     />
   );
 };

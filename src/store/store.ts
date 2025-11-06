@@ -10,6 +10,8 @@ import { chartReducer, type ChartState } from '@/features/charts';
 import { chartNoteReducer, type ChartNoteState } from '@/features/chartNotes';
 import { chartEditorReducer, type ChartEditorState } from '@/features/chartEditor';
 import { excelUIReducer, type ExcelUIState } from '@/features/excelUI';
+import chartHistoryReducer from '@/features/chartHistory/chartHistorySlice';
+import type { ChartHistoryState } from '@/features/chartHistory/chartHistoryTypes';
 
 const persistConfig = {
   key: 'root',
@@ -24,6 +26,7 @@ const rootReducer = combineReducers({
   chartNote: chartNoteReducer,
   chartEditor: chartEditorReducer,
   excelUI: excelUIReducer,
+  chartHistory: chartHistoryReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -47,6 +50,7 @@ export type RootState = {
   chartNote: ChartNoteState;
   chartEditor: ChartEditorState;
   excelUI: ExcelUIState;
+  chartHistory: ChartHistoryState;
 };
 
 export type AppDispatch = typeof store.dispatch;

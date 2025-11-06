@@ -19,6 +19,7 @@ import ThemeSwitcher from '../ui/ThemeSwitcher';
 import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { User } from '@/features/auth/authType';
+import Routers from '@/router/routers';
 
 interface HeaderProps {
   isAuthenticated?: boolean;
@@ -49,7 +50,12 @@ const Header: React.FC<HeaderProps> = ({
 
   const navItems = [
     { name: t('navigation_home'), href: '/' },
-    ...(isAuthenticated ? [{ name: 'Workspace', href: '/workspace' }] : []),
+    ...(isAuthenticated
+      ? [
+          { name: 'Datasets', href: `${Routers.WORKSPACE_DATASETS}` },
+          { name: 'Charts', href: `${Routers.WORKSPACE_CHARTS}` },
+        ]
+      : []),
     { name: t('navigation_about'), href: '/about-us' },
   ];
 

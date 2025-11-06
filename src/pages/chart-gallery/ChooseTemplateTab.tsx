@@ -34,6 +34,7 @@ import Routers from '@/router/routers';
 import { useDataset } from '@/features/dataset/useDataset';
 import type { ChartCategory, ChartTemplate } from '@/types/chart-gallery-types';
 import ChartTemplateCard from './ChartTemplateCard';
+import { isSupportedChartType } from '@/constants/chart-types';
 
 export default function ChooseTemplateTab() {
   const { t } = useTranslation();
@@ -61,17 +62,18 @@ export default function ChooseTemplateTab() {
   const datasetId = currentDatasetId;
 
   // Dataset hook - keep selection in global store so it persists across navigation
-  const { currentDataset, getDatasetById } = useDataset();
+  // const { currentDataset, getDatasetById } = useDataset();
+  const { getDatasetById } = useDataset();
 
   // Sync local display state from global currentDataset so selection persists when navigating back
-  useEffect(() => {
-    if (currentDataset && currentDataset.id) {
-      // Only update if local state differs to avoid overwriting selection in dialog flows
-      if (currentDatasetId !== currentDataset.id) setCurrentDatasetId(currentDataset.id);
-      if (currentDatasetName !== currentDataset.name)
-        setCurrentDatasetName(currentDataset.name || '');
-    }
-  }, [currentDataset, currentDatasetId, currentDatasetName]);
+  // useEffect(() => {
+  //   if (currentDataset && currentDataset.id) {
+  //     // Only update if local state differs to avoid overwriting selection in dialog flows
+  //     if (currentDatasetId !== currentDataset.id) setCurrentDatasetId(currentDataset.id);
+  //     if (currentDatasetName !== currentDataset.name)
+  //       setCurrentDatasetName(currentDataset.name || '');
+  //   }
+  // }, [currentDataset, currentDatasetId, currentDatasetName]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<ChartCategory[]>([]);
@@ -133,8 +135,7 @@ export default function ChooseTemplateTab() {
   const continueWithTemplate = (template: ChartTemplate, datasetIdParam?: string) => {
     try {
       // Only allow chart types supported by CreateChartRequest
-      // Extend support to include 'scatter' 'pie' and 'donut'
-      if (!['line', 'bar', 'area', 'scatter', 'pie', 'donut'].includes(template.type)) {
+      if (!isSupportedChartType(template.type)) {
         showError(
           t('chart_create_error', 'Error'),
           t('chart_create_unsupported_type', 'This chart type is not supported for creation.')

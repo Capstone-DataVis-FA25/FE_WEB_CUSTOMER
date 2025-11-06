@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams, Routes } from 'react-router-dom';
 import Routers from '@/router/routers';
 import { useDataset } from '@/features/dataset/useDataset';
 import { useCharts } from '@/features/charts/useCharts';
@@ -43,6 +43,11 @@ import useToast from '@/hooks/useToast';
 import { usePagination } from '@/hooks/usePagination';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
+const getTabFromPath = (pathname: string): 'datasets' | 'charts' => {
+  if (pathname.startsWith(Routers.WORKSPACE_CHARTS)) return 'charts';
+  return 'datasets';
+};
+
 const WorkspacePage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -50,8 +55,6 @@ const WorkspacePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
-
-  // Dataset API integration
   const { datasets, loading, deleting, error, getDatasets, deleteDataset, clearDatasetError } =
     useDataset();
 
@@ -71,7 +74,9 @@ const WorkspacePage: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingChartId, setDeletingChartId] = useState<string | null>(null);
   const [selectingDatasetModal, setSelectingDatasetModal] = useState<boolean>(false);
-
+  const [currentTab, setCurrentTab] = useState<'datasets' | 'charts'>(
+    getTabFromPath(location.pathname)
+  );
   // Get current page from URL, default to 1
   const getCurrentPageFromURL = () => {
     const pageParam = searchParams.get('page');
@@ -92,82 +97,20 @@ const WorkspacePage: React.FC = () => {
     totalItems: 0, // Will be updated when charts are loaded
   });
 
-  // Determine current tab based on navigation state; default to datasets
-  const [currentTab, setCurrentTab] = useState<'datasets' | 'charts'>(
-    (location.state as any)?.tab === 'charts' ? 'charts' : 'datasets'
-  );
-
-  // Update currentTab if navigation state changes
+  // Determine current tab based on URL path
   useEffect(() => {
-    const nextTab = (location.state as any)?.tab;
-    if (nextTab === 'datasets' || nextTab === 'charts') {
-      setCurrentTab(nextTab);
-    }
-  }, [location.state]);
+    const path = location.pathname;
+    setCurrentTab(getTabFromPath(path));
+  }, [location.pathname]);
 
-  // Sync pagination with URL - when URL changes, update pagination
+  // Reset page về 1 khi đổi tab
   useEffect(() => {
-    // Only sync if we're actually on workspace pages
-    if (!location.pathname.startsWith('/workspace')) {
-      return;
-    }
-
-    const urlPage = getCurrentPageFromURL();
-
     if (currentTab === 'datasets') {
-      const currentPage = datasetPagination.pagination.currentPage;
-      if (urlPage !== currentPage) {
-        datasetPagination.setPage(urlPage);
-      }
+      datasetPagination.setPage(1);
     } else if (currentTab === 'charts') {
-      const currentPage = chartPagination.pagination.currentPage;
-      if (urlPage !== currentPage) {
-        chartPagination.setPage(urlPage);
-      }
+      chartPagination.setPage(1);
     }
-  }, [searchParams.toString(), currentTab, location.pathname]);
-
-  // Sync URL with pagination - when pagination changes, update URL (for datasets)
-  useEffect(() => {
-    if (currentTab !== 'datasets' || !location.pathname.startsWith('/workspace')) return;
-
-    const currentPage = datasetPagination.pagination.currentPage;
-    const urlPage = getCurrentPageFromURL();
-
-    // Only update URL if the page is different from what's in the URL
-    if (currentPage !== urlPage) {
-      const newSearchParams = new URLSearchParams(searchParams);
-
-      if (currentPage > 1) {
-        newSearchParams.set('page', currentPage.toString());
-      } else {
-        newSearchParams.delete('page');
-      }
-
-      setSearchParams(newSearchParams, { replace: true });
-    }
-  }, [datasetPagination.pagination.currentPage, currentTab, location.pathname]);
-
-  // Sync URL with pagination - when pagination changes, update URL (for charts)
-  useEffect(() => {
-    if (currentTab !== 'charts' || !location.pathname.startsWith('/workspace')) return;
-
-    const currentPage = chartPagination.pagination.currentPage;
-    const urlPage = getCurrentPageFromURL();
-
-    // Only update URL if the page is different from what's in the URL
-    if (currentPage !== urlPage) {
-      const newSearchParams = new URLSearchParams(searchParams);
-
-      if (currentPage > 1) {
-        newSearchParams.set('page', currentPage.toString());
-      } else {
-        newSearchParams.delete('page');
-      }
-
-      setSearchParams(newSearchParams, { replace: true });
-    }
-  }, [chartPagination.pagination.currentPage, currentTab, location.pathname]);
+  }, [currentTab]);
 
   // Fetch datasets and charts on component mount
   useEffect(() => {
@@ -219,13 +162,14 @@ const WorkspacePage: React.FC = () => {
 
   // Handle tab change by updating state (no route change)
   const handleTabChange = (value: string) => {
-    if (value === 'datasets' || value === 'charts') {
-      if (value === 'datasets') {
-        datasetPagination.setPage(1);
-      } else {
-        chartPagination.setPage(1);
-      }
+    if (value === 'datasets') {
+      datasetPagination.setPage(1);
       setCurrentTab(value);
+      navigate(Routers.WORKSPACE_DATASETS);
+    } else if (value === 'charts') {
+      chartPagination.setPage(1);
+      setCurrentTab(value);
+      navigate(Routers.WORKSPACE_CHARTS);
     }
   };
 

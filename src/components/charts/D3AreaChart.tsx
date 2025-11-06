@@ -72,6 +72,9 @@ export interface D3AreaChartProps {
   labelFontSize?: number;
   legendFontSize?: number;
   showPointValues?: boolean;
+
+  // Preview variant: render without frame/background card
+  variant?: 'default' | 'preview';
 }
 
 const D3AreaChart: React.FC<D3AreaChartProps> = ({
@@ -123,6 +126,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
   labelFontSize = 12,
   legendFontSize = 11,
   showPointValues = false,
+  variant = 'default',
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -223,7 +227,13 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     const gridColor = isDarkMode ? '#4b5563' : '#9ca3af';
     const textColor = isDarkMode ? '#f3f4f6' : '#1f2937';
     const chartBackgroundColor =
-      backgroundColor !== 'transparent' ? backgroundColor : isDarkMode ? '#111827' : '#ffffff';
+      variant === 'preview'
+        ? 'transparent'
+        : backgroundColor !== 'transparent'
+          ? backgroundColor
+          : isDarkMode
+            ? '#111827'
+            : '#ffffff';
 
     // Clear previous chart
     d3.select(svgRef.current).selectAll('*').remove();
@@ -277,23 +287,27 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     const innerWidth = currentWidth - responsiveMargin.left - responsiveMargin.right;
     const innerHeight = currentHeight - responsiveMargin.top - responsiveMargin.bottom;
 
-    // Add background
-    svg
-      .append('rect')
-      .attr('width', currentWidth)
-      .attr('height', currentHeight)
-      .attr('fill', chartBackgroundColor)
-      .attr('rx', 8);
+    // Add background (skip in preview variant)
+    if (variant !== 'preview') {
+      svg
+        .append('rect')
+        .attr('width', currentWidth)
+        .attr('height', currentHeight)
+        .attr('fill', chartBackgroundColor)
+        .attr('rx', 8);
+    }
 
-    // Add subtle Y-axis background area
-    svg
-      .append('rect')
-      .attr('x', 0)
-      .attr('y', 0)
-      .attr('width', responsiveMargin.left)
-      .attr('height', currentHeight)
-      .attr('fill', isDarkMode ? '#111827' : '#f8fafc')
-      .attr('opacity', 0.3);
+    // Add subtle Y-axis background area (skip in preview variant)
+    if (variant !== 'preview') {
+      svg
+        .append('rect')
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width', responsiveMargin.left)
+        .attr('height', currentHeight)
+        .attr('fill', isDarkMode ? '#111827' : '#f8fafc')
+        .attr('opacity', 0.3);
+    }
 
     // Create main group and center the plotting area horizontally by computing
     // the left translate such that the inner plotting area is centered inside
@@ -834,7 +848,6 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
 
       if (legendPosition === 'top' || legendPosition === 'bottom') {
         // Horizontal legend - items laid out horizontally
-        const itemPadding = isMobile ? 6 : 8;
 
         // Build items inside legendContents and support up to 2 rows if needed
         const localIconSize = isMobile ? 12 : isTablet ? 13 : 14;
@@ -1248,6 +1261,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     legendFontSize,
     showPointValues,
     paddingVersion,
+    variant,
   ]);
 
   return (
@@ -1262,7 +1276,13 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       )}
 
       {/* Chart Container with integrated legend */}
-      <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+      <div
+        className={
+          variant === 'preview'
+            ? 'relative overflow-hidden'
+            : 'chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden'
+        }
+      >
         <svg
           ref={svgRef}
           width={dimensions.width}

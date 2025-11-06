@@ -12,9 +12,18 @@ export type MainChartConfig =
   | AreaChartConfig
   | ScatterChartConfig
   | PieChartConfig
-  | DonutChartConfig;
+  | DonutChartConfig
+  | CyclePlotConfig;
 // Scatter chart specific configuration
 export interface SubScatterChartConfig extends BaseChartConfig {
+  pointRadius?: number;
+}
+
+// Cycle Plot specific configuration
+export interface SubCyclePlotChartConfig extends BaseChartConfig {
+  showPoints?: boolean;
+  curve?: keyof typeof curveOptions;
+  lineWidth?: number;
   pointRadius?: number;
 }
 
@@ -56,6 +65,25 @@ export interface DonutChartConfig {
   config: SubPieDonutChartConfig;
   formatters: Partial<PieDonutFormatterConfig>;
   chartType: 'donut';
+}
+
+export interface CyclePlotAxisConfig extends AxisConfig {
+  cycleKey?: string;
+  periodKey?: string;
+  valueKey?: string;
+  cycleColors?: Record<string, { light: string; dark: string }>;
+  showAverageLine?: boolean;
+  emphasizeLatestCycle?: boolean;
+  showRangeBand?: boolean;
+  periodOrdering?: 'auto' | 'custom';
+  showTooltipDelta?: boolean;
+}
+
+export interface CyclePlotConfig {
+  config: SubCyclePlotChartConfig;
+  formatters: Partial<FormatterConfig>;
+  axisConfigs: CyclePlotAxisConfig;
+  chartType: 'cycleplot';
 }
 
 // Curve options
@@ -121,7 +149,13 @@ export interface AxisConfig {
   seriesConfigs?: SeriesConfig[];
 }
 
-export type DataBoundField = 'xAxisKey' | 'seriesConfigs' | 'labelKey' | 'valueKey';
+export type DataBoundField =
+  | 'xAxisKey'
+  | 'seriesConfigs'
+  | 'labelKey'
+  | 'valueKey'
+  | 'cycleKey'
+  | 'periodKey';
 
 export const CHART_DATA_BINDING_KEYS: Record<MainChartConfig['chartType'], DataBoundField[]> = {
   line: ['xAxisKey', 'seriesConfigs'],
@@ -130,6 +164,7 @@ export const CHART_DATA_BINDING_KEYS: Record<MainChartConfig['chartType'], DataB
   scatter: ['xAxisKey', 'seriesConfigs'],
   pie: ['labelKey', 'valueKey'],
   donut: ['labelKey', 'valueKey'],
+  cycleplot: ['cycleKey', 'periodKey', 'valueKey'],
 };
 
 // Path-based definition that reflects actual nesting
@@ -137,7 +172,10 @@ export type DataBindingPath =
   | 'axisConfigs.xAxisKey'
   | 'axisConfigs.seriesConfigs'
   | 'config.labelKey'
-  | 'config.valueKey';
+  | 'config.valueKey'
+  | 'axisConfigs.cycleKey'
+  | 'axisConfigs.periodKey'
+  | 'axisConfigs.valueKey';
 
 export const CHART_DATA_BINDING_PATHS: Record<MainChartConfig['chartType'], DataBindingPath[]> = {
   line: ['axisConfigs.xAxisKey', 'axisConfigs.seriesConfigs'],
@@ -146,6 +184,7 @@ export const CHART_DATA_BINDING_PATHS: Record<MainChartConfig['chartType'], Data
   scatter: ['axisConfigs.xAxisKey', 'axisConfigs.seriesConfigs'],
   pie: ['config.labelKey', 'config.valueKey'],
   donut: ['config.labelKey', 'config.valueKey'],
+  cycleplot: ['axisConfigs.cycleKey', 'axisConfigs.periodKey', 'axisConfigs.valueKey'],
 };
 
 // Series configuration interface for Data Series management

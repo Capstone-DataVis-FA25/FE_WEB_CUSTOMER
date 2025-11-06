@@ -66,17 +66,14 @@ export const useChartEditor = () => {
   const isFormValid = useAppSelector(selectors.selectIsFormValid);
 
   // Actions
-  const handleInitializeEditor = useCallback(
-    (payload: {
-      mode: 'create' | 'edit';
-      chartId?: string;
-      datasetId?: string;
-      initialChartType?: ChartType;
-    }) => {
-      dispatch(initializeEditor(payload));
-    },
-    [dispatch]
-  );
+  const handleInitializeEditor = (payload: {
+    mode: 'create' | 'edit';
+    chartId?: string;
+    datasetId?: string;
+    initialChartType?: ChartType;
+  }) => {
+    dispatch(initializeEditor(payload));
+  };
 
   const handleSetChartData = useCallback(
     (data: ChartDataPoint[]) => {
@@ -85,19 +82,13 @@ export const useChartEditor = () => {
     [dispatch]
   );
 
-  const handleSetChartConfig = useCallback(
-    (config: MainChartConfig | null) => {
-      dispatch(setChartConfig(config));
-    },
-    [dispatch]
-  );
+  const handleSetChartConfig = (config: MainChartConfig | null) => {
+    dispatch(setChartConfig(config));
+  };
 
-  const handleSetCurrentChartType = useCallback(
-    (type: ChartType) => {
-      dispatch(setCurrentChartType(type));
-    },
-    [dispatch]
-  );
+  const handleSetCurrentChartType = (type: ChartType) => {
+    dispatch(setCurrentChartType(type));
+  };
 
   const handleSetEditableName = useCallback(
     (name: string) => {

@@ -271,7 +271,7 @@ const ImportExportSection = () => {
     >
       <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-hidden rounded-lg">
         <CardHeader
-          className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg"
+          className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg"
           onClick={toggleSection}
         >
           <div className="flex items-center justify-between w-full">

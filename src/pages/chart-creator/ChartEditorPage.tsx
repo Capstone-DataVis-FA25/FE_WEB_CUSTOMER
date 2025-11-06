@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 dayjs.extend(customParseFormat);
+import ChartHistoryPanel from '@/components/charts/ChartHistoryPanel';
 
 // UnifiedChartEditor is used inside ChartTab
 import ChartTab from './ChartTab';
@@ -39,24 +40,34 @@ import { selectWorkingDataset } from '@/features/chartEditor/chartEditorSelector
 import { clearCurrentChartNotes } from '@/features/chartNotes/chartNoteSlice';
 import { useChartEditor } from '@/features/chartEditor';
 import type { MainChartConfig } from '@/types/chart';
-import { CHART_DATA_BINDING_PATHS } from '@/types/chart';
 import ChartEditorHeader from './ChartEditorHeader';
 import { resetBindings } from '@/utils/chartBindings';
 
 const ChartEditorPage: React.FC = () => {
   const { t } = useTranslation();
   const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const chartId = params.get('chartId') ?? undefined;
   const navigate = useNavigate();
   const { getDatasetById, currentDataset, loading: isDatasetLoading } = useDataset();
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
   const dispatch = useAppDispatch();
+  const [currentModalAction, setCurrentModalAction] = useState<'save' | 'reset' | null>(null);
+  // Chart history sidebar state
+  const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState(false);
+  const handleToggleHistorySidebar = () => setIsHistorySidebarOpen(v => !v);
+  // Unsaved changes modal state
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+  const [isSavingBeforeLeave, setIsSavingBeforeLeave] = useState(false);
+  const { currentDataset: dataset } = useDataset();
+  // Use datasetId from context, with local state for selection changes
+  const [datasetId, setDatasetId] = useState<string>(dataset?.id || '');
 
   // Chart editor context (now includes validation)
   const {
     mode,
-    chartId,
-    datasetId: contextDatasetId,
     setChartData,
     chartConfig,
     setChartConfig,
@@ -74,7 +85,6 @@ const ChartEditorPage: React.FC = () => {
   // Helper to set originals from external data (for future use)
   // const setOriginalValues = useSetChartEditorOriginals();
   // const [dataset, setDataset] = useState<Dataset | undefined>(undefined);
-  const [currentModalAction, setCurrentModalAction] = useState<'save' | 'reset' | null>(null);
   const {
     currentChart,
     loading: isChartLoading,
@@ -91,14 +101,6 @@ const ChartEditorPage: React.FC = () => {
   const handleToggleNotesSidebar = () => {
     setIsNotesSidebarOpen(!isNotesSidebarOpen);
   };
-
-  // Unsaved changes modal state
-  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
-  const [isSavingBeforeLeave, setIsSavingBeforeLeave] = useState(false);
-
-  // Use datasetId from context, with local state for selection changes
-  const [datasetId, setDatasetId] = useState<string>(contextDatasetId || '');
 
   // State for dataset selection modal
   const [showDatasetModal, setShowDatasetModal] = useState(false);
@@ -287,9 +289,9 @@ const ChartEditorPage: React.FC = () => {
   // ============================================================
   // useEffect #2: Sync datasetId with context
   useEffect(() => {
-    // console.log('useEffect #2: contextDatasetId changed', contextDatasetId);
-    setDatasetId(contextDatasetId || '');
-  }, [contextDatasetId]);
+    // console.log('useEffect #2: dataset?.id changed', dataset?.id);
+    setDatasetId(dataset?.id || '');
+  }, [dataset?.id]);
 
   // ============================================================
   // EFFECT 2: Load chart in edit mode (independent)
@@ -457,7 +459,7 @@ const ChartEditorPage: React.FC = () => {
     [dispatch]
   );
 
-  // Thông báo rằng là chart chưa lưu -> người dùng lưu hoặc cancel
+  // Thông báo rằng là chart chưa lưu -> người dùng lưu hoặc cancel (reload/close tab)
   useBeforeUnload({
     hasUnsavedChanges: hasChanges && mode === 'edit',
     message: t(
@@ -465,6 +467,30 @@ const ChartEditorPage: React.FC = () => {
       'You have unsaved changes to your chart. Are you sure you want to leave?'
     ),
   });
+
+  // Chặn back trên trình duyệt khi đang chỉnh sửa (edit mode) và hiện modal xác nhận
+  useEffect(() => {
+    if (mode !== 'edit') return;
+    const handlePopState = (event: PopStateEvent) => {
+      if (hasChanges && mode === 'edit') {
+        event.preventDefault();
+        window.history.pushState(null, '', window.location.href);
+        setPendingNavigation(() => () => {
+          clearCurrentChart();
+          navigate('/workspace', { state: { tab: 'charts' } });
+        });
+        setShowUnsavedModal(true);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    // Push dummy state to prevent immediate back
+    if (hasChanges && mode === 'edit') {
+      window.history.pushState(null, '', window.location.href);
+    }
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [hasChanges, mode, navigate, clearCurrentChart]);
 
   // Handle create new chart
   const handleCreateChart = async () => {
@@ -668,7 +694,10 @@ const ChartEditorPage: React.FC = () => {
   }, []);
 
   // Loading state
-  if (isDatasetLoading || isChartLoading) {
+  // Show full-page loading only when chart is loading, or when dataset is loading
+  // AND the dataset selection dialog is not open. This prevents the dialog's
+  // internal fetch from blocking the entire page.
+  if (isChartLoading || (isDatasetLoading && !showDatasetModal)) {
     return (
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
         <div className="text-center">
@@ -685,9 +714,10 @@ const ChartEditorPage: React.FC = () => {
         onReset={handleReset}
         onSave={handleSave}
         onBack={handleBack}
-        onOpenDatasetModal={() => setShowDatasetModal(true)}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        chartId={chartId}
+        onToggleHistorySidebar={handleToggleHistorySidebar}
       />
 
       {/* Main Content - Full Width Chart Area */}
@@ -787,6 +817,26 @@ const ChartEditorPage: React.FC = () => {
           chartId={chartId}
           isOpen={isNotesSidebarOpen}
           onToggle={handleToggleNotesSidebar}
+        />
+      )}
+
+      {/* Chart History Sidebar */}
+      {mode === 'edit' && chartId && isHistorySidebarOpen && (
+        <ChartHistoryPanel
+          chartId={chartId}
+          isOpen={true}
+          onToggle={handleToggleHistorySidebar}
+          onRestoreSuccess={async () => {
+            // Reload chart data after restore (name, description, type, config all updated)
+            if (chartId) {
+              try {
+                await getChartById(chartId);
+                showSuccess(t('chart_restore_success', 'Chart restored successfully'));
+              } catch (error) {
+                console.error('[ChartEditorPage] Failed to reload chart after restore:', error);
+              }
+            }
+          }}
         />
       )}
     </div>

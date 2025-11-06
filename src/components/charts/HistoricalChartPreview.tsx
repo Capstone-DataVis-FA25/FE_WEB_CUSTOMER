@@ -1,24 +1,29 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent } from '../ui/card';
-import { useChartEditorRead } from '@/features/chartEditor';
-import { useDataset } from '@/features/dataset/useDataset';
 import D3LineChart from '@/components/charts/D3LineChart';
 import D3BarChart from '@/components/charts/D3BarChart';
 import D3AreaChart from '@/components/charts/D3AreaChart';
 import D3ScatterChart from '@/components/charts/D3ScatterChart';
-import D3CyclePlot from '@/components/charts/D3CyclePlot';
-import { TrendingUp } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { curveOptions } from '@/types/chart';
-import type { SubPieDonutChartConfig, PieDonutFormatterConfig } from '@/types/chart';
-import { convertChartDataToArray } from '@/utils/dataConverter';
+import D3PieChart from '@/components/charts/D3PieChart';
 import { ChartType } from '@/features/charts/chartTypes';
-import D3PieChart from './D3PieChart';
+import { defaultColorsChart } from '@/utils/Utils';
+import {
+  type SubPieDonutChartConfig,
+  type PieDonutFormatterConfig,
+  curveOptions,
+} from '@/types/chart';
+import { useDataset } from '@/features/dataset/useDataset';
+import { convertChartDataToArray } from '@/utils/dataConverter';
+import { useTranslation } from 'react-i18next';
+import { TrendingUp } from 'lucide-react';
 
-const ChartDisplaySection: React.FC = () => {
+// Render chart giống ChartDisplaySection nhưng cho historical version
+
+const HistoricalChartPreview: React.FC<{
+  chartType: string;
+  chartConfig: any;
+  chartData: any[];
+}> = ({ chartType, chartConfig, chartData }) => {
   const { t } = useTranslation();
-  const { chartData, chartConfig, currentChartType: chartType } = useChartEditorRead();
   const { currentDataset } = useDataset();
 
   // Helper: Map DataHeader ID to name
@@ -304,106 +309,65 @@ const ChartDisplaySection: React.FC = () => {
 
           case 'scatter': {
             const scatterConfig = safeChartConfig as any;
-
-            // For scatter, use the first visible series as Y key
             const yKey = (yAxisKeysNames as string[])[0];
-
-            // Convert chartData to array format with ALL columns (including potential colorKey/sizeKey)
             const arrayData = convertChartDataToArray(chartData);
-
-            // Scatter-specific configuration
             const scatterProps = {
               arrayData,
               width: safeChartConfig.width,
               height: safeChartConfig.height,
               margin: safeChartConfig.margin,
               xAxisKey: xAxisKeyName,
-              // Support multiple series: pass all visible series as yAxisKeys
               yAxisKey: yKey,
               yAxisKeys: yAxisKeysNames as string[],
-
-              // Optional: colorKey for grouping by category
-              colorKey: scatterConfig.colorKey, // Should be a column name from dataset
-
-              // Optional: sizeKey for bubble chart effect
-              sizeKey: scatterConfig.sizeKey, // Should be a column name from dataset
-
-              // Colors
+              colorKey: scatterConfig.colorKey,
+              sizeKey: scatterConfig.sizeKey,
               colors: colors,
-              // Explicit series colors mapping keyed by header/display name
               seriesColors: Object.fromEntries(
                 (axisConfigs.seriesConfigs || []).map((series: any) => [
                   getHeaderName(series.dataColumn),
                   series.color || '#3b82f6',
                 ])
               ),
-              // Series display names mapping
               seriesNames: Object.fromEntries(
                 (axisConfigs.seriesConfigs || []).map((series: any) => [
                   getHeaderName(series.dataColumn),
                   series.name,
                 ])
               ),
-
-              // Title and labels
               title: safeChartConfig.title,
               xAxisLabel: axisConfigs.xAxisLabel,
               yAxisLabel: axisConfigs.yAxisLabel,
-
-              // Display options
               showGrid: safeChartConfig.showGrid,
               showLegend: safeChartConfig.showLegend,
               showTooltip: scatterConfig.showTooltip,
               showAxisLabels: axisConfigs.showAxisLabels,
               showAxisTicks: axisConfigs.showAxisTicks,
-
-              // Styling
               pointRadius: scatterConfig.pointRadius || 5,
               minPointRadius: scatterConfig.minPointRadius || 3,
               maxPointRadius: scatterConfig.maxPointRadius || 15,
               pointOpacity: scatterConfig.pointOpacity || 0.7,
-
-              // Grid and legend
               gridOpacity: scatterConfig.gridOpacity,
               legendFontSize: scatterConfig.legendFontSize,
-
-              // Axis configuration
               xAxisStart: axisConfigs.xAxisStart,
               yAxisStart: axisConfigs.yAxisStart,
               xAxisRotation: axisConfigs.xAxisRotation,
-
-              // Formatters
               yAxisFormatter: safeCommonProps.yAxisFormatter,
               xAxisFormatter: safeCommonProps.xAxisFormatter,
-
-              // Font sizes
               fontSize: safeCommonProps.fontSize,
               titleFontSize: scatterConfig.titleFontSize,
               labelFontSize: scatterConfig.labelFontSize,
-
-              // Theme
               theme: scatterConfig.theme,
               backgroundColor: safeChartConfig.backgroundColor,
-
-              // Animation
               animationDuration: safeChartConfig.animationDuration,
-
-              // Regression line
               showRegressionLine: scatterConfig.showRegressionLine,
               regressionLineColor: scatterConfig.regressionLineColor,
               regressionLineWidth: scatterConfig.regressionLineWidth,
-
-              // Zoom and Pan
-              enableZoom: scatterConfig.enableZoom,
-              enablePan: scatterConfig.enablePan,
-              zoomExtent: scatterConfig.zoomExtent,
             };
-
             return <D3ScatterChart {...scatterProps} />;
           }
 
           case 'bar': {
-            const barConfig = safeChartConfig as any; // Using 'any' for SubBarChartConfig compatibility
+            const barConfig = safeChartConfig as any;
             return (
               <D3BarChart
                 {...safeCommonProps}
@@ -442,7 +406,7 @@ const ChartDisplaySection: React.FC = () => {
           }
 
           case 'area': {
-            const areaConfig = safeChartConfig as any; // Using 'any' for SubAreaChartConfig compatibility
+            const areaConfig = safeChartConfig as any;
             const areaProps = {
               data: chartData,
               width: safeChartConfig.width,
@@ -483,130 +447,6 @@ const ChartDisplaySection: React.FC = () => {
           default:
             return null;
         }
-      }
-      case ChartType.CyclePlot: {
-        const cyclePlotConfig = safeChartConfig as any;
-        if (!axisConfigs.cycleKey || !axisConfigs.periodKey || !axisConfigs.valueKey) {
-          return (
-            <ErrorPanel
-              title={t('chart_editor_no_cycle_keys', 'Missing required fields for Cycle Plot')}
-              subtitle={t(
-                'chart_editor_cycle_keys_hint',
-                'Please select Cycle, Period, and Value columns for the cycle plot.'
-              )}
-              bordered
-            />
-          );
-        }
-
-        // Convert to array data format
-        const arrayData = convertChartDataToArray(chartData);
-
-        // Use cycleColors from axisConfigs if available, otherwise use default colors
-        const cycleColors = axisConfigs.cycleColors || colors;
-
-        console.log('✅ CyclePlot rendering with:', {
-          cycleKey: getHeaderName(axisConfigs.cycleKey),
-          periodKey: getHeaderName(axisConfigs.periodKey),
-          valueKey: getHeaderName(axisConfigs.valueKey),
-          arrayDataLength: arrayData?.length || 0,
-          cycleColors,
-        });
-
-        // Get column names for axis labels (fallback to column name if no custom label)
-        const periodColumnName = getHeaderName(axisConfigs.periodKey);
-        const valueColumnName = getHeaderName(axisConfigs.valueKey);
-
-        const cyclePlotProps = {
-          width: cyclePlotConfig?.width,
-          height: cyclePlotConfig?.height,
-          margin: cyclePlotConfig?.margin,
-          arrayData,
-          cycleKey: getHeaderName(axisConfigs.cycleKey),
-          periodKey: periodColumnName,
-          valueKey: valueColumnName,
-
-          // Styling
-          colors: cycleColors,
-          lineWidth: cyclePlotConfig?.lineWidth || 2,
-          pointRadius: cyclePlotConfig?.pointRadius || 4,
-          opacity: cyclePlotConfig?.opacity || 0.8,
-
-          // Display options
-          title: cyclePlotConfig?.title || '',
-          xAxisLabel: axisConfigs.xAxisLabel || periodColumnName, // Use column name as default
-          yAxisLabel: axisConfigs.yAxisLabel || valueColumnName, // Use column name as default
-          showLegend: cyclePlotConfig?.showLegend !== false,
-          showGrid: cyclePlotConfig?.showGrid !== false,
-          showPoints: cyclePlotConfig?.showPoints !== false,
-          showTooltip: cyclePlotConfig?.showTooltip !== false,
-
-          // Grid
-          gridOpacity: cyclePlotConfig?.gridOpacity || 0.3,
-
-          // Legend
-          legendFontSize: cyclePlotConfig?.legendFontSize || 12,
-          legendPosition: cyclePlotConfig?.legendPosition || 'top',
-
-          // Axis configuration
-          yAxisStart: axisConfigs.yAxisStart,
-          xAxisRotation: axisConfigs.xAxisRotation,
-          showAxisLabels: axisConfigs.showAxisLabels,
-          showAxisTicks: axisConfigs.showAxisTicks,
-
-          // Cycle-specific UX options
-          showAverageLine: axisConfigs.showAverageLine,
-          emphasizeLatestCycle: axisConfigs.emphasizeLatestCycle,
-          showRangeBand: axisConfigs.showRangeBand,
-          periodOrdering: axisConfigs.periodOrdering || 'auto',
-          showTooltipDelta: axisConfigs.showTooltipDelta,
-
-          // Zoom and Pan
-          enableZoom: cyclePlotConfig?.enableZoom,
-          enablePan: cyclePlotConfig?.enablePan,
-          zoomExtent: cyclePlotConfig?.zoomExtent,
-
-          // Formatters
-          yAxisFormatter: formatters?.useYFormatter
-            ? (value: number) => {
-                switch (formatters.yFormatterType) {
-                  case 'currency':
-                    return new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                    }).format(value);
-                  case 'percentage':
-                    return new Intl.NumberFormat('en-US', { style: 'percent' }).format(value / 100);
-                  case 'decimal':
-                    return value.toFixed(2);
-                  case 'scientific':
-                    return value.toExponential(2);
-                  default:
-                    return value.toString();
-                }
-              }
-            : undefined,
-          xAxisFormatter: formatters?.useXFormatter
-            ? (value: string | number) => {
-                return String(value);
-              }
-            : undefined,
-
-          // Font sizes
-          fontSize: cyclePlotConfig?.fontSize || { axis: 12, label: 14, title: 16 },
-          titleFontSize: cyclePlotConfig?.titleFontSize || 18,
-          labelFontSize: cyclePlotConfig?.labelFontSize || 14,
-
-          // Theme
-          theme: cyclePlotConfig?.theme || 'auto',
-          backgroundColor: cyclePlotConfig?.backgroundColor || 'transparent',
-
-          // Animation
-          animationDuration: cyclePlotConfig?.animationDuration || 1000,
-          curveType: cyclePlotConfig?.curveType || 'monotone',
-        };
-
-        return <D3CyclePlot {...cyclePlotProps} />;
       }
       case ChartType.Pie:
       case ChartType.Donut: {
@@ -709,7 +549,7 @@ const ChartDisplaySection: React.FC = () => {
           enableHoverEffect: pieConfig.enableHoverEffect,
 
           // Colors
-          colors: colors,
+          colors: defaultColorsChart,
 
           // Value formatter
           valueFormatter: formatter.useValueFormatter
@@ -754,25 +594,7 @@ const ChartDisplaySection: React.FC = () => {
     }
   };
 
-  return (
-    <div className="lg:col-span-6 space-y-6">
-      {/* Chart Display Area */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.3 }}
-        className="sticky top-4 z-10"
-      >
-        <Card className="backdrop-blur-sm bg-white/95 dark:bg-gray-800/95 border-0 shadow-2xl">
-          <CardContent className="p-6">
-            <div className="w-full h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              {renderChart()}
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    </div>
-  );
+  return renderChart();
 };
 
-export default React.memo(ChartDisplaySection);
+export default HistoricalChartPreview;

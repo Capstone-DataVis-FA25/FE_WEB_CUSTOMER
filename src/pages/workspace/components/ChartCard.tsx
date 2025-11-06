@@ -1,5 +1,18 @@
 import React, { useState } from 'react';
-import { BarChart3, LineChart, AreaChart, Database, Eye, Share, Trash2, Clock } from 'lucide-react';
+import {
+  BarChart3,
+  LineChart,
+  AreaChart,
+  Database,
+  Eye,
+  Share,
+  Trash2,
+  Clock,
+  RefreshCcw,
+  Donut,
+  Dot,
+  ChartPie,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +28,7 @@ type BaseChart = {
 };
 import Utils from '@/utils/Utils';
 import { useTranslation } from 'react-i18next';
+import { ChartType } from '@/features/charts';
 
 // Extended Chart type for UI with additional optional fields
 type Chart = BaseChart & {
@@ -35,12 +49,20 @@ interface ChartCardProps {
 
 const getChartIcon = (type: string) => {
   switch (type) {
-    case 'line':
+    case ChartType.Line:
       return <LineChart className="h-4 w-4" />;
-    case 'bar':
+    case ChartType.Bar:
       return <BarChart3 className="h-4 w-4" />;
-    case 'area':
+    case ChartType.Area:
       return <AreaChart className="h-4 w-4" />;
+    case ChartType.Pie:
+      return <ChartPie className="h-4 w-4" />;
+    case ChartType.Scatter:
+      return <Dot className="h-4 w-4" />;
+    case ChartType.Donut:
+      return <Donut className="h-4 w-4" />;
+    case ChartType.CyclePlot:
+      return <RefreshCcw className="h-4 w-4" />;
     default:
       return <BarChart3 className="h-4 w-4" />;
   }
@@ -48,45 +70,42 @@ const getChartIcon = (type: string) => {
 
 const getChartTypeLabel = (type: string) => {
   switch (type) {
-    case 'line':
+    case ChartType.Line:
       return 'Line Chart';
-    case 'bar':
+    case ChartType.Bar:
       return 'Bar Chart';
-    case 'area':
+    case ChartType.Area:
       return 'Area Chart';
+    case ChartType.Pie:
+      return 'Pie Chart';
+    case ChartType.Scatter:
+      return 'Scatter Plot';
+    case ChartType.Donut:
+      return 'Donut Chart';
+    case ChartType.CyclePlot:
+      return 'Cycle Plot';
     default:
-      return 'Chart';
-  }
-};
-
-const getCategoryColor = (category?: string) => {
-  switch (category) {
-    case 'Sales':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-    case 'Finance':
-      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
-    case 'Analytics':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-    case 'Performance':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
-    default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+      return 'Unknown Chart';
   }
 };
 
 // Chart color mapping based on type
 const getChartColor = (type: string) => {
   switch (type) {
-    case 'line':
+    case ChartType.Line:
       return 'from-blue-500 to-cyan-500';
-    case 'bar':
+    case ChartType.Bar:
       return 'from-emerald-500 to-teal-500';
-    case 'area':
+    case ChartType.Area:
       return 'from-orange-500 to-red-500';
-    case 'pie':
+    case ChartType.Pie:
       return 'from-purple-500 to-pink-500';
-    case 'scatter':
+    case ChartType.Scatter:
       return 'from-indigo-500 to-blue-500';
+    case ChartType.Donut:
+      return 'from-yellow-500 to-amber-500';
+    case ChartType.CyclePlot:
+      return 'from-green-500 to-lime-500';
     default:
       return 'from-gray-500 to-gray-600';
   }
@@ -150,24 +169,14 @@ const ChartCard: React.FC<ChartCardProps> = ({
               <BarChart3 className="w-3 h-3" />
               {getChartTypeLabel(chart.type)}
             </Badge>
-            {chart.category && (
-              <Badge variant="outline" className={getCategoryColor(chart.category)}>
-                {chart.category}
-              </Badge>
-            )}
-            {chart.isPublic && (
-              <Badge variant="secondary" className="text-xs">
-                Public
-              </Badge>
-            )}
           </div>
         </div>
 
         <div className="space-y-2">
-          <CardTitle className="text-lg leading-tight hover:text-emerald-600 transition-colors group-hover:text-emerald-600">
+          <CardTitle className="text-lg leading-tight hover:text-emerald-600 transition-colors group-hover:text-emerald-600 truncate">
             {chart.name}
           </CardTitle>
-          <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem] text-gray-700 dark:text-gray-300">
+          <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem] text-gray-700 dark:text-gray-300 truncate">
             {chart.description || 'No description available'}
           </CardDescription>
         </div>
@@ -178,7 +187,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
           <div className="flex items-center space-x-1 text-muted-foreground">
             <Database className="h-3 w-3" />
             <span className="font-medium">{t('chart_dataset', 'Dataset')}:</span>
-            <span className="text-gray-700 dark:text-gray-300">
+            <span className="text-gray-700 dark:text-gray-300 truncate max-w-[10rem]">
               {chart.dataset?.name || chart.datasetName || `Dataset ${chart.datasetId}`}
             </span>
           </div>

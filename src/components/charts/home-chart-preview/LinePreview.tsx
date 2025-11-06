@@ -13,9 +13,11 @@ const LinePreview: React.FC<Props> = ({ arrayData }) => {
       yAxisKeys={['revenue']}
       width={420}
       height={420}
-      showLegend={false}
+      showLegend={true}
+      animationDuration={800}
       showGrid={true}
       showPoints={true}
+      variant="preview"
     />
   );
 };
