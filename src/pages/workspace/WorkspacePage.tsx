@@ -18,7 +18,16 @@ import { useCharts } from '@/features/charts/useCharts';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import type { Dataset } from '@/features/dataset/datasetAPI';
-import { ChartType, type Chart as BaseChart } from '@/features/charts/chartTypes';
+// Minimal BaseChart type to avoid dependency on missing '@/features/charts/chartTypes'
+type BaseChart = {
+  id: string;
+  name: string;
+  description?: string;
+  type: string;
+  datasetId?: string;
+  dataset?: { name?: string } | null;
+  updatedAt: string;
+};
 
 // Extended Chart type for UI with additional optional fields
 type Chart = BaseChart & {
@@ -68,8 +77,6 @@ const WorkspacePage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<'datasets' | 'charts'>(
     getTabFromPath(location.pathname)
   );
-  const isInitialLoading = (loading && !error) || (chartsLoading && !chartsError);
-
   // Get current page from URL, default to 1
   const getCurrentPageFromURL = () => {
     const pageParam = searchParams.get('page');
@@ -110,6 +117,8 @@ const WorkspacePage: React.FC = () => {
     getDatasets();
     getCharts();
   }, [getDatasets, getCharts]);
+
+  // Removed full-page initial loading; each tab handles its own scoped loading state
 
   // Show error toast when error occurs
   useEffect(() => {
@@ -313,216 +322,202 @@ const WorkspacePage: React.FC = () => {
     }
   };
 
+  // While initial fetch is in-flight and no items yet, show only header + a scoped spinner
+  const isInitialLoading =
+    (loading || chartsLoading) &&
+    allFilteredDatasets.length === 0 &&
+    allFilteredCharts.length === 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      {isInitialLoading ? (
-        // Loading screen while fetching both datasets and charts
-        <div className="flex items-center justify-center min-h-screen">
-          <LoadingSpinner />
-        </div>
-      ) : (
-        // Main workspace content
-        <div className="container mx-auto p-6 space-y-8">
-          {/* Header Section - Enhanced */}
-          <div className="flex flex-col space-y-6 md:flex-row md:items-center md:justify-between md:space-y-0">
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Database className="h-6 w-6 text-white" />
-                </div>
-                <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Workspace
-                </h1>
+      {/* Main workspace content */}
+      <div className="container mx-auto p-6 space-y-8">
+        {/* Header Section - Enhanced */}
+        <div className="flex flex-col space-y-6 md:flex-row md:items-center md:justify-between md:space-y-0">
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Database className="h-6 w-6 text-white" />
               </div>
-              <p className="text-lg text-muted-foreground max-w-2xl">
-                Create, manage, and visualize your data with powerful charts and analytics
-              </p>
-              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                <div className="flex items-center space-x-1">
-                  <Database className="h-4 w-4 text-blue-500" />
-                  <span>{allFilteredDatasets.length} datasets</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <BarChart3 className="h-4 w-4 text-emerald-500" />
-                  <span>{allFilteredCharts.length} charts</span>
-                </div>
-              </div>
+              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Workspace
+              </h1>
             </div>
-            <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => handleCreateChart()}
-                className="border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-900/20 shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Chart
-              </Button>
-              <Button
-                onClick={handleCreateDataset}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                <span>New Dataset</span>
-              </Button>
+            <p className="text-lg text-muted-foreground max-w-2xl">
+              Create, manage, and visualize your data with powerful charts and analytics
+            </p>
+            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+              <div className="flex items-center space-x-1">
+                <Database className="h-4 w-4 text-blue-500" />
+                <span>{allFilteredDatasets.length} datasets</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <BarChart3 className="h-4 w-4 text-emerald-500" />
+                <span>{allFilteredCharts.length} charts</span>
+              </div>
             </div>
           </div>
-
-          {/* Search and Filters - Enhanced */}
-          <Card className="border-0 shadow-xl bg-white/70 backdrop-blur-sm dark:bg-gray-800/70">
-            <CardContent className="p-6">
-              <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-x-6 md:space-y-0">
-                <div className="relative flex-1">
-                  <Input
-                    placeholder="Search datasets and charts..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="h-12 text-lg border-2 border-gray-200 focus:border-blue-500 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm"
-                  />
-                </div>
-                <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className="w-full sm:w-[160px] h-12 border-2 border-gray-600 hover:border-gray-500 rounded-xl backdrop-blur-sm px-3 text-left flex items-center justify-between shadow-sm hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <span className="truncate">
-                          {(() => {
-                            const labels: Record<string, string> = {
-                              all: 'All types',
-                              line: ChartType.Line,
-                              bar: ChartType.Bar,
-                              area: ChartType.Area,
-                              scatter: ChartType.Scatter,
-                              pie: ChartType.Pie,
-                              donut: ChartType.Donut,
-                            };
-                            return labels[chartTypeFilter] || 'Filter by type';
-                          })()}
-                        </span>
-                        <svg
-                          className="ml-2 h-4 w-4 opacity-60"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M6 9l6 6 6-6"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="z-[99999] bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-1 w-[160px]">
-                      <DropdownMenuItem
-                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                        onClick={() => setChartTypeFilter('all')}
-                      >
-                        All types
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                        onClick={() => setChartTypeFilter('line')}
-                      >
-                        Line
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                        onClick={() => setChartTypeFilter('bar')}
-                      >
-                        Bar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                        onClick={() => setChartTypeFilter('area')}
-                      >
-                        Area
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                        onClick={() => setChartTypeFilter('scatter')}
-                      >
-                        Scatter
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                        onClick={() => setChartTypeFilter('pie')}
-                      >
-                        Pie
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                        onClick={() => setChartTypeFilter('donut')}
-                      >
-                        Donut
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Main Content - Enhanced Tabs */}
-          <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-8">
-            <div className="flex justify-center">
-              <TabsList className="grid w-full max-w-md grid-cols-2 h-14 p-1 bg-white/70 backdrop-blur-sm dark:bg-gray-800/70 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
-                <TabsTrigger
-                  value="datasets"
-                  className="flex items-center space-x-2 h-12 rounded-lg text-sm font-medium"
-                >
-                  <Database className="h-4 w-4" />
-                  <span>Datasets ({allFilteredDatasets.length})</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="charts"
-                  className="flex items-center space-x-2 h-12 rounded-lg text-sm font-medium"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  <span>Charts ({allFilteredCharts.length})</span>
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            {/* Datasets Tab */}
-            <TabsContent value="datasets" className="space-y-6">
-              <DatasetTab
-                loading={loading}
-                deleting={deleting}
-                filteredDatasets={filteredDatasets}
-                allFilteredDatasets={allFilteredDatasets}
-                searchTerm={searchTerm}
-                onCreateDataset={handleCreateDataset}
-                onDeleteDataset={handleDeleteDataset}
-                deletingId={deletingId}
-                pagination={datasetPagination}
-              />
-            </TabsContent>
-
-            {/* Charts Tab */}
-            <TabsContent value="charts" className="space-y-6">
-              <ChartTab
-                charts={charts}
-                chartsLoading={chartsLoading}
-                chartDeleting={chartDeleting}
-                datasetSelectingModal={selectingDatasetModal}
-                filteredCharts={filteredCharts}
-                allFilteredCharts={allFilteredCharts}
-                searchTerm={searchTerm}
-                onHandleOpenModalSelectedDataset={handleOpenModalSelectDataset}
-                onCreateChart={handleCreateChart}
-                onDeleteChart={handleDeleteChart}
-                onEditChart={handleEditChart}
-                deletingChartId={deletingChartId}
-                pagination={chartPagination}
-              />
-            </TabsContent>
-          </Tabs>
+          <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => handleCreateChart()}
+              className="border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-900/20 shadow-lg hover:shadow-xl transition-all duration-200"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Chart
+            </Button>
+            <Button
+              onClick={handleCreateDataset}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              <span>New Dataset</span>
+            </Button>
+          </div>
         </div>
-      )}
+
+        {isInitialLoading ? (
+          <div className="flex justify-center items-center min-h-[calc(100vh-220px)]">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <>
+            {/* Search and Filters - Enhanced */}
+            <Card className="border-0 shadow-xl bg-white/70 backdrop-blur-sm dark:bg-gray-800/70">
+              <CardContent className="p-6">
+                <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-x-6 md:space-y-0">
+                  <div className="relative flex-1">
+                    <Input
+                      placeholder="Search datasets and charts..."
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                      className="h-12 text-lg border-2 border-gray-200 focus:border-blue-500 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="w-full sm:w-[160px] h-12 border-2 border-gray-600 hover:border-gray-500 rounded-xl backdrop-blur-sm px-3 text-left flex items-center justify-between shadow-sm hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <span className="truncate">
+                            {(() => {
+                              const labels: Record<string, string> = {
+                                all: 'All types',
+                                line: 'Line',
+                                bar: 'Bar',
+                                area: 'Area',
+                              };
+                              return labels[chartTypeFilter] || 'Filter by type';
+                            })()}
+                          </span>
+                          <svg
+                            className="ml-2 h-4 w-4 opacity-60"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M6 9l6 6 6-6"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="z-[99999] bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-1 w-[160px]">
+                        <DropdownMenuItem
+                          className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                          onClick={() => setChartTypeFilter('all')}
+                        >
+                          All types
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                          onClick={() => setChartTypeFilter('line')}
+                        >
+                          Line
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                          onClick={() => setChartTypeFilter('bar')}
+                        >
+                          Bar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                          onClick={() => setChartTypeFilter('area')}
+                        >
+                          Area
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Main Content - Enhanced Tabs */}
+            <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-8">
+              <div className="flex justify-center">
+                <TabsList className="grid w-full max-w-md grid-cols-2 h-14 p-1 bg-white/70 backdrop-blur-sm dark:bg-gray-800/70 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
+                  <TabsTrigger
+                    value="datasets"
+                    className="flex items-center space-x-2 h-12 rounded-lg text-sm font-medium"
+                  >
+                    <Database className="h-4 w-4" />
+                    <span>Datasets ({allFilteredDatasets.length})</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="charts"
+                    className="flex items-center space-x-2 h-12 rounded-lg text-sm font-medium"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    <span>Charts ({allFilteredCharts.length})</span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              {/* Datasets Tab */}
+              <TabsContent value="datasets" className="space-y-6">
+                <DatasetTab
+                  loading={loading}
+                  deleting={deleting}
+                  filteredDatasets={filteredDatasets}
+                  allFilteredDatasets={allFilteredDatasets}
+                  searchTerm={searchTerm}
+                  onCreateDataset={handleCreateDataset}
+                  onDeleteDataset={handleDeleteDataset}
+                  deletingId={deletingId}
+                  pagination={datasetPagination}
+                />
+              </TabsContent>
+
+              {/* Charts Tab */}
+              <TabsContent value="charts" className="space-y-6">
+                <ChartTab
+                  charts={charts}
+                  chartsLoading={chartsLoading}
+                  chartDeleting={chartDeleting}
+                  datasetSelectingModal={selectingDatasetModal}
+                  filteredCharts={filteredCharts}
+                  allFilteredCharts={allFilteredCharts}
+                  searchTerm={searchTerm}
+                  onHandleOpenModalSelectedDataset={handleOpenModalSelectDataset}
+                  onCreateChart={handleCreateChart}
+                  onDeleteChart={handleDeleteChart}
+                  onEditChart={handleEditChart}
+                  deletingChartId={deletingChartId}
+                  pagination={chartPagination}
+                />
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
+      </div>
 
       <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
       {/* Delete Confirmation Modal */}

@@ -68,13 +68,14 @@ const ExcelRow = memo(
     );
 
     return (
-      <tr
-        className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
-          isSelected ? 'bg-blue-100 dark:bg-blue-900/50' : ''
-        }`}
-      >
+      <tr className={`hover:bg-gray-50 dark:hover:bg-gray-700`}>
         {/* Row number cell */}
-        <td className="sticky left-0 z-20 bg-gray-100 dark:bg-gray-700 border-r border-b border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-2 text-xs">
+        <td
+          className={`sticky left-0 z-20 bg-gray-100 dark:bg-gray-700 border-r border-b border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-2 text-xs relative ${isSelected ? 'ring-1 ring-blue-400/60 bg-blue-50 dark:bg-blue-900/30' : ''}`}
+        >
+          {isSelected && (
+            <span className="absolute left-0 -top-px -bottom-px w-[2px] bg-blue-400 pointer-events-none z-30" />
+          )}
           <div
             className="flex flex-col items-center min-h-[2rem] justify-between py-1 cursor-pointer"
             onClick={handleRowClick}

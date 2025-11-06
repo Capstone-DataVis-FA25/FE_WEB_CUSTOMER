@@ -1,8 +1,8 @@
-import { memo, useCallback, useEffect, useMemo } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useDataset, type DateFormat, type NumberFormat } from '@/contexts/DatasetContext';
+import { useDataset, type NumberFormat } from '@/contexts/DatasetContext';
 import { useForm } from '@/contexts/FormContext';
 import { useAppSelector } from '@/store/hooks';
 import { selectDuplicateColumns, selectEmptyColumns } from '@/features/excelUI';
@@ -10,7 +10,6 @@ import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils
 import { Settings, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 // import { useToastContext } from '../providers/ToastProvider';
-import { DateFormatSelector } from './DateFormatSelector';
 import { NumberFormatSelector } from './NumberFormatSelector';
 import './scrollbar.css';
 
@@ -43,8 +42,6 @@ const DataViewerOptions = memo(function DataViewerOptions({
   const {
     numberFormat,
     setNumberFormat,
-    dateFormat,
-    setDateFormat,
     hasValidationErrors: hasDatasetValidationErrors,
   } = useDataset();
 
@@ -90,15 +87,6 @@ const DataViewerOptions = memo(function DataViewerOptions({
     // Replace old state with the new format
     setNumberFormat(format);
   };
-
-  const handleDateFormatChange = useCallback(
-    (format: DateFormat) => {
-      // No-op if user reselects the same date format
-      if (format === dateFormat) return;
-      setDateFormat(format);
-    },
-    [dateFormat, setDateFormat]
-  );
 
   // Memoize expensive validation check - combine both form and dataset validation
   const hasErrors = useMemo(() => {
@@ -188,13 +176,6 @@ const DataViewerOptions = memo(function DataViewerOptions({
             thousandsSeparator={numberFormat.thousandsSeparator}
             decimalSeparator={numberFormat.decimalSeparator}
             onChange={handleNumberFormatChange}
-            disabled={isUploading}
-          />
-
-          {/* Date Format Settings */}
-          <DateFormatSelector
-            format={dateFormat}
-            onChange={handleDateFormatChange}
             disabled={isUploading}
           />
 
