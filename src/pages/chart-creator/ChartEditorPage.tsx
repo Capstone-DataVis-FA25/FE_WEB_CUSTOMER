@@ -43,6 +43,7 @@ import { resetBindings } from '@/utils/chartBindings';
 const ChartEditorPage: React.FC = () => {
   const { t } = useTranslation();
   const location = useLocation();
+  const params = new URLSearchParams(location.search);
   const navigate = useNavigate();
   const { getDatasetById, currentDataset, loading: isDatasetLoading } = useDataset();
   const { showSuccess, showError, toasts, removeToast } = useToast();
@@ -90,14 +91,13 @@ const ChartEditorPage: React.FC = () => {
 
   // Chart notes sidebar state
   const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(false);
+  // Use datasetId from context, with local state for selection changes
+  const [datasetId, setDatasetId] = useState<string>(contextDatasetId || '');
 
   // Handle notes sidebar
   const handleToggleNotesSidebar = () => {
     setIsNotesSidebarOpen(!isNotesSidebarOpen);
   };
-
-  // Use datasetId from context, with local state for selection changes
-  const [datasetId, setDatasetId] = useState<string>(contextDatasetId || '');
 
   // State for dataset selection modal
   const [showDatasetModal, setShowDatasetModal] = useState(false);

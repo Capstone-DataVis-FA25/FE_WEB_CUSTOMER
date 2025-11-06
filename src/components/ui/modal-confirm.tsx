@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -74,8 +75,8 @@ const Modal: React.FC<ModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
       {/* Backdrop - Mờ nhẹ để làm nổi bật modal */}
       <div className="absolute inset-0 bg-black/70" onClick={handleOverlayClick} />
 
@@ -112,7 +113,8 @@ const Modal: React.FC<ModalProps> = ({
         {/* Content */}
         <div className="p-6 text-gray-700 dark:text-gray-300">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

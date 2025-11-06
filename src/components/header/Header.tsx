@@ -19,6 +19,7 @@ import ThemeSwitcher from '../ui/ThemeSwitcher';
 import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { User } from '@/features/auth/authType';
+import Routers from '@/router/routers';
 
 interface HeaderProps {
   isAuthenticated?: boolean;
@@ -40,6 +41,7 @@ const Header: React.FC<HeaderProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isResourcesDropdownOpen, setIsResourcesDropdownOpen] = useState(false);
+  const resourcesCloseTimerRef = useRef<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const resourcesDropdownRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
@@ -48,7 +50,12 @@ const Header: React.FC<HeaderProps> = ({
 
   const navItems = [
     { name: t('navigation_home'), href: '/' },
-    ...(isAuthenticated ? [{ name: 'Workspace', href: '/workspace' }] : []),
+    ...(isAuthenticated
+      ? [
+          { name: 'Datasets', href: `${Routers.WORKSPACE_DATASETS}` },
+          { name: 'Charts', href: `${Routers.WORKSPACE_CHARTS}` },
+        ]
+      : []),
     { name: t('navigation_about'), href: '/about-us' },
   ];
 
@@ -127,8 +134,23 @@ const Header: React.FC<HeaderProps> = ({
                 <div
                   className="relative"
                   ref={resourcesDropdownRef}
-                  onMouseEnter={() => setIsResourcesDropdownOpen(true)}
-                  onMouseLeave={() => setIsResourcesDropdownOpen(false)}
+                  onMouseEnter={() => {
+                    if (resourcesCloseTimerRef.current) {
+                      window.clearTimeout(resourcesCloseTimerRef.current);
+                      resourcesCloseTimerRef.current = null;
+                    }
+                    setIsResourcesDropdownOpen(true);
+                  }}
+                  onMouseLeave={() => {
+                    // Delay close slightly to allow moving into submenu area
+                    if (resourcesCloseTimerRef.current) {
+                      window.clearTimeout(resourcesCloseTimerRef.current);
+                    }
+                    resourcesCloseTimerRef.current = window.setTimeout(() => {
+                      setIsResourcesDropdownOpen(false);
+                      resourcesCloseTimerRef.current = null;
+                    }, 180);
+                  }}
                 >
                   <button
                     onClick={() => setIsResourcesDropdownOpen(p => !p)}
@@ -144,7 +166,25 @@ const Header: React.FC<HeaderProps> = ({
 
                   {isResourcesDropdownOpen && (
                     <SlideInDown className="absolute left-0 mt-2 w-60 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-2 z-50 ring-1 ring-black/5 dark:ring-white/5">
-                      <div className="grid grid-cols-2 gap-1 px-2">
+                      <div
+                        className="grid grid-cols-2 gap-1 px-2"
+                        onMouseEnter={() => {
+                          if (resourcesCloseTimerRef.current) {
+                            window.clearTimeout(resourcesCloseTimerRef.current);
+                            resourcesCloseTimerRef.current = null;
+                          }
+                          setIsResourcesDropdownOpen(true);
+                        }}
+                        onMouseLeave={() => {
+                          if (resourcesCloseTimerRef.current) {
+                            window.clearTimeout(resourcesCloseTimerRef.current);
+                          }
+                          resourcesCloseTimerRef.current = window.setTimeout(() => {
+                            setIsResourcesDropdownOpen(false);
+                            resourcesCloseTimerRef.current = null;
+                          }, 180);
+                        }}
+                      >
                         {resourcesItems.map((item, index) => (
                           <FadeIn key={item.name} delay={index * 0.05}>
                             <Link

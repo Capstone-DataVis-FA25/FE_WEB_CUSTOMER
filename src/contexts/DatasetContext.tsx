@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { DataHeader, ParsedDataResult } from '@/utils/dataProcessors';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+
+dayjs.extend(customParseFormat);
 
 // Types
 export interface NumberFormat {
@@ -23,65 +27,22 @@ export type DateFormat =
   | 'YYYY-MM-DD HH:mm:ss'
   | 'YYYY-MM-DDTHH:mm:ss';
 
-// Define all supported date formats and their parsers
-const dateParsers: Record<DateFormat, { regex: RegExp; parse: (m: RegExpMatchArray) => string }> = {
-  'YYYY-MM-DD': {
-    regex: /^(\d{4})-(\d{2})-(\d{2})$/,
-    parse: m => `${m[1]}-${m[2]}-${m[3]}T00:00:00`,
-  },
-  'DD/MM/YYYY': {
-    regex: /^(\d{2})\/(\d{2})\/(\d{4})$/,
-    parse: m => `${m[3]}-${m[2]}-${m[1]}T00:00:00`,
-  },
-  'MM/DD/YYYY': {
-    regex: /^(\d{2})\/(\d{2})\/(\d{4})$/,
-    parse: m => `${m[3]}-${m[1]}-${m[2]}T00:00:00`,
-  },
-  'YYYY/MM/DD': {
-    regex: /^(\d{4})\/(\d{2})\/(\d{2})$/,
-    parse: m => `${m[1]}-${m[2]}-${m[3]}T00:00:00`,
-  },
-  'DD-MM-YYYY': {
-    regex: /^(\d{2})-(\d{2})-(\d{4})$/,
-    parse: m => `${m[3]}-${m[2]}-${m[1]}T00:00:00`,
-  },
-  'MM-DD-YYYY': {
-    regex: /^(\d{2})-(\d{2})-(\d{4})$/,
-    parse: m => `${m[3]}-${m[1]}-${m[2]}T00:00:00`,
-  },
-  'YYYY-MM': {
-    regex: /^(\d{4})-(\d{2})$/,
-    parse: m => `${m[1]}-${m[2]}-01T00:00:00`,
-  },
-  'YY-MM': {
-    regex: /^(\d{2})-(\d{2})$/,
-    parse: m => `20${m[1]}-${m[2]}-01T00:00:00`,
-  },
-  'MM/YY': {
-    regex: /^(\d{2})\/(\d{2})$/,
-    parse: m => `20${m[2]}-${m[1]}-01T00:00:00`,
-  },
-  'MM/YYYY': {
-    regex: /^(\d{2})\/(\d{4})$/,
-    parse: m => `${m[2]}-${m[1]}-01T00:00:00`,
-  },
-  'DD Month YYYY': {
-    regex: /^(\d{2}) ([A-Za-z]+) (\d{4})$/,
-    parse: m => `${m[3]}-${m[2]}-${m[1]}`,
-  },
-  YYYY: {
-    regex: /^(\d{4})$/,
-    parse: m => `${m[1]}-01-01T00:00:00`,
-  },
-  'YYYY-MM-DD HH:mm:ss': {
-    regex: /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/,
-    parse: m => `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}`,
-  },
-  'YYYY-MM-DDTHH:mm:ss': {
-    regex: /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/,
-    parse: m => `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}`,
-  },
-};
+export const DATE_FORMATS: DateFormat[] = [
+  'YYYY-MM-DD',
+  'DD/MM/YYYY',
+  'MM/DD/YYYY',
+  'YYYY/MM/DD',
+  'DD-MM-YYYY',
+  'MM-DD-YYYY',
+  'YYYY-MM',
+  'YY-MM',
+  'MM/YY',
+  'MM/YYYY',
+  'DD Month YYYY',
+  'YYYY',
+  'YYYY-MM-DD HH:mm:ss',
+  'YYYY-MM-DDTHH:mm:ss',
+];
 
 interface ValidationErrors {
   numberFormat?: {
@@ -224,22 +185,22 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
   }, []);
 
   const setOriginalParsedData = useCallback((data: ParsedDataResult | null) => {
-    if (data && typeof data.data?.length !== 'undefined') {
-      console.log('🔧 DatasetContext: setOriginalParsedData called', {
-        dataLength: data.data.length,
-      });
-    }
+    // if (data && typeof data.data?.length !== 'undefined') {
+    //   console.log('🔧 DatasetContext: setOriginalParsedData called', {
+    //     dataLength: data.data.length,
+    //   });
+    // }
     setState(prev => ({ ...prev, originalParsedData: data }));
   }, []);
 
   const setCurrentParsedData = useCallback((data: ParsedDataResult | null) => {
     setState(prev => {
       if (prev.currentParsedData === data) return prev; // no-op if same reference
-      if (data && typeof data.data?.length !== 'undefined') {
-        console.log('🔧 DatasetContext: setCurrentParsedData called', {
-          dataLength: data.data.length,
-        });
-      }
+      // if (data && typeof data.data?.length !== 'undefined') {
+      //   console.log('🔧 DatasetContext: setCurrentParsedData called', {
+      //     dataLength: data.data.length,
+      //   });
+      // }
       return { ...prev, currentParsedData: data };
     });
   }, []);
@@ -434,58 +395,62 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
 
       if (type === 'number') {
         const { thousandsSeparator, decimalSeparator } = numberFormat || state.numberFormat;
-
-        // Build regex dynamically
         const escThousand = thousandsSeparator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const escDecimal = decimalSeparator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-        // Pattern: optional sign, digits in groups of 1–3 separated by thousand sep, optional decimal part
         const pattern = new RegExp(
           `^[-+]?\\d{1,3}(?:${escThousand}\\d{3})*(?:${escDecimal}\\d+)?$`
         );
-
         if (!pattern.test(v)) {
-          // Store undefined for invalid number
           updateParsedValue(colIndex, rowIndex, undefined);
           return { ok: false, value: original, changed: false };
         }
-
-        // Convert: remove thousands, replace decimal with dot
         let cleaned = v.replace(new RegExp(escThousand, 'g'), '');
         cleaned = cleaned.replace(new RegExp(escDecimal, 'g'), '.');
-
         const parsedNumber = parseFloat(cleaned);
         if (isNaN(parsedNumber)) {
-          // Store undefined for invalid number
           updateParsedValue(colIndex, rowIndex, undefined);
           return { ok: false, value: original, changed: false };
         }
-
-        // Store parsed number
         updateParsedValue(colIndex, rowIndex, parsedNumber);
-
-        return {
-          ok: true,
-          value: String(parsedNumber),
-          changed: cleaned !== original,
-        };
+        return { ok: true, value: String(parsedNumber), changed: cleaned !== original };
       }
 
       if (type === 'date') {
-        const fmt = dateFormat || 'YYYY-MM-DD';
-        const parser = dateParsers[fmt];
-        if (parser) {
-          const match = v.match(parser.regex); // <- use match instead of exec
-          if (match) {
-            const iso = parser.parse(match);
-            // Store parsed date as string
-            updateParsedValue(colIndex, rowIndex, iso);
-            return { ok: true, value: iso, changed: iso !== original };
-          }
+        const headerFmt = state.currentParsedData?.headers?.[colIndex]?.dateFormat as
+          | DateFormat
+          | undefined;
+        const fmt = (dateFormat || headerFmt || 'YYYY-MM-DD') as DateFormat;
+        const formatMap: Record<string, string> = {
+          'YYYY-MM-DD': 'YYYY-MM-DD',
+          'DD/MM/YYYY': 'DD/MM/YYYY',
+          'MM/DD/YYYY': 'MM/DD/YYYY',
+          'YYYY/MM/DD': 'YYYY/MM/DD',
+          'DD-MM-YYYY': 'DD-MM-YYYY',
+          'MM-DD-YYYY': 'MM-DD-YYYY',
+          'YYYY-MM': 'YYYY-MM',
+          'YY-MM': 'YY-MM',
+          'MM/YY': 'MM/YY',
+          'MM/YYYY': 'MM/YYYY',
+          'DD Month YYYY': 'DD MMMM YYYY',
+          YYYY: 'YYYY',
+          'YYYY-MM-DD HH:mm:ss': 'YYYY-MM-DD HH:mm:ss',
+          'YYYY-MM-DDTHH:mm:ss': 'YYYY-MM-DDTHH:mm:ss',
+        };
+        const djFormat = formatMap[fmt] || 'YYYY-MM-DD';
+        const d = dayjs(v, djFormat, true);
+        if (!d.isValid()) {
+          updateParsedValue(colIndex, rowIndex, undefined);
+          return { ok: false, value: original, changed: false };
         }
-        // Store undefined for invalid date
-        updateParsedValue(colIndex, rowIndex, undefined);
-        return { ok: false, value: original, changed: false };
+        let iso: string;
+        if (fmt === 'YYYY-MM-DD HH:mm:ss' || fmt === 'YYYY-MM-DDTHH:mm:ss') {
+          iso = d.format('YYYY-MM-DD[T]HH:mm:ss');
+        } else {
+          const datePart = d.format('YYYY-MM-DD');
+          iso = `${datePart}T00:00:00`;
+        }
+        updateParsedValue(colIndex, rowIndex, iso);
+        return { ok: true, value: iso, changed: iso !== original };
       }
 
       return { ok: true, value: original, changed: false };
@@ -501,34 +466,16 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
       dateFormat?: DateFormat
     ): { nextData: string[][]; nextColumns: DataHeader[] } => {
       const currentNumberFormat = numberFormat || state.numberFormat;
-      const currentDateFormat = dateFormat || state.dateFormat;
+      const headerFmt = state.currentParsedData?.headers?.[colIndex]?.dateFormat as
+        | DateFormat
+        | undefined;
+      const currentDateFormat = (dateFormat || headerFmt || state.dateFormat) as DateFormat;
 
       // Clear parsed values if changing to text type
       if (targetType === 'text') {
         clearParsedValuesForColumn(colIndex);
       }
 
-      // if (targetType === 'number') {
-      //   console.log(
-      //     'tryConvertColumn run with colIndex',
-      //     colIndex,
-      //     'and targetType',
-      //     targetType,
-      //     'and thousandsSeparator',
-      //     currentNumberFormat.thousandsSeparator,
-      //     'and decimalSeparator',
-      //     currentNumberFormat.decimalSeparator
-      //   );
-      // } else if (targetType === 'date') {
-      //   console.log(
-      //     'tryConvertColumn run with colIndex',
-      //     colIndex,
-      //     'and targetType',
-      //     targetType,
-      //     'and format',
-      //     currentDateFormat
-      //   );
-      // }
       const data = state.currentParsedData?.data || [];
       const columns = state.currentParsedData?.headers || [];
 
@@ -539,9 +486,9 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
         const raw = data[ri][colIndex] ?? '';
         let result: ConvertResult = { ok: true, value: '', changed: false };
         if (targetType === 'number') {
-          result = tryConvert(targetType, colIndex, ri, raw, currentNumberFormat, undefined);
+          result = tryConvert('number', colIndex, ri, raw, currentNumberFormat, undefined);
         } else if (targetType === 'date') {
-          result = tryConvert(targetType, colIndex, ri, raw, undefined, currentDateFormat);
+          result = tryConvert('date', colIndex, ri, raw, undefined, currentDateFormat);
         }
 
         if (!result.ok) {
@@ -574,10 +521,28 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
       // Data is unchanged
       const nextData = data;
 
-      // Only update column type
-      const nextColumns = columns.map((col, i) =>
-        i === colIndex ? { ...col, type: targetType } : col
-      );
+      // Update column type and dateFormat if applicable
+      const nextColumns = columns.map((col, i) => {
+        if (i !== colIndex) return col;
+        if (targetType === 'date') {
+          return { ...col, type: 'date', dateFormat: currentDateFormat } as DataHeader;
+        }
+        return { ...col, type: targetType } as DataHeader;
+      });
+
+      // Persist header changes into currentParsedData so downstream reads pick up the new format/type
+      setState(prev => {
+        const cp = prev.currentParsedData;
+        if (!cp) return prev;
+        if (cp.headers === nextColumns) return prev;
+        return {
+          ...prev,
+          currentParsedData: {
+            ...cp,
+            headers: nextColumns,
+          },
+        };
+      });
 
       return { nextData, nextColumns };
     },
@@ -597,8 +562,6 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
       let formatToUse = format;
       if (targetType === 'number' && !format) {
         formatToUse = state.numberFormat;
-      } else if (targetType === 'date' && !format) {
-        formatToUse = state.dateFormat;
       }
 
       for (let i = 0; i < (state.currentParsedData.headers?.length || 0); i++) {
@@ -608,7 +571,9 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
         if (targetType === 'number') {
           tryConvertColumn(i, 'number', formatToUse as NumberFormat);
         } else if (targetType === 'date') {
-          tryConvertColumn(i, 'date', undefined, formatToUse as DateFormat);
+          const df = (state.currentParsedData.headers[i]?.dateFormat ||
+            state.dateFormat) as DateFormat;
+          tryConvertColumn(i, 'date', undefined, df);
         }
       }
     },

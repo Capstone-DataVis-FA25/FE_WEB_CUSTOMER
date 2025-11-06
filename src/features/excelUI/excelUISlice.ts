@@ -101,6 +101,11 @@ const excelUISlice = createSlice({
       const { index, width } = action.payload;
       if (state.columns[index]) state.columns[index] = { ...state.columns[index], width };
     },
+    setColumnDateFormat: (state, action: PayloadAction<{ index: number; dateFormat: string }>) => {
+      const { index, dateFormat } = action.payload;
+      if (state.columns[index])
+        state.columns[index] = { ...state.columns[index], dateFormat } as DataHeader;
+    },
     // ===== Filters management =====
     setFilters: (state, action: PayloadAction<string[]>) => {
       state.filters = action.payload;
@@ -183,6 +188,7 @@ export const {
   updateParseError,
   setDateFormat,
   setNumberFormat,
+  setColumnDateFormat,
 } = excelUISlice.actions;
 
 export default excelUISlice.reducer;

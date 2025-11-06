@@ -34,8 +34,14 @@ import ValidationDisplay from './ValidationDisplay';
 import { Button } from '@/components/ui/button';
 import * as XLSX from 'xlsx';
 import saveAs from 'file-saver';
-import { Plus, Copy, FileDown } from 'lucide-react';
+import { Plus, Copy, FileDown, RotateCcw } from 'lucide-react';
 // removed unused dropdown menu imports
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+dayjs.extend(customParseFormat);
+import { ModalConfirm } from '@/components/ui/modal-confirm';
+import { useModalConfirm } from '@/hooks/useModal';
+import { useToastContext } from '@/components/providers/ToastProvider';
 
 // =============== Types & Helpers =================
 import type { DataHeader } from '@/utils/dataProcessors';
@@ -78,6 +84,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   highlightHeaderIds,
 }) => {
   // Core state
+  const modalConfirm = useModalConfirm();
+  const { showSuccess } = useToastContext();
   const columns = useAppSelector(selectColumns);
   // Keep a ref of columns to avoid function identity churn in callbacks that shouldn't care about header name changes
   const columnsRef = useRef(columns);
@@ -100,6 +108,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // Track last initialized dimensions to detect real Change Data
   const lastInitRowsRef = useRef<number>(0);
   const lastInitColsRef = useRef<number>(0);
+  // Snapshot of the original dataset (first init or Change Data re-init)
+  const originalColsRef = useRef<DataHeader[] | null>(null);
+  const originalDataRef = useRef<string[][] | null>(null);
   // Redux dispatch and selectors
   const dispatch = useAppDispatch();
   // Only subscribe to selectors that CustomExcel actually needs for its own rendering
@@ -159,6 +170,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     const initData = initialData.length
       ? initialData
       : DEFAULT_ROWS.map(() => Array(initCols.length).fill(''));
+    // Capture original snapshot (deep-ish copy) for Reset
+    originalColsRef.current = initCols.map(c => ({ ...c }));
+    originalDataRef.current = initData.map(r => [...r]);
     // Sync formats to Redux immediately to ensure error messages show correct expected format
     dispatch(setDateFormat(dateFormat));
     dispatch(setNumberFormat(numberFormat));
@@ -180,13 +194,14 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       initData.forEach((row, rowIndex) => {
         row.forEach((cellValue, colIndex) => {
           const colType = initCols[colIndex]?.type ?? 'text';
+          const perColDateFormat = initCols[colIndex]?.dateFormat;
           const conv = tryConvert(
             colType,
             colIndex,
             rowIndex,
             cellValue,
             colType === 'number' ? numberFormat : undefined,
-            colType === 'date' ? dateFormat : undefined
+            colType === 'date' ? (perColDateFormat as any) : undefined
           );
           if (!conv.ok) {
             if (!parseErrors[rowIndex]) parseErrors[rowIndex] = [];
@@ -272,6 +287,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   const prevNumberColsRef = useRef<number[] | null>(null);
   const prevDateColsRef = useRef<number[] | null>(null);
   const prevFormatsRef = useRef<{ dec: string; thou: string; date: string } | null>(null);
+  const prevDataSigRef = useRef<string | null>(null);
   useEffect(() => {
     if (!columns || columns.length === 0) return;
     const numberCols = columns.map((c, i) => (c.type === 'number' ? i : -1)).filter(i => i >= 0);
@@ -281,6 +297,13 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       thou: numberFormat.thousandsSeparator,
       date: dateFormat,
     };
+    // Lightweight data signature: length + first few rows joined
+    const previewRows = 5;
+    const sigRows = data
+      .slice(0, previewRows)
+      .map(r => (r ? r.join('\u001f') : ''))
+      .join('\u001e');
+    const dataSig = `${data.length}|${columns.length}|${sigRows}`;
 
     const sameNumbers =
       prevNumberColsRef.current &&
@@ -295,13 +318,13 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       prevFormatsRef.current.dec === formats.dec &&
       prevFormatsRef.current.thou === formats.thou &&
       prevFormatsRef.current.date === formats.date;
-
-    if (sameNumbers && sameDates && sameFormats) return;
+    if (sameNumbers && sameDates && sameFormats && prevDataSigRef.current === dataSig) return;
 
     // Update refs
     prevNumberColsRef.current = numberCols;
     prevDateColsRef.current = dateCols;
     prevFormatsRef.current = formats;
+    prevDataSigRef.current = dataSig;
 
     if (numberCols.length === 0 && dateCols.length === 0) return;
 
@@ -317,7 +340,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       }
       for (const ci of dateCols) {
         const v = data[ri]?.[ci] ?? '';
-        const conv = tryConvert('date', ci, ri, v, undefined, dateFormat);
+        const perColDateFormat = columns[ci]?.dateFormat;
+        const conv = tryConvert('date', ci, ri, v, undefined, perColDateFormat as any);
         if (!conv.ok) {
           if (!nextErrors[ri]) nextErrors[ri] = [];
           nextErrors[ri].push(ci);
@@ -437,7 +461,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
           }
           for (const ci of dateCols) {
             const v = nextData[ri]?.[ci] ?? '';
-            const conv = tryConvert('date', ci, ri, v, undefined, dateFormat);
+            const perColDateFormat = nextCols[ci]?.dateFormat;
+            const conv = tryConvert('date', ci, ri, v, undefined, perColDateFormat as any);
             if (!conv.ok) {
               if (!nextErrors[ri]) nextErrors[ri] = [];
               nextErrors[ri].push(ci);
@@ -480,13 +505,14 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       const colType = nextColumns[c]?.type ?? 'text';
       for (let ri = 0; ri < nextData.length; ri++) {
         const v = nextData[ri]?.[c] ?? '';
+        const perColDateFormat = nextColumns[c]?.dateFormat;
         const conv = tryConvert(
           colType,
           c,
           ri,
           v,
           colType === 'number' ? numberFormat : undefined,
-          colType === 'date' ? dateFormat : undefined
+          colType === 'date' ? (perColDateFormat as any) : undefined
         );
         dispatch(updateParseError({ row: ri, column: c, hasError: !conv.ok }));
       }
@@ -764,14 +790,17 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         return direction === 'asc' ? aNum - bNum : bNum - aNum;
       }
       if (type === 'date') {
-        const aDate = new Date(aVal);
-        const bDate = new Date(bVal);
-        const aT = aDate.getTime();
-        const bT = bDate.getTime();
-        if (Number.isNaN(aT) && Number.isNaN(bT)) return 0;
-        if (Number.isNaN(aT)) return direction === 'asc' ? 1 : -1;
-        if (Number.isNaN(bT)) return direction === 'asc' ? -1 : 1;
-        return direction === 'asc' ? aT - bT : bT - aT;
+        const fmt = columns[column]?.dateFormat as string | undefined;
+        const aParsed = fmt ? dayjs(aVal, fmt, true) : dayjs(aVal);
+        const bParsed = fmt ? dayjs(bVal, fmt, true) : dayjs(bVal);
+        let aT = aParsed.isValid() ? aParsed.valueOf() : NaN;
+        let bT = bParsed.isValid() ? bParsed.valueOf() : NaN;
+        // Fallback to native Date if strict parse fails
+        if (Number.isNaN(aT)) aT = new Date(aVal).getTime();
+        if (Number.isNaN(bT)) bT = new Date(bVal).getTime();
+        const aSafe = Number.isNaN(aT) ? Number.NEGATIVE_INFINITY : aT;
+        const bSafe = Number.isNaN(bT) ? Number.NEGATIVE_INFINITY : bT;
+        return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
       }
       return direction === 'asc'
         ? aVal.toLowerCase().localeCompare(bVal.toLowerCase())
@@ -800,14 +829,17 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         return direction === 'asc' ? aNum - bNum : bNum - aNum;
       }
       if (type === 'date') {
-        const aDate = new Date(aVal);
-        const bDate = new Date(bVal);
-        const aT = aDate.getTime();
-        const bT = bDate.getTime();
-        if (Number.isNaN(aT) && Number.isNaN(bT)) return 0;
-        if (Number.isNaN(aT)) return direction === 'asc' ? 1 : -1;
-        if (Number.isNaN(bT)) return direction === 'asc' ? -1 : 1;
-        return direction === 'asc' ? aT - bT : bT - aT;
+        const fmt = columns[column]?.dateFormat as string | undefined;
+        const aParsed = fmt ? dayjs(aVal, fmt, true) : dayjs(aVal);
+        const bParsed = fmt ? dayjs(bVal, fmt, true) : dayjs(bVal);
+        let aT = aParsed.isValid() ? aParsed.valueOf() : NaN;
+        let bT = bParsed.isValid() ? bParsed.valueOf() : NaN;
+        // Fallback to native Date if strict parse fails
+        if (Number.isNaN(aT)) aT = new Date(aVal).getTime();
+        if (Number.isNaN(bT)) bT = new Date(bVal).getTime();
+        const aSafe = Number.isNaN(aT) ? Number.NEGATIVE_INFINITY : aT;
+        const bSafe = Number.isNaN(bT) ? Number.NEGATIVE_INFINITY : bT;
+        return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
       }
       return direction === 'asc'
         ? String(aVal).toLowerCase().localeCompare(String(bVal).toLowerCase())
@@ -952,14 +984,14 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       .join(',');
   }, [highlightedColumns]);
 
-  // Debug: log highlight resolution details
-  useEffect(() => {
-    console.log('[HighlightDebug][CustomExcel] resolve', {
-      incomingIds: highlightHeaderIds || [],
-      columnIds: columns.map(c => (c as any)?.id ?? (c as any)?.headerId ?? null),
-      highlightedIndices: Array.from(highlightedColumns.values()),
-    });
-  }, [columns, highlightHeaderIds, highlightedColumns]);
+  // // Debug: log highlight resolution details
+  // useEffect(() => {
+  //   console.log('[HighlightDebug][CustomExcel] resolve', {
+  //     incomingIds: highlightHeaderIds || [],
+  //     columnIds: columns.map(c => (c as any)?.id ?? (c as any)?.headerId ?? null),
+  //     highlightedIndices: Array.from(highlightedColumns.values()),
+  //   });
+  // }, [columns, highlightHeaderIds, highlightedColumns]);
 
   // Read highlightVersion to satisfy lints about unused var in rows; keeps stable prop churn minimal
   useEffect(() => {
@@ -967,16 +999,27 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   }, [highlightVersion]);
 
   // ===== Clipboard & Export Helpers =====
-  const copyAll = useCallback(() => {
+  const copyAll = useCallback(async () => {
     try {
-      const header = columns.map(c => c.name);
-      const body = data.map(r => r.map(v => v ?? ''));
-      const text = [header, ...body].map(row => row.join('\t')).join('\n');
-      void navigator.clipboard.writeText(text);
+      const escapeCSV = (val: unknown): string => {
+        const s = val == null ? '' : String(val);
+        // Escape double quotes by doubling them
+        const escaped = s.replace(/"/g, '""');
+        // If contains comma, quote, or newline, wrap in quotes
+        if (/[",\n]/.test(escaped)) {
+          return `"${escaped}"`;
+        }
+        return escaped;
+      };
+      const header = columns.map(c => escapeCSV(c.name));
+      const body = data.map(r => r.map(v => escapeCSV(v)));
+      const csv = [header, ...body].map(row => row.join(',')).join('\n');
+      await navigator.clipboard.writeText(csv);
+      showSuccess('Copied to clipboard');
     } catch (e) {
       console.error('Copy failed', e);
     }
-  }, [columns, data]);
+  }, [columns, data, showSuccess]);
 
   const exportXlsx = useCallback(() => {
     try {
@@ -991,6 +1034,57 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       console.error('Export failed', e);
     }
   }, [columns, data]);
+
+  // Reset to original dataset snapshot captured on init (rows, columns, and data)
+  const handleResetOriginal = useCallback(() => {
+    try {
+      const origData = originalDataRef.current;
+      const origCols = originalColsRef.current;
+      if (!origData || !origCols) {
+        // Fallback if snapshot missing
+        initializeFromProps();
+        return;
+      }
+
+      // Restore columns first to ensure widths/types/format match snapshot
+      const restoredCols = origCols.map(c => ({ ...c }));
+      dispatch(setColumnsRedux(restoredCols));
+
+      // Clear UI state tied to current edits
+      dispatch(setSortConfig(null));
+      dispatch(setFilters(Array(restoredCols.length).fill('')));
+
+      // Restore data
+      clearExcelErrors();
+      const restoredData = origData.map(r => [...r]);
+      setData(restoredData);
+
+      // Recompute parse errors on the restored sheet using RESTORED columns
+      const nextErrors: Record<number, number[]> = {};
+      for (let ri = 0; ri < restoredData.length; ri++) {
+        for (let ci = 0; ci < restoredCols.length; ci++) {
+          const col = restoredCols[ci];
+          const colType = col?.type ?? 'text';
+          const v = restoredData[ri]?.[ci] ?? '';
+          const conv = tryConvert(
+            colType as any,
+            ci,
+            ri,
+            v,
+            colType === 'number' ? numberFormat : undefined,
+            colType === 'date' ? (col as any)?.dateFormat : undefined
+          );
+          if (!conv.ok) {
+            if (!nextErrors[ri]) nextErrors[ri] = [];
+            nextErrors[ri].push(ci);
+          }
+        }
+      }
+      dispatch(setParseErrors(nextErrors));
+    } catch (e) {
+      console.error('Reset failed', e);
+    }
+  }, [dispatch, clearExcelErrors, initializeFromProps, tryConvert, numberFormat]);
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTableElement>) => {
@@ -1112,6 +1206,19 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         <Button size="sm" variant="outline" onClick={exportXlsx} className="gap-1 bg-transparent">
           <FileDown size={14} /> Export
         </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            modalConfirm.openConfirm(async () => {
+              handleResetOriginal();
+              showSuccess('Reset successful');
+            })
+          }
+          className="gap-1 bg-transparent"
+        >
+          <RotateCcw size={14} /> Reset
+        </Button>
         <div className="flex-grow text-xs text-gray-500 dark:text-gray-400">
           {isLarge && (
             <span>
@@ -1135,9 +1242,13 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
           <span className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-mono">
             {numberFormat.decimalSeparator}
           </span>
-          <span className="text-gray-600 dark:text-gray-300">Date format:</span>
+          <span className="text-gray-600 dark:text-gray-300">Columns:</span>
           <span className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-mono">
-            {dateFormat}
+            {columns.length}
+          </span>
+          <span className="text-gray-600 dark:text-gray-300">Rows:</span>
+          <span className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-mono">
+            {filteredData.length}
           </span>
         </div>
       </div>
@@ -1240,6 +1351,21 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
           </p>
         </div>
       )}
+
+      <ModalConfirm
+        isOpen={modalConfirm.isOpen}
+        onClose={modalConfirm.close}
+        onConfirm={modalConfirm.confirm}
+        loading={modalConfirm.isLoading}
+        type="danger"
+        title={t('reset_confirm_title', 'Reset data')}
+        message={t(
+          'reset_confirm_message',
+          'Restore original rows, columns, and data. Sorting and filters will be cleared. This cannot be undone.'
+        )}
+        confirmText={t('reset_confirm_yes', 'Reset')}
+        cancelText={t('reset_confirm_no', 'Cancel')}
+      />
     </div>
   );
 };

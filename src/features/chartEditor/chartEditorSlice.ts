@@ -6,6 +6,7 @@ import type { MainChartConfig } from '@/types/chart';
 import { ChartType } from '@/features/charts';
 import type { NumberFormat, DateFormat } from '@/contexts/DatasetContext';
 import type { DataHeader } from '@/utils/dataProcessors';
+import { getDefaultChartConfig } from '@/utils/chartDefaults';
 
 // Deep partial utility type for nested optional properties
 type DeepPartial<T> = {
@@ -30,7 +31,7 @@ export interface ChartEditorState {
   // Chart data & config
   chartData: ChartDataPoint[];
   chartConfig: MainChartConfig | null;
-  currentChartType: ChartType;
+  currentChartType: ChartType | null;
 
   // Local working dataset for the editor (decoupled from fetched entity)
   workingDataset: {
@@ -50,7 +51,7 @@ export interface ChartEditorState {
   originalName: string;
   originalDescription: string;
   originalConfig: MainChartConfig | null;
-  originalChartType: ChartType;
+  originalChartType: ChartType | null;
 
   // Reset trigger for forcing re-renders
   resetTrigger: number;
@@ -65,7 +66,7 @@ const initialState: ChartEditorState = {
   datasetId: undefined,
   chartData: [],
   chartConfig: null,
-  currentChartType: ChartType.Line,
+  currentChartType: null,
   workingDataset: null,
   editableName: '',
   editableDescription: '',
@@ -74,7 +75,7 @@ const initialState: ChartEditorState = {
   originalName: '',
   originalDescription: '',
   originalConfig: null,
-  originalChartType: ChartType.Line,
+  originalChartType: null,
   resetTrigger: 0,
   validationErrors: {
     name: false,
@@ -103,7 +104,10 @@ const chartEditorSlice = createSlice({
       state.mode = action.payload.mode;
       state.chartId = action.payload.chartId;
       state.datasetId = action.payload.datasetId;
-      state.currentChartType = action.payload.initialChartType || ChartType.Line;
+      state.currentChartType = action.payload.initialChartType || null;
+      if (action.payload.mode === 'create' && action.payload.initialChartType) {
+        state.chartConfig = getDefaultChartConfig(action.payload.initialChartType);
+      }
       // Reset other state
       state.chartData = [];
       state.chartConfig = null;
@@ -114,7 +118,7 @@ const chartEditorSlice = createSlice({
       state.originalName = '';
       state.originalDescription = '';
       state.originalConfig = null;
-      state.originalChartType = action.payload.initialChartType || ChartType.Line;
+      state.originalChartType = action.payload.initialChartType || null;
       state.resetTrigger = 0;
       state.validationErrors = initialState.validationErrors;
       state.workingDataset = null;
