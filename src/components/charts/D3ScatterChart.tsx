@@ -248,7 +248,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
   backgroundColor = 'transparent',
 
   // Animation
-  animationDuration = 1000,
+  animationDuration = 400,
 
   // Regression line
   showRegressionLine = false,
@@ -418,7 +418,8 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
         const newWidth = baseWidth * Math.min(sizeMultiplier, 2); // Cap at 2x to avoid too large
         let newHeight = newWidth * aspectRatio * Math.min(sizeMultiplier, 2);
 
-        const hasXAxisLabel = xAxisLabel && showAxisLabels;
+        // Check if labels will be displayed (either explicit prop or fallback to key name)
+        const hasXAxisLabel = showAxisLabels && (xAxisLabel || xAxisKey);
         if (hasXAxisLabel) {
           newHeight += containerWidth < 640 ? 35 : 40;
         }
@@ -430,9 +431,17 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
           newHeight += legendExtraHeight;
         }
 
-        setDimensions({
-          width: Math.max(Math.floor(newWidth), 100),
-          height: Math.max(Math.floor(newHeight), 100),
+        const finalWidth = Math.max(Math.floor(newWidth), 100);
+        const finalHeight = Math.max(Math.floor(newHeight), 100);
+
+        // Only update if dimensions changed significantly (>5px) to avoid unnecessary re-renders
+        setDimensions(prev => {
+          const widthDiff = Math.abs(prev.width - finalWidth);
+          const heightDiff = Math.abs(prev.height - finalHeight);
+          if (widthDiff > 5 || heightDiff > 5) {
+            return { width: finalWidth, height: finalHeight };
+          }
+          return prev;
         });
       }
     };
@@ -1321,8 +1330,9 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
       const paddingX = 14;
       const paddingY = 8;
 
+      // Increased multiplier from 0.6 to 0.7 for more accurate width estimation
       const estimatedTextWidth = (s: string) =>
-        Math.max(8, Math.min(200, s.length * (fontSizePx * 0.6)));
+        Math.max(8, Math.min(200, s.length * (fontSizePx * 0.7)));
       const itemsWidth = items.reduce(
         (acc, it) => acc + iconSize + 6 + estimatedTextWidth(it.label),
         0
