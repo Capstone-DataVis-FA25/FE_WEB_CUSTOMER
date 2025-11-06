@@ -114,7 +114,7 @@ const DatasetInfoCard: React.FC<Props> = ({
                     }
                   }}
                   autoFocus
-                  className={`font-medium min-h-[100px] ${validationErrors.description ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  className={`font-medium min-h-[100px] bg-transparent dark:bg-transparent border-blue-200/50 dark:border-blue-800/50 focus-visible:ring-blue-400/50 dark:focus-visible:ring-blue-500/50 ${validationErrors.description ? 'border-red-500 focus:ring-red-500' : ''}`}
                   placeholder={t('dataset_descriptionPlaceholder', 'Enter dataset description')}
                 />
                 {validationErrors.description && (

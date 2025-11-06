@@ -210,21 +210,12 @@ const DatasetDetailPage: React.FC = () => {
     setIsEditingName(false);
   }, [editableName, t]);
 
-  // Handle description edit - validate before exiting edit mode
+  // Handle description edit - optional field (no required validation)
   const handleDescriptionSave = useCallback(() => {
-    // Validate description is not empty
-    if (!editableDescription.trim()) {
-      setValidationErrors(prev => ({
-        ...prev,
-        description: t('dataset_descriptionRequired', 'Dataset description is required'),
-      }));
-      return;
-    }
-
-    // Clear validation error and exit editing mode
+    // Always clear validation error and exit editing mode
     setValidationErrors(prev => ({ ...prev, description: '' }));
     setIsEditingDescription(false);
-  }, [editableDescription, t]);
+  }, []);
 
   // Handle name change - validate on every change
   const handleNameChange = useCallback(
@@ -263,33 +254,22 @@ const DatasetDetailPage: React.FC = () => {
     [validationErrors.name]
   );
 
-  // Handle description change - validate on every change
-  const handleDescriptionChange = useCallback(
-    (value: string) => {
-      setEditableDescription(value);
-
-      // Real-time validation: clear error if input is not empty
-      if (value.trim()) {
-        setValidationErrors(prev => ({ ...prev, description: '' }));
-      } else {
-        setValidationErrors(prev => ({
-          ...prev,
-          description: t('dataset_descriptionRequired', 'Dataset description is required'),
-        }));
-      }
-    },
-    [t]
-  );
+  // Handle description change - optional (no required validation)
+  const handleDescriptionChange = useCallback((value: string) => {
+    setEditableDescription(value);
+    // Clear any prior error regardless of content
+    setValidationErrors(prev => ({ ...prev, description: '' }));
+  }, []);
 
   // Handle save with confirmation
   const handleSave = useCallback(async () => {
     if (!currentDataset || !extractedId) return;
 
-    // Validate fields
-    if (!editableName.trim() || !editableDescription.trim()) {
+    // Validate fields: only name is required
+    if (!editableName.trim()) {
       showError(
         t('dataset_validationError', 'Validation Error'),
-        t('dataset_fieldsRequired', 'Name and description are required')
+        t('dataset_nameRequired', 'Dataset name is required')
       );
       return;
     }
