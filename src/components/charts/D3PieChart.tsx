@@ -85,6 +85,8 @@ export interface D3PieChartProps {
     | 'duration'
     | 'date'
     | 'custom';
+  // Preview variant: render without frame/background card
+  variant?: 'default' | 'preview';
 }
 
 const D3PieChart: React.FC<D3PieChartProps> = ({
@@ -125,6 +127,7 @@ const D3PieChart: React.FC<D3PieChartProps> = ({
   hoverScale = 1.05,
   valueFormatter,
   valueFormatterType = 'number',
+  variant = 'default',
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1110,7 +1113,13 @@ const D3PieChart: React.FC<D3PieChartProps> = ({
           </div>
         </div>
       ) : (
-        <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+        <div
+          className={
+            variant === 'preview'
+              ? 'relative overflow-hidden'
+              : 'chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden'
+          }
+        >
           <svg
             ref={svgRef}
             width={dimensions.width}

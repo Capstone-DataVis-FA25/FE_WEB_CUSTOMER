@@ -14,8 +14,10 @@ const PiePreview: React.FC<Props> = ({ arrayData }) => {
       valueKey="share"
       width={420}
       height={420}
+      animationDuration={800}
       showLegend={true}
       showLabels={true}
+      variant="preview"
     />
   );
 };
