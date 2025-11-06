@@ -34,6 +34,7 @@ interface ChartEditorHeaderProps {
   onTabChange?: (tab: 'chart' | 'data') => void;
   chartId?: string;
   onToggleHistorySidebar?: () => void;
+  mode: 'create' | 'edit';
 }
 
 const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
@@ -44,11 +45,11 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
   onTabChange,
   chartId,
   onToggleHistorySidebar,
+  mode,
 }) => {
   const { t } = useTranslation();
   const { currentChart, creating } = useCharts();
   const {
-    mode,
     isEditingName,
     setIsEditingName,
     editableName,

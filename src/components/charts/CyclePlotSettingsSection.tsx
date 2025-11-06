@@ -462,7 +462,7 @@ const CyclePlotSettingsSection: React.FC = () => {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {t('value_key_hint', 'Column with numeric values for Y-axis')}
+                    {t('value_key_hint', '💡 Value must be numeric values (number)')}
                   </p>
                 </div>
 

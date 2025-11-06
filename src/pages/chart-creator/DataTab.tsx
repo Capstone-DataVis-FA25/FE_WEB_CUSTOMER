@@ -68,34 +68,26 @@ const DataTab: React.FC<DataTabProps> = ({
     return `${colsSig}__${hlSig}`;
   }, [initialColumns, highlightHeaderIds]);
 
-  React.useEffect(() => {
-    console.log('[HighlightDebug][DataTab] excelKey & props', {
-      excelKey,
-      highlightHeaderIds: highlightHeaderIds || [],
-      headers: (initialColumns || []).map(c => ({
-        id: (c as any).id ?? (c as any).headerId,
-        name: c.name,
-      })),
-    });
-  }, [excelKey, highlightHeaderIds, initialColumns]);
+  // React.useEffect(() => {
+  //   console.log('[HighlightDebug][DataTab] excelKey & props', {
+  //     excelKey,
+  //     highlightHeaderIds: highlightHeaderIds || [],
+  //     headers: (initialColumns || []).map(c => ({
+  //       id: (c as any).id ?? (c as any).headerId,
+  //       name: c.name,
+  //     })),
+  //   });
+  // }, [excelKey, highlightHeaderIds, initialColumns]);
 
   return (
     <div className="w-full h-full min-h-0 flex bg-white dark:bg-gray-900">
       {/* Left: Custom Excel */}
       <div className="flex-1 h-full min-h-0 min-w-0 p-4 overflow-hidden">
-        {/* Legend */}
+        {/* Legend (yellow only) */}
         <div className="mb-2 flex flex-wrap items-center justify-center gap-3 text-xs text-gray-600 dark:text-gray-300">
           <div className="flex items-center gap-2">
             <span className="inline-block w-3 h-3 rounded-sm bg-amber-300 border border-amber-500" />
             <span>Used by current chart</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-sm bg-blue-200 border border-blue-400" />
-            <span>Selected row highlight</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-sm bg-red-200 border border-red-400" />
-            <span>Invalid cell</span>
           </div>
         </div>
         <div className="relative h-full min-h-[60vh]">
@@ -112,6 +104,7 @@ const DataTab: React.FC<DataTabProps> = ({
                 onDataChange={onDataChange}
                 onSorting={onSorting}
                 highlightHeaderIds={highlightHeaderIds}
+                disableSelection={true}
               />
             </DatasetProvider>
           ) : (

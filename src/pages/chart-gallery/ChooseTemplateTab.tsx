@@ -173,7 +173,7 @@ export default function ChooseTemplateTab() {
 
   // Check if user has datasetId or needs to select one
   const handleContinueWithTemplate = (template: ChartTemplate) => {
-    clearChartEditor();
+    // clearChartEditor();
     if (!template) {
       showError(
         t('chart_create_error', 'Error'),

@@ -1,4 +1,4 @@
-// Export ChartEditor with providers as default for use in routing
-import ChartEditorWithProviders from './ChartEditorWithProviders';
+// Export ChartEditorPage directly
+import ChartEditorPage from './ChartEditorPage';
 
-export default ChartEditorWithProviders;
+export default ChartEditorPage;

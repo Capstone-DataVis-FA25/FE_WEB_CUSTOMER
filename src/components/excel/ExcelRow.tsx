@@ -15,6 +15,7 @@ interface ExcelRowProps {
   onDataChange?: (data: string[][], columns: any[]) => void;
   highlightedColumns?: Set<number>;
   highlightVersion?: string;
+  disableSelection?: boolean;
 }
 
 const ExcelRow = memo(
@@ -28,8 +29,10 @@ const ExcelRow = memo(
     onDataChange,
     highlightedColumns,
     highlightVersion,
+    disableSelection = false,
   }: ExcelRowProps) {
-    const isSelected = useAppSelector(selectIsRowSelected(rowIndex));
+    const isSelectedRedux = useAppSelector(selectIsRowSelected(rowIndex));
+    const isSelected = disableSelection ? false : isSelectedRedux;
     const dispatch = useAppDispatch();
 
     const renderCountRef = useRef(0);
@@ -56,8 +59,9 @@ const ExcelRow = memo(
     }, [rowData, columnsLength, dispatch, onDataChange]);
 
     const handleRowClick = useCallback(() => {
+      if (disableSelection) return;
       dispatch(setSelectedRow(rowIndex));
-    }, [rowIndex, dispatch]);
+    }, [rowIndex, dispatch, disableSelection]);
 
     const handleDeselect = useCallback(
       (e: React.MouseEvent) => {
@@ -73,15 +77,15 @@ const ExcelRow = memo(
         <td
           className={`sticky left-0 z-20 bg-gray-100 dark:bg-gray-700 border-r border-b border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-2 text-xs relative ${isSelected ? 'ring-1 ring-blue-400/60 bg-blue-50 dark:bg-blue-900/30' : ''}`}
         >
-          {isSelected && (
+          {isSelected && !disableSelection && (
             <span className="absolute left-0 -top-px -bottom-px w-[2px] bg-blue-400 pointer-events-none z-30" />
           )}
           <div
-            className="flex flex-col items-center min-h-[2rem] justify-between py-1 cursor-pointer"
+            className={`flex flex-col items-center min-h-[2rem] justify-between py-1 ${disableSelection ? 'cursor-default' : 'cursor-pointer'}`}
             onClick={handleRowClick}
           >
             <span>{rowIndex + 1}</span>
-            {isSelected && (
+            {isSelected && !disableSelection && (
               <Button size="icon" variant="ghost" onClick={handleDeselect} className="w-4 h-4">
                 <X size={10} className="text-blue-500" />
               </Button>
@@ -100,6 +104,7 @@ const ExcelRow = memo(
             onCellChange={onCellChange}
             onCellFocus={onCellFocus}
             isHighlighted={highlightedColumns?.has(columnIndex)}
+            disableSelection={disableSelection}
           />
         ))}
       </tr>
@@ -115,7 +120,8 @@ const ExcelRow = memo(
       prevProps.onDataChange === nextProps.onDataChange &&
       prevProps.rowData === nextProps.rowData &&
       prevProps.highlightedColumns === nextProps.highlightedColumns &&
-      prevProps.highlightVersion === nextProps.highlightVersion
+      prevProps.highlightVersion === nextProps.highlightVersion &&
+      prevProps.disableSelection === nextProps.disableSelection
     );
   }
 );

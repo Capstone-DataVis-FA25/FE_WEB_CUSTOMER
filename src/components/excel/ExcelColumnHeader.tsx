@@ -49,6 +49,7 @@ interface ExcelColumnHeaderProps {
   allowHeaderEdit?: boolean;
   isHighlighted?: boolean;
   showDeselect?: boolean;
+  disableSelection?: boolean;
 }
 
 const ExcelColumnHeader = memo(
@@ -60,12 +61,15 @@ const ExcelColumnHeader = memo(
     allowHeaderEdit = true,
     isHighlighted,
     showDeselect = true,
+    disableSelection = false,
   }: ExcelColumnHeaderProps) {
     const dispatch = useAppDispatch();
     const { tryConvertColumn, tryConvert, currentParsedData } = useDataset();
     const [dateSubOpen, setDateSubOpen] = useState(false);
     const [isTypeIconHover, setIsTypeIconHover] = useState(false);
-    const isSelected = useAppSelector(selectIsColumnSelected(columnIndex));
+    const [isSortIconHover, setIsSortIconHover] = useState(false);
+    const isSelectedRedux = useAppSelector(selectIsColumnSelected(columnIndex));
+    const isSelected = disableSelection ? false : isSelectedRedux;
     const column = useAppSelector(selectColumnByIndex(columnIndex)) as DataHeader | undefined;
     const sortDirection = useAppSelector(selectSortDirectionForColumn(columnIndex)) as
       | 'asc'
@@ -96,9 +100,10 @@ const ExcelColumnHeader = memo(
     });
 
     const handleHeaderClick = useCallback(() => {
+      if (disableSelection) return;
       // Always select this column (this will deselect any other selected column)
       dispatch(setSelectedColumn(columnIndex));
-    }, [columnIndex, dispatch]);
+    }, [columnIndex, dispatch, disableSelection]);
 
     const handleDeselectColumn = useCallback(
       (e: React.MouseEvent) => {
@@ -165,13 +170,19 @@ const ExcelColumnHeader = memo(
 
     return (
       <th
-        className={`relative group border-b border-r p-2 align-top font-semibold text-gray-700 dark:text-gray-200 cursor-pointer ${
+        className={`relative group border-b border-r p-2 align-top font-semibold text-gray-700 dark:text-gray-200 ${
+          disableSelection ? 'cursor-default' : 'cursor-pointer'
+        } ${
           isDuplicate || isEmpty
             ? `bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-600${
-                isTypeIconHover ? '' : ' hover:bg-red-200 dark:hover:bg-red-800/50'
+                isTypeIconHover || isSortIconHover
+                  ? ''
+                  : ' hover:bg-red-200 dark:hover:bg-red-800/50'
               }`
             : `border-gray-300 dark:border-gray-600${
-                isTypeIconHover ? '' : ' hover:bg-gray-200 dark:hover:bg-gray-600'
+                isTypeIconHover || isSortIconHover
+                  ? ''
+                  : ' hover:bg-gray-200 dark:hover:bg-gray-600'
               }`
         } ${isSelected ? 'bg-blue-100 dark:bg-blue-900/50' : ''} ${
           typeof isHighlighted !== 'undefined' && isHighlighted
@@ -180,6 +191,16 @@ const ExcelColumnHeader = memo(
         }`}
         style={{ width: column?.width ?? 150, minWidth: 150 }}
         onClick={handleHeaderClick}
+        onMouseDown={e => {
+          if (disableSelection) {
+            const target = e.target as HTMLElement;
+            const isSortBtn = !!target.closest('[data-role="sort-btn"]');
+            if (!isSortBtn) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }
+        }}
       >
         {(isDuplicate || isEmpty) && (
           <span className="absolute left-0 -top-px -bottom-px w-[2px] bg-red-500 pointer-events-none z-10" />
@@ -319,8 +340,11 @@ const ExcelColumnHeader = memo(
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 hover:bg-gray-300 dark:hover:bg-gray-600"
+            className="h-6 w-6 p-0 hover:bg-gray-300 dark:hover:bg-gray-600 relative z-10"
             onClick={handleSort}
+            onMouseEnter={() => setIsSortIconHover(true)}
+            onMouseLeave={() => setIsSortIconHover(false)}
+            data-role="sort-btn"
           >
             {isSorting ? (
               sortDirection === 'asc' ? (

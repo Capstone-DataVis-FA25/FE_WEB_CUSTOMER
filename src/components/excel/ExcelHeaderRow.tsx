@@ -9,6 +9,7 @@ interface ExcelHeaderRowProps {
   allowHeaderEdit?: boolean;
   highlightedColumns?: Set<number>;
   showColumnDeselect?: boolean;
+  disableSelection?: boolean;
 }
 
 const ExcelHeaderRow: React.FC<ExcelHeaderRowProps> = memo(function ExcelHeaderRow({
@@ -17,6 +18,7 @@ const ExcelHeaderRow: React.FC<ExcelHeaderRowProps> = memo(function ExcelHeaderR
   allowHeaderEdit = true,
   highlightedColumns,
   showColumnDeselect = true,
+  disableSelection = false,
 }) {
   const columns = useAppSelector(selectColumns);
 
@@ -35,6 +37,7 @@ const ExcelHeaderRow: React.FC<ExcelHeaderRowProps> = memo(function ExcelHeaderR
             allowHeaderEdit={allowHeaderEdit}
             isHighlighted={highlightedColumns?.has(ci)}
             showDeselect={showColumnDeselect}
+            disableSelection={disableSelection}
           />
         ))}
       </tr>
