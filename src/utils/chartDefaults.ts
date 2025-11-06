@@ -247,8 +247,6 @@ export const defaultCyclePlotConfig: CyclePlotConfig = {
 // Returns a consistent default StructuredChartConfig for given chart type and optional dataset name
 export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => {
   const log = (cfg: MainChartConfig) => {
-    // console.log('[getDefaultChartConfig] type ->', chartType);
-    // console.log('[getDefaultChartConfig] result:', cfg);
     return cfg;
   };
   switch (chartType) {
@@ -266,9 +264,5 @@ export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => 
       return log(defaultDonutChartConfig);
     case ChartType.CyclePlot:
       return log(defaultCyclePlotConfig);
-    default:
-      // Fallback to line chart config if unknown type
-      console.warn(`Unknown chart type: ${chartType}, falling back to line chart config`);
-      return log(defaultLineChartConfig);
   }
 };
