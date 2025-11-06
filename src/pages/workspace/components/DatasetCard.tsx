@@ -101,10 +101,10 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
         </div>
 
         <div className="space-y-2">
-          <CardTitle className="text-lg leading-tight hover:text-blue-600 transition-colors group-hover:text-blue-600">
+          <CardTitle className="text-lg leading-tight hover:text-blue-600 transition-colors group-hover:text-blue-600 truncate">
             {dataset.name}
           </CardTitle>
-          <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem] text-gray-700 dark:text-gray-300">
+          <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem] text-gray-700 dark:text-gray-300 truncate">
             {dataset.description || 'No description available'}
           </CardDescription>
         </div>
