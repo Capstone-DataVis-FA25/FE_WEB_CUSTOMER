@@ -43,6 +43,8 @@ import { resetBindings } from '@/utils/chartBindings';
 const ChartEditorPage: React.FC = () => {
   const { t } = useTranslation();
   const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const chartId = params.get('chartId') ?? undefined;
   const navigate = useNavigate();
   const { getDatasetById, currentDataset, loading: isDatasetLoading } = useDataset();
   const { showSuccess, showError, toasts, removeToast } = useToast();
@@ -56,12 +58,13 @@ const ChartEditorPage: React.FC = () => {
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
   const [isSavingBeforeLeave, setIsSavingBeforeLeave] = useState(false);
+  const { currentDataset: dataset } = useDataset();
+  // Use datasetId from context, with local state for selection changes
+  const [datasetId, setDatasetId] = useState<string>(dataset?.id || '');
 
   // Chart editor context (now includes validation)
   const {
     mode,
-    chartId,
-    datasetId: contextDatasetId,
     setChartData,
     chartConfig,
     setChartConfig,
@@ -95,9 +98,6 @@ const ChartEditorPage: React.FC = () => {
   const handleToggleNotesSidebar = () => {
     setIsNotesSidebarOpen(!isNotesSidebarOpen);
   };
-
-  // Use datasetId from context, with local state for selection changes
-  const [datasetId, setDatasetId] = useState<string>(contextDatasetId || '');
 
   // State for dataset selection modal
   const [showDatasetModal, setShowDatasetModal] = useState(false);
@@ -286,9 +286,9 @@ const ChartEditorPage: React.FC = () => {
   // ============================================================
   // useEffect #2: Sync datasetId with context
   useEffect(() => {
-    // console.log('useEffect #2: contextDatasetId changed', contextDatasetId);
-    setDatasetId(contextDatasetId || '');
-  }, [contextDatasetId]);
+    // console.log('useEffect #2: dataset?.id changed', dataset?.id);
+    setDatasetId(dataset?.id || '');
+  }, [dataset?.id]);
 
   // ============================================================
   // EFFECT 2: Load chart in edit mode (independent)

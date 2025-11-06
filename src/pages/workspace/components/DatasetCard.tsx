@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Routers from '@/router/routers';
+import { useDataset } from '@/features/dataset/useDataset';
 
 import type { Dataset } from '@/features/dataset/datasetAPI';
 import Utils from '@/utils/Utils';
@@ -32,6 +33,7 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
+  const { getDatasetById } = useDataset();
 
   const handleView = (e?: React.MouseEvent) => {
     if (e) {
@@ -49,6 +51,7 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
     e.stopPropagation(); // Prevent card click
     // Điều hướng sang trang chart gallery kèm dataset_id
     if (dataset.id) {
+      getDatasetById(dataset.id);
       navigate(Routers.CHART_GALLERY, {
         state: {
           datasetId: dataset.id,
@@ -98,10 +101,10 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
         </div>
 
         <div className="space-y-2">
-          <CardTitle className="text-lg leading-tight hover:text-blue-600 transition-colors group-hover:text-blue-600">
+          <CardTitle className="text-lg leading-tight hover:text-blue-600 transition-colors group-hover:text-blue-600 truncate">
             {dataset.name}
           </CardTitle>
-          <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem] text-gray-700 dark:text-gray-300">
+          <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem] text-gray-700 dark:text-gray-300 truncate">
             {dataset.description || 'No description available'}
           </CardDescription>
         </div>
