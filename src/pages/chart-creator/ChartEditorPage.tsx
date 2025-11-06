@@ -27,7 +27,7 @@ import ChartNoteSidebar from '@/components/charts/ChartNoteSidebar';
 import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
 import { getDefaultChartConfig } from '@/utils/chartDefaults';
 // MainChartConfig now handled by contexts
-import type { ChartRequest, ChartType } from '@/features/charts';
+import { ChartType, type ChartRequest } from '@/features/charts';
 // ChartType is imported in ChartEditorWithProviders
 import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -542,7 +542,7 @@ const ChartEditorPage: React.FC = () => {
         const updateData = {
           name: editableName.trim() || currentChart.name,
           description: editableDescription.trim() || currentChart.description,
-          type: currentChartType ?? 'line',
+          type: currentChartType ?? ChartType.Line,
           config: chartConfig || undefined,
         };
 
@@ -640,7 +640,7 @@ const ChartEditorPage: React.FC = () => {
         const updateData = {
           name: editableName.trim() || currentChart.name,
           description: editableDescription.trim() || currentChart.description,
-          type: currentChartType ?? 'line',
+          type: currentChartType ?? ChartType.Line,
           config: chartConfig || undefined,
         };
 

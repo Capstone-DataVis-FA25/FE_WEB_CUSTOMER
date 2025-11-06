@@ -29,6 +29,7 @@ type BaseChart = {
 import Utils from '@/utils/Utils';
 import { useTranslation } from 'react-i18next';
 import { ChartType } from '@/features/charts';
+import { useChartEditor } from '@/features/chartEditor';
 
 // Extended Chart type for UI with additional optional fields
 type Chart = BaseChart & {
@@ -122,9 +123,10 @@ const ChartCard: React.FC<ChartCardProps> = ({
   isDeleting = false,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
-
+  const { clearChartEditor } = useChartEditor();
   const handleView = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
+    clearChartEditor();
     if (onView) {
       onView(chart);
     }

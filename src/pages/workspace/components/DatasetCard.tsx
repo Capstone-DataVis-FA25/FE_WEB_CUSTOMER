@@ -51,7 +51,6 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
     e.stopPropagation(); // Prevent card click
     // Điều hướng sang trang chart gallery kèm dataset_id
     if (dataset.id) {
-      getDatasetById(dataset.id);
       navigate(Routers.CHART_GALLERY, {
         state: {
           datasetId: dataset.id,

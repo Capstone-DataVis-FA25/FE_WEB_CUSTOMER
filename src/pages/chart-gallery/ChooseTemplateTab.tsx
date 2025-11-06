@@ -35,12 +35,14 @@ import { useDataset } from '@/features/dataset/useDataset';
 import type { ChartCategory, ChartTemplate } from '@/types/chart-gallery-types';
 import ChartTemplateCard from './ChartTemplateCard';
 import { isSupportedChartType } from '@/constants/chart-types';
+import { useChartEditor } from '@/features/chartEditor';
 
 export default function ChooseTemplateTab() {
   const { t } = useTranslation();
   const location = useLocation();
   const { showError, showSuccess } = useToastContext();
   const navigate = useNavigate();
+  const { clearChartEditor } = useChartEditor();
 
   // Extract data from both location state AND query parameters
   const locationState = location.state as {
@@ -171,6 +173,7 @@ export default function ChooseTemplateTab() {
 
   // Check if user has datasetId or needs to select one
   const handleContinueWithTemplate = (template: ChartTemplate) => {
+    clearChartEditor();
     if (!template) {
       showError(
         t('chart_create_error', 'Error'),
