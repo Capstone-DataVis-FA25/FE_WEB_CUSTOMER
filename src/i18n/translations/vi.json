@@ -296,6 +296,7 @@
   "resendEmail_error": "Gửi email thất bại. Vui lòng thử lại.",
   "resendEmail_description": "Nhập email của bạn để nhận lại email xác thực",
   "navigation_about": "Giới thiệu",
+  "navigation_pricing": "Bảng giá",
   "profile_emptyFieldsError": "Vui lòng điền vào tất cả các trường bắt buộc.",
   "profile_noChangesError": "Không phát hiện thay đổi.",
   "profile_invalidFirstNameError": "Họ chứa ký tự không hợp lệ.",
