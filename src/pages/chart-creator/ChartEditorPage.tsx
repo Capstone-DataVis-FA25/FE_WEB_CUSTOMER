@@ -360,7 +360,7 @@ const ChartEditorPage: React.FC = () => {
   // EFFECT: Load dataset when datasetId changes
   // ============================================================
   useEffect(() => {
-    console.log('[ChartEditorPage] Dataset loader effect fired', { datasetId });
+    // console.log('[ChartEditorPage] Dataset loader effect fired', { datasetId });
 
     if (!datasetId) {
       setChartData([]);
@@ -369,10 +369,10 @@ const ChartEditorPage: React.FC = () => {
 
     (async () => {
       try {
-        console.log('[ChartEditorPage] getDatasetById -> start', datasetId);
+        // console.log('[ChartEditorPage] getDatasetById -> start', datasetId);
         const res = await getDatasetById(datasetId);
         const ok = (res as any)?.meta?.requestStatus === 'fulfilled';
-        console.log('[ChartEditorPage] getDatasetById -> done', { ok, datasetId });
+        // console.log('[ChartEditorPage] getDatasetById -> done', { ok, datasetId });
 
         if (!ok) {
           const msg = (res as any)?.payload?.message || 'Error loading dataset';
@@ -614,6 +614,9 @@ const ChartEditorPage: React.FC = () => {
         const response = await updateChart(chartIdFromUrl, updateData);
         if (response.meta.requestStatus === 'fulfilled') {
           updateOriginals();
+          // After successful save, the current datasetId becomes the new baseline
+          originalDatasetIdRef.current = datasetId ?? null;
+          setDatasetDirty(false);
           showSuccess(t('chart_update_success', 'Chart updated successfully'));
         } else {
           showError(t('chart_update_error', 'Failed to update chart'));
@@ -639,7 +642,58 @@ const ChartEditorPage: React.FC = () => {
 
     try {
       if (chartConfig) {
-        setChartConfig(resetBindings(chartConfig as MainChartConfig));
+        // Debug: print bindings before/after reset
+        const extractBindings = (cfg: MainChartConfig | null, type: any) => {
+          if (!cfg) return {} as any;
+          if (type === 'line' || type === 'bar' || type === 'area' || type === 'scatter') {
+            const axis = (cfg as any)?.axisConfigs;
+            const series = (axis?.seriesConfigs || []).map((s: any) => s?.dataKey);
+            return {
+              chartType: type,
+              xAxisKey: axis?.xAxisKey,
+              seriesDataKeys: series,
+            };
+          }
+          if (type === 'pie' || type === 'donut') {
+            const anyCfg = cfg as any;
+            return {
+              chartType: type,
+              labelKey: anyCfg?.config?.labelKey,
+              valueKey: anyCfg?.config?.valueKey,
+            };
+          }
+          return { chartType: type } as any;
+        };
+
+        // Ensure reset uses an actual chart type (state -> config -> default)
+        const typeForReset =
+          (currentChartType as any) || (chartConfig as any)?.chartType || ChartType.Line;
+        const cfgWithType = {
+          ...(chartConfig as MainChartConfig),
+          chartType: typeForReset,
+        } as MainChartConfig;
+        const before = extractBindings(cfgWithType, typeForReset);
+        const nextCfg = resetBindings(cfgWithType);
+        const after = extractBindings(nextCfg, typeForReset);
+
+        console.groupCollapsed('[Dataset Change] Reset bindings');
+        console.log('Dataset:', {
+          previousDatasetId: originalDatasetIdRef.current,
+          selectedDatasetId,
+        });
+        console.log('Before:', before);
+        console.log('Type used for reset:', typeForReset);
+        console.log('After :', after);
+        console.groupEnd();
+
+        setChartConfig(nextCfg);
+      }
+      // Track dirty state relative to original dataset id
+      if (originalDatasetIdRef.current === null) {
+        originalDatasetIdRef.current = selectedDatasetId;
+        setDatasetDirty(false);
+      } else {
+        setDatasetDirty(originalDatasetIdRef.current !== selectedDatasetId);
       }
       showSuccess('Dataset selected successfully');
     } catch (error) {
@@ -647,12 +701,24 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
+  // Track original datasetId for reset
+  const originalDatasetIdRef = React.useRef<string | null>(null);
+  const [datasetDirty, setDatasetDirty] = useState(false);
+
   const handleReset = () => {
-    if (hasChanges) {
+    if (hasChanges || datasetDirty) {
       setCurrentModalAction('reset');
       modalConfirm.openConfirm(async () => {
         try {
           resetToOriginal();
+          if (datasetDirty) {
+            // restore datasetId to original snapshot
+            const orig = originalDatasetIdRef.current;
+            if (typeof orig === 'string') {
+              setDatasetId(orig);
+            }
+            setDatasetDirty(false);
+          }
           showSuccess(t('chart_reset', 'Chart reset to original values'));
         } catch (error) {
           console.error('Error resetting chart:', error);
@@ -726,6 +792,16 @@ const ChartEditorPage: React.FC = () => {
     modalConfirm.close();
   };
 
+  // Initialize dataset baseline when chart loads (first time we have a dataset id)
+  useEffect(() => {
+    if (mode && (currentChart || mode === 'create')) {
+      if (originalDatasetIdRef.current === null && datasetId) {
+        originalDatasetIdRef.current = datasetId;
+        setDatasetDirty(false);
+      }
+    }
+  }, [mode, currentChart, datasetId]);
+
   const handleToggleHistorySidebar = () => setIsHistorySidebarOpen(v => !v);
   const handleToggleNotesSidebar = () => setIsNotesSidebarOpen(!isNotesSidebarOpen);
 
@@ -753,6 +829,7 @@ const ChartEditorPage: React.FC = () => {
         chartId={chartIdFromUrl}
         onToggleHistorySidebar={handleToggleHistorySidebar}
         mode={mode}
+        dirty={hasChanges || datasetDirty}
       />
 
       <div className="flex-1 min-h-0 min-w-0 bg-gray-900">

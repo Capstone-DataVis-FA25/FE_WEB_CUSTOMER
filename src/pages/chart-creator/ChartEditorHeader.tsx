@@ -35,6 +35,7 @@ interface ChartEditorHeaderProps {
   chartId?: string;
   onToggleHistorySidebar?: () => void;
   mode: 'create' | 'edit';
+  dirty?: boolean;
 }
 
 const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
@@ -46,6 +47,7 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
   chartId,
   onToggleHistorySidebar,
   mode,
+  dirty,
 }) => {
   const { t } = useTranslation();
   const { currentChart, creating } = useCharts();
@@ -67,6 +69,8 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
     isFormValid,
     currentChartType,
   } = useChartEditor();
+
+  const combinedHasChanges = typeof dirty === 'boolean' ? dirty : hasChanges;
 
   const chartInfo: ChartInfo = useMemo(() => {
     switch (currentChartType) {
@@ -229,7 +233,7 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                     <BarChart3 className="w-3 h-3" />
                     {chartInfo.name}
                   </Badge>
-                  {hasChanges && mode === 'edit' && (
+                  {combinedHasChanges && mode === 'edit' && (
                     <Badge
                       variant="outline"
                       className="flex items-center gap-1 text-xs border-orange-300 text-orange-600 bg-orange-50 dark:border-orange-600 dark:text-orange-400 dark:bg-orange-900/20"
@@ -370,7 +374,7 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                   size="sm"
                   variant="outline"
                   onClick={onReset}
-                  disabled={!hasChanges}
+                  disabled={!combinedHasChanges}
                   className="flex items-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
@@ -380,7 +384,7 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
               <Button
                 size="sm"
                 onClick={onSave}
-                disabled={mode === 'create' ? creating || !isFormValid : !hasChanges}
+                disabled={mode === 'create' ? creating || !isFormValid : !combinedHasChanges}
                 className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creating ? (

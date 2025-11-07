@@ -416,7 +416,10 @@ function DatasetUploadModalContent({
   return (
     <>
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-7xl max-h-[90vh] bg-white dark:bg-gray-800 overflow-hidden">
+        <DialogContent
+          className="sm:max-w-7xl max-h-[90vh] bg-white dark:bg-gray-800 overflow-hidden"
+          aria-describedby={undefined}
+        >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b">
             <div className="flex items-center gap-2">
