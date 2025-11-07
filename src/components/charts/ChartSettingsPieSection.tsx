@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { SubPieDonutChartConfig } from '@/types/chart';
 import { Card, CardHeader, CardContent } from '../ui/card';
 import { ChevronDown, ChevronUp, Sliders } from 'lucide-react';
@@ -6,6 +6,7 @@ import { Label } from '../ui/label';
 import { useChartEditor, useChartEditorActions } from '@/features/chartEditor';
 import { useDataset } from '@/features/dataset/useDataset';
 import { AnimatePresence, motion } from '@/theme/animation';
+import { CHART_ROLE_VALIDATION_RULES } from '@/utils/chartValidation';
 
 // Pie config type guard
 function isPieDonutConfig(config: any): config is SubPieDonutChartConfig {
@@ -27,6 +28,33 @@ const ChartSettingsPieSection: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { handleConfigChange } = useChartEditorActions();
   const config = chartConfig?.config;
+
+  // Role-based validation for label/value by chart type (pie/donut)
+  const roleRules = useMemo(() => {
+    const key = String(chartConfig?.chartType || '').toLowerCase();
+    return (
+      CHART_ROLE_VALIDATION_RULES[key as 'pie' | 'donut'] || CHART_ROLE_VALIDATION_RULES['pie']
+    );
+  }, [chartConfig?.chartType]);
+
+  const headers = (currentDataset?.headers as any[]) || [];
+  const normalizeType = (t?: string) => (t || '').toLowerCase();
+  const validLabelHeaders = useMemo(
+    () => headers.filter(h => roleRules.label.allowedTypes.includes(normalizeType(h.type) as any)),
+    [headers, roleRules]
+  );
+  const validValueHeaders = useMemo(
+    () => headers.filter(h => roleRules.value.allowedTypes.includes(normalizeType(h.type) as any)),
+    [headers, roleRules]
+  );
+  const currentLabelHeader = headers.find(h => (h.id || h.name) === (config as any)?.labelKey);
+  const currentValueHeader = headers.find(h => (h.id || h.name) === (config as any)?.valueKey);
+  const isCurrentLabelValid = !currentLabelHeader
+    ? true
+    : roleRules.label.allowedTypes.includes(normalizeType(currentLabelHeader?.type) as any);
+  const isCurrentValueValid = !currentValueHeader
+    ? true
+    : roleRules.value.allowedTypes.includes(normalizeType(currentValueHeader?.type) as any);
 
   const toggleSection = () => {
     setIsCollapsed(!isCollapsed);
@@ -90,15 +118,29 @@ const ChartSettingsPieSection: React.FC = () => {
                           ? 'No dataset or columns available'
                           : 'Select a column'}
                       </option>
-                      {currentDataset &&
-                        currentDataset.headers &&
-                        currentDataset.headers.length > 0 &&
-                        currentDataset.headers.map((header: any) => (
-                          <option key={header.id || header.name} value={header.id || header.name}>
-                            {header.name || header.id}
-                          </option>
-                        ))}
+                      {/* Show current invalid selection as disabled so user can see it */}
+                      {currentLabelHeader && !isCurrentLabelValid && (
+                        <option value={currentLabelHeader.id || currentLabelHeader.name} disabled>
+                          {(currentLabelHeader.name || currentLabelHeader.id) + ' (invalid type)'}
+                        </option>
+                      )}
+                      {validLabelHeaders.map((header: any) => (
+                        <option key={header.id || header.name} value={header.id || header.name}>
+                          {header.name || header.id} {`(${normalizeType(header.type)})`}
+                        </option>
+                      ))}
                     </select>
+                    {/* Hint */}
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      {`💡 Label should be categorical data (text/date)`}
+                    </p>
+                    {/* Hint / Warning */}
+                    {!isCurrentLabelValid && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                        ⚠️ Selected label column type is not allowed for this chart. Allowed:{' '}
+                        {roleRules.label.allowedTypes.join(', ')}
+                      </p>
+                    )}
                   </div>
 
                   {/* Value Column Selection */}
@@ -125,15 +167,28 @@ const ChartSettingsPieSection: React.FC = () => {
                           ? 'No dataset or columns available'
                           : 'Select a column'}
                       </option>
-                      {currentDataset &&
-                        currentDataset.headers &&
-                        currentDataset.headers.length > 0 &&
-                        currentDataset.headers.map((header: any) => (
-                          <option key={header.id || header.name} value={header.id || header.name}>
-                            {header.name || header.id}
-                          </option>
-                        ))}
+                      {/* Show current invalid selection as disabled so user can see it */}
+                      {currentValueHeader && !isCurrentValueValid && (
+                        <option value={currentValueHeader.id || currentValueHeader.name} disabled>
+                          {(currentValueHeader.name || currentValueHeader.id) + ' (invalid type)'}
+                        </option>
+                      )}
+                      {validValueHeaders.map((header: any) => (
+                        <option key={header.id || header.name} value={header.id || header.name}>
+                          {header.name || header.id} {`(${normalizeType(header.type)})`}
+                        </option>
+                      ))}
                     </select>
+                    {/* Hint */}
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      {`💡 Value must be numeric values (number)`}
+                    </p>
+                    {!isCurrentValueValid && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                        ⚠️ Selected value column type is not allowed for this chart. Allowed:{' '}
+                        {roleRules.value.allowedTypes.join(', ')}
+                      </p>
+                    )}
                   </div>
 
                   <div>

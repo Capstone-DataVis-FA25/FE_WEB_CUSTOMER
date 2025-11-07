@@ -56,6 +56,7 @@ interface CustomExcelProps {
   allowColumnEdit?: boolean;
   onSorting?: (s: { column: number; direction: 'asc' | 'desc' } | null) => void;
   highlightHeaderIds?: string[];
+  disableSelection?: boolean;
 }
 const DEFAULT_WIDTH = 180;
 
@@ -82,6 +83,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   allowColumnEdit = true,
   onSorting,
   highlightHeaderIds,
+  disableSelection = false,
 }) => {
   // Core state
   const modalConfirm = useModalConfirm();
@@ -144,6 +146,13 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   useEffect(() => {
     dispatch(setNumberFormat(numberFormat));
   }, [numberFormat, dispatch]);
+  // Clear selection if disabled
+  useEffect(() => {
+    if (disableSelection) {
+      dispatch(setSelectedRow(null));
+      dispatch(setSelectedColumn(null));
+    }
+  }, [disableSelection, dispatch]);
   // Temporary edits are now managed by ExcelUIContext
 
   // Large dataset heuristics
@@ -535,10 +544,11 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // Handle cell focus to select column
   const handleCellFocus = useCallback(
     (rowIndex: number, columnIndex: number) => {
+      if (disableSelection) return;
       // Select the column when a cell is focused
       dispatch(setSelectedColumn(columnIndex));
     },
-    [dispatch]
+    [dispatch, disableSelection]
   );
 
   // Handle cell changes from individual ExcelCell components
@@ -1198,27 +1208,29 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
               </Button>
             )}
             <div className="h-5 w-px bg-gray-300 dark:bg-gray-600" />
-            <Button size="sm" variant="outline" onClick={copyAll} className="gap-1 bg-transparent">
-              <Copy size={14} /> Copy
-            </Button>
           </>
         )}
+        <Button size="sm" variant="outline" onClick={copyAll} className="gap-1 bg-transparent">
+          <Copy size={14} /> Copy
+        </Button>
         <Button size="sm" variant="outline" onClick={exportXlsx} className="gap-1 bg-transparent">
           <FileDown size={14} /> Export
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() =>
-            modalConfirm.openConfirm(async () => {
-              handleResetOriginal();
-              showSuccess('Reset successful');
-            })
-          }
-          className="gap-1 bg-transparent"
-        >
-          <RotateCcw size={14} /> Reset
-        </Button>
+        {mode === 'edit' && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              modalConfirm.openConfirm(async () => {
+                handleResetOriginal();
+                showSuccess('Reset successful');
+              })
+            }
+            className="gap-1 bg-transparent"
+          >
+            <RotateCcw size={14} /> Reset
+          </Button>
+        )}
         <div className="flex-grow text-xs text-gray-500 dark:text-gray-400">
           {isLarge && (
             <span>
@@ -1276,7 +1288,8 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
               onTypeChange={setType}
               allowHeaderEdit={allowHeaderEdit}
               highlightedColumns={highlightedColumns}
-              showColumnDeselect={allowColumnEdit}
+              showColumnDeselect={disableSelection ? false : allowColumnEdit}
+              disableSelection={disableSelection}
             />
             <tbody>
               {isLarge && topSpacerHeight > 0 && (
@@ -1297,6 +1310,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
                   onCellFocus={handleCellFocus}
                   highlightedColumns={highlightedColumns}
                   highlightVersion={highlightVersion}
+                  disableSelection={disableSelection}
                 />
               ))}
               {isLarge && bottomSpacerHeight > 0 && (
@@ -1349,6 +1363,12 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
             {sortConfig &&
               `Sorted by "${columns[sortConfig.column]?.name}" (${sortConfig.direction})`}
           </p>
+        </div>
+      )}
+
+      {mode !== 'edit' && sortConfig && (
+        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          <p>{`Sorted by "${columns[sortConfig.column]?.name}" (${sortConfig.direction})`}</p>
         </div>
       )}
 

@@ -16,6 +16,7 @@ interface ExcelCellProps {
   onCellChange?: (rowIndex: number, columnIndex: number, newValue: string) => void;
   onCellFocus?: (rowIndex: number, columnIndex: number) => void;
   isHighlighted?: boolean;
+  disableSelection?: boolean;
 }
 
 const ExcelCell = memo(
@@ -27,6 +28,7 @@ const ExcelCell = memo(
     onCellChange,
     onCellFocus,
     isHighlighted,
+    disableSelection = false,
   }: ExcelCellProps) {
     // Get validation state for this specific cell - only re-renders when this cell's validation changes
     const { hasParseError } = useAppSelector(selectCellValidation(rowIndex, columnIndex)) as {
@@ -68,6 +70,7 @@ const ExcelCell = memo(
     }, [value, isEditing]);
 
     const handleFocus = useCallback(() => {
+      if (disableSelection) return;
       setIsEditing(true);
       setTempValue(value);
       setLiveHasError(hasParseError);
@@ -77,7 +80,7 @@ const ExcelCell = memo(
       if (onCellFocus) {
         onCellFocus(rowIndex, columnIndex);
       }
-    }, [value, onCellFocus, rowIndex, columnIndex, hasParseError, dispatch]);
+    }, [value, onCellFocus, rowIndex, columnIndex, hasParseError, dispatch, disableSelection]);
 
     const handleBlur = useCallback(() => {
       setIsEditing(false);
@@ -157,6 +160,13 @@ const ExcelCell = memo(
       if (e.key === 'Enter') e.currentTarget.blur();
     };
 
+    const handleMouseDown = (e: React.MouseEvent<HTMLInputElement>) => {
+      if (disableSelection) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
     // Determine the display value
     const displayValue = isEditing ? tempValue : value;
 
@@ -164,7 +174,7 @@ const ExcelCell = memo(
     const cellClassName = `
     relative border-b border-r border-gray-200 dark:border-gray-600
     ${(isEditing ? liveHasError : hasParseError) ? 'bg-red-50 dark:bg-red-900/30 border-red-300' : ''}
-    ${isEditing ? 'bg-blue-50 dark:bg-blue-900/30' : ''}
+    ${isEditing && !disableSelection ? 'bg-blue-50 dark:bg-blue-900/30' : ''}
     ${isHighlighted ? 'bg-amber-50/60 dark:bg-amber-900/10' : ''}
   `.trim();
 
@@ -178,7 +188,7 @@ const ExcelCell = memo(
           <span className="absolute left-0 -top-px -bottom-px w-[2px] bg-red-500 pointer-events-none z-30" />
         )}
         {/* Selection stripe (focused/editing) above highlight */}
-        {!(isEditing ? liveHasError : hasParseError) && isEditing && (
+        {!(isEditing ? liveHasError : hasParseError) && isEditing && !disableSelection && (
           <span className="absolute left-0 -top-px -bottom-px w-[2px] bg-blue-400 pointer-events-none z-20" />
         )}
         {/* Highlight stripe when column is bound */}
@@ -194,9 +204,11 @@ const ExcelCell = memo(
           onFocus={handleFocus}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
+          onMouseDown={handleMouseDown}
           className={`
           w-full h-full p-2 bg-transparent border-none outline-none
           ${mode === 'view' ? 'cursor-default' : 'cursor-text'}
+          ${disableSelection ? 'pointer-events-none select-none' : ''}
           ${(isEditing ? liveHasError : hasParseError) ? 'text-red-600 dark:text-red-400' : ''}
         `.trim()}
           style={{
@@ -205,6 +217,7 @@ const ExcelCell = memo(
           }}
           autoComplete="off"
           spellCheck={false}
+          tabIndex={disableSelection ? -1 : 0}
         />
       </td>
     );

@@ -6,7 +6,7 @@ import type { MainChartConfig } from '@/types/chart';
 import { ChartType } from '@/features/charts';
 import type { NumberFormat, DateFormat } from '@/contexts/DatasetContext';
 import type { DataHeader } from '@/utils/dataProcessors';
-import { getDefaultChartConfig } from '@/utils/chartDefaults';
+import { act } from 'react';
 
 // Deep partial utility type for nested optional properties
 type DeepPartial<T> = {
@@ -23,11 +23,6 @@ interface ValidationErrors {
 }
 
 export interface ChartEditorState {
-  // Mode and IDs
-  mode: 'create' | 'edit';
-  chartId?: string;
-  datasetId?: string;
-
   // Chart data & config
   chartData: ChartDataPoint[];
   chartConfig: MainChartConfig | null;
@@ -61,9 +56,6 @@ export interface ChartEditorState {
 }
 
 const initialState: ChartEditorState = {
-  mode: 'create',
-  chartId: undefined,
-  datasetId: undefined,
   chartData: [],
   chartConfig: null,
   currentChartType: null,
@@ -91,39 +83,6 @@ const chartEditorSlice = createSlice({
   name: 'chartEditor',
   initialState,
   reducers: {
-    // Initialize chart editor
-    initializeEditor: (
-      state,
-      action: PayloadAction<{
-        mode: 'create' | 'edit';
-        chartId?: string;
-        datasetId?: string;
-        initialChartType?: ChartType;
-      }>
-    ) => {
-      state.mode = action.payload.mode;
-      state.chartId = action.payload.chartId;
-      state.datasetId = action.payload.datasetId;
-      state.currentChartType = action.payload.initialChartType || null;
-      if (action.payload.mode === 'create' && action.payload.initialChartType) {
-        state.chartConfig = getDefaultChartConfig(action.payload.initialChartType);
-      }
-      // Reset other state
-      state.chartData = [];
-      state.chartConfig = null;
-      state.editableName = '';
-      state.editableDescription = '';
-      state.isEditingName = false;
-      state.isEditingDescription = false;
-      state.originalName = '';
-      state.originalDescription = '';
-      state.originalConfig = null;
-      state.originalChartType = action.payload.initialChartType || null;
-      state.resetTrigger = 0;
-      state.validationErrors = initialState.validationErrors;
-      state.workingDataset = null;
-    },
-
     // Chart data & config
     setChartData: (state, action: PayloadAction<ChartDataPoint[]>) => {
       state.chartData = action.payload;
@@ -324,7 +283,6 @@ const chartEditorSlice = createSlice({
 });
 
 export const {
-  initializeEditor,
   setChartData,
   setChartConfig,
   setCurrentChartType,

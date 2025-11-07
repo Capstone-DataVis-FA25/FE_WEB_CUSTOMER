@@ -19,6 +19,7 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({ chartId, isOpen, on
   const { user } = useAuth();
   const { t } = useTranslation();
   const {
+    notes,
     currentChartNotes,
     creating,
     updating,
@@ -29,7 +30,7 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({ chartId, isOpen, on
     deleteNote,
     toggleNoteCompleted,
     getChartNotes,
-    clearCurrentNotes,
+    setCurrentNotes,
   } = useChartNotes();
 
   const [newNote, setNewNote] = useState('');
@@ -40,15 +41,28 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({ chartId, isOpen, on
   const [saveConfirmNoteId, setSaveConfirmNoteId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const fetchedForChartRef = useRef<string | null>(null);
 
-  // Load notes when chartId changes (clear old notes first to prevent showing wrong count)
+  // Load notes only once per chart when the sidebar is first opened
+  // Do NOT fetch here; background prefetch in ChartEditorPage handles network.
   useLayoutEffect(() => {
-    if (chartId) {
-      // Clear old notes immediately before loading new ones
-      clearCurrentNotes();
-      getChartNotes(chartId);
+    if (!chartId || !isOpen) return;
+
+    if (fetchedForChartRef.current === chartId) {
+      setCurrentNotes(chartId);
+      return;
     }
-  }, [chartId, getChartNotes, clearCurrentNotes]);
+
+    const hasPrefetched = Array.isArray(notes[chartId]) && notes[chartId].length > 0;
+    if (hasPrefetched) {
+      setCurrentNotes(chartId);
+      fetchedForChartRef.current = chartId;
+      return;
+    }
+
+    // No prefetched notes yet; keep UI idle (loading indicator can rely on global loading)
+    fetchedForChartRef.current = chartId;
+  }, [chartId, isOpen, notes, setCurrentNotes]);
 
   // Auto scroll to bottom when new notes added
   useEffect(() => {

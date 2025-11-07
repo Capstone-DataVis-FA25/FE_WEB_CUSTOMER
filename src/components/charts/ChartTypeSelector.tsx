@@ -84,50 +84,39 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
     [chartTypeOptions, currentChartType]
   );
 
-  // Universal deep merge function that works with any config structure
+  // Intersection merge: keep only keys that exist in the new default.
+  // For overlapping keys, prefer current values; for nested objects, recurse using
+  // only the keys present in the new default. Old-type-only fields are dropped.
   const deepMergeConfigs = (currentConfig: any, newDefaultConfig: any): any => {
-    // Handle null/undefined cases
-    if (!currentConfig) return newDefaultConfig;
     if (!newDefaultConfig) return currentConfig;
+    if (!currentConfig) return newDefaultConfig;
 
-    // Handle primitive types and arrays
-    if (typeof currentConfig !== 'object' || Array.isArray(currentConfig)) {
+    if (typeof newDefaultConfig !== 'object' || Array.isArray(newDefaultConfig)) {
       return currentConfig;
     }
-    if (typeof newDefaultConfig !== 'object' || Array.isArray(newDefaultConfig)) {
+    if (typeof currentConfig !== 'object' || Array.isArray(currentConfig)) {
       return newDefaultConfig;
     }
 
     const result: any = {};
-
-    // Get all unique keys from both objects
-    const allKeys = new Set([...Object.keys(currentConfig), ...Object.keys(newDefaultConfig)]);
-
-    for (const key of allKeys) {
+    // Only iterate keys from the new default (drop old-only keys)
+    for (const key of Object.keys(newDefaultConfig)) {
       const currentValue = currentConfig[key];
       const newValue = newDefaultConfig[key];
 
-      // If both configs have this key, it's a common field - preserve current value
-      if (currentConfig.hasOwnProperty(key) && newDefaultConfig.hasOwnProperty(key)) {
-        if (
-          typeof currentValue === 'object' &&
-          typeof newValue === 'object' &&
-          currentValue !== null &&
-          newValue !== null &&
-          !Array.isArray(currentValue) &&
-          !Array.isArray(newValue)
-        ) {
-          // Recursively merge nested objects
-          result[key] = deepMergeConfigs(currentValue, newValue);
-        } else {
-          // Use current value (preserves user's settings for common fields)
-          result[key] = currentValue;
-        }
-      } else if (currentConfig.hasOwnProperty(key)) {
-        // Only current config has this key - preserve it (might be user data like series)
+      if (
+        currentValue !== undefined &&
+        typeof currentValue === 'object' &&
+        currentValue !== null &&
+        !Array.isArray(currentValue) &&
+        typeof newValue === 'object' &&
+        newValue !== null &&
+        !Array.isArray(newValue)
+      ) {
+        result[key] = deepMergeConfigs(currentValue, newValue);
+      } else if (currentValue !== undefined) {
         result[key] = currentValue;
       } else {
-        // Only new config has this key - use new default
         result[key] = newValue;
       }
     }
@@ -152,13 +141,14 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
     // If we have an existing config, merge it with the new chart type defaults
     if (chartConfig) {
       const mergedConfig = mergeConfigs(chartConfig, newChartType);
-      setChartConfig(mergedConfig);
+      // Ensure chartType reflects the new selection and drop old-type-only keys
+      setChartConfig({ ...mergedConfig, chartType: newChartType } as MainChartConfig);
     } else {
       // If there's no existing config (e.g. fresh create flow), immediately set a
       // sensible default config for the selected chart type so downstream UI does
       // not observe a transient null `chartConfig` value.
       const defaultConfig = getDefaultChartConfig(newChartType);
-      setChartConfig(defaultConfig);
+      setChartConfig({ ...defaultConfig, chartType: newChartType } as MainChartConfig);
     }
 
     setCurrentChartType(newChartType);

@@ -282,7 +282,12 @@ export interface SubPieDonutChartConfig extends BaseChartConfig {
 }
 
 // For backward compatibility, keep ChartConfig as LineChartConfig
-export type ChartConfig = LineChartConfig | BarChartConfig | AreaChartConfig;
+export type ChartConfig =
+  | LineChartConfig
+  | BarChartConfig
+  | AreaChartConfig
+  | PieChartConfig
+  | ScatterChartConfig;
 
 // Formatter configuration
 export interface FormatterConfig {
