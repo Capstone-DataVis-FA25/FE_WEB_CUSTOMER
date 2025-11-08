@@ -26,6 +26,7 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
   onOpenChange,
   onSelectDataset,
   currentDatasetId,
+  // onSelectSameDataset removed
 }) => {
   const { datasets, loading, getDatasets } = useDataset();
   const [selectedDatasetId, setSelectedDatasetId] = useState<string>('');
@@ -67,12 +68,17 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
   }, [open, selectedDatasetId, currentDatasetId, datasets.length]);
 
   const handleConfirm = () => {
-    if (selectedDatasetId) {
-      const selectedDataset = datasets.find(ds => ds.id === selectedDatasetId);
-      onSelectDataset(selectedDatasetId, selectedDataset?.name || '');
+    if (!selectedDatasetId) return;
+    // If user picked the current dataset, do no-op and just close
+    if (currentDatasetId && selectedDatasetId === currentDatasetId) {
       onOpenChange(false);
       setSelectedDatasetId('');
+      return;
     }
+    const selectedDataset = datasets.find(ds => ds.id === selectedDatasetId);
+    onSelectDataset(selectedDatasetId, selectedDataset?.name || '');
+    onOpenChange(false);
+    setSelectedDatasetId('');
   };
 
   const handleCancel = () => {
@@ -237,7 +243,7 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
             disabled={!selectedDatasetId || loading}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
           >
-            {selectedDatasetId === currentDatasetId ? 'Keep Current Dataset' : 'Switch to Dataset'}
+            Switch to Dataset
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -24,9 +24,7 @@ export const fetchDatasetById = createAsyncThunk(
   'dataset/fetchDatasetById',
   async (id: string, { rejectWithValue }) => {
     try {
-      console.log('Fetching dataset by ID:', id);
       const response = await datasetAPI.getDatasetById(id);
-      console.log('Dataset fetched successfully:', response);
       return response;
     } catch (error: unknown) {
       console.error('Error fetching dataset by ID:', id, error);

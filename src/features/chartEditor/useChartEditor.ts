@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  initializeEditor,
   setChartData,
   setChartConfig,
   setCurrentChartType,
@@ -45,10 +44,7 @@ interface ValidationErrors {
 export const useChartEditor = () => {
   const dispatch = useAppDispatch();
 
-  // Select state
-  const mode = useAppSelector(selectors.selectMode);
-  const chartId = useAppSelector(selectors.selectChartId);
-  const datasetId = useAppSelector(selectors.selectDatasetId);
+  // Select state (IDs derived from URL now; not in Redux)
   const chartData = useAppSelector(selectors.selectChartData);
   const chartConfig = useAppSelector(selectors.selectChartConfig);
   const currentChartType = useAppSelector(selectors.selectCurrentChartType);
@@ -66,14 +62,6 @@ export const useChartEditor = () => {
   const isFormValid = useAppSelector(selectors.selectIsFormValid);
 
   // Actions
-  const handleInitializeEditor = (payload: {
-    mode: 'create' | 'edit';
-    chartId?: string;
-    datasetId?: string;
-    initialChartType?: ChartType;
-  }) => {
-    dispatch(initializeEditor(payload));
-  };
 
   const handleSetChartData = useCallback(
     (data: ChartDataPoint[]) => {
@@ -187,9 +175,6 @@ export const useChartEditor = () => {
 
   return {
     // State
-    mode,
-    chartId,
-    datasetId,
     chartData,
     chartConfig,
     currentChartType,
@@ -207,7 +192,6 @@ export const useChartEditor = () => {
     isFormValid,
 
     // Actions
-    initializeEditor: handleInitializeEditor,
     setChartData: handleSetChartData,
     setChartConfig: handleSetChartConfig,
     setCurrentChartType: handleSetCurrentChartType,

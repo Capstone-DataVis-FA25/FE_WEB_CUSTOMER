@@ -461,6 +461,10 @@ const SeriesManagementSection: React.FC = () => {
                                       </option>
                                     ))}
                                 </select>
+                                {/* Hint: standardized across charts */}
+                                <p className="text-xs text-muted-foreground italic mt-1">
+                                  {`💡 Value must be numeric values (number)`}
+                                </p>
                               </div>
                             </div>
                             <div className="pt-2 border-t border-border/30">

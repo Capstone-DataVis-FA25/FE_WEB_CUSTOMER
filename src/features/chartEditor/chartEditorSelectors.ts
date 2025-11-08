@@ -4,11 +4,6 @@ import type { RootState } from '@/store/store';
 // Base selector
 export const selectChartEditor = (state: RootState) => state.chartEditor;
 
-// Mode and IDs
-export const selectMode = (state: RootState) => state.chartEditor.mode;
-export const selectChartId = (state: RootState) => state.chartEditor.chartId;
-export const selectDatasetId = (state: RootState) => state.chartEditor.datasetId;
-
 // Chart data & config
 export const selectChartData = (state: RootState) => state.chartEditor.chartData;
 export const selectChartConfig = (state: RootState) => state.chartEditor.chartConfig;
@@ -39,7 +34,6 @@ export const selectValidationErrors = (state: RootState) => state.chartEditor.va
 // Computed selectors
 export const selectHasChanges = createSelector(
   [
-    selectMode,
     selectEditableName,
     selectOriginalName,
     selectEditableDescription,
@@ -50,7 +44,6 @@ export const selectHasChanges = createSelector(
     selectOriginalConfig,
   ],
   (
-    mode,
     editableName,
     originalName,
     editableDescription,
@@ -60,10 +53,6 @@ export const selectHasChanges = createSelector(
     chartConfig,
     originalConfig
   ) => {
-    if (mode !== 'edit') {
-      return false;
-    }
-
     const nameChanged = editableName !== originalName;
     const descriptionChanged = editableDescription !== originalDescription;
     const chartTypeChanged = currentChartType !== originalChartType;

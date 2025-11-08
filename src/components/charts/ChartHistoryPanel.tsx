@@ -39,7 +39,6 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
     deleteHistory,
     compareVersions,
     clearComparisonResult,
-    clearHistories,
   } = useChartHistory();
 
   const {
@@ -69,14 +68,7 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
   type DiffObject = { [key: string]: DiffLeaf | DiffObject };
   type FlatDiffs = { [key: string]: DiffLeaf };
 
-  // Load history when component mounts (only once when chartId is available)
-  useEffect(() => {
-    if (chartId) {
-      clearHistories();
-      getChartHistory(chartId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chartId]); // Only re-run when chartId changes
+  // Do not fetch on open. History is prefetched in background by ChartEditorPage.
 
   // Helper to flatten differences (same as VersionComparisonModal)
   const flattenDifferences = (obj: DiffObject, prefix = '') => {

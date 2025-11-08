@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
@@ -7,7 +7,6 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 dayjs.extend(customParseFormat);
 import ChartHistoryPanel from '@/components/charts/ChartHistoryPanel';
 
-// UnifiedChartEditor is used inside ChartTab
 import ChartTab from './ChartTab';
 import DataTab from './DataTab';
 import type { DataHeader } from '@/utils/dataProcessors';
@@ -16,7 +15,6 @@ import { useDataset } from '@/features/dataset/useDataset';
 import { convertToChartData } from '@/utils/dataConverter';
 import { useCharts } from '@/features/charts/useCharts';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-// Chart data types are now handled in contexts
 import { useToast } from '@/hooks/useToast';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
@@ -26,15 +24,14 @@ import ToastContainer from '@/components/ui/toast-container';
 import ChartNoteSidebar from '@/components/charts/ChartNoteSidebar';
 import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
 import { getDefaultChartConfig } from '@/utils/chartDefaults';
-// MainChartConfig now handled by contexts
 import { ChartType, type ChartRequest } from '@/features/charts';
-// ChartType is imported in ChartEditorWithProviders
 import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   setWorkingDataset,
   updateWorkingData,
   setChartData as setChartDataAction,
+  clearChartEditor,
 } from '@/features/chartEditor/chartEditorSlice';
 import { selectWorkingDataset } from '@/features/chartEditor/chartEditorSelectors';
 import { clearCurrentChartNotes } from '@/features/chartNotes/chartNoteSlice';
@@ -42,30 +39,56 @@ import { useChartEditor } from '@/features/chartEditor';
 import type { MainChartConfig } from '@/types/chart';
 import ChartEditorHeader from './ChartEditorHeader';
 import { resetBindings } from '@/utils/chartBindings';
+import { useChartNotes } from '@/features/chartNotes/useChartNotes';
+import { useChartHistory } from '@/features/chartHistory/useChartHistory';
+
+const normalizeDateFormat = (fmt?: string) => {
+  if (!fmt) return fmt;
+  return fmt.replace(/Month/g, 'MMMM');
+};
 
 const ChartEditorPage: React.FC = () => {
   const { t } = useTranslation();
   const location = useLocation();
-  const params = new URLSearchParams(location.search);
   const navigate = useNavigate();
-  const { getDatasetById, currentDataset, loading: isDatasetLoading } = useDataset();
+  const [searchParams] = useSearchParams();
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
   const dispatch = useAppDispatch();
+
+  // ============================================================
+  // DERIVE STATE FROM URL - SINGLE SOURCE OF TRUTH
+  // ============================================================
+  const chartIdFromUrl = searchParams.get('chartId') || undefined;
+  const datasetIdFromUrl = searchParams.get('datasetId') || undefined;
+  const locationState = location.state as { type?: ChartType; datasetId?: string } | null;
+  const chartTypeFromState = locationState?.type;
+
+  // Determine mode based on URL
+  const mode = chartIdFromUrl ? 'edit' : 'create';
+
+  // ============================================================
+  // LOCAL STATE
+  // ============================================================
   const [currentModalAction, setCurrentModalAction] = useState<'save' | 'reset' | null>(null);
-  // Chart history sidebar state
   const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState(false);
-  const handleToggleHistorySidebar = () => setIsHistorySidebarOpen(v => !v);
-  // Unsaved changes modal state
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
   const [isSavingBeforeLeave, setIsSavingBeforeLeave] = useState(false);
+  const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(false);
+  const [showDatasetModal, setShowDatasetModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chart' | 'data'>('chart');
+  const [gridSort, setGridSort] = useState<{ column: number; direction: 'asc' | 'desc' } | null>(
+    null
+  );
 
-  // Chart editor context (now includes validation)
+  // Local datasetId state (can differ from URL in create mode after selection)
+  const [datasetId, setDatasetId] = useState<string>(datasetIdFromUrl || '');
+
+  // ============================================================
+  // HOOKS
+  // ============================================================
   const {
-    mode,
-    chartId,
-    datasetId: contextDatasetId,
     setChartData,
     chartConfig,
     setChartConfig,
@@ -80,9 +103,6 @@ const ChartEditorPage: React.FC = () => {
     updateOriginals,
   } = useChartEditor();
 
-  // Helper to set originals from external data (for future use)
-  // const setOriginalValues = useSetChartEditorOriginals();
-  // const [dataset, setDataset] = useState<Dataset | undefined>(undefined);
   const {
     currentChart,
     loading: isChartLoading,
@@ -92,26 +112,17 @@ const ChartEditorPage: React.FC = () => {
     createChart,
   } = useCharts();
 
-  // Chart notes sidebar state
-  const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(false);
-  // Use datasetId from context, with local state for selection changes
-  const [datasetId, setDatasetId] = useState<string>(contextDatasetId || '');
+  const { getDatasetById, currentDataset, loading: isDatasetLoading } = useDataset();
+  const working = useAppSelector(selectWorkingDataset);
 
-  // Handle notes sidebar
-  const handleToggleNotesSidebar = () => {
-    setIsNotesSidebarOpen(!isNotesSidebarOpen);
-  };
+  // Background fetch helpers (notes & history)
+  const { getChartNotes, setCurrentNotes } = useChartNotes();
+  const { getChartHistory, getHistoryCount } = useChartHistory();
 
-  // State for dataset selection modal
-  const [showDatasetModal, setShowDatasetModal] = useState(false);
-
-  const [activeTab, setActiveTab] = useState<'chart' | 'data'>('chart');
-  // Receive current grid sort from CustomExcel via DataTab
-  const [gridSort, setGridSort] = useState<{ column: number; direction: 'asc' | 'desc' } | null>(
-    null
-  );
-
-  const excelInitial = React.useMemo(() => {
+  // ============================================================
+  // MEMOIZED VALUES
+  // ============================================================
+  const excelInitial = useMemo(() => {
     const headers: any[] = (currentDataset?.headers as any[]) || [];
     let initialColumns: DataHeader[] | undefined;
     let initialData: string[][] | undefined;
@@ -121,13 +132,22 @@ const ChartEditorPage: React.FC = () => {
         id: (h as any).id,
         name: h.name ?? `Column ${idx + 1}`,
         type: (h.type as 'text' | 'number' | 'date') ?? 'text',
+        dateFormat: h.dateFormat,
         index: idx,
         width: h.width ?? 200,
       }));
 
       const maxLen = Math.max(0, ...headers.map(h => (Array.isArray(h.data) ? h.data.length : 0)));
       initialData = Array.from({ length: Math.max(maxLen, 0) }).map((_, r) =>
-        headers.map(h => String((h.data && h.data[r]) ?? ''))
+        headers.map(h => {
+          const raw = (h.data && h.data[r]) ?? '';
+          if (h?.type === 'date') {
+            const fmt: string | undefined = normalizeDateFormat(h?.dateFormat);
+            const d = dayjs(raw);
+            return d.isValid() ? d.format(fmt || 'YYYY-MM-DD') : String(raw ?? '');
+          }
+          return String(raw ?? '');
+        })
       );
     } else if (Array.isArray((currentDataset as any)?.rows)) {
       const rows = (currentDataset as any).rows as any[];
@@ -146,7 +166,7 @@ const ChartEditorPage: React.FC = () => {
     return { initialColumns, initialData };
   }, [currentDataset?.headers, (currentDataset as any)?.rows]);
 
-  const excelFormats = React.useMemo(() => {
+  const excelFormats = useMemo(() => {
     const ds: any = currentDataset || {};
     const initialNumberFormat: NumberFormat | undefined =
       ds.detectedNumberFormat ||
@@ -158,15 +178,12 @@ const ChartEditorPage: React.FC = () => {
     return { initialNumberFormat, initialDateFormat };
   }, [currentDataset]);
 
-  // Working dataset from Redux (preferred source for editor)
-  const working = useAppSelector(selectWorkingDataset);
-
-  // Derive used header IDs from chart config
-  const { highlightHeaderIds } = React.useMemo(() => {
+  const { highlightHeaderIds } = useMemo(() => {
     if (!chartConfig) return { highlightHeaderIds: [] as string[] };
     const ids = new Set<string>();
     const nameToId = new Map<string, string>();
     const idSet = new Set<string>();
+
     const collect = (arr?: any[]) => {
       (arr || []).forEach(h => {
         if (h?.name && (h?.id || h?.headerId)) {
@@ -178,6 +195,7 @@ const ChartEditorPage: React.FC = () => {
         if (hid) idSet.add(hid);
       });
     };
+
     const headersFromDataset = (currentDataset?.headers as any[]) || [];
     const headersFromWorking = (working?.headers as any[]) || [];
     const headersFromInitial = excelInitial.initialColumns || [];
@@ -212,165 +230,150 @@ const ChartEditorPage: React.FC = () => {
         }
       }
     };
+
     visit(chartConfig);
     const outAll = Array.from(ids);
     const out = outAll.filter(id => idSet.has(id));
-    const ax = (chartConfig as any)?.axisConfigs;
-    const ser = Array.isArray(ax?.seriesConfigs) ? ax.seriesConfigs : [];
-    console.log('[HighlightDebug] axis/series inspection', {
-      xAxisKey: ax?.xAxisKey,
-      xAxisKeyMapped:
-        typeof ax?.xAxisKey === 'string'
-          ? nameToId.get(String(ax.xAxisKey).trim().toLowerCase()) ||
-            (idSet.has(String(ax.xAxisKey).trim()) ? String(ax.xAxisKey).trim() : null)
-          : null,
-      seriesConfigs: ser.map((s: any) => ({
-        dataColumn: s?.dataColumn,
-        mapped:
-          typeof s?.dataColumn === 'string'
-            ? nameToId.get(String(s.dataColumn).trim().toLowerCase()) ||
-              (idSet.has(String(s.dataColumn).trim()) ? String(s.dataColumn).trim() : null)
-            : null,
-        headerId: s?.headerId ?? null,
-      })),
-    });
-    console.log('[HighlightDebug] derived ids from chartConfig', {
-      count: out.length,
-      ids: out,
-      rawIds: outAll,
-      nameMapSize: nameToId.size,
-      idSetSize: idSet.size,
-      datasetHeaders: headersFromDataset.map(h => ({ id: h?.id ?? h?.headerId, name: h?.name })),
-      workingHeaders: headersFromWorking.map(h => ({ id: h?.id ?? h?.headerId, name: h?.name })),
-      initialHeaders: (headersFromInitial as any[]).map(h => ({
-        id: h?.id ?? h?.headerId,
-        name: h?.name,
-      })),
-    });
     return { highlightHeaderIds: out };
   }, [chartConfig, currentDataset?.headers, working?.headers, excelInitial.initialColumns]);
 
-  // Initialize workingDataset after dataset changes (do not reset on config changes)
+  // ============================================================
+  // EFFECT: Clear everything on mount
+  // ============================================================
   useEffect(() => {
-    if (!excelInitial.initialColumns || !excelInitial.initialData) return;
-    const formats = {
-      number: excelFormats.initialNumberFormat,
-      date: excelFormats.initialDateFormat,
-    };
-    dispatch(
-      setWorkingDataset({
-        headers: excelInitial.initialColumns,
-        data: excelInitial.initialData,
-        formats,
-      })
-    );
-    // Chart data will be derived by the working-dataset sync effect
-  }, [
-    excelInitial.initialColumns,
-    excelInitial.initialData,
-    excelFormats.initialNumberFormat,
-    excelFormats.initialDateFormat,
-    dispatch,
-  ]);
-
-  //Run once on mount
-  // useEffect #1: Clear current chart, dataset, notes on mount
-  useEffect(() => {
-    // console.log(
-    //   'useEffect #1: mount - clearCurrentChart, clearCurrentDataset, clearCurrentChartNotes'
-    // );
+    // console.log('[ChartEditorPage] Mount - clearing all state');
     clearCurrentChart();
-    clearCurrentDataset();
-    clearCurrentChartNotes();
+    dispatch(clearCurrentDataset());
+    dispatch(clearCurrentChartNotes());
+
+    return () => {
+      // console.log('[ChartEditorPage] Unmount - clearing all state');
+      clearCurrentChart();
+      dispatch(clearCurrentDataset());
+      dispatch(clearCurrentChartNotes());
+      dispatch(clearChartEditor());
+    };
   }, []);
 
   // ============================================================
-  // EFFECT 1: Sync datasetId with context (simple sync)
+  // EFFECT: Load chart when chartId changes (EDIT MODE)
   // ============================================================
-  // useEffect #2: Sync datasetId with context
   useEffect(() => {
-    // console.log('useEffect #2: contextDatasetId changed', contextDatasetId);
-    setDatasetId(contextDatasetId || '');
-  }, [contextDatasetId]);
+    if (mode !== 'edit' || !chartIdFromUrl) return;
 
-  // ============================================================
-  // EFFECT 2: Load chart in edit mode (independent)
-  // ============================================================
-  // useEffect #3: Load chart in edit mode
-  useEffect(() => {
-    // console.log('useEffect #3: mode or chartId changed', {
+    // console.log('[ChartEditorPage] Chart loader effect fired', {
     //   mode,
-    //   chartId,
-    //   isChartLoading,
-    //   currentChart,
+    //   chartIdFromUrl,
+    //   currentChartId: currentChart?.id,
     // });
-    if (mode === 'edit' && chartId && !isChartLoading && !currentChart) {
-      (async () => {
-        try {
-          const res = await getChartById(chartId);
-          const ok = (res as any)?.meta?.requestStatus === 'fulfilled';
-          if (!ok) {
-            const msg = (res as any)?.payload?.message || 'Error loading chart';
-            showError(msg);
-          }
-        } catch (e: any) {
-          const msg = e?.message || 'Error loading chart';
+
+    // Clear previous chart before loading new one
+    if (currentChart?.id !== chartIdFromUrl) {
+      // console.log('[ChartEditorPage] Clearing previous chart before load');
+      clearCurrentChart();
+    }
+
+    (async () => {
+      try {
+        // console.log('[ChartEditorPage] getChartById -> start', chartIdFromUrl);
+        const res = await getChartById(chartIdFromUrl);
+        const ok = (res as any)?.meta?.requestStatus === 'fulfilled';
+        // console.log('[ChartEditorPage] getChartById -> done', { ok, chartIdFromUrl });
+
+        if (!ok) {
+          const msg = (res as any)?.payload?.message || 'Error loading chart';
           showError(msg);
         }
-      })();
-    }
-  }, [mode, chartId]);
+      } catch (e: any) {
+        const msg = e?.message || 'Error loading chart';
+        showError(msg);
+      }
+    })();
+  }, [mode, chartIdFromUrl]); // Re-run when chartId in URL changes
 
   // ============================================================
-  // EFFECT 3: Initialize form fields when chart loads (edit mode)
+  // EFFECT: Initialize form fields from loaded chart (EDIT MODE)
   // ============================================================
-  // useEffect #4: Initialize form fields when chart loads (edit mode)
   useEffect(() => {
-    // console.log('useEffect #4: mode or currentChart?.id changed', { mode, currentChart });
-    if (mode === 'edit' && currentChart) {
+    if (mode !== 'edit' || !currentChart) return;
+
+    // console.log('[ChartEditorPage] Populating form from currentChart', {
+    //   currentChartId: currentChart.id,
+    //   chartIdFromUrl,
+    // });
+
+    // Only populate if this is the chart we're supposed to be editing
+    if (currentChart.id === chartIdFromUrl) {
       setEditableName(currentChart.name || '');
       setEditableDescription(currentChart.description || '');
       setChartConfig(currentChart.config as MainChartConfig);
       setCurrentChartType(currentChart.type as ChartType);
-      // Set datasetId from chart so effect 5 can fetch it
+
+      // Set datasetId from chart
       if (currentChart.datasetId && currentChart.datasetId !== datasetId) {
+        // console.log('[ChartEditorPage] Setting datasetId from chart', {
+        //   from: datasetId,
+        //   to: currentChart.datasetId,
+        // });
         setDatasetId(currentChart.datasetId);
       }
-      // Set originals right after populating
+
+      // Update originals after populating
       updateOriginals();
     }
-  }, [mode, currentChart?.id]); // Only depend on chart ID change, not chart object
+  }, [mode, currentChart?.id, chartIdFromUrl]); // Depend on chart ID and URL chartId
 
   // ============================================================
-  // EFFECT 4: Initialize form fields in create mode (independent)
+  // EFFECT: Initialize form fields in CREATE MODE
   // ============================================================
-  // useEffect #5: Initialize form fields in create mode
   useEffect(() => {
-    // console.log('useEffect #5: mode or currentChartType changed', { mode, currentChartType });
-    if (mode === 'create') {
-      // Only initialize if not already set
-      if (!chartConfig) {
-        setEditableName('New Chart'.trim());
-        setEditableDescription('Chart created from template');
-        setChartConfig(getDefaultChartConfig(currentChartType));
-      }
+    if (mode !== 'create') return;
+
+    console.log('[ChartEditorPage] Initializing create mode', {
+      chartTypeFromState,
+      currentChartType,
+    });
+
+    // Set chart type from location state if available
+    if (chartTypeFromState && chartTypeFromState !== currentChartType) {
+      setCurrentChartType(chartTypeFromState);
     }
-  }, [mode, currentChartType]); // Only on mode or chart type change
+
+    // Initialize config only if not already set
+    if (!chartConfig) {
+      const initialType = chartTypeFromState || currentChartType || ChartType.Line;
+      setEditableName('New Chart'.trim());
+      setEditableDescription('Chart created from template');
+      setChartConfig(getDefaultChartConfig(initialType));
+      setCurrentChartType(initialType);
+    }
+
+    // Set datasetId from URL or location state
+    const initialDatasetId = datasetIdFromUrl || locationState?.datasetId;
+    if (initialDatasetId && initialDatasetId !== datasetId) {
+      console.log('[ChartEditorPage] Setting initial datasetId in create mode', initialDatasetId);
+      setDatasetId(initialDatasetId);
+    }
+  }, [mode]); // Only run when mode changes
 
   // ============================================================
-  // EFFECT 5: Load dataset based on datasetId (independent)
+  // EFFECT: Load dataset when datasetId changes
   // ============================================================
-  // useEffect #6: Load dataset based on datasetId
   useEffect(() => {
-    // console.log('useEffect #6: datasetId changed', datasetId);
+    // console.log('[ChartEditorPage] Dataset loader effect fired', { datasetId });
+
     if (!datasetId) {
       setChartData([]);
       return;
     }
+
     (async () => {
       try {
+        // console.log('[ChartEditorPage] getDatasetById -> start', datasetId);
         const res = await getDatasetById(datasetId);
         const ok = (res as any)?.meta?.requestStatus === 'fulfilled';
+        // console.log('[ChartEditorPage] getDatasetById -> done', { ok, datasetId });
+
         if (!ok) {
           const msg = (res as any)?.payload?.message || 'Error loading dataset';
           showError(msg);
@@ -382,14 +385,71 @@ const ChartEditorPage: React.FC = () => {
     })();
   }, [datasetId, getDatasetById]);
 
-  // working already declared above for initialization guard
+  // ============================================================
+  // EFFECT: Background prefetch notes & history once per chart (EDIT MODE)
+  // ============================================================
+  const notesPrefetchedRef = React.useRef<string | null>(null);
+  const historyPrefetchedRef = React.useRef<string | null>(null);
+  useEffect(() => {
+    if (mode !== 'edit' || !chartIdFromUrl) return;
 
-  // Keep chartData in sync when working dataset, config or grid sort changes
+    // Notes prefetch once
+    if (notesPrefetchedRef.current !== chartIdFromUrl) {
+      (async () => {
+        try {
+          await getChartNotes(chartIdFromUrl);
+          setCurrentNotes(chartIdFromUrl);
+        } catch {}
+      })();
+      notesPrefetchedRef.current = chartIdFromUrl;
+    }
+
+    // History prefetch once (list + count)
+    if (historyPrefetchedRef.current !== chartIdFromUrl) {
+      (async () => {
+        try {
+          await Promise.all([getChartHistory(chartIdFromUrl), getHistoryCount(chartIdFromUrl)]);
+        } catch {}
+      })();
+      historyPrefetchedRef.current = chartIdFromUrl;
+    }
+  }, [mode, chartIdFromUrl, getChartNotes, setCurrentNotes, getChartHistory, getHistoryCount]);
+
+  // ============================================================
+  // EFFECT: Initialize working dataset from loaded dataset
+  // ============================================================
+  useEffect(() => {
+    if (!excelInitial.initialColumns || !excelInitial.initialData) return;
+
+    const formats = {
+      number: excelFormats.initialNumberFormat,
+      date: excelFormats.initialDateFormat,
+    };
+
+    dispatch(
+      setWorkingDataset({
+        headers: excelInitial.initialColumns,
+        data: excelInitial.initialData,
+        formats,
+      })
+    );
+  }, [
+    excelInitial.initialColumns,
+    excelInitial.initialData,
+    excelFormats.initialNumberFormat,
+    excelFormats.initialDateFormat,
+    dispatch,
+  ]);
+
+  // ============================================================
+  // EFFECT: Sync chart data from working dataset
+  // ============================================================
   useEffect(() => {
     if (!working?.headers || !working?.data) {
       dispatch(setChartDataAction([]));
       return;
     }
+
     try {
       const headerNames = working.headers.map(h => h.name);
       const sortedRows = (() => {
@@ -397,12 +457,14 @@ const ChartEditorPage: React.FC = () => {
         const { column, direction } = gridSort;
         const type = working.headers[column]?.type ?? 'text';
         const rowsCopy = [...working.data];
+
         rowsCopy.sort((a, b) => {
           const aVal = a[column] || '';
           const bVal = b[column] || '';
           if (!aVal && !bVal) return 0;
           if (!aVal) return direction === 'asc' ? 1 : -1;
           if (!bVal) return direction === 'asc' ? -1 : 1;
+
           if (type === 'number') {
             const aNum = Number.parseFloat(aVal);
             const bNum = Number.parseFloat(bVal);
@@ -410,8 +472,11 @@ const ChartEditorPage: React.FC = () => {
             const bSafe = Number.isNaN(bNum) ? 0 : bNum;
             return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
           }
+
           if (type === 'date') {
-            const fmt = (working.headers[column] as any)?.dateFormat as string | undefined;
+            const fmt = normalizeDateFormat(
+              (working.headers[column] as any)?.dateFormat as string | undefined
+            );
             const aParsed = fmt ? dayjs(aVal, fmt, true) : dayjs(aVal);
             const bParsed = fmt ? dayjs(bVal, fmt, true) : dayjs(bVal);
             let aT = aParsed.isValid() ? aParsed.valueOf() : NaN;
@@ -422,44 +487,54 @@ const ChartEditorPage: React.FC = () => {
             const bSafe = Number.isNaN(bT) ? -Infinity : bT;
             return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
           }
+
           const aStr = String(aVal).toLowerCase();
           const bStr = String(bVal).toLowerCase();
           return direction === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
         });
+
         return rowsCopy;
       })();
+
       const arrayData: (string | number)[][] = [headerNames, ...sortedRows];
       const converted = convertToChartData(arrayData);
-      console.log('[ChartEditorPage] Working convertToChartData ->', { arrayData, converted });
       dispatch(setChartDataAction(converted));
     } catch (e) {
       dispatch(setChartDataAction([]));
     }
   }, [working?.version, chartConfig, gridSort, dispatch]);
 
-  // Handle live grid edits from DataTab/CustomExcel
-  const handleGridDataChange = React.useCallback(
-    (nextData: string[][], nextCols: DataHeader[]) => {
-      // Update working dataset in Redux
-      dispatch(updateWorkingData({ data: nextData, headers: nextCols }));
-      // Recompute chart data from array format
-      try {
-        const headerNames = nextCols.map(h => h.name);
-        const arrayData: (string | number)[][] = [headerNames, ...nextData];
-        const converted = convertToChartData(arrayData);
-        console.log('[ChartEditorPage] Grid change convertToChartData ->', {
-          arrayData,
-          converted,
-        });
-        dispatch(setChartDataAction(converted));
-      } catch {
-        dispatch(setChartDataAction([]));
-      }
-    },
-    [dispatch]
-  );
+  // ============================================================
+  // EFFECT: Browser back button prevention
+  // ============================================================
+  useEffect(() => {
+    if (mode !== 'edit') return;
 
-  // Thông báo rằng là chart chưa lưu -> người dùng lưu hoặc cancel (reload/close tab)
+    const handlePopState = (event: PopStateEvent) => {
+      if (hasChanges && mode === 'edit') {
+        event.preventDefault();
+        window.history.pushState(null, '', window.location.href);
+        setPendingNavigation(() => () => {
+          navigate('/workspace', { state: { tab: 'charts' } });
+        });
+        setShowUnsavedModal(true);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    if (hasChanges && mode === 'edit') {
+      window.history.pushState(null, '', window.location.href);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [hasChanges, mode, navigate]);
+
+  // ============================================================
+  // EFFECT: Unsaved changes warning on page unload
+  // ============================================================
   useBeforeUnload({
     hasUnsavedChanges: hasChanges && mode === 'edit',
     message: t(
@@ -468,34 +543,27 @@ const ChartEditorPage: React.FC = () => {
     ),
   });
 
-  // Chặn back trên trình duyệt khi đang chỉnh sửa (edit mode) và hiện modal xác nhận
-  useEffect(() => {
-    if (mode !== 'edit') return;
-    const handlePopState = (event: PopStateEvent) => {
-      if (hasChanges && mode === 'edit') {
-        event.preventDefault();
-        window.history.pushState(null, '', window.location.href);
-        setPendingNavigation(() => () => {
-          clearCurrentChart();
-          navigate('/workspace', { state: { tab: 'charts' } });
-        });
-        setShowUnsavedModal(true);
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-    // Push dummy state to prevent immediate back
-    if (hasChanges && mode === 'edit') {
-      window.history.pushState(null, '', window.location.href);
-    }
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [hasChanges, mode, navigate, clearCurrentChart]);
+  // ============================================================
+  // HANDLERS
+  // ============================================================
+  const handleGridDataChange = React.useCallback(
+    (nextData: string[][], nextCols: DataHeader[]) => {
+      dispatch(updateWorkingData({ data: nextData, headers: nextCols }));
 
-  // Handle create new chart
+      try {
+        const headerNames = nextCols.map(h => h.name);
+        const arrayData: (string | number)[][] = [headerNames, ...nextData];
+        const converted = convertToChartData(arrayData);
+        dispatch(setChartDataAction(converted));
+      } catch {
+        dispatch(setChartDataAction([]));
+      }
+    },
+    [dispatch]
+  );
+
   const handleCreateChart = async () => {
     try {
-      // Validate required fields
       if (!editableName.trim()) {
         showError('Chart name is required');
         return;
@@ -512,17 +580,15 @@ const ChartEditorPage: React.FC = () => {
       const createData: ChartRequest = {
         name: editableName.trim(),
         description: editableDescription.trim(),
-        datasetId: datasetId || '', // Use empty string instead of null for optional field
-        type: currentChartType,
+        datasetId: datasetId || '',
+        type: currentChartType ?? ChartType.Line,
         config: chartConfig as unknown as ChartRequest['config'],
       };
 
       const result = await createChart(createData).unwrap();
-
       showSuccess(t('chart_create_success', 'Chart created successfully'));
 
-      // Navigate to edit mode with only the chartId
-      // The datasetId is stored in the chart and will be loaded automatically
+      // Navigate to edit mode with new chart ID
       navigate(`${location.pathname}?chartId=${result.id}`, {
         replace: true,
       });
@@ -532,9 +598,8 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
-  // Handle update existing chart
   const handleUpdateChart = () => {
-    if (!chartId || !currentChart) return;
+    if (!chartIdFromUrl || !currentChart) return;
 
     setCurrentModalAction('save');
     modalConfirm.openConfirm(async () => {
@@ -546,22 +611,23 @@ const ChartEditorPage: React.FC = () => {
           config: chartConfig || undefined,
         };
 
-        const response = await updateChart(chartId, updateData);
+        const response = await updateChart(chartIdFromUrl, updateData);
         if (response.meta.requestStatus === 'fulfilled') {
-          // Update original values after successful save using context
           updateOriginals();
+          // After successful save, the current datasetId becomes the new baseline
+          originalDatasetIdRef.current = datasetId ?? null;
+          setDatasetDirty(false);
           showSuccess(t('chart_update_success', 'Chart updated successfully'));
         } else {
           showError(t('chart_update_error', 'Failed to update chart'));
         }
       } catch (error) {
         showError(t('chart_update_error', 'Failed to update chart'));
-        throw error; // Re-throw to let modal handle loading state
+        throw error;
       }
     });
   };
 
-  // Handle save/create chart - main dispatcher
   const handleSave = async () => {
     if (mode === 'create') {
       await handleCreateChart();
@@ -570,15 +636,64 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
-  // Handle dataset selection from modal
-  const handleDatasetSelected = async (datasetId: string) => {
-    // Set datasetID
-    setDatasetId(datasetId);
+  const handleDatasetSelected = async (selectedDatasetId: string) => {
+    setDatasetId(selectedDatasetId);
     setShowDatasetModal(false);
+
     try {
-      // Reset data-bound fields based on current chart type
       if (chartConfig) {
-        setChartConfig(resetBindings(chartConfig as MainChartConfig));
+        // Debug: print bindings before/after reset
+        const extractBindings = (cfg: MainChartConfig | null, type: any) => {
+          if (!cfg) return {} as any;
+          if (type === 'line' || type === 'bar' || type === 'area' || type === 'scatter') {
+            const axis = (cfg as any)?.axisConfigs;
+            const series = (axis?.seriesConfigs || []).map((s: any) => s?.dataKey);
+            return {
+              chartType: type,
+              xAxisKey: axis?.xAxisKey,
+              seriesDataKeys: series,
+            };
+          }
+          if (type === 'pie' || type === 'donut') {
+            const anyCfg = cfg as any;
+            return {
+              chartType: type,
+              labelKey: anyCfg?.config?.labelKey,
+              valueKey: anyCfg?.config?.valueKey,
+            };
+          }
+          return { chartType: type } as any;
+        };
+
+        // Ensure reset uses an actual chart type (state -> config -> default)
+        const typeForReset =
+          (currentChartType as any) || (chartConfig as any)?.chartType || ChartType.Line;
+        const cfgWithType = {
+          ...(chartConfig as MainChartConfig),
+          chartType: typeForReset,
+        } as MainChartConfig;
+        const before = extractBindings(cfgWithType, typeForReset);
+        const nextCfg = resetBindings(cfgWithType);
+        const after = extractBindings(nextCfg, typeForReset);
+
+        console.groupCollapsed('[Dataset Change] Reset bindings');
+        console.log('Dataset:', {
+          previousDatasetId: originalDatasetIdRef.current,
+          selectedDatasetId,
+        });
+        console.log('Before:', before);
+        console.log('Type used for reset:', typeForReset);
+        console.log('After :', after);
+        console.groupEnd();
+
+        setChartConfig(nextCfg);
+      }
+      // Track dirty state relative to original dataset id
+      if (originalDatasetIdRef.current === null) {
+        originalDatasetIdRef.current = selectedDatasetId;
+        setDatasetDirty(false);
+      } else {
+        setDatasetDirty(originalDatasetIdRef.current !== selectedDatasetId);
       }
       showSuccess('Dataset selected successfully');
     } catch (error) {
@@ -586,14 +701,24 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
-  // Reset lại giá trị của chart config
+  // Track original datasetId for reset
+  const originalDatasetIdRef = React.useRef<string | null>(null);
+  const [datasetDirty, setDatasetDirty] = useState(false);
+
   const handleReset = () => {
-    if (hasChanges) {
+    if (hasChanges || datasetDirty) {
       setCurrentModalAction('reset');
       modalConfirm.openConfirm(async () => {
         try {
-          // Reset all values to original using context
           resetToOriginal();
+          if (datasetDirty) {
+            // restore datasetId to original snapshot
+            const orig = originalDatasetIdRef.current;
+            if (typeof orig === 'string') {
+              setDatasetId(orig);
+            }
+            setDatasetDirty(false);
+          }
           showSuccess(t('chart_reset', 'Chart reset to original values'));
         } catch (error) {
           console.error('Error resetting chart:', error);
@@ -603,38 +728,25 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
-  // Handle back navigation with cleanup
   const handleBack = () => {
-    // Check if there are unsaved changes in edit mode
     if (hasChanges && mode === 'edit') {
-      // Show unsaved changes modal
       setPendingNavigation(() => () => {
-        clearCurrentChart();
-        // Edit mode: navigate back to workspace with charts tab
         navigate('/workspace', { state: { tab: 'charts' } });
       });
       setShowUnsavedModal(true);
     } else {
-      // No changes, navigate directly based on mode and datasetId
-      clearCurrentChart();
-
       if (mode === 'edit') {
-        // Edit mode: navigate back to workspace with charts tab
         navigate('/workspace', { state: { tab: 'charts' } });
       } else if (mode === 'create' && datasetId) {
-        // Create mode with datasetId: navigate back to chart gallery with that dataset
         navigate('/chart-gallery', { state: { datasetId } });
       } else {
-        // Create mode without datasetId: navigate back to workspace (default datasets tab)
         navigate('/chart-gallery');
       }
     }
   };
 
-  // Handle unsaved changes modal actions
-  // TODO: Tối ưu sau
   const handleSaveAndLeave = async () => {
-    if (mode === 'edit' && chartId && currentChart) {
+    if (mode === 'edit' && chartIdFromUrl && currentChart) {
       setIsSavingBeforeLeave(true);
       try {
         const updateData = {
@@ -644,21 +756,20 @@ const ChartEditorPage: React.FC = () => {
           config: chartConfig || undefined,
         };
 
-        const response = await updateChart(chartId, updateData);
+        const response = await updateChart(chartIdFromUrl, updateData);
         if (response.meta.requestStatus === 'fulfilled') {
-          // Update original values after successful save using context
           updateOriginals();
           showSuccess(t('chart_update_success', 'Chart updated successfully'));
         } else {
           showError(t('chart_update_error', 'Failed to update chart'));
         }
-        // Execute pending navigation
+
         if (pendingNavigation) {
           pendingNavigation();
         }
       } catch (error) {
         showError(t('chart_update_error', 'Failed to update chart'));
-        throw error; // Re-throw to keep modal open
+        throw error;
       } finally {
         setIsSavingBeforeLeave(false);
       }
@@ -666,37 +777,37 @@ const ChartEditorPage: React.FC = () => {
   };
 
   const handleLeaveAnyway = () => {
-    // Execute pending navigation without saving
     if (pendingNavigation) {
       pendingNavigation();
     }
   };
 
   const handleStay = () => {
-    // Clear pending navigation and close modal
     setPendingNavigation(null);
     setShowUnsavedModal(false);
   };
 
-  // Handle modal close with action cleanup
   const handleModalClose = () => {
     setCurrentModalAction(null);
     modalConfirm.close();
   };
 
-  // Clear Redux entities on unmount
+  // Initialize dataset baseline when chart loads (first time we have a dataset id)
   useEffect(() => {
-    return () => {
-      clearCurrentChart();
-      clearCurrentDataset();
-      clearCurrentChartNotes();
-    };
-  }, []);
+    if (mode && (currentChart || mode === 'create')) {
+      if (originalDatasetIdRef.current === null && datasetId) {
+        originalDatasetIdRef.current = datasetId;
+        setDatasetDirty(false);
+      }
+    }
+  }, [mode, currentChart, datasetId]);
 
-  // Loading state
-  // Show full-page loading only when chart is loading, or when dataset is loading
-  // AND the dataset selection dialog is not open. This prevents the dialog's
-  // internal fetch from blocking the entire page.
+  const handleToggleHistorySidebar = () => setIsHistorySidebarOpen(v => !v);
+  const handleToggleNotesSidebar = () => setIsNotesSidebarOpen(!isNotesSidebarOpen);
+
+  // ============================================================
+  // RENDER
+  // ============================================================
   if (isChartLoading || (isDatasetLoading && !showDatasetModal)) {
     return (
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
@@ -709,18 +820,18 @@ const ChartEditorPage: React.FC = () => {
 
   return (
     <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex flex-col">
-      {/* Header Section */}
       <ChartEditorHeader
         onReset={handleReset}
         onSave={handleSave}
         onBack={handleBack}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        chartId={chartId}
+        chartId={chartIdFromUrl}
         onToggleHistorySidebar={handleToggleHistorySidebar}
+        mode={mode}
+        dirty={hasChanges || datasetDirty}
       />
 
-      {/* Main Content - Full Width Chart Area */}
       <div className="flex-1 min-h-0 min-w-0 bg-gray-900">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -753,8 +864,9 @@ const ChartEditorPage: React.FC = () => {
           </div>
         </motion.div>
       </div>
+
       <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
-      {/* Confirmation Modal */}
+
       <div className="relative z-[70]">
         <ModalConfirm
           isOpen={modalConfirm.isOpen}
@@ -793,7 +905,6 @@ const ChartEditorPage: React.FC = () => {
         />
       </div>
 
-      {/* Dataset Selection Modal */}
       <DatasetSelectionDialog
         open={showDatasetModal}
         onOpenChange={setShowDatasetModal}
@@ -801,7 +912,6 @@ const ChartEditorPage: React.FC = () => {
         currentDatasetId={currentDataset?.id || datasetId || ''}
       />
 
-      {/* Unsaved Changes Modal */}
       <UnsavedChangesModal
         isOpen={showUnsavedModal}
         onClose={() => setShowUnsavedModal(false)}
@@ -811,26 +921,23 @@ const ChartEditorPage: React.FC = () => {
         loading={isSavingBeforeLeave}
       />
 
-      {/* Chart Notes Sidebar - Only show in edit mode when chartId exists */}
-      {mode === 'edit' && chartId && (
+      {mode === 'edit' && chartIdFromUrl && (
         <ChartNoteSidebar
-          chartId={chartId}
+          chartId={chartIdFromUrl}
           isOpen={isNotesSidebarOpen}
           onToggle={handleToggleNotesSidebar}
         />
       )}
 
-      {/* Chart History Sidebar */}
-      {mode === 'edit' && chartId && isHistorySidebarOpen && (
+      {mode === 'edit' && chartIdFromUrl && isHistorySidebarOpen && (
         <ChartHistoryPanel
-          chartId={chartId}
+          chartId={chartIdFromUrl}
           isOpen={true}
           onToggle={handleToggleHistorySidebar}
           onRestoreSuccess={async () => {
-            // Reload chart data after restore (name, description, type, config all updated)
-            if (chartId) {
+            if (chartIdFromUrl) {
               try {
-                await getChartById(chartId);
+                await getChartById(chartIdFromUrl);
                 showSuccess(t('chart_restore_success', 'Chart restored successfully'));
               } catch (error) {
                 console.error('[ChartEditorPage] Failed to reload chart after restore:', error);
