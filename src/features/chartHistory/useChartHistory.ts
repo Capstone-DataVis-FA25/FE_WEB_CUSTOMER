@@ -56,6 +56,7 @@ export const useChartHistory = () => {
       name: string;
       description?: string;
       type: string;
+      datasetId: string;
       config: any;
       updatedAt: string;
     }

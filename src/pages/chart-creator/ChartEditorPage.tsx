@@ -671,7 +671,6 @@ const ChartEditorPage: React.FC = () => {
           (currentChartType as any) || (chartConfig as any)?.chartType || ChartType.Line;
         const cfgWithType = {
           ...(chartConfig as MainChartConfig),
-          chartType: typeForReset,
         } as MainChartConfig;
         const before = extractBindings(cfgWithType, typeForReset);
         const nextCfg = resetBindings(cfgWithType);

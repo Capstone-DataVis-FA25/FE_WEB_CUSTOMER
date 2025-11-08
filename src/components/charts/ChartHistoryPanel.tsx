@@ -10,6 +10,7 @@ import { ModalConfirm } from '@/components/ui/modal-confirm';
 import VersionComparisonModal from '@/components/charts/VersionComparisonModal';
 import Utils from '@/utils/Utils';
 import { useChartEditor } from '@/features/chartEditor';
+import { useDataset } from '@/features/dataset/useDataset';
 
 interface ChartHistoryPanelProps {
   chartId: string | null;
@@ -39,6 +40,7 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
     deleteHistory,
     compareVersions,
     clearComparisonResult,
+    clearHistories,
   } = useChartHistory();
 
   const {
@@ -52,6 +54,8 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
     editableName,
     editableDescription,
   } = useChartEditor();
+
+  const { getDatasetById, currentDataset } = useDataset();
 
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
@@ -68,7 +72,14 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
   type DiffObject = { [key: string]: DiffLeaf | DiffObject };
   type FlatDiffs = { [key: string]: DiffLeaf };
 
-  // Do not fetch on open. History is prefetched in background by ChartEditorPage.
+  // Load history when component mounts (only once when chartId is available)
+  useEffect(() => {
+    if (chartId) {
+      clearHistories();
+      getChartHistory(chartId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chartId]); // Only re-run when chartId changes
 
   // Helper to flatten differences (same as VersionComparisonModal)
   const flattenDifferences = (obj: DiffObject, prefix = '') => {
@@ -99,11 +110,11 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
       const currentChart = {
         name: editableName,
         description: editableDescription,
-        type: currentChartType,
+        type: (currentChartType || '') as string,
+        datasetId: currentDataset?.id || '',
         config: chartConfig,
         updatedAt: new Date().toISOString(),
       };
-
       const result = await compareVersions(historyId, currentChart).unwrap();
       const flatDiffs = flattenDifferences(result?.differences || {});
       const hasDiff = Object.keys(flatDiffs).length > 0;
@@ -131,6 +142,7 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
       setCurrentChartType(result.chart.type);
       setEditableName(result.chart.name);
       setEditableDescription(result.chart.description);
+      getDatasetById(result.chart.datasetId);
       updateOriginals();
 
       setRestoreDialogOpen(false);
@@ -150,12 +162,14 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
   const handleCompareClick = async (historyId: string) => {
     if (!chartId) return;
 
+    console.log('chartConfig: ', chartConfig);
     try {
       // Get current chart data
       const currentChart = {
         name: editableName,
         description: editableDescription,
-        type: currentChartType,
+        type: currentChartType || '',
+        datasetId: currentDataset?.id || '',
         config: chartConfig,
         updatedAt: new Date().toISOString(),
       };
@@ -390,7 +404,8 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
               const currentChart = {
                 name: editableName,
                 description: editableDescription,
-                type: currentChartType,
+                type: currentChartType || '',
+                datasetId: currentDataset?.id || '',
                 config: chartConfig,
                 updatedAt: new Date().toISOString(),
               };

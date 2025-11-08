@@ -60,6 +60,7 @@ export function compareChartVersions(
     name: string;
     description?: string;
     type: string;
+    datasetId: string;
     config: any;
     updatedAt: string;
   },
@@ -67,6 +68,7 @@ export function compareChartVersions(
     name: string;
     description?: string;
     type: string;
+    datasetId: string;
     config: any;
     createdAt: string;
   }
@@ -76,6 +78,7 @@ export function compareChartVersions(
     name: currentChart.name,
     description: currentChart.description,
     type: currentChart.type,
+    datasetId: currentChart.datasetId,
     config: currentChart.config,
   };
 
@@ -83,6 +86,7 @@ export function compareChartVersions(
     name: historicalVersion.name,
     description: historicalVersion.description,
     type: historicalVersion.type,
+    datasetId: historicalVersion.datasetId,
     config: historicalVersion.config,
   };
 
@@ -94,6 +98,7 @@ export function compareChartVersions(
       name: currentChart.name,
       description: currentChart.description,
       type: currentChart.type,
+      datasetId: currentChart.datasetId,
       config: currentChart.config,
       updatedAt: currentChart.updatedAt,
     },
@@ -101,6 +106,7 @@ export function compareChartVersions(
       name: historicalVersion.name,
       description: historicalVersion.description,
       type: historicalVersion.type,
+      datasetId: historicalVersion.datasetId,
       config: historicalVersion.config,
       createdAt: historicalVersion.createdAt,
     },
