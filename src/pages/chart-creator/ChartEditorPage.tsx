@@ -609,6 +609,7 @@ const ChartEditorPage: React.FC = () => {
           description: editableDescription.trim() || currentChart.description,
           type: currentChartType ?? ChartType.Line,
           config: chartConfig || undefined,
+          datasetId: datasetId ?? undefined,
         };
 
         const response = await updateChart(chartIdFromUrl, updateData);
@@ -754,6 +755,7 @@ const ChartEditorPage: React.FC = () => {
           description: editableDescription.trim() || currentChart.description,
           type: currentChartType ?? ChartType.Line,
           config: chartConfig || undefined,
+          datasetId: datasetId ?? undefined,
         };
 
         const response = await updateChart(chartIdFromUrl, updateData);
