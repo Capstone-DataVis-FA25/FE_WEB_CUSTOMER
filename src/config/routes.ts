@@ -211,6 +211,19 @@ export const publicRoutes: RouteConfig[] = [
     },
   },
   {
+    path: Routers.PAYMENT_SUCCESS,
+    name: 'payment-success',
+    component: 'PaymentSuccessPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Payment Success',
+      description: 'Confirm payment status',
+      hideFromNav: true,
+    },
+  },
+  {
     path: Routers.ABOUT_US,
     name: 'about-us',
     component: 'AboutPage',

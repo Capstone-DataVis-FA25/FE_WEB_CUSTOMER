@@ -31,4 +31,9 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string) => `/charts/${id}`,
     DELETE: (id: string) => `/charts/${id}`,
   },
+  PAYMENTS: {
+    CHECKOUT: '/payments/checkout',
+    GET_BY_ID: (id: string) => `/payments/${id}`,
+    WEBHOOK: '/payments/webhook',
+  },
 } as const;

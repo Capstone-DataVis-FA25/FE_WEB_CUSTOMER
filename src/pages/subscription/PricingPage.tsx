@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import subscriptionPlansService from '@/services/subscriptionPlans.service';
+import paymentsService from '@/services/payments.service';
 import type { SubscriptionPlan } from '@/types/subscription';
 import { formatPrice } from '@/utils/formatter';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import useToast from '@/hooks/useToast';
 
 const PricingPage: React.FC = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const { showError, showSuccess } = useToast();
 
   useEffect(() => {
     const load = async () => {
@@ -30,22 +32,22 @@ const PricingPage: React.FC = () => {
   }, []);
 
   const onSubscribe = async (plan: SubscriptionPlan) => {
-    const priceId = plan.stripePriceId || plan.id;
-    setCheckoutLoading(priceId || plan.id);
+    const planId = plan.id;
+    setCheckoutLoading(planId);
     try {
-      const res = await subscriptionPlansService.createCheckout(priceId);
+      const baseSuccess = `${window.location.origin}/subscription/success`;
+      const returnUrl = `${baseSuccess}?status=COMPLETED&planId=${encodeURIComponent(planId)}`;
+      const res = await paymentsService.createCheckout(planId, returnUrl);
       const url = res?.checkoutUrl;
       if (url) {
         window.open(url, '_blank');
+        showSuccess('Redirecting to payment gateway', 'Please complete the payment.');
       } else {
-        alert('Checkout URL not returned by server.');
+        showError('Error', 'checkoutUrl not returned by server.');
       }
     } catch (err: any) {
       console.error(err);
-      alert(
-        err?.message ||
-          'Failed to start checkout. Backend endpoint /subscription-plans/checkout may be required.'
-      );
+      showError('Payment failed', err?.message || 'Unable to create payment session.');
     } finally {
       setCheckoutLoading(null);
     }
@@ -135,7 +137,7 @@ const PricingPage: React.FC = () => {
                   onClick={() => onSubscribe(plan)}
                   disabled={!!checkoutLoading}
                 >
-                  {checkoutLoading === (plan.stripePriceId || plan.id) ? (
+                  {checkoutLoading === plan.id ? (
                     <span className="flex items-center gap-2">Processing...</span>
                   ) : (
                     'Subscribe'
