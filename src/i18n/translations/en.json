@@ -72,6 +72,7 @@
   "navigation_profile": "Profile",
   "navigation_settings": "Settings",
   "navigation_about": "About Us",
+  "navigation_pricing": "Pricing",
   "home_title": "Demo Components Homepage",
   "home_subtitle": "Explore interactive UI components built with React & TypeScript",
   "common_searchPlaceholder": "Search...",
