@@ -200,14 +200,7 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
             label={t('chartHistory.comparison.historicalChart', 'Historical Chart Preview')}
           />
           {showChart && (
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 flex items-center justify-center min-h-[320px]">
-              <ChartRenderer
-                chartType={historical?.type}
-                chartConfig={historical?.config}
-                chartData={chartData}
-                getHeaderName={getHeaderName}
-              />
-            </div>
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 flex items-center justify-center min-h-[320px]"></div>
           )}
         </div>
         {/* Current & Historical JSON Section */}
