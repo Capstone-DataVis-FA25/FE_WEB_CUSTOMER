@@ -9,9 +9,6 @@ import {
 import { GitCompare, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ComparisonResult } from '@/features/chartHistory/chartHistoryTypes';
-import { useChartEditor } from '@/features/chartEditor';
-import ChartRenderer from './ChartRenderer';
-import { useDataset } from '@/features/dataset/useDataset';
 
 interface VersionComparisonModalProps {
   open: boolean;
@@ -29,15 +26,6 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
   datasetIdHistory,
 }) => {
   const { t } = useTranslation();
-  const { chartData } = useChartEditor();
-  const { currentDataset } = useDataset();
-
-  const dataHeaders = currentDataset?.headers || [];
-
-  const getHeaderName = (id: string) => {
-    const header = dataHeaders.find((h: { id: string; name: string }) => h.id === id);
-    return header ? header.name : id;
-  };
 
   // Helper to flatten nested differences object to dot notation keysf
   type DiffLeaf = { current: any; historical: any };
