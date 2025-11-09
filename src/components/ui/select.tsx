@@ -34,6 +34,9 @@ const SelectContext = React.createContext<{
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   triggerRef?: React.RefObject<HTMLButtonElement | null>;
   contentRef?: React.RefObject<HTMLDivElement | null>;
+  itemsMap?: React.MutableRefObject<Map<string, string>>;
+  registerItem?: (value: string, label: string) => void;
+  unregisterItem?: (value: string) => void;
 }>({
   open: false,
   setOpen: () => {},
@@ -44,6 +47,14 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
+  const itemsMap = React.useRef(new Map<string, string>());
+
+  const registerItem = React.useCallback((v: string, label: string) => {
+    itemsMap.current.set(v, label);
+  }, []);
+  const unregisterItem = React.useCallback((v: string) => {
+    itemsMap.current.delete(v);
+  }, []);
 
   // Close dropdown when clicking outside of the Select container or content
   React.useEffect(() => {
@@ -64,7 +75,19 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
   }, [open]);
 
   return (
-    <SelectContext.Provider value={{ value, onValueChange, open, setOpen, triggerRef, contentRef }}>
+    <SelectContext.Provider
+      value={{
+        value,
+        onValueChange,
+        open,
+        setOpen,
+        triggerRef,
+        contentRef,
+        itemsMap,
+        registerItem,
+        unregisterItem,
+      }}
+    >
       <div className="relative" ref={containerRef}>
         {children}
       </div>
@@ -105,26 +128,70 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
 SelectTrigger.displayName = 'SelectTrigger';
 
 const SelectContent: React.FC<SelectContentProps> = ({ children, className }) => {
-  const { open, contentRef } = React.useContext(SelectContext);
+  const { open, contentRef, triggerRef, setOpen } = React.useContext(SelectContext);
 
-  if (!open) return null;
+  const [pos, setPos] = React.useState<{ left: number; top: number; width: number } | null>(null);
 
-  return (
+  React.useEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const trg = triggerRef?.current;
+      if (!trg) return;
+      const rect = trg.getBoundingClientRect();
+      setPos({ left: rect.left, top: rect.bottom + 4, width: rect.width });
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [open, triggerRef]);
+
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    if (open) document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, setOpen]);
+
+  if (!open || !pos) return null;
+
+  return ReactDOM.createPortal(
     <div
       ref={contentRef}
       data-select-content
       className={cn(
-        'absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95',
+        'fixed z-[1000] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95',
         className
       )}
+      style={{ left: pos.left, top: pos.top, width: pos.width }}
     >
       <div className="p-1 space-y-1">{children}</div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
 const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
-  const { onValueChange, setOpen, value: selectedValue } = React.useContext(SelectContext);
+  const {
+    onValueChange,
+    setOpen,
+    value: selectedValue,
+    registerItem,
+    unregisterItem,
+  } = React.useContext(SelectContext);
+  const itemRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const label =
+      typeof children === 'string' ? children : itemRef.current?.textContent || String(value);
+    registerItem?.(value, label);
+    return () => unregisterItem?.(value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, children]);
 
   const handleClick = () => {
     onValueChange?.(value);
@@ -135,6 +202,7 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
 
   return (
     <div
+      ref={itemRef}
       className={cn(
         'relative flex w-full cursor-pointer select-none items-center rounded-md py-2.5 px-3 text-sm outline-none transition-all duration-150',
         isSelected
@@ -150,13 +218,12 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
 };
 
 const SelectValue: React.FC<SelectValueProps> = ({ placeholder }) => {
-  const { value } = React.useContext(SelectContext);
+  const { value, itemsMap } = React.useContext(SelectContext);
 
-  if (!value) {
-    return <span className="block truncate text-gray-500">{placeholder}</span>;
-  }
+  if (!value) return <span className="block truncate text-gray-500">{placeholder}</span>;
 
-  return <span className="block truncate">{value}</span>;
+  const label = itemsMap?.current.get(value) || value;
+  return <span className="block truncate">{label}</span>;
 };
 
 export { Select, SelectTrigger, SelectContent, SelectItem, SelectValue };
