@@ -29,6 +29,7 @@ const componentMap = {
   BarChartPage: lazy(() => import('../components/charts/page.example/BarChartPage')),
   AreaChartPage: lazy(() => import('../components/charts/page.example/AreaChartPage')),
   PricingPage: lazy(() => import('../pages/subscription/PricingPage')),
+  PaymentSuccessPage: lazy(() => import('../pages/subscription/PaymentSuccessPage')),
   LineChartEditorDemo: lazy(() => import('../components/charts/page.example/LineChartEditorDemo')),
   BarChartEditorDemo: lazy(() => import('../components/charts/page.example/BarChartEditorDemo')),
   AreaChartEditorDemo: lazy(() => import('../components/charts/page.example/AreaChartEditorDemo')),
