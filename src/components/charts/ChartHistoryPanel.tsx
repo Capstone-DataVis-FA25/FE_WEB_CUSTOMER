@@ -373,6 +373,7 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
         }}
         comparisonResult={comparisonResult}
         isLoading={comparing}
+        datasetIdHistory={selectedHistory?.datasetId}
       />
       {/* Delete Confirmation Modal */}
       <ModalConfirm

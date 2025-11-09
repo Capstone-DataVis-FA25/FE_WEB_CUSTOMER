@@ -671,6 +671,7 @@ const ChartEditorPage: React.FC = () => {
           (currentChartType as any) || (chartConfig as any)?.chartType || ChartType.Line;
         const cfgWithType = {
           ...(chartConfig as MainChartConfig),
+          chartType: typeForReset,
         } as MainChartConfig;
         const before = extractBindings(cfgWithType, typeForReset);
         const nextCfg = resetBindings(cfgWithType);
@@ -686,7 +687,9 @@ const ChartEditorPage: React.FC = () => {
         console.log('After :', after);
         console.groupEnd();
 
-        setChartConfig(nextCfg);
+        // Apply reset config without chartType property
+        const { chartType, ...cfgWithoutType } = nextCfg;
+        setChartConfig(cfgWithoutType as MainChartConfig);
       }
       // Track dirty state relative to original dataset id
       if (originalDatasetIdRef.current === null) {
