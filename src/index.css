@@ -1,3 +1,8 @@
+/* Hide scrollbars globally (WebKit). Components that need visible scrollbars
+   should use the `.custom-scrollbar` class which re-enables them. */
+::-webkit-scrollbar {
+  display: none;
+}
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import './fonts.css';
@@ -11,6 +16,13 @@
   100% {
     width: 0%;
   }
+}
+
+.dark input[type='date']::-webkit-calendar-picker-indicator,
+.dark input[type='month']::-webkit-calendar-picker-indicator,
+.dark input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.2);
+  opacity: 0.9;
 }
 
 /* Galaxy Background Animations */

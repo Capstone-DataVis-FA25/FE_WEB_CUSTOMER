@@ -10,13 +10,21 @@ import type {
 } from '@/types/chart';
 import { FilterSummaryButton } from './filters/FilterSummaryButton';
 import OperationsBanner from './OperationsBanner';
+import {
+  humanizeOperator,
+  getGranularityFromFormat,
+  formatDateDisplay,
+  formatNumberDisplay,
+} from '@/utils/filterUtils';
+import type { NumberFormat } from '@/contexts/DatasetContext';
 
 interface DataOperationsPanelProps {
   datasetName?: string;
   onOpenDatasetModal?: () => void;
-  availableColumns?: { id: string; name: string; type: DatasetColumnType }[];
+  availableColumns?: { id: string; name: string; type: DatasetColumnType; dateFormat?: string }[];
   datasetConfig?: DatasetConfig;
   onDatasetConfigChange: (next?: DatasetConfig) => void;
+  numberFormat?: NumberFormat;
 }
 
 const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
@@ -25,9 +33,8 @@ const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
   availableColumns = [],
   datasetConfig,
   onDatasetConfigChange,
+  numberFormat,
 }) => {
-  const operatorLabel = (op: string) => op.replace(/_/g, ' ');
-
   return (
     <div className="h-full min-h-0 w-[480px] min-w-[480px] max-w-[480px] border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 overflow-y-auto hide-scrollbar">
       <div className="mb-3 flex flex-col gap-2">
@@ -80,6 +87,7 @@ const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
             <FilterSummaryButton
               availableColumns={availableColumns}
               initialColumns={(datasetConfig?.filters as unknown as DatasetFilterColumn[]) || []}
+              numberFormat={numberFormat}
               onFilterChange={cols =>
                 onDatasetConfigChange({
                   ...(datasetConfig || {}),
@@ -111,18 +119,57 @@ const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
                             className="inline-flex items-center gap-1 mr-2"
                           >
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700">
-                              {operatorLabel(cond.operator)}
+                              {humanizeOperator(cond.operator)}
                             </span>
                             {cond.operator === 'between' ? (
                               <span>
-                                <span className="font-semibold">{String(cond.value ?? '?')}</span>
+                                <span className="font-semibold">
+                                  {col.columnType === 'date'
+                                    ? formatDateDisplay(
+                                        getGranularityFromFormat(
+                                          availableColumns.find(c => c.id === col.columnId)
+                                            ?.dateFormat
+                                        ),
+                                        cond.value as any,
+                                        availableColumns.find(c => c.id === col.columnId)
+                                          ?.dateFormat
+                                      )
+                                    : col.columnType === 'number'
+                                      ? formatNumberDisplay(cond.value as any, numberFormat)
+                                      : String(cond.value ?? '?')}
+                                </span>
                                 <span className="mx-1">and</span>
                                 <span className="font-semibold">
-                                  {String(cond.valueEnd ?? '?')}
+                                  {col.columnType === 'date'
+                                    ? formatDateDisplay(
+                                        getGranularityFromFormat(
+                                          availableColumns.find(c => c.id === col.columnId)
+                                            ?.dateFormat
+                                        ),
+                                        cond.valueEnd as any,
+                                        availableColumns.find(c => c.id === col.columnId)
+                                          ?.dateFormat
+                                      )
+                                    : col.columnType === 'number'
+                                      ? formatNumberDisplay(cond.valueEnd as any, numberFormat)
+                                      : String(cond.valueEnd ?? '?')}
                                 </span>
                               </span>
                             ) : (
-                              <span className="font-semibold">{String(cond.value ?? '?')}</span>
+                              <span className="font-semibold">
+                                {col.columnType === 'date'
+                                  ? formatDateDisplay(
+                                      getGranularityFromFormat(
+                                        availableColumns.find(c => c.id === col.columnId)
+                                          ?.dateFormat
+                                      ),
+                                      cond.value as any,
+                                      availableColumns.find(c => c.id === col.columnId)?.dateFormat
+                                    )
+                                  : col.columnType === 'number'
+                                    ? formatNumberDisplay(cond.value as any, numberFormat)
+                                    : String(cond.value ?? '?')}
+                              </span>
                             )}
                             {cidx < (col.conditions?.length || 0) - 1 && (
                               <span className="text-blue-700 dark:text-blue-300">OR</span>

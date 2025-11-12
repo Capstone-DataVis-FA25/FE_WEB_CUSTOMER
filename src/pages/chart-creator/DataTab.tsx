@@ -144,9 +144,11 @@ const DataTab: React.FC<DataTabProps> = ({
           id: (c as any).id || (c as any).headerId || String(c.name || `col_${idx + 1}`),
           name: c.name || String((c as any).id || (c as any).headerId || `Column ${idx + 1}`),
           type: (c as any).type || 'text',
+          dateFormat: (c as any).dateFormat,
         }))}
         datasetConfig={datasetConfig}
         onDatasetConfigChange={onDatasetConfigChange}
+        numberFormat={initialNumberFormat}
       />
     </div>
   );

@@ -1,23 +1,31 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FilterIcon, X } from 'lucide-react';
 import { FilterModal, type FilterColumn, type ColumnType } from './FilterModal';
+import type { NumberFormat } from '@/contexts/DatasetContext';
 
 interface FilterSummaryButtonProps {
-  availableColumns: { id: string; name: string; type: ColumnType }[];
+  availableColumns: { id: string; name: string; type: ColumnType; dateFormat?: string }[];
   onFilterChange?: (columns: FilterColumn[]) => void;
   initialColumns?: FilterColumn[];
+  numberFormat?: NumberFormat;
 }
 
 export const FilterSummaryButton: React.FC<FilterSummaryButtonProps> = ({
   availableColumns,
   onFilterChange,
   initialColumns = [],
+  numberFormat,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [filters, setFilters] = useState<FilterColumn[]>(initialColumns);
+
+  // Keep local state in sync with external config changes
+  useEffect(() => {
+    setFilters(initialColumns);
+  }, [initialColumns]);
 
   const handleApplyFilter = (columns: FilterColumn[]) => {
     setFilters(columns);
@@ -62,6 +70,7 @@ export const FilterSummaryButton: React.FC<FilterSummaryButtonProps> = ({
         onApply={handleApplyFilter}
         availableColumns={availableColumns}
         initialColumns={filters}
+        numberFormat={numberFormat}
       />
     </>
   );
