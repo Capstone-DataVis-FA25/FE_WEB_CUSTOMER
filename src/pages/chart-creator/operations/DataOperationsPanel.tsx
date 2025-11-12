@@ -71,12 +71,6 @@ const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
         <OperationsBanner
           title="Operations Disabled"
           message="Select a dataset to enable sort and other operations."
-          action={
-            <Button variant="outline" size="sm" onClick={onOpenDatasetModal} className="gap-2">
-              <Database className="w-4 h-4" />
-              Select Dataset
-            </Button>
-          }
         />
       ) : (
         <>

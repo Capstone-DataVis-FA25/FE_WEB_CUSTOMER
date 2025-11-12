@@ -67,13 +67,13 @@ const DEFAULT_COLS: DataHeader[] = [
   { name: 'Column 1', type: 'text', width: 200, index: 0 },
   { name: 'Column 2', type: 'text', width: 200, index: 1 },
 ];
-const DEFAULT_ROWS: string[][] = Array.from({ length: 8 }, () =>
-  Array(DEFAULT_COLS.length).fill('')
-);
+const createEmptyGrid = (rows: number, cols: number): string[][] =>
+  Array.from({ length: rows }, () => Array(cols).fill(''));
+const DEFAULT_ROWS: string[][] = createEmptyGrid(8, DEFAULT_COLS.length);
 
 const CustomExcel: React.FC<CustomExcelProps> = ({
-  initialData = DEFAULT_ROWS,
-  initialColumns = DEFAULT_COLS,
+  initialData,
+  initialColumns,
   onDataChange,
   className = '',
   mode = 'edit',
@@ -168,14 +168,25 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // Shared initializer used on first mount and on Change Data
   const initializeFromProps = useCallback(() => {
     // init from incoming props
-    const initCols = (initialColumns.length ? initialColumns : DEFAULT_COLS).map(c => ({
+    const incomingColumns =
+      Array.isArray(initialColumns) && initialColumns.length > 0 ? initialColumns : DEFAULT_COLS;
+    const initCols = incomingColumns.map(c => ({
       ...c,
       id: (c as any).id ?? (c as any).headerId ?? undefined,
       width: c.width || DEFAULT_WIDTH,
     }));
-    const initData = initialData.length
-      ? initialData
-      : DEFAULT_ROWS.map(() => Array(initCols.length).fill(''));
+
+    const providedData = Array.isArray(initialData) ? initialData : undefined;
+    const hasProvidedData = providedData !== undefined;
+    const shouldUseBlankFallback =
+      mode === 'edit' && (!hasProvidedData || providedData.length === 0);
+    const initData = shouldUseBlankFallback
+      ? createEmptyGrid(8, initCols.length)
+      : hasProvidedData
+        ? providedData.map(row => [...row])
+        : mode === 'view'
+          ? []
+          : createEmptyGrid(8, initCols.length);
     // Capture original snapshot (deep-ish copy) for Reset
     originalColsRef.current = initCols.map(c => ({ ...c }));
     originalDataRef.current = initData.map(r => [...r]);
