@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Database } from 'lucide-react';
-import MultiLevelSortPanel from './MultiLevelSortPanel';
 import type {
   DatasetConfig,
   SortLevel,
@@ -10,6 +9,7 @@ import type {
   DatasetFilterCondition,
 } from '@/types/chart';
 import { FilterSummaryButton } from './filters/FilterSummaryButton';
+import { SortSummaryButton } from './sort/SortSummaryButton';
 import OperationsBanner from './OperationsBanner';
 import {
   humanizeOperator,
@@ -183,24 +183,50 @@ const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
 
           <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
 
-          <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+          <div className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
             Sort Configuration
           </div>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-            {(datasetConfig?.sort?.length ?? 0) === 0
-              ? 'No sorting applied'
-              : `Sorting by ${datasetConfig?.sort?.length} level${(datasetConfig?.sort?.length ?? 0) !== 1 ? 's' : ''}`}
-          </p>
-          <MultiLevelSortPanel
-            sortLevels={datasetConfig?.sort ?? []}
-            onSortChange={(levels: SortLevel[]) =>
-              onDatasetConfigChange({
-                ...(datasetConfig || {}),
-                sort: levels.length ? levels : undefined,
-              })
-            }
-            availableColumns={availableColumns}
-          />
+          <div className="mb-4">
+            <SortSummaryButton
+              availableColumns={availableColumns}
+              initialLevels={datasetConfig?.sort ?? []}
+              onSortChange={(levels: SortLevel[]) =>
+                onDatasetConfigChange({
+                  ...(datasetConfig || {}),
+                  sort: levels.length ? levels : undefined,
+                })
+              }
+            />
+            {(datasetConfig?.sort?.length ?? 0) > 0 ? (
+              <div className="mt-3 p-3 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                <p className="text-xs font-medium text-blue-900 dark:text-blue-200 mb-2">
+                  Applied Sort Order
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {(datasetConfig?.sort || []).map((level, index) => {
+                    const columnName =
+                      availableColumns.find(c => c.id === level.columnId)?.name || level.columnId;
+                    return (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border border-blue-200 dark:border-blue-700 text-blue-900 dark:text-blue-200 bg-blue-100 dark:bg-blue-900/40"
+                      >
+                        <span className="font-semibold">{index + 1}.</span>
+                        <span>{columnName}</span>
+                        <span className="font-mono text-blue-700 dark:text-blue-300">
+                          {level.direction === 'asc' ? '↑' : '↓'}
+                        </span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                No configuration applied
+              </p>
+            )}
+          </div>
         </>
       )}
 
