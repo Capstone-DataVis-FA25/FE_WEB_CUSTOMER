@@ -25,6 +25,7 @@ export const Permission = {
   // Admin permissions
   ADMIN_ACCESS: 'admin_access',
   MANAGE_USERS: 'manage_users',
+  VIEW_SUBSCRIPTION_PLANS: 'view_subscription_plans',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -195,6 +196,31 @@ export const publicRoutes: RouteConfig[] = [
     meta: {
       title: 'Dashboard',
       description: 'Dashboard',
+    },
+  },
+  {
+    path: Routers.PRICING,
+    name: 'pricing',
+    component: 'PricingPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_SUBSCRIPTION_PLANS],
+    meta: {
+      title: 'Pricing',
+      description: 'View subscription plans and subscribe',
+    },
+  },
+  {
+    path: Routers.PAYMENT_SUCCESS,
+    name: 'payment-success',
+    component: 'PaymentSuccessPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Payment Success',
+      description: 'Confirm payment status',
+      hideFromNav: true,
     },
   },
   {

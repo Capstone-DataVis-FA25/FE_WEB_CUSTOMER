@@ -17,6 +17,8 @@ const Routers = {
 
   // Chart Gallery
   CHART_GALLERY: '/chart-gallery',
+  PRICING: '/pricing',
+  PAYMENT_SUCCESS: '/subscription/success',
 
   // For state-based navigation, use location.state.datasetId (recommended)
   DATASET_DETAIL: '/datasets/detail', // state-based route, do not use slug param
