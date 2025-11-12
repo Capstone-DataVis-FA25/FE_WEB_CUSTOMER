@@ -36,7 +36,8 @@ import {
 import { selectWorkingDataset } from '@/features/chartEditor/chartEditorSelectors';
 import { clearCurrentChartNotes } from '@/features/chartNotes/chartNoteSlice';
 import { useChartEditor } from '@/features/chartEditor';
-import type { MainChartConfig } from '@/types/chart';
+import type { MainChartConfig, SortLevel, DatasetConfig } from '@/types/chart';
+import { buildColumnIndexMap, applyMultiLevelSort, applyDatasetFilters } from '@/utils/datasetOps';
 import ChartEditorHeader from './ChartEditorHeader';
 import { resetBindings } from '@/utils/chartBindings';
 import { useChartNotes } from '@/features/chartNotes/useChartNotes';
@@ -78,9 +79,7 @@ const ChartEditorPage: React.FC = () => {
   const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(false);
   const [showDatasetModal, setShowDatasetModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'chart' | 'data'>('chart');
-  const [gridSort, setGridSort] = useState<{ column: number; direction: 'asc' | 'desc' } | null>(
-    null
-  );
+  // sortLevels will be derived from chartConfig.dataset to make DataTab controlled by datasetConfig
 
   // Local datasetId state (can differ from URL in create mode after selection)
   const [datasetId, setDatasetId] = useState<string>(datasetIdFromUrl || '');
@@ -101,6 +100,7 @@ const ChartEditorPage: React.FC = () => {
     hasChanges,
     resetToOriginal,
     updateOriginals,
+    handleConfigChange,
   } = useChartEditor();
 
   const {
@@ -356,9 +356,12 @@ const ChartEditorPage: React.FC = () => {
     }
   }, [mode]); // Only run when mode changes
 
-  // ============================================================
-  // EFFECT: Load dataset when datasetId changes
-  // ============================================================
+  // Derive current datasetConfig and sortLevels from chartConfig
+  const datasetConfig: DatasetConfig | undefined = (chartConfig as any)?.datasetConfig as
+    | DatasetConfig
+    | undefined;
+  const sortLevels: SortLevel[] = useMemo(() => datasetConfig?.sort ?? [], [datasetConfig]);
+
   useEffect(() => {
     // console.log('[ChartEditorPage] Dataset loader effect fired', { datasetId });
 
@@ -452,57 +455,19 @@ const ChartEditorPage: React.FC = () => {
 
     try {
       const headerNames = working.headers.map(h => h.name);
-      const sortedRows = (() => {
-        if (!gridSort) return working.data;
-        const { column, direction } = gridSort;
-        const type = working.headers[column]?.type ?? 'text';
-        const rowsCopy = [...working.data];
+      const colIndexMap = buildColumnIndexMap(working.headers as unknown as DataHeader[]);
+      const filtered =
+        applyDatasetFilters(working.data, (datasetConfig as any)?.filters, colIndexMap) ||
+        working.data;
+      const multiSorted = applyMultiLevelSort(filtered, sortLevels, colIndexMap) || filtered;
 
-        rowsCopy.sort((a, b) => {
-          const aVal = a[column] || '';
-          const bVal = b[column] || '';
-          if (!aVal && !bVal) return 0;
-          if (!aVal) return direction === 'asc' ? 1 : -1;
-          if (!bVal) return direction === 'asc' ? -1 : 1;
-
-          if (type === 'number') {
-            const aNum = Number.parseFloat(aVal);
-            const bNum = Number.parseFloat(bVal);
-            const aSafe = Number.isNaN(aNum) ? 0 : aNum;
-            const bSafe = Number.isNaN(bNum) ? 0 : bNum;
-            return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
-          }
-
-          if (type === 'date') {
-            const fmt = normalizeDateFormat(
-              (working.headers[column] as any)?.dateFormat as string | undefined
-            );
-            const aParsed = fmt ? dayjs(aVal, fmt, true) : dayjs(aVal);
-            const bParsed = fmt ? dayjs(bVal, fmt, true) : dayjs(bVal);
-            let aT = aParsed.isValid() ? aParsed.valueOf() : NaN;
-            let bT = bParsed.isValid() ? bParsed.valueOf() : NaN;
-            if (Number.isNaN(aT)) aT = new Date(aVal).getTime();
-            if (Number.isNaN(bT)) bT = new Date(bVal).getTime();
-            const aSafe = Number.isNaN(aT) ? -Infinity : aT;
-            const bSafe = Number.isNaN(bT) ? -Infinity : bT;
-            return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
-          }
-
-          const aStr = String(aVal).toLowerCase();
-          const bStr = String(bVal).toLowerCase();
-          return direction === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
-        });
-
-        return rowsCopy;
-      })();
-
-      const arrayData: (string | number)[][] = [headerNames, ...sortedRows];
+      const arrayData: (string | number)[][] = [headerNames, ...multiSorted];
       const converted = convertToChartData(arrayData);
       dispatch(setChartDataAction(converted));
     } catch (e) {
       dispatch(setChartDataAction([]));
     }
-  }, [working?.version, chartConfig, gridSort, dispatch]);
+  }, [working?.version, chartConfig, sortLevels, dispatch]);
 
   // ============================================================
   // EFFECT: Browser back button prevention
@@ -687,7 +652,12 @@ const ChartEditorPage: React.FC = () => {
         console.log('After :', after);
         console.groupEnd();
 
-        setChartConfig(nextCfg);
+        const nextCfgWithDatasetReset = {
+          ...nextCfg,
+          datasetConfig: {} as DatasetConfig,
+        } as MainChartConfig;
+
+        setChartConfig(nextCfgWithDatasetReset);
       }
       // Track dirty state relative to original dataset id
       if (originalDatasetIdRef.current === null) {
@@ -859,9 +829,12 @@ const ChartEditorPage: React.FC = () => {
               initialNumberFormat={excelFormats.initialNumberFormat}
               initialDateFormat={excelFormats.initialDateFormat}
               onDataChange={handleGridDataChange}
-              onSorting={setGridSort}
               datasetName={currentDataset?.name || ''}
               highlightHeaderIds={highlightHeaderIds}
+              datasetConfig={datasetConfig}
+              onDatasetConfigChange={(next?: DatasetConfig) =>
+                handleConfigChange({ datasetConfig: next } as any)
+              }
             />
           </div>
         </motion.div>
@@ -923,7 +896,7 @@ const ChartEditorPage: React.FC = () => {
         loading={isSavingBeforeLeave}
       />
 
-      {mode === 'edit' && chartIdFromUrl && (
+      {mode === 'edit' && chartIdFromUrl && activeTab === 'chart' && (
         <ChartNoteSidebar
           chartId={chartIdFromUrl}
           isOpen={isNotesSidebarOpen}

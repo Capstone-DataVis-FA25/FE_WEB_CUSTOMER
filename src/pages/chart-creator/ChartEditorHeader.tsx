@@ -270,7 +270,8 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                           }`}
                           onBlur={handleDescriptionSave}
                           onKeyDown={e => {
-                            if (e.key === 'Enter' && e.ctrlKey) {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
                               handleDescriptionSave();
                             } else if (e.key === 'Escape') {
                               if (editableDescription.trim()) {

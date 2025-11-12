@@ -2,15 +2,15 @@ import React from 'react';
 import type { DataHeader } from '@/utils/dataProcessors';
 import { preformatDataToFormats } from '@/utils/dataProcessors';
 import CustomExcel from '@/components/excel/CustomExcel';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import {
   DatasetProvider,
   useDataset,
   type NumberFormat,
   type DateFormat,
 } from '@/contexts/DatasetContext';
-import { Button } from '@/components/ui/button';
-import { Database } from 'lucide-react';
+import DataOperationsPanel from './operations/DataOperationsPanel';
+import type { DatasetConfig, SortLevel } from '@/types/chart';
+import { buildColumnIndexMap, applyMultiLevelSort, applyDatasetFilters } from '@/utils/datasetOps';
 
 interface DataTabProps {
   initialData?: string[][];
@@ -23,6 +23,8 @@ interface DataTabProps {
   onSorting?: (s: { column: number; direction: 'asc' | 'desc' } | null) => void;
   datasetName?: string;
   highlightHeaderIds?: string[];
+  datasetConfig?: DatasetConfig;
+  onDatasetConfigChange: (next?: DatasetConfig) => void;
 }
 
 const ApplyFormats: React.FC<{ nf?: NumberFormat; df?: DateFormat }> = ({ nf, df }) => {
@@ -45,6 +47,8 @@ const DataTab: React.FC<DataTabProps> = ({
   onSorting,
   datasetName,
   highlightHeaderIds,
+  datasetConfig,
+  onDatasetConfigChange,
 }) => {
   // Removed artificial padding rows; render exactly what dataset provides
 
@@ -59,14 +63,29 @@ const DataTab: React.FC<DataTabProps> = ({
     );
   }, [initialData, initialColumns, initialNumberFormat, initialDateFormat]);
 
+  // Build a lookup from various header identifiers to column index
+  const columnIndexMap = React.useMemo(() => buildColumnIndexMap(initialColumns), [initialColumns]);
+
+  // Apply filters then multi-level sort to formatted data
+  const sortLevels: SortLevel[] = React.useMemo(() => datasetConfig?.sort ?? [], [datasetConfig]);
+  const filteredThenSorted = React.useMemo(() => {
+    const filtered = applyDatasetFilters(
+      formattedData,
+      datasetConfig?.filters as any,
+      columnIndexMap
+    );
+    return applyMultiLevelSort(filtered, sortLevels, columnIndexMap);
+  }, [formattedData, datasetConfig?.filters, sortLevels, columnIndexMap]);
+
   // Stable key to remount grid when headers or highlight inputs change
   const excelKey = React.useMemo(() => {
     const colsSig = (initialColumns || [])
       .map(c => `${c.id ?? ''}|${c.name ?? ''}|${c.type ?? 'text'}`)
       .join('||');
     const hlSig = `${(highlightHeaderIds || []).join(',')}`;
-    return `${colsSig}__${hlSig}`;
-  }, [initialColumns, highlightHeaderIds]);
+    const sortSig = (datasetConfig?.sort || []).map(l => `${l.columnId}:${l.direction}`).join('|');
+    return `${colsSig}__${hlSig}__${sortSig}`;
+  }, [initialColumns, highlightHeaderIds, datasetConfig?.sort]);
 
   // React.useEffect(() => {
   //   console.log('[HighlightDebug][DataTab] excelKey & props', {
@@ -96,7 +115,7 @@ const DataTab: React.FC<DataTabProps> = ({
               <ApplyFormats nf={initialNumberFormat} df={initialDateFormat} />
               <CustomExcel
                 key={excelKey}
-                initialData={formattedData}
+                initialData={filteredThenSorted}
                 initialColumns={initialColumns}
                 mode="view"
                 allowHeaderEdit={false}
@@ -117,43 +136,20 @@ const DataTab: React.FC<DataTabProps> = ({
         </div>
       </div>
 
-      {/* Right: Operation panel (placeholder, keep as-is for now) */}
-      <div className="h-full min-h-0 w-[360px] min-w-[360px] max-w-[360px] border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 overflow-y-auto">
-        <div className="mb-3 flex flex-col gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onOpenDatasetModal}
-            className="flex items-center gap-2 self-start"
-          >
-            <Database className="w-4 h-4" />
-            Select Dataset
-          </Button>
-          <div className="flex flex-col gap-1">
-            {datasetName ? (
-              <span
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200 self-start max-w-[280px]"
-                title={datasetName}
-              >
-                <Database className="w-3 h-3 shrink-0" />
-                <span className="truncate max-w-[240px]">{datasetName}</span>
-              </span>
-            ) : (
-              <span
-                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 self-start"
-                title="No dataset selected"
-              >
-                No dataset selected
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="h-px bg-gray-200 dark:bg-gray-800 mb-3" />
-        <div className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-3">Operation</div>
-        <div className="rounded-md border border-dashed border-gray-300 dark:border-gray-700 p-4 text-sm text-gray-600 dark:text-gray-300">
-          This is the operation panel. Leave as-is for now.
-        </div>
-      </div>
+      {/* Right: Operation panel */}
+      <DataOperationsPanel
+        datasetName={datasetName}
+        onOpenDatasetModal={onOpenDatasetModal}
+        availableColumns={(initialColumns || []).map((c, idx) => ({
+          id: (c as any).id || (c as any).headerId || String(c.name || `col_${idx + 1}`),
+          name: c.name || String((c as any).id || (c as any).headerId || `Column ${idx + 1}`),
+          type: (c as any).type || 'text',
+          dateFormat: (c as any).dateFormat,
+        }))}
+        datasetConfig={datasetConfig}
+        onDatasetConfigChange={onDatasetConfigChange}
+        numberFormat={initialNumberFormat}
+      />
     </div>
   );
 };
