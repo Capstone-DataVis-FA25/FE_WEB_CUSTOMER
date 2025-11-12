@@ -169,6 +169,7 @@ export const defaultLineChartConfig: LineChartConfig = {
   config: defaultSubLineConfig,
   formatters: defaultFormatterConfig,
   axisConfigs: defaultAxisConfigs,
+  datasetConfig: {},
   chartType: 'line',
 };
 
@@ -176,6 +177,7 @@ export const defaultAreaChartConfig: AreaChartConfig = {
   config: defaultSubAreaConfig,
   formatters: defaultFormatterConfig,
   axisConfigs: defaultAxisConfigs,
+  datasetConfig: {},
   chartType: 'area',
 };
 
@@ -183,6 +185,7 @@ export const defaultBarChartConfig: BarChartConfig = {
   config: defaultSubBarConfig,
   formatters: defaultFormatterConfig,
   axisConfigs: defaultAxisConfigs,
+  datasetConfig: {},
   chartType: 'bar',
 };
 
@@ -190,18 +193,21 @@ export const defaultScatterChartConfig: ScatterChartConfig = {
   config: defaultSubScatterConfig,
   formatters: defaultFormatterConfig,
   axisConfigs: defaultAxisConfigs,
+  datasetConfig: {},
   chartType: 'scatter',
 };
 
 export const defaultPieChartConfig: PieChartConfig = {
   config: defaultSubPieConfig,
   formatters: defaultPieDonutFormatterConfig,
+  datasetConfig: {},
   chartType: 'pie',
 };
 
 export const defaultDonutChartConfig: DonutChartConfig = {
   config: defaultSubDonutConfig,
   formatters: defaultPieDonutFormatterConfig,
+  datasetConfig: {},
   chartType: 'donut',
 };
 
