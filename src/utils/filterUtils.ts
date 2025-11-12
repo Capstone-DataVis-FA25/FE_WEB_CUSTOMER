@@ -1,6 +1,7 @@
 export type SimpleColumnType = 'text' | 'number' | 'date';
 export type DateGranularity = 'year' | 'year_month' | 'date' | 'datetime';
 export type NumberFormat = { thousandsSeparator: string; decimalSeparator: string };
+type FilterValueInput = string | number | null | undefined | (string | number | null | undefined)[];
 
 export const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -11,6 +12,7 @@ export const getOperatorsForType = (type: SimpleColumnType): { value: string; la
     case 'text':
       return [
         { value: 'equals', label: 'equals' },
+        { value: 'not_equals', label: 'not equals' },
         { value: 'contains', label: 'contains' },
         { value: 'not_contains', label: 'not contains' },
         { value: 'starts_with', label: 'starts with' },
@@ -19,6 +21,7 @@ export const getOperatorsForType = (type: SimpleColumnType): { value: string; la
     case 'number':
       return [
         { value: 'equals', label: 'equals' },
+        { value: 'not_equals', label: 'not equals' },
         { value: 'greater_than', label: 'greater than' },
         { value: 'less_than', label: 'less than' },
         { value: 'between', label: 'between' },
@@ -26,6 +29,7 @@ export const getOperatorsForType = (type: SimpleColumnType): { value: string; la
     case 'date':
       return [
         { value: 'equals', label: 'equals' },
+        { value: 'not_equals', label: 'not equals' },
         { value: 'greater_than', label: 'greater than' },
         { value: 'less_than', label: 'less than' },
         { value: 'between', label: 'between' },
@@ -36,11 +40,16 @@ export const getOperatorsForType = (type: SimpleColumnType): { value: string; la
 // Validate a number condition: required, numeric, and range order for 'between'
 export const validateNumberCondition = (
   operator: string,
-  value: string | number | null | undefined,
+  value: FilterValueInput,
   valueEnd?: string | number | null | undefined
 ): string | null => {
   const isEmpty = (x: any) => x === null || x === undefined || x === '';
   const toNum = (x: any) => (typeof x === 'number' ? x : Number(x));
+  if (operator === 'equals' || operator === 'not_equals') {
+    if (Array.isArray(value)) {
+      return value.length === 0 ? 'Select at least one value.' : null;
+    }
+  }
   if (operator === 'between') {
     if (isEmpty(value) || isEmpty(valueEnd)) return 'Both values are required.';
     const a = toNum(value);
@@ -56,11 +65,13 @@ export const validateNumberCondition = (
 };
 
 // Validate a text condition: required non-empty value
-export const validateTextCondition = (
-  operator: string,
-  value: string | number | null | undefined
-): string | null => {
+export const validateTextCondition = (operator: string, value: FilterValueInput): string | null => {
   const isEmpty = (x: any) => x === null || x === undefined || x === '';
+  if (operator === 'equals' || operator === 'not_equals') {
+    if (Array.isArray(value)) {
+      return value.length === 0 ? 'Select at least one value.' : null;
+    }
+  }
   if (isEmpty(value)) return 'Value is required.';
   return null;
 };
@@ -98,10 +109,15 @@ export const formatNumberDisplay = (
 export const validateDateCondition = (
   g: DateGranularity,
   operator: string,
-  value: string | number | null | undefined,
+  value: FilterValueInput,
   valueEnd?: string | number | null | undefined
 ): string | null => {
   const isEmpty = (x: any) => x === null || x === undefined || x === '';
+  if (operator === 'equals' || operator === 'not_equals') {
+    if (Array.isArray(value)) {
+      return value.length === 0 ? 'Select at least one value.' : null;
+    }
+  }
   if (operator === 'between') {
     if (isEmpty(value) || isEmpty(valueEnd)) return 'Both values are required.';
   } else {

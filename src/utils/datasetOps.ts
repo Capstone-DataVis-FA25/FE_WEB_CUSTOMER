@@ -36,12 +36,15 @@ export const applyDatasetFilters = (
   if (!data || data.length === 0) return data;
   if (!filters || filters.length === 0) return data;
 
+  const toComparableString = (value: unknown) => (value == null ? '' : String(value));
+
   // AND semantics across columns, OR semantics within a column's conditions
   const keep = (row: string[]): boolean => {
     for (const col of filters) {
       const idx = colIndex.get(String(col.columnId));
       if (idx == null) continue; // unknown column -> ignore filter
       const value = row[idx] ?? '';
+      const valueAsString = toComparableString(value);
       const passThisColumn = (col.conditions || []).some(cond => {
         const op = cond.operator;
         if (op === 'between') {
@@ -64,22 +67,28 @@ export const applyDatasetFilters = (
           return tv >= lo && tv <= hi;
         }
         switch (op) {
-          case 'equals':
-            return String(value) === String(cond.value ?? '');
-          case 'not_equals':
-            return String(value) !== String(cond.value ?? '');
+          case 'equals': {
+            const candidates = Array.isArray(cond.value) ? cond.value : [cond.value];
+            if (!candidates || candidates.length === 0) return true;
+            return candidates.some(candidate => valueAsString === toComparableString(candidate));
+          }
+          case 'not_equals': {
+            const candidates = Array.isArray(cond.value) ? cond.value : [cond.value];
+            if (!candidates || candidates.length === 0) return true;
+            return !candidates.some(candidate => valueAsString === toComparableString(candidate));
+          }
           case 'contains':
-            return strIncludes(String(value), String(cond.value ?? ''));
+            return strIncludes(valueAsString, toComparableString(cond.value ?? ''));
           case 'not_contains':
-            return !strIncludes(String(value), String(cond.value ?? ''));
+            return !strIncludes(valueAsString, toComparableString(cond.value ?? ''));
           case 'starts_with':
-            return String(value)
+            return valueAsString
               .toLowerCase()
-              .startsWith(String(cond.value ?? '').toLowerCase());
+              .startsWith(toComparableString(cond.value ?? '').toLowerCase());
           case 'ends_with':
-            return String(value)
+            return valueAsString
               .toLowerCase()
-              .endsWith(String(cond.value ?? '').toLowerCase());
+              .endsWith(toComparableString(cond.value ?? '').toLowerCase());
           case 'greater_than': {
             const { va } = cmpNumbers(value, undefined);
             const vb = Number.parseFloat(String(cond.value ?? ''));

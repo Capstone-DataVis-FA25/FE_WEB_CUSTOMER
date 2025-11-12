@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, RotateCcw, Check, X, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { NumberFormat } from '@/contexts/DatasetContext';
@@ -15,7 +15,7 @@ import {
   validateTextCondition,
   formatNumberDisplay,
 } from '@/utils/filterUtils';
-import type { DatasetColumnType, DatasetFilterColumn } from '@/types/chart';
+import type { DatasetColumnType, DatasetFilterColumn, DatasetFilterCondition } from '@/types/chart';
 import { ColumnFilterSection } from './FilterComponents';
 
 interface FilterModalProps {
@@ -25,6 +25,7 @@ interface FilterModalProps {
   availableColumns: { id: string; name: string; type: DatasetColumnType; dateFormat?: string }[];
   initialColumns?: DatasetFilterColumn[];
   numberFormat?: NumberFormat;
+  uniqueValuesByColumn?: Record<string, string[]>;
 }
 
 export const FilterModal: React.FC<FilterModalProps> = ({
@@ -34,9 +35,58 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   availableColumns,
   initialColumns = [],
   numberFormat,
+  uniqueValuesByColumn,
 }) => {
   const [columns, setColumns] = useState<DatasetFilterColumn[]>(initialColumns);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const resolveUniqueValues = useCallback(
+    (col: DatasetFilterColumn): string[] | undefined => {
+      const meta = availableColumns.find(c => c.id === col.columnId);
+      const candidates = [col.columnId, meta?.id, meta?.name, col.columnName].filter(
+        Boolean
+      ) as string[];
+      for (const candidate of candidates) {
+        if (candidate && uniqueValuesByColumn?.[candidate]) {
+          return uniqueValuesByColumn[candidate];
+        }
+      }
+      return undefined;
+    },
+    [availableColumns, uniqueValuesByColumn]
+  );
+
+  const formatSingleValue = useCallback(
+    (col: DatasetFilterColumn, raw: string | number | null | undefined) => {
+      const meta = availableColumns.find(c => c.id === col.columnId);
+      if (raw == null || raw === '') return '(blank)';
+      if (col.columnType === 'date') {
+        return formatDateDisplay(
+          getGranularityFromFormat(meta?.dateFormat),
+          raw as any,
+          meta?.dateFormat
+        );
+      }
+      if (col.columnType === 'number') {
+        return formatNumberDisplay(String(raw), numberFormat);
+      }
+      return String(raw);
+    },
+    [availableColumns, numberFormat]
+  );
+
+  const formatValueSummary = useCallback(
+    (col: DatasetFilterColumn, cond: DatasetFilterCondition) => {
+      if (Array.isArray(cond.value)) {
+        if (cond.value.length === 0) return '(none selected)';
+        const formatted = cond.value.map(v => formatSingleValue(col, v));
+        if (formatted.length <= 3) return formatted.join(', ');
+        return `${formatted.slice(0, 3).join(', ')}, +${formatted.length - 3} more`;
+      }
+      return formatSingleValue(col, cond.value as any);
+    },
+    [formatSingleValue]
+  );
 
   // Keep modal state in sync with external config
   useEffect(() => {
@@ -49,6 +99,16 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     const usedIds = columns.map(c => c.columnId);
     const candidate = availableColumns.find(c => !usedIds.includes(c.id));
     if (!candidate) return;
+    // Use non-unique-picker operators by default to avoid loading all unique values
+    const operators = getOperatorsForType(candidate.type);
+    let defaultOperator: string;
+    if (candidate.type === 'text') {
+      defaultOperator = operators[2]?.value || 'contains'; // Use "contains" instead of "equals"
+    } else if (candidate.type === 'number') {
+      defaultOperator = operators[2]?.value || 'greater_than'; // Use "greater_than" instead of "equals"
+    } else {
+      defaultOperator = operators[2]?.value || 'greater_than'; // date: Use "greater_than" instead of "equals"
+    }
     const newColumn: DatasetFilterColumn = {
       id: generateId(),
       columnId: candidate.id,
@@ -57,7 +117,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
       conditions: [
         {
           id: generateId(),
-          operator: getOperatorsForType(candidate.type)[0]?.value || 'equals',
+          operator: defaultOperator,
           value: null,
         },
       ],
@@ -82,7 +142,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
   const previewHasLines = columns.length > 0 && columns.some(c => (c.conditions || []).length > 0);
 
-  const hasInvalid = React.useMemo(() => {
+  const hasInvalid = useMemo(() => {
     for (const col of columns) {
       const fmt = availableColumns.find(c => c.id === col.columnId)?.dateFormat;
       const g = getGranularityFromFormat(fmt);
@@ -104,7 +164,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] flex flex-col">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] flex flex-col">
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Filter Configuration
@@ -144,6 +204,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                       onUpdate={col => handleUpdateColumn(index, col)}
                       onRemove={() => handleRemoveColumn(index)}
                       numberFormat={numberFormat}
+                      uniqueValues={resolveUniqueValues(column)}
                     />
                   ))}
                 </div>
@@ -180,50 +241,16 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                               {cond.operator === 'between' ? (
                                 <span>
                                   <span className="font-semibold">
-                                    {col.columnType === 'date'
-                                      ? formatDateDisplay(
-                                          getGranularityFromFormat(
-                                            availableColumns.find(c => c.id === col.columnId)
-                                              ?.dateFormat
-                                          ),
-                                          cond.value as any,
-                                          availableColumns.find(c => c.id === col.columnId)
-                                            ?.dateFormat
-                                        )
-                                      : col.columnType === 'number'
-                                        ? formatNumberDisplay(cond.value as any, numberFormat)
-                                        : String(cond.value ?? '?')}
+                                    {formatSingleValue(col, cond.value as any)}
                                   </span>
                                   <span className="mx-1">and</span>
                                   <span className="font-semibold">
-                                    {col.columnType === 'date'
-                                      ? formatDateDisplay(
-                                          getGranularityFromFormat(
-                                            availableColumns.find(c => c.id === col.columnId)
-                                              ?.dateFormat
-                                          ),
-                                          cond.valueEnd as any,
-                                          availableColumns.find(c => c.id === col.columnId)
-                                            ?.dateFormat
-                                        )
-                                      : col.columnType === 'number'
-                                        ? formatNumberDisplay(cond.valueEnd as any, numberFormat)
-                                        : String(cond.valueEnd ?? '?')}
+                                    {formatSingleValue(col, cond.valueEnd as any)}
                                   </span>
                                 </span>
                               ) : (
                                 <span className="font-semibold">
-                                  {col.columnType === 'date'
-                                    ? formatDateDisplay(
-                                        getGranularityFromFormat(
-                                          availableColumns.find(c => c.id === col.columnId)
-                                            ?.dateFormat
-                                        ),
-                                        cond.value as any,
-                                        availableColumns.find(c => c.id === col.columnId)
-                                          ?.dateFormat
-                                      )
-                                    : String(cond.value ?? '?')}
+                                  {formatValueSummary(col, cond)}
                                 </span>
                               )}
                               {cidx < (col.conditions?.length || 0) - 1 && (

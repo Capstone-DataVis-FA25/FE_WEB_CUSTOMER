@@ -66,6 +66,58 @@ const DataTab: React.FC<DataTabProps> = ({
   // Build a lookup from various header identifiers to column index
   const columnIndexMap = React.useMemo(() => buildColumnIndexMap(initialColumns), [initialColumns]);
 
+  const uniqueValuesByColumn = React.useMemo(() => {
+    if (!formattedData || !initialColumns || initialColumns.length === 0)
+      return {} as Record<string, string[]>;
+    const MAX_TRACKED_UNIQUE_VALUES = Number.POSITIVE_INFINITY; // allow collecting all unique values
+    const columnKeys = initialColumns.map(
+      (col, idx) => (col as any).id || (col as any).headerId || String(col.name || `col_${idx + 1}`)
+    );
+    const maps = initialColumns.map(() => new Map<string, string>());
+
+    for (const row of formattedData) {
+      if (!row) continue;
+      initialColumns.forEach((_, idx) => {
+        const map = maps[idx];
+        if (!map) return;
+        if (map.size >= MAX_TRACKED_UNIQUE_VALUES) return;
+        const raw = (row as any)[idx];
+        const str = raw === null || raw === undefined ? '' : String(raw).trim();
+        if (!map.has(str)) {
+          map.set(str, str);
+        }
+      });
+    }
+
+    const result: Record<string, string[]> = {};
+    initialColumns.forEach((_, idx) => {
+      const key = columnKeys[idx];
+      if (!key) return;
+      const colType = (initialColumns[idx] as any)?.type || 'text';
+      const values = Array.from(maps[idx].values()).sort((a, b) => {
+        // For number columns, try numeric sorting first
+        if (colType === 'number') {
+          // Remove formatting (commas, spaces) for comparison
+          const cleanA = a.replace(/[,\s]/g, '');
+          const cleanB = b.replace(/[,\s]/g, '');
+          const numA = Number.parseFloat(cleanA);
+          const numB = Number.parseFloat(cleanB);
+          if (!Number.isNaN(numA) && !Number.isNaN(numB)) {
+            return numA - numB;
+          }
+          // If one is numeric and one isn't, numeric comes first
+          if (!Number.isNaN(numA)) return -1;
+          if (!Number.isNaN(numB)) return 1;
+        }
+        // Fallback to locale-aware string comparison
+        return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+      });
+      result[key] = values;
+    });
+
+    return result;
+  }, [formattedData, initialColumns]);
+
   // Apply filters then multi-level sort to formatted data
   const sortLevels: SortLevel[] = React.useMemo(() => datasetConfig?.sort ?? [], [datasetConfig]);
   const filteredThenSorted = React.useMemo(() => {
@@ -149,6 +201,7 @@ const DataTab: React.FC<DataTabProps> = ({
         datasetConfig={datasetConfig}
         onDatasetConfigChange={onDatasetConfigChange}
         numberFormat={initialNumberFormat}
+        uniqueValuesByColumn={uniqueValuesByColumn}
       />
     </div>
   );

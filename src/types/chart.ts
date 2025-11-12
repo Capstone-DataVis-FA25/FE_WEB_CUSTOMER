@@ -21,10 +21,12 @@ export interface DatasetConfig {
 
 export type DatasetColumnType = 'text' | 'number' | 'date';
 
+export type DatasetFilterValue = string | number | null | (string | number | null)[];
+
 export interface DatasetFilterCondition {
   id: string;
   operator: string;
-  value: string | number | null;
+  value: DatasetFilterValue;
   valueEnd?: string | number | null;
 }
 

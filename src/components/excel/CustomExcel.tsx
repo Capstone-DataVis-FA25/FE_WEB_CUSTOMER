@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect, useCallback, useRef, useMemo, useDeferredValue } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
@@ -774,11 +774,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     );
   }, [data, filters]);
 
-  // Defer heavy filtered data propagation to keep typing/editing responsive
-  const deferredFilteredData = useDeferredValue(filteredData);
+  const sortedFilteredData = filteredData;
 
-  // Sorting removed from grid; use filtered view directly
-  const sortedFilteredData = deferredFilteredData;
+  // Sorting removed from grid
 
   // Sorting persistence removed from grid
 

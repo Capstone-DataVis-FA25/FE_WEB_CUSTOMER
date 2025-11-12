@@ -7,6 +7,7 @@ import type {
   SortLevel,
   DatasetFilterColumn,
   DatasetColumnType,
+  DatasetFilterCondition,
 } from '@/types/chart';
 import { FilterSummaryButton } from './filters/FilterSummaryButton';
 import OperationsBanner from './OperationsBanner';
@@ -25,6 +26,7 @@ interface DataOperationsPanelProps {
   datasetConfig?: DatasetConfig;
   onDatasetConfigChange: (next?: DatasetConfig) => void;
   numberFormat?: NumberFormat;
+  uniqueValuesByColumn?: Record<string, string[]>;
 }
 
 const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
@@ -34,7 +36,40 @@ const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
   datasetConfig,
   onDatasetConfigChange,
   numberFormat,
+  uniqueValuesByColumn,
 }) => {
+  const renderSingleValue = React.useCallback(
+    (col: DatasetFilterColumn, raw: string | number | null | undefined) => {
+      const meta = availableColumns.find(c => c.id === col.columnId);
+      if (raw == null || raw === '') return '(blank)';
+      if (col.columnType === 'date') {
+        return formatDateDisplay(
+          getGranularityFromFormat(meta?.dateFormat),
+          raw as any,
+          meta?.dateFormat
+        );
+      }
+      if (col.columnType === 'number') {
+        return formatNumberDisplay(String(raw), numberFormat);
+      }
+      return String(raw);
+    },
+    [availableColumns, numberFormat]
+  );
+
+  const renderValueSummary = React.useCallback(
+    (col: DatasetFilterColumn, cond: DatasetFilterCondition) => {
+      if (Array.isArray(cond.value)) {
+        if (cond.value.length === 0) return '(none selected)';
+        const formatted = cond.value.map(v => renderSingleValue(col, v));
+        if (formatted.length <= 3) return formatted.join(', ');
+        return `${formatted.slice(0, 3).join(', ')}, +${formatted.length - 3} more`;
+      }
+      return renderSingleValue(col, cond.value as any);
+    },
+    [renderSingleValue]
+  );
+
   return (
     <div className="h-full min-h-0 w-[480px] min-w-[480px] max-w-[480px] border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 overflow-y-auto hide-scrollbar">
       <div className="mb-3 flex flex-col gap-2">
@@ -82,6 +117,7 @@ const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
               availableColumns={availableColumns}
               initialColumns={(datasetConfig?.filters as unknown as DatasetFilterColumn[]) || []}
               numberFormat={numberFormat}
+              uniqueValuesByColumn={uniqueValuesByColumn}
               onFilterChange={cols =>
                 onDatasetConfigChange({
                   ...(datasetConfig || {}),
@@ -118,52 +154,15 @@ const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
                             {cond.operator === 'between' ? (
                               <span>
                                 <span className="font-semibold">
-                                  {col.columnType === 'date'
-                                    ? formatDateDisplay(
-                                        getGranularityFromFormat(
-                                          availableColumns.find(c => c.id === col.columnId)
-                                            ?.dateFormat
-                                        ),
-                                        cond.value as any,
-                                        availableColumns.find(c => c.id === col.columnId)
-                                          ?.dateFormat
-                                      )
-                                    : col.columnType === 'number'
-                                      ? formatNumberDisplay(cond.value as any, numberFormat)
-                                      : String(cond.value ?? '?')}
+                                  {renderSingleValue(col, cond.value as any)}
                                 </span>
                                 <span className="mx-1">and</span>
                                 <span className="font-semibold">
-                                  {col.columnType === 'date'
-                                    ? formatDateDisplay(
-                                        getGranularityFromFormat(
-                                          availableColumns.find(c => c.id === col.columnId)
-                                            ?.dateFormat
-                                        ),
-                                        cond.valueEnd as any,
-                                        availableColumns.find(c => c.id === col.columnId)
-                                          ?.dateFormat
-                                      )
-                                    : col.columnType === 'number'
-                                      ? formatNumberDisplay(cond.valueEnd as any, numberFormat)
-                                      : String(cond.valueEnd ?? '?')}
+                                  {renderSingleValue(col, cond.valueEnd as any)}
                                 </span>
                               </span>
                             ) : (
-                              <span className="font-semibold">
-                                {col.columnType === 'date'
-                                  ? formatDateDisplay(
-                                      getGranularityFromFormat(
-                                        availableColumns.find(c => c.id === col.columnId)
-                                          ?.dateFormat
-                                      ),
-                                      cond.value as any,
-                                      availableColumns.find(c => c.id === col.columnId)?.dateFormat
-                                    )
-                                  : col.columnType === 'number'
-                                    ? formatNumberDisplay(cond.value as any, numberFormat)
-                                    : String(cond.value ?? '?')}
-                              </span>
+                              <span className="font-semibold">{renderValueSummary(col, cond)}</span>
                             )}
                             {cidx < (col.conditions?.length || 0) - 1 && (
                               <span className="text-blue-700 dark:text-blue-300">OR</span>
