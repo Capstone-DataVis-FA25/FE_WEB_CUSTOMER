@@ -41,6 +41,7 @@ import ChartEditorHeader from './ChartEditorHeader';
 import { resetBindings } from '@/utils/chartBindings';
 import { useChartNotes } from '@/features/chartNotes/useChartNotes';
 import { useChartHistory } from '@/features/chartHistory/useChartHistory';
+import { captureAndUploadChartSnapshot } from '@/services/uploadService';
 
 const normalizeDateFormat = (fmt?: string) => {
   if (!fmt) return fmt;
@@ -598,18 +599,32 @@ const ChartEditorPage: React.FC = () => {
     }
   };
 
-  const handleUpdateChart = () => {
+  const handleUpdateChart = async () => {
     if (!chartIdFromUrl || !currentChart) return;
 
     setCurrentModalAction('save');
     modalConfirm.openConfirm(async () => {
       try {
+        // Capture and upload chart snapshot before updating
+        let imageUrl: string | undefined;
+        try {
+          const url = await captureAndUploadChartSnapshot('.chart-container');
+          if (url) {
+            imageUrl = url;
+            console.log('Chart snapshot captured and uploaded:', imageUrl);
+          }
+        } catch (error) {
+          console.warn('Failed to capture chart snapshot:', error);
+          // Continue with update even if snapshot fails
+        }
+
         const updateData = {
           name: editableName.trim() || currentChart.name,
           description: editableDescription.trim() || currentChart.description,
           type: currentChartType ?? ChartType.Line,
           config: chartConfig || undefined,
           datasetId: datasetId ?? undefined,
+          imageUrl, // Include the captured image URL
         };
 
         const response = await updateChart(chartIdFromUrl, updateData);

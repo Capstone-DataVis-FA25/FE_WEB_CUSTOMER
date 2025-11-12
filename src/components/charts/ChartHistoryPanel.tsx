@@ -67,6 +67,12 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
   const [noDiffAlert, setNoDiffAlert] = useState(false);
   const selectedHistory = currentChartHistories.find(h => h.id === selectedHistoryId);
 
+  useEffect(() => {
+    if (selectedHistoryId && !currentChartHistories.some((h: any) => h.id === selectedHistoryId)) {
+      setSelectedHistoryId(null);
+    }
+  }, [selectedHistoryId, currentChartHistories]);
+
   // Helper to flatten nested differences object to dot notation keys
   type DiffLeaf = { current: any; historical: any };
   type DiffObject = { [key: string]: DiffLeaf | DiffObject };
@@ -137,7 +143,7 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
         historyId: selectedHistoryId,
         changeNote,
       }).unwrap();
-      console.log('Restore Result:', result);
+
       setChartConfig(result.chart.config);
       setCurrentChartType(result.chart.type);
       setEditableName(result.chart.name);
@@ -160,9 +166,10 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
 
   // Handle Compare Click
   const handleCompareClick = async (historyId: string) => {
+    setSelectedHistoryId(historyId); // <-- Thêm dòng này
+
     if (!chartId) return;
 
-    console.log('chartConfig: ', chartConfig);
     try {
       // Get current chart data
       const currentChart = {
@@ -373,7 +380,7 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
         }}
         comparisonResult={comparisonResult}
         isLoading={comparing}
-        datasetIdHistory={selectedHistory?.datasetId}
+        selectedHistory={selectedHistory}
       />
       {/* Delete Confirmation Modal */}
       <ModalConfirm

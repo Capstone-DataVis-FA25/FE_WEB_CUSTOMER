@@ -9,13 +9,15 @@ import {
 import { GitCompare, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ComparisonResult } from '@/features/chartHistory/chartHistoryTypes';
+import type { ChartHistory } from '@/features/chartHistory/chartHistoryTypes';
 
 interface VersionComparisonModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   comparisonResult: ComparisonResult | null;
   isLoading: boolean;
-  datasetIdHistory?: string;
+  datasetIdHistory?: string; // eslint-disable-line @typescript-eslint/no-unused-vars
+  selectedHistory?: ChartHistory;
 }
 
 const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
@@ -23,7 +25,7 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
   onOpenChange,
   comparisonResult,
   isLoading,
-  datasetIdHistory,
+  selectedHistory,
 }) => {
   const { t } = useTranslation();
 
@@ -79,7 +81,7 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
         const keyPath = path;
         const highlight = diffKeys.some(k => k === keyPath || k.startsWith(keyPath + '.'));
         lines.push(`${'  '.repeat(indent)}${JSON.stringify(val)}`);
-        highlights.push(highlight && diffKeys.includes(keyPath));
+        highlights.push(highlight);
         return;
       }
       if (Array.isArray(val)) {
@@ -98,11 +100,11 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
         const value = val[key];
         if (typeof value === 'object' && value !== null) {
           lines.push(`${'  '.repeat(indent + 1)}"${key}": `);
-          highlights.push(highlight && diffKeys.includes(keyPath));
+          highlights.push(highlight);
           walk(value, keyPath, indent + 2);
         } else {
           lines.push(`${'  '.repeat(indent + 1)}"${key}": ${JSON.stringify(value)}`);
-          highlights.push(highlight && diffKeys.includes(keyPath));
+          highlights.push(highlight);
         }
       }
       lines.push(`${'  '.repeat(indent)}}`);
@@ -145,6 +147,16 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
     if (!comparisonResult) return null;
     const { current, historical, differences } = comparisonResult;
 
+    // Remove unwanted properties before diff (for rendering only)
+    const currentForRender =
+      current && typeof current === 'object'
+        ? (({ updatedAt, ...rest }) => rest)(current)
+        : current;
+    const historicalForRender =
+      historical && typeof historical === 'object'
+        ? (({ imageUrl, createdAt, ...rest }) => rest)(historical)
+        : historical;
+
     // Flatten differences to dot notation keys
     const flatDiffs: FlatDiffs = flattenDifferences((differences || {}) as DiffObject);
     const diffKeys = Object.keys(flatDiffs);
@@ -168,19 +180,25 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
         <div className="ml-4 mt-1 grid grid-cols-2 gap-2">
           <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded">
             <div className="text-gray-600 dark:text-gray-400 mb-1">Current:</div>
-            <code className="text-xs">{JSON.stringify(flatDiffs[key].current, null, 2)}</code>
+            <pre className="text-xs whitespace-pre-wrap break-words">
+              {JSON.stringify(flatDiffs[key].current, null, 2)}
+            </pre>
           </div>
           <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded">
             <div className="text-gray-600 dark:text-gray-400 mb-1">Historical:</div>
-            <code className="text-xs">{JSON.stringify(flatDiffs[key].historical, null, 2)}</code>
+            <pre className="text-xs whitespace-pre-wrap break-words">
+              {JSON.stringify(flatDiffs[key].historical, null, 2)}
+            </pre>
           </div>
         </div>
       </li>
     );
 
+    // Ưu tiên lấy imageUrl từ selectedHistory nếu có
+    const historicalImageUrl = selectedHistory?.imageUrl || comparisonResult?.historical?.imageUrl;
     return (
       <div className="space-y-6">
-        {/* Chart Preview Section */}
+        {/* Chart Preview Section - Show historical chart image if available */}
         <div>
           <SectionToggle
             open={showChart}
@@ -188,7 +206,39 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
             label={t('chartHistory.comparison.historicalChart', 'Historical Chart Preview')}
           />
           {showChart && (
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 flex items-center justify-center min-h-[320px]"></div>
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 flex items-center justify-center min-h-[320px]">
+              {historicalImageUrl ? (
+                <div className="w-full">
+                  <img
+                    src={historicalImageUrl}
+                    alt={t(
+                      'chartHistory.comparison.historicalChartAlt',
+                      'Historical chart snapshot'
+                    )}
+                    className="max-w-full h-auto rounded-md border border-gray-200 dark:border-gray-700"
+                    onError={e => {
+                      // Fallback if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        parent.innerHTML = `<div class=\"text-center text-gray-500 dark:text-gray-400 py-12\">\n                          <span class=\"icon\"><svg width=\"48\" height=\"48\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><line x1=\"12\" y1=\"8\" x2=\"12\" y2=\"12\"/><line x1=\"12\" y1=\"16\" x2=\"12.01\" y2=\"16\"/></svg></span>\n                          <p>${t('chartHistory.comparison.imageNotAvailable', 'Chart image not available')}</p>\n                        </div>`;
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 dark:text-gray-400">
+                  <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>
+                    {t(
+                      'chartHistory.comparison.noImageAvailable',
+                      'No chart preview available for this version'
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
           )}
         </div>
         {/* Current & Historical JSON Section */}
@@ -199,7 +249,7 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
               onClick={() => setShowCurrentHistory(v => !v)}
               label={t('chartHistory.comparison.current', 'Current Version')}
             />
-            {showCurrentHistory && renderHighlightedJson(current, diffKeys, 'current')}
+            {showCurrentHistory && renderHighlightedJson(currentForRender, diffKeys, 'current')}
           </div>
           <div>
             <SectionToggle
@@ -207,7 +257,8 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
               onClick={() => setShowCurrentHistory(v => !v)}
               label={t('chartHistory.comparison.historical', 'Historical Version')}
             />
-            {showCurrentHistory && renderHighlightedJson(historical, diffKeys, 'historical')}
+            {showCurrentHistory &&
+              renderHighlightedJson(historicalForRender, diffKeys, 'historical')}
           </div>
         </div>
         {/* Differences Section */}

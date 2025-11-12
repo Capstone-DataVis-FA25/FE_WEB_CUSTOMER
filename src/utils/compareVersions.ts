@@ -88,6 +88,7 @@ export function compareChartVersions(
     type: historicalVersion.type,
     datasetId: historicalVersion.datasetId,
     config: historicalVersion.config,
+    imageUrl: (historicalVersion as any).imageUrl,
   };
 
   // Deep compare
@@ -109,6 +110,7 @@ export function compareChartVersions(
       datasetId: historicalVersion.datasetId,
       config: historicalVersion.config,
       createdAt: historicalVersion.createdAt,
+      imageUrl: (historicalVersion as any).imageUrl,
     },
     differences,
   };
