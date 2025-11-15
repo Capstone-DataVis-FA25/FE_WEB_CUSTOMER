@@ -205,12 +205,22 @@ export const ConditionRow: React.FC<{
     let nextValue: DatasetFilterCondition['value'] = condition.value;
     let nextValueEnd: DatasetFilterCondition['valueEnd'] = condition.valueEnd;
 
+    const isCurrentArrayOperator = operator === 'equals' || operator === 'not_equals';
+    const isNextArrayOperator = nextOperator === 'equals' || nextOperator === 'not_equals';
+
     if (nextOperator === 'equals' || nextOperator === 'not_equals') {
-      nextValue = Array.isArray(condition.value)
-        ? condition.value
-        : condition.value != null && condition.value !== ''
-          ? [String(condition.value)]
-          : [];
+      // If switching from a non-array operator (like contains) to an array operator (equals/not_equals),
+      // clear the value to avoid preserving old values
+      if (!isCurrentArrayOperator) {
+        nextValue = [];
+      } else {
+        // Already an array operator, preserve the array
+        nextValue = Array.isArray(condition.value)
+          ? condition.value
+          : condition.value != null && condition.value !== ''
+            ? [String(condition.value)]
+            : [];
+      }
       nextValueEnd = undefined;
     } else if (nextOperator === 'between') {
       nextValue = null;

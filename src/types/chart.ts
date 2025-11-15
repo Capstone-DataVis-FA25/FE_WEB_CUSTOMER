@@ -12,11 +12,29 @@ export interface SortLevel {
   direction: 'asc' | 'desc';
 }
 
+export interface GroupByColumn {
+  id: string;
+  name: string;
+  timeUnit?: 'second' | 'minute' | 'hour' | 'day' | 'month' | 'quarter' | 'year';
+}
+
+export interface AggregationMetric {
+  id: string;
+  type: 'sum' | 'average' | 'min' | 'max' | 'count';
+  columnId?: string;
+  alias?: string;
+}
+
 export interface DatasetConfig {
   // Multi-level sort: applied in array order (stable sort semantics)
   sort?: SortLevel[];
   // Optional dataset-level filters (UI schema)
   filters?: DatasetFilterColumn[];
+  // Optional aggregation configuration
+  aggregation?: {
+    groupBy?: GroupByColumn[];
+    metrics?: AggregationMetric[];
+  };
 }
 
 export type DatasetColumnType = 'text' | 'number' | 'date';

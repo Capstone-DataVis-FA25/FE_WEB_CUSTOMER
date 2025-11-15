@@ -38,6 +38,7 @@ import { clearCurrentChartNotes } from '@/features/chartNotes/chartNoteSlice';
 import { useChartEditor } from '@/features/chartEditor';
 import type { MainChartConfig, SortLevel, DatasetConfig } from '@/types/chart';
 import { buildColumnIndexMap, applyMultiLevelSort, applyDatasetFilters } from '@/utils/datasetOps';
+import { applyAggregation } from '@/utils/aggregationUtils';
 import ChartEditorHeader from './ChartEditorHeader';
 import { resetBindings } from '@/utils/chartBindings';
 import { useChartNotes } from '@/features/chartNotes/useChartNotes';
@@ -444,30 +445,117 @@ const ChartEditorPage: React.FC = () => {
     dispatch,
   ]);
 
+  // Store original dataset (before any processing) - used for filter/sort/aggregation operations
+  const originalDataset = useMemo(() => {
+    return {
+      headers: excelInitial.initialColumns || working?.headers,
+      data: excelInitial.initialData || working?.data,
+    };
+  }, [excelInitial.initialColumns, excelInitial.initialData, working?.headers, working?.data]);
+
   // ============================================================
-  // EFFECT: Sync chart data from working dataset
+  // COMPUTE: Processed data (filter → sort → aggregation)
+  // ============================================================
+  const processedData = useMemo(() => {
+    // Always use original dataset for operations (filter/sort/aggregation)
+    // working.data/headers might be aggregated, so use originalDataset
+    const dataToProcess = originalDataset.data || working?.data;
+    const headersToUse = originalDataset.headers || working?.headers;
+
+    if (!headersToUse || !dataToProcess) {
+      return { data: undefined, headers: undefined };
+    }
+
+    try {
+      // Build column index map from ORIGINAL headers (not aggregated)
+      const colIndexMap = buildColumnIndexMap(headersToUse as unknown as DataHeader[]);
+
+      // Filter using original data and original headers
+      const filtered =
+        applyDatasetFilters(dataToProcess, (datasetConfig as any)?.filters, colIndexMap) ||
+        dataToProcess;
+
+      // Sort using filtered data
+      const multiSorted = applyMultiLevelSort(filtered, sortLevels, colIndexMap) || filtered;
+
+      // Apply aggregation if configured - use original headers for column references
+      const aggregationResult = applyAggregation(
+        multiSorted,
+        headersToUse as unknown as DataHeader[],
+        datasetConfig?.aggregation,
+        colIndexMap,
+        excelFormats.initialNumberFormat
+      );
+
+      // Use aggregated data/headers if aggregation is active, otherwise use sorted data
+      const finalHeaders = aggregationResult
+        ? aggregationResult.headers
+        : (headersToUse as unknown as DataHeader[]);
+      const finalData = aggregationResult ? aggregationResult.data : multiSorted;
+
+      return { data: finalData, headers: finalHeaders };
+    } catch (e) {
+      return { data: undefined, headers: undefined };
+    }
+  }, [
+    originalDataset.data,
+    originalDataset.headers,
+    working?.data,
+    working?.headers,
+    datasetConfig?.filters,
+    sortLevels,
+    datasetConfig?.aggregation,
+    excelFormats.initialNumberFormat,
+  ]);
+
+  // ============================================================
+  // EFFECT: Update working dataset with aggregated headers when aggregation changes
   // ============================================================
   useEffect(() => {
-    if (!working?.headers || !working?.data) {
+    if (!processedData.headers || !processedData.data) return;
+
+    // Only update if aggregation is active and headers changed
+    if (
+      datasetConfig?.aggregation &&
+      (datasetConfig.aggregation.groupBy?.length || datasetConfig.aggregation.metrics?.length)
+    ) {
+      const headersChanged =
+        processedData.headers.length !== working?.headers.length ||
+        processedData.headers.some((h, idx) => {
+          const existing = working?.headers[idx];
+          return !existing || h.id !== (existing as any).id || h.name !== existing.name;
+        });
+
+      if (headersChanged && working) {
+        dispatch(
+          setWorkingDataset({
+            headers: processedData.headers as any,
+            data: processedData.data,
+            formats: working.formats,
+          })
+        );
+      }
+    }
+  }, [processedData.headers, processedData.data, datasetConfig?.aggregation, working, dispatch]);
+
+  // ============================================================
+  // EFFECT: Sync chart data from processed data
+  // ============================================================
+  useEffect(() => {
+    if (!processedData.headers || !processedData.data) {
       dispatch(setChartDataAction([]));
       return;
     }
 
     try {
-      const headerNames = working.headers.map(h => h.name);
-      const colIndexMap = buildColumnIndexMap(working.headers as unknown as DataHeader[]);
-      const filtered =
-        applyDatasetFilters(working.data, (datasetConfig as any)?.filters, colIndexMap) ||
-        working.data;
-      const multiSorted = applyMultiLevelSort(filtered, sortLevels, colIndexMap) || filtered;
-
-      const arrayData: (string | number)[][] = [headerNames, ...multiSorted];
+      const headerNames = processedData.headers.map(h => h.name);
+      const arrayData: (string | number)[][] = [headerNames, ...processedData.data];
       const converted = convertToChartData(arrayData);
       dispatch(setChartDataAction(converted));
     } catch (e) {
       dispatch(setChartDataAction([]));
     }
-  }, [working?.version, chartConfig, sortLevels, dispatch]);
+  }, [processedData.headers, processedData.data, dispatch]);
 
   // ============================================================
   // EFFECT: Browser back button prevention
@@ -822,8 +910,12 @@ const ChartEditorPage: React.FC = () => {
             className="flex-1 min-h-0 min-w-0"
           >
             <DataTab
-              initialColumns={working?.headers || excelInitial.initialColumns}
-              initialData={working?.data || excelInitial.initialData}
+              initialColumns={
+                processedData.headers || working?.headers || excelInitial.initialColumns
+              }
+              initialData={processedData.data || working?.data || excelInitial.initialData}
+              originalColumns={originalDataset.headers}
+              originalData={originalDataset.data}
               loading={isDatasetLoading}
               onOpenDatasetModal={() => setShowDatasetModal(true)}
               initialNumberFormat={excelFormats.initialNumberFormat}

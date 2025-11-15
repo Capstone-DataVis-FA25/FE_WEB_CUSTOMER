@@ -7,11 +7,12 @@ import type {
   DatasetFilterColumn,
   DatasetColumnType,
   DatasetFilterCondition,
+  GroupByColumn,
+  AggregationMetric,
 } from '@/types/chart';
 import { FilterSummaryButton } from './filters/FilterSummaryButton';
 import { SortSummaryButton } from './sort/SortSummaryButton';
 import { AggregationSummaryButton } from './aggregation/AggregationSummaryButton';
-import type { GroupByColumn, AggregationMetric } from './aggregation/GroupByAggregationModal';
 import OperationsBanner from './OperationsBanner';
 import {
   humanizeOperator,
@@ -238,28 +239,28 @@ const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
           <div className="mb-4">
             <AggregationSummaryButton
               availableColumns={availableColumns}
-              initialGroupBy={(datasetConfig as any)?.aggregation?.groupBy || []}
-              initialMetrics={(datasetConfig as any)?.aggregation?.metrics || []}
+              initialGroupBy={datasetConfig?.aggregation?.groupBy || []}
+              initialMetrics={datasetConfig?.aggregation?.metrics || []}
               onAggregationChange={(groupBy, metrics) =>
                 onDatasetConfigChange({
                   ...(datasetConfig || {}),
                   aggregation:
                     groupBy.length > 0 || metrics.length > 0 ? { groupBy, metrics } : undefined,
-                } as any)
+                })
               }
             />
-            {((datasetConfig as any)?.aggregation?.groupBy?.length ?? 0) > 0 ||
-            ((datasetConfig as any)?.aggregation?.metrics?.length ?? 0) > 0 ? (
+            {(datasetConfig?.aggregation?.groupBy?.length ?? 0) > 0 ||
+            (datasetConfig?.aggregation?.metrics?.length ?? 0) > 0 ? (
               <div className="mt-3 p-3 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
                 <p className="text-xs font-medium text-blue-900 dark:text-blue-200 mb-2">
                   Applied Aggregation
                 </p>
                 <div className="space-y-2">
-                  {((datasetConfig as any)?.aggregation?.groupBy?.length ?? 0) > 0 && (
+                  {(datasetConfig?.aggregation?.groupBy?.length ?? 0) > 0 && (
                     <div className="text-xs text-blue-900 dark:text-blue-100">
                       <span className="font-semibold mr-1">Group By:</span>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {((datasetConfig as any)?.aggregation?.groupBy || []).map(
+                        {(datasetConfig?.aggregation?.groupBy || []).map(
                           (gb: GroupByColumn, idx: number) => {
                             const columnName =
                               availableColumns.find(c => c.id === gb.id)?.name || gb.name;
@@ -281,11 +282,11 @@ const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
                       </div>
                     </div>
                   )}
-                  {((datasetConfig as any)?.aggregation?.metrics?.length ?? 0) > 0 && (
+                  {(datasetConfig?.aggregation?.metrics?.length ?? 0) > 0 && (
                     <div className="text-xs text-blue-900 dark:text-blue-100">
                       <span className="font-semibold mr-1">Metrics:</span>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {((datasetConfig as any)?.aggregation?.metrics || []).map(
+                        {(datasetConfig?.aggregation?.metrics || []).map(
                           (metric: AggregationMetric, idx: number) => (
                             <span
                               key={idx}

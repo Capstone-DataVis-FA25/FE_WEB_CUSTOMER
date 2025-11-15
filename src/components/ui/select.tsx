@@ -37,6 +37,8 @@ const SelectContext = React.createContext<{
   itemsMap?: React.MutableRefObject<Map<string, string>>;
   registerItem?: (value: string, label: string) => void;
   unregisterItem?: (value: string) => void;
+  itemsRef?: React.MutableRefObject<Map<string, React.RefObject<HTMLDivElement>>>;
+  registerItemRef?: (value: string, ref: React.RefObject<HTMLDivElement>) => void;
 }>({
   open: false,
   setOpen: () => {},
@@ -48,12 +50,17 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
   const itemsMap = React.useRef(new Map<string, string>());
+  const itemsRef = React.useRef(new Map<string, React.RefObject<HTMLDivElement>>());
 
   const registerItem = React.useCallback((v: string, label: string) => {
     itemsMap.current.set(v, label);
   }, []);
   const unregisterItem = React.useCallback((v: string) => {
     itemsMap.current.delete(v);
+    itemsRef.current.delete(v);
+  }, []);
+  const registerItemRef = React.useCallback((v: string, ref: React.RefObject<HTMLDivElement>) => {
+    itemsRef.current.set(v, ref);
   }, []);
 
   // Close dropdown when clicking outside of the Select container or content
@@ -86,6 +93,8 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
         itemsMap,
         registerItem,
         unregisterItem,
+        itemsRef,
+        registerItemRef,
       }}
     >
       <div className="relative" ref={containerRef}>
@@ -128,7 +137,11 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
 SelectTrigger.displayName = 'SelectTrigger';
 
 const SelectContent: React.FC<SelectContentProps> = ({ children, className }) => {
-  const { open, contentRef, triggerRef, setOpen } = React.useContext(SelectContext);
+  const { open, contentRef, triggerRef, setOpen, itemsMap, itemsRef } =
+    React.useContext(SelectContext);
+  const lastKeyRef = React.useRef<string>('');
+  const keyPressTimeRef = React.useRef<number>(0);
+  const matchIndexRef = React.useRef<number>(0);
 
   const [pos, setPos] = React.useState<{ left: number; top: number; width: number } | null>(null);
 
@@ -150,12 +163,65 @@ const SelectContent: React.FC<SelectContentProps> = ({ children, className }) =>
   }, [open, triggerRef]);
 
   React.useEffect(() => {
+    if (!open) {
+      lastKeyRef.current = '';
+      matchIndexRef.current = 0;
+      keyPressTimeRef.current = 0;
+      return;
+    }
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+        return;
+      }
+
+      // Handle letter key presses for navigation
+      if (e.key.length === 1 && /[a-zA-Z0-9]/.test(e.key)) {
+        e.preventDefault();
+        const key = e.key.toLowerCase();
+        const now = Date.now();
+
+        // Reset match index if different key or more than 500ms passed
+        if (lastKeyRef.current !== key || now - keyPressTimeRef.current > 500) {
+          matchIndexRef.current = 0;
+        } else {
+          matchIndexRef.current += 1;
+        }
+
+        lastKeyRef.current = key;
+        keyPressTimeRef.current = now;
+
+        // Find all items that start with this key (case-insensitive)
+        const matches: string[] = [];
+        itemsMap?.current.forEach((label, value) => {
+          const labelLower = label.toLowerCase();
+          if (labelLower.startsWith(key)) {
+            matches.push(value);
+          }
+        });
+
+        if (matches.length > 0) {
+          // Cycle through matches
+          const index = matchIndexRef.current % matches.length;
+          const matchedValue = matches[index];
+          const itemRef = itemsRef?.current.get(matchedValue);
+
+          if (itemRef?.current && contentRef?.current) {
+            // Scroll item into view
+            itemRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            // Highlight the item temporarily
+            itemRef.current.focus();
+          }
+        }
+      }
     };
-    if (open) document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, setOpen]);
+
+    if (open) {
+      document.addEventListener('keydown', onKey);
+      return () => document.removeEventListener('keydown', onKey);
+    }
+  }, [open, setOpen, itemsMap, itemsRef, contentRef]);
 
   if (!open || !pos) return null;
 
@@ -182,6 +248,7 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
     value: selectedValue,
     registerItem,
     unregisterItem,
+    registerItemRef,
   } = React.useContext(SelectContext);
   const itemRef = React.useRef<HTMLDivElement>(null);
 
@@ -189,7 +256,10 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
     const label =
       typeof children === 'string' ? children : itemRef.current?.textContent || String(value);
     registerItem?.(value, label);
-    return () => unregisterItem?.(value);
+    registerItemRef?.(value, itemRef);
+    return () => {
+      unregisterItem?.(value);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, children]);
 
@@ -203,6 +273,7 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
   return (
     <div
       ref={itemRef}
+      tabIndex={-1}
       className={cn(
         'relative flex w-full cursor-pointer select-none items-center rounded-md py-2.5 px-3 text-sm outline-none transition-all duration-150',
         isSelected
@@ -211,6 +282,12 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
       )}
       data-value={value}
       onClick={handleClick}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
     >
       {children}
     </div>

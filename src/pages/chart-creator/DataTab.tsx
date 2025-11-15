@@ -10,11 +10,13 @@ import {
 } from '@/contexts/DatasetContext';
 import DataOperationsPanel from './operations/DataOperationsPanel';
 import type { DatasetConfig, SortLevel } from '@/types/chart';
-import { buildColumnIndexMap, applyMultiLevelSort, applyDatasetFilters } from '@/utils/datasetOps';
+import { buildColumnIndexMap } from '@/utils/datasetOps';
 
 interface DataTabProps {
   initialData?: string[][];
   initialColumns?: DataHeader[];
+  originalColumns?: DataHeader[]; // Original columns before aggregation (for filter/sort operations)
+  originalData?: string[][]; // Original data before aggregation (for unique values calculation)
   loading?: boolean;
   onOpenDatasetModal?: () => void;
   initialNumberFormat?: NumberFormat;
@@ -39,6 +41,8 @@ const ApplyFormats: React.FC<{ nf?: NumberFormat; df?: DateFormat }> = ({ nf, df
 const DataTab: React.FC<DataTabProps> = ({
   initialData,
   initialColumns,
+  originalColumns,
+  originalData,
   loading,
   onOpenDatasetModal,
   initialNumberFormat,
@@ -53,6 +57,7 @@ const DataTab: React.FC<DataTabProps> = ({
   // Removed artificial padding rows; render exactly what dataset provides
 
   // Normalize API values into strings that match the selected formats to prevent validation errors
+  // This is for display data (processed/aggregated)
   const formattedData = React.useMemo(() => {
     if (!initialData || !initialColumns || initialColumns.length === 0) return initialData;
     return preformatDataToFormats(
@@ -63,21 +68,44 @@ const DataTab: React.FC<DataTabProps> = ({
     );
   }, [initialData, initialColumns, initialNumberFormat, initialDateFormat]);
 
-  // Build a lookup from various header identifiers to column index
-  const columnIndexMap = React.useMemo(() => buildColumnIndexMap(initialColumns), [initialColumns]);
+  // Format original data for unique values calculation (before any processing)
+  const formattedOriginalData = React.useMemo(() => {
+    if (!originalData || !originalColumns || originalColumns.length === 0) return originalData;
+    return preformatDataToFormats(
+      originalData,
+      originalColumns,
+      initialNumberFormat,
+      initialDateFormat
+    );
+  }, [originalData, originalColumns, initialNumberFormat, initialDateFormat]);
 
+  // Use original columns for filter/sort operations, aggregated columns for display
+  const columnsForOperations = originalColumns || initialColumns;
+
+  // Build a lookup from various header identifiers to column index
+  const columnIndexMap = React.useMemo(
+    () => buildColumnIndexMap(columnsForOperations),
+    [columnsForOperations]
+  );
+
+  // Calculate unique values from ORIGINAL dataset (before filter/sort/aggregation)
+  // This ensures equals/not equals dropdowns work correctly
   const uniqueValuesByColumn = React.useMemo(() => {
-    if (!formattedData || !initialColumns || initialColumns.length === 0)
-      return {} as Record<string, string[]>;
+    const colsToUse = columnsForOperations || initialColumns;
+    // MUST use original formatted data, not processed/aggregated data
+    const dataToUse = formattedOriginalData;
+    if (!dataToUse || !colsToUse || colsToUse.length === 0) return {} as Record<string, string[]>;
     const MAX_TRACKED_UNIQUE_VALUES = Number.POSITIVE_INFINITY; // allow collecting all unique values
-    const columnKeys = initialColumns.map(
+    const columnKeys = colsToUse.map(
       (col, idx) => (col as any).id || (col as any).headerId || String(col.name || `col_${idx + 1}`)
     );
-    const maps = initialColumns.map(() => new Map<string, string>());
+    const maps = colsToUse.map(() => new Map<string, string>());
 
-    for (const row of formattedData) {
+    // Calculate unique values from original dataset (before any processing)
+    for (const row of dataToUse) {
       if (!row) continue;
-      initialColumns.forEach((_, idx) => {
+      colsToUse.forEach((_, idx) => {
+        if (idx >= row.length) return; // Skip if index out of bounds
         const map = maps[idx];
         if (!map) return;
         if (map.size >= MAX_TRACKED_UNIQUE_VALUES) return;
@@ -90,10 +118,10 @@ const DataTab: React.FC<DataTabProps> = ({
     }
 
     const result: Record<string, string[]> = {};
-    initialColumns.forEach((_, idx) => {
+    colsToUse.forEach((_, idx) => {
       const key = columnKeys[idx];
       if (!key) return;
-      const colType = (initialColumns[idx] as any)?.type || 'text';
+      const colType = (colsToUse[idx] as any)?.type || 'text';
       const values = Array.from(maps[idx].values()).sort((a, b) => {
         // For number columns, try numeric sorting first
         if (colType === 'number') {
@@ -116,28 +144,25 @@ const DataTab: React.FC<DataTabProps> = ({
     });
 
     return result;
-  }, [formattedData, initialColumns]);
+  }, [formattedOriginalData, columnsForOperations, initialColumns]);
 
-  // Apply filters then multi-level sort to formatted data
-  const sortLevels: SortLevel[] = React.useMemo(() => datasetConfig?.sort ?? [], [datasetConfig]);
-  const filteredThenSorted = React.useMemo(() => {
-    const filtered = applyDatasetFilters(
-      formattedData,
-      datasetConfig?.filters as any,
-      columnIndexMap
-    );
-    return applyMultiLevelSort(filtered, sortLevels, columnIndexMap);
-  }, [formattedData, datasetConfig?.filters, sortLevels, columnIndexMap]);
+  // Data is already processed (filtered, sorted, aggregated) by ChartEditorPage
+  // Just use the passed data directly
+  const displayData = formattedData;
+  const displayHeaders = initialColumns;
 
   // Stable key to remount grid when headers or highlight inputs change
   const excelKey = React.useMemo(() => {
-    const colsSig = (initialColumns || [])
+    const colsSig = (displayHeaders || [])
       .map(c => `${c.id ?? ''}|${c.name ?? ''}|${c.type ?? 'text'}`)
       .join('||');
     const hlSig = `${(highlightHeaderIds || []).join(',')}`;
     const sortSig = (datasetConfig?.sort || []).map(l => `${l.columnId}:${l.direction}`).join('|');
-    return `${colsSig}__${hlSig}__${sortSig}`;
-  }, [initialColumns, highlightHeaderIds, datasetConfig?.sort]);
+    const aggSig = datasetConfig?.aggregation
+      ? `agg_${(datasetConfig.aggregation.groupBy || []).map(g => g.id).join(',')}_${(datasetConfig.aggregation.metrics || []).map(m => m.id).join(',')}`
+      : 'noagg';
+    return `${colsSig}__${hlSig}__${sortSig}__${aggSig}`;
+  }, [displayHeaders, highlightHeaderIds, datasetConfig?.sort, datasetConfig?.aggregation]);
 
   // React.useEffect(() => {
   //   console.log('[HighlightDebug][DataTab] excelKey & props', {
@@ -162,13 +187,13 @@ const DataTab: React.FC<DataTabProps> = ({
           </div>
         </div>
         <div className="relative h-full min-h-[60vh]">
-          {initialColumns && initialColumns.length > 0 ? (
+          {displayHeaders && displayHeaders.length > 0 ? (
             <DatasetProvider>
               <ApplyFormats nf={initialNumberFormat} df={initialDateFormat} />
               <CustomExcel
                 key={excelKey}
-                initialData={filteredThenSorted}
-                initialColumns={initialColumns}
+                initialData={displayData}
+                initialColumns={displayHeaders}
                 mode="view"
                 allowHeaderEdit={false}
                 allowColumnEdit={false}
@@ -192,7 +217,7 @@ const DataTab: React.FC<DataTabProps> = ({
       <DataOperationsPanel
         datasetName={datasetName}
         onOpenDatasetModal={onOpenDatasetModal}
-        availableColumns={(initialColumns || []).map((c, idx) => ({
+        availableColumns={(columnsForOperations || []).map((c, idx) => ({
           id: (c as any).id || (c as any).headerId || String(c.name || `col_${idx + 1}`),
           name: c.name || String((c as any).id || (c as any).headerId || `Column ${idx + 1}`),
           type: (c as any).type || 'text',

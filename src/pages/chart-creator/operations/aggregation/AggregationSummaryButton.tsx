@@ -3,12 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { BarChart3, X } from 'lucide-react';
-import {
-  GroupByAggregationModal,
-  type GroupByColumn,
-  type AggregationMetric,
-} from './GroupByAggregationModal';
-import type { DatasetColumnType } from '@/types/chart';
+import { GroupByAggregationModal } from './GroupByAggregationModal';
+import type { DatasetColumnType, GroupByColumn, AggregationMetric } from '@/types/chart';
 
 interface AggregationSummaryButtonProps {
   availableColumns: { id: string; name: string; type: DatasetColumnType; dateFormat?: string }[];

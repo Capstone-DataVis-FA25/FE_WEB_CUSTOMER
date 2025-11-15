@@ -9,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/u
 import { Input } from '@/components/ui/input';
 
 import { Plus, X, Eye } from 'lucide-react';
-import { getGranularityFromFormat } from '@/utils/filterUtils';
+
+const MAX_METRICS = 5;
 
 export interface GroupByColumn {
   id: string;
   name: string;
-  timeUnit?: 'day' | 'week' | 'month' | 'year';
+  timeUnit?: 'second' | 'minute' | 'hour' | 'day' | 'month' | 'quarter' | 'year';
 }
 
 export interface AggregationMetric {
@@ -144,13 +145,17 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
     setGroupByColumns(groupByColumns.filter(col => col.id !== columnId));
   };
 
-  const updateTimeUnit = (columnId: string, timeUnit: 'day' | 'week' | 'month' | 'year') => {
+  const updateTimeUnit = (
+    columnId: string,
+    timeUnit: 'second' | 'minute' | 'hour' | 'day' | 'month' | 'quarter' | 'year'
+  ) => {
     setGroupByColumns(
       groupByColumns.map(col => (col.id === columnId ? { ...col, timeUnit } : col))
     );
   };
 
   const addMetric = () => {
+    if (metrics.length >= MAX_METRICS) return; // Limit to MAX_METRICS
     const candidate = aggregableColumns.find(col => !metrics.some(m => m.columnId === col.id));
     const metric: AggregationMetric = {
       id: Math.random().toString(36),
@@ -186,36 +191,13 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
 
   const aggregableColumns = availableColumns.filter(col => col.type === 'number');
 
-  const isAggregationDisabled = groupByColumns.length === 0;
+  const generatePreview = () => {
+    const hasGroupBy = groupByColumns.length > 0;
+    const hasMetrics = metrics.length > 0;
 
-  const generatePreviewText = () => {
-    if (groupByColumns.length === 0) return '';
+    if (!hasGroupBy && !hasMetrics) return null;
 
-    const groupText = groupByColumns
-      .map(col => `${col.name}${col.timeUnit ? ` (by ${col.timeUnit})` : ''}`)
-      .join(', ');
-
-    const metricsText = metrics
-      .map((metric, idx) => {
-        // Use alias if provided, otherwise use placeholder
-        let displayAlias = metric.alias;
-        if (!displayAlias || displayAlias.trim() === '') {
-          if (metric.type === 'count') {
-            displayAlias = 'count()';
-          } else if (metric.columnId) {
-            const metricColumn = availableColumns.find(c => c.id === metric.columnId);
-            displayAlias = metricColumn
-              ? `${metric.type}(${metricColumn.name})`
-              : `${metric.type}()`;
-          } else {
-            displayAlias = `${metric.type}()`;
-          }
-        }
-        return `${idx + 1}. ${displayAlias}`;
-      })
-      .join('\n');
-
-    return `Group by: ${groupText}\n\nMetrics:\n${metricsText}`;
+    return { groupByColumns, metrics, hasGroupBy, hasMetrics };
   };
 
   if (!open) return null;
@@ -262,28 +244,7 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
                         c => c.id === col.id || !groupByColumns.find(gc => gc.id === c.id)
                       );
 
-                      // Determine available time units based on date format
-                      const getAvailableTimeUnits = (): ('day' | 'week' | 'month' | 'year')[] => {
-                        if (!isDateColumn || !columnMeta?.dateFormat) {
-                          return ['day', 'week', 'month', 'year'];
-                        }
-                        const granularity = getGranularityFromFormat(columnMeta.dateFormat);
-                        switch (granularity) {
-                          case 'year':
-                            return ['year'];
-                          case 'year_month':
-                            return ['month', 'year'];
-                          case 'date':
-                            return ['day', 'week', 'month', 'year'];
-                          case 'datetime':
-                            return ['day', 'week', 'month', 'year'];
-                          default:
-                            return ['day', 'week', 'month', 'year'];
-                        }
-                      };
-
-                      const availableTimeUnits = getAvailableTimeUnits();
-                      const currentTimeUnit = col.timeUnit || availableTimeUnits[0];
+                      const currentTimeUnit = col.timeUnit || 'day';
 
                       const selectedColumnName = columnMeta?.name || col.name;
                       const selectedColumnType = columnMeta?.type;
@@ -345,18 +306,13 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
                                   </span>
                                 </SelectTrigger>
                                 <SelectContent className="z-[1000]">
-                                  {availableTimeUnits.includes('day') && (
-                                    <SelectItem value="day">Day</SelectItem>
-                                  )}
-                                  {availableTimeUnits.includes('week') && (
-                                    <SelectItem value="week">Week</SelectItem>
-                                  )}
-                                  {availableTimeUnits.includes('month') && (
-                                    <SelectItem value="month">Month</SelectItem>
-                                  )}
-                                  {availableTimeUnits.includes('year') && (
-                                    <SelectItem value="year">Year</SelectItem>
-                                  )}
+                                  <SelectItem value="second">Second</SelectItem>
+                                  <SelectItem value="minute">Minute</SelectItem>
+                                  <SelectItem value="hour">Hour</SelectItem>
+                                  <SelectItem value="day">Day</SelectItem>
+                                  <SelectItem value="month">Month</SelectItem>
+                                  <SelectItem value="quarter">Quarter</SelectItem>
+                                  <SelectItem value="year">Year</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -393,16 +349,10 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
                     Metrics (Aggregation)
                   </h3>
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-                    {isAggregationDisabled
-                      ? 'Add a dimension first to enable metrics'
-                      : 'Define metrics to aggregate'}
+                    Define metrics to aggregate (max {MAX_METRICS})
                   </p>
                 </div>
-                <div
-                  className={`space-y-2 flex-1 min-h-0 overflow-y-auto preview-scrollbar-modal ${
-                    isAggregationDisabled ? 'opacity-50 pointer-events-none' : ''
-                  }`}
-                >
+                <div className="space-y-2 flex-1 min-h-0 overflow-y-auto preview-scrollbar-modal">
                   {metrics.length === 0 ? (
                     <div className="text-xs text-gray-500 dark:text-gray-400 italic py-2">
                       No metrics added
@@ -530,7 +480,7 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
                   size="sm"
                   className="w-full gap-2 bg-transparent"
                   disabled={
-                    isAggregationDisabled ||
+                    metrics.length >= MAX_METRICS ||
                     (aggregableColumns.length === 0 && metrics.some(m => m.type === 'count'))
                   }
                 >
@@ -546,17 +496,80 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
                 <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Preview</h3>
               </div>
               <div className="h-[calc(100%-2.5rem)] overflow-y-auto preview-scrollbar-modal">
-                {groupByColumns.length === 0 ? (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 italic p-4 rounded bg-gray-50 dark:bg-gray-800/50">
-                    Add a dimension to see preview
-                  </div>
-                ) : (
-                  <div className="p-4 rounded bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-                    <pre className="text-xs text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap break-words">
-                      {generatePreviewText()}
-                    </pre>
-                  </div>
-                )}
+                {(() => {
+                  const preview = generatePreview();
+                  if (!preview) {
+                    return (
+                      <div className="text-xs text-gray-500 dark:text-gray-400 italic p-4 rounded bg-gray-50 dark:bg-gray-800/50">
+                        Add dimensions or metrics to see preview
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="p-3 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                      <p className="text-xs font-medium text-blue-900 dark:text-blue-200 mb-2">
+                        Applied Aggregation
+                      </p>
+                      <div className="space-y-2">
+                        {preview.hasGroupBy && (
+                          <div className="text-xs text-blue-900 dark:text-blue-100">
+                            <span className="font-semibold mr-1">Group By:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {preview.groupByColumns.map((gb, idx) => {
+                                const columnName =
+                                  availableColumns.find(c => c.id === gb.id)?.name || gb.name;
+                                return (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border border-blue-200 dark:border-blue-700 text-blue-900 dark:text-blue-200 bg-blue-100 dark:bg-blue-900/40"
+                                  >
+                                    <span>{columnName}</span>
+                                    {gb.timeUnit && (
+                                      <span className="text-blue-700 dark:text-blue-300 text-[10px]">
+                                        ({gb.timeUnit})
+                                      </span>
+                                    )}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {preview.hasMetrics && (
+                          <div className="text-xs text-blue-900 dark:text-blue-100">
+                            <span className="font-semibold mr-1">Metrics:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {preview.metrics.map((metric, idx) => {
+                                const metricColumn = metric.columnId
+                                  ? availableColumns.find(c => c.id === metric.columnId)
+                                  : null;
+                                const displayAlias =
+                                  metric.alias ||
+                                  (metric.type === 'count'
+                                    ? 'count()'
+                                    : metricColumn
+                                      ? `${metric.type}(${metricColumn.name})`
+                                      : `${metric.type}(${metric.columnId || 'count'})`);
+                                return (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border border-blue-200 dark:border-blue-700 text-blue-900 dark:text-blue-200 bg-blue-100 dark:bg-blue-900/40"
+                                  >
+                                    <span>{displayAlias}</span>
+                                    <span className="text-blue-700 dark:text-blue-300 text-[10px]">
+                                      ({metric.type})
+                                    </span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -569,7 +582,7 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
             >
               Cancel
             </Button>
-            <Button onClick={handleApply} disabled={groupByColumns.length === 0} className="gap-2">
+            <Button onClick={handleApply} disabled={metrics.length === 0} className="gap-2">
               Apply
             </Button>
           </div>
