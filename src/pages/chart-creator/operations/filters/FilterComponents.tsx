@@ -723,17 +723,8 @@ export const ColumnFilterSection: React.FC<{
   const createDefaultCondition = (columnType: DatasetColumnType): DatasetFilterCondition => {
     // Use non-unique-picker operators by default to avoid loading all unique values
     const operators = getOperatorsForType(columnType);
-    let defaultOperator: string;
-    if (columnType === 'text') {
-      // Use "contains" (index 2) instead of "equals" to avoid unique value loading
-      defaultOperator = operators[2]?.value || 'contains';
-    } else if (columnType === 'number') {
-      // Use "greater_than" (index 2) instead of "equals"
-      defaultOperator = operators[2]?.value || 'greater_than';
-    } else {
-      // date: Use "greater_than" (index 2) instead of "equals"
-      defaultOperator = operators[2]?.value || 'greater_than';
-    }
+    // Default operators are now at index 0 (contains for text, greater_than for number/date)
+    const defaultOperator = operators[0]?.value || 'contains';
     return {
       id: generateId(),
       operator: defaultOperator,
@@ -820,27 +811,38 @@ export const ColumnFilterSection: React.FC<{
             </label>
             <Select value={column.columnId} onValueChange={handleColumnChange}>
               <SelectTrigger className="w-full h-9 text-xs outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 data-[state=open]:ring-0 data-[state=open]:ring-offset-0">
-                <span className="block truncate">
-                  {(() => {
-                    const sel = availableColumns.find(c => c.id === column.columnId);
-                    const label = sel?.name || column.columnName || column.columnId;
-                    const type = sel?.type || column.columnType;
-                    const fmt = sel?.dateFormat;
-                    const typeWithFmt = type === 'date' && fmt ? `${type} - ${fmt}` : type;
-                    return `${label} (${typeWithFmt})`;
-                  })()}
-                </span>
+                {(() => {
+                  const sel = availableColumns.find(c => c.id === column.columnId);
+                  const label = sel?.name || column.columnName || column.columnId;
+                  const type = sel?.type || column.columnType;
+                  const fmt = sel?.dateFormat;
+                  return (
+                    <div className="flex items-center justify-between w-full min-w-0">
+                      <span className="truncate">{label}</span>
+                      {type && (
+                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                          ({type === 'date' && fmt ? `${type} - ${fmt}` : type})
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
               </SelectTrigger>
               <SelectContent>
                 {availableColumns
                   .filter(col => !usedColumnIds.includes(col.id) || col.id === column.columnId)
                   .map(col => (
                     <SelectItem key={col.id} value={col.id}>
-                      {col.name} (
-                      {col.type === 'date' && col.dateFormat
-                        ? `${col.type} - ${col.dateFormat}`
-                        : col.type}
-                      )
+                      <div className="flex items-center justify-between w-full">
+                        <span>{col.name}</span>
+                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                          (
+                          {col.type === 'date' && col.dateFormat
+                            ? `${col.type} - ${col.dateFormat}`
+                            : col.type}
+                          )
+                        </span>
+                      </div>
                     </SelectItem>
                   ))}
               </SelectContent>

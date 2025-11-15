@@ -101,14 +101,8 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     if (!candidate) return;
     // Use non-unique-picker operators by default to avoid loading all unique values
     const operators = getOperatorsForType(candidate.type);
-    let defaultOperator: string;
-    if (candidate.type === 'text') {
-      defaultOperator = operators[2]?.value || 'contains'; // Use "contains" instead of "equals"
-    } else if (candidate.type === 'number') {
-      defaultOperator = operators[2]?.value || 'greater_than'; // Use "greater_than" instead of "equals"
-    } else {
-      defaultOperator = operators[2]?.value || 'greater_than'; // date: Use "greater_than" instead of "equals"
-    }
+    // Default operators are now at index 0 (contains for text, greater_than for number/date)
+    const defaultOperator = operators[0]?.value || 'contains';
     const newColumn: DatasetFilterColumn = {
       id: generateId(),
       columnId: candidate.id,
@@ -163,8 +157,8 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] flex flex-col">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 select-none">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] flex flex-col select-none">
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Filter Configuration
@@ -296,8 +290,8 @@ export const FilterModal: React.FC<FilterModalProps> = ({
       </div>
 
       {showResetConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-sm w-full mx-4 overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 select-none">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-sm w-full mx-4 overflow-hidden select-none">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 Reset all filters?

@@ -11,27 +11,27 @@ export const getOperatorsForType = (type: SimpleColumnType): { value: string; la
   switch (type) {
     case 'text':
       return [
-        { value: 'equals', label: 'equals' },
-        { value: 'not_equals', label: 'not equals' },
         { value: 'contains', label: 'contains' },
         { value: 'not_contains', label: 'not contains' },
+        { value: 'equals', label: 'equals' },
+        { value: 'not_equals', label: 'not equals' },
         { value: 'starts_with', label: 'starts with' },
         { value: 'ends_with', label: 'ends with' },
       ];
     case 'number':
       return [
-        { value: 'equals', label: 'equals' },
-        { value: 'not_equals', label: 'not equals' },
         { value: 'greater_than', label: 'greater than' },
         { value: 'less_than', label: 'less than' },
+        { value: 'equals', label: 'equals' },
+        { value: 'not_equals', label: 'not equals' },
         { value: 'between', label: 'between' },
       ];
     case 'date':
       return [
-        { value: 'equals', label: 'equals' },
-        { value: 'not_equals', label: 'not equals' },
         { value: 'greater_than', label: 'greater than' },
         { value: 'less_than', label: 'less than' },
+        { value: 'equals', label: 'equals' },
+        { value: 'not_equals', label: 'not equals' },
         { value: 'between', label: 'between' },
       ];
   }

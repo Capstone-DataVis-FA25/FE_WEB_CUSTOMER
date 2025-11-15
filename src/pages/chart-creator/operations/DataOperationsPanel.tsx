@@ -10,6 +10,8 @@ import type {
 } from '@/types/chart';
 import { FilterSummaryButton } from './filters/FilterSummaryButton';
 import { SortSummaryButton } from './sort/SortSummaryButton';
+import { AggregationSummaryButton } from './aggregation/AggregationSummaryButton';
+import type { GroupByColumn, AggregationMetric } from './aggregation/GroupByAggregationModal';
 import OperationsBanner from './OperationsBanner';
 import {
   humanizeOperator,
@@ -71,7 +73,7 @@ const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
   );
 
   return (
-    <div className="h-full min-h-0 w-[480px] min-w-[480px] max-w-[480px] border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 overflow-y-auto hide-scrollbar">
+    <div className="h-full min-h-0 w-[480px] min-w-[480px] max-w-[480px] border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 overflow-y-auto hide-scrollbar select-none">
       <div className="mb-3 flex flex-col gap-2">
         <Button
           variant="outline"
@@ -219,6 +221,88 @@ const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
                       </span>
                     );
                   })}
+                </div>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                No configuration applied
+              </p>
+            )}
+          </div>
+
+          <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
+
+          <div className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
+            Aggregation Configuration
+          </div>
+          <div className="mb-4">
+            <AggregationSummaryButton
+              availableColumns={availableColumns}
+              initialGroupBy={(datasetConfig as any)?.aggregation?.groupBy || []}
+              initialMetrics={(datasetConfig as any)?.aggregation?.metrics || []}
+              onAggregationChange={(groupBy, metrics) =>
+                onDatasetConfigChange({
+                  ...(datasetConfig || {}),
+                  aggregation:
+                    groupBy.length > 0 || metrics.length > 0 ? { groupBy, metrics } : undefined,
+                } as any)
+              }
+            />
+            {((datasetConfig as any)?.aggregation?.groupBy?.length ?? 0) > 0 ||
+            ((datasetConfig as any)?.aggregation?.metrics?.length ?? 0) > 0 ? (
+              <div className="mt-3 p-3 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                <p className="text-xs font-medium text-blue-900 dark:text-blue-200 mb-2">
+                  Applied Aggregation
+                </p>
+                <div className="space-y-2">
+                  {((datasetConfig as any)?.aggregation?.groupBy?.length ?? 0) > 0 && (
+                    <div className="text-xs text-blue-900 dark:text-blue-100">
+                      <span className="font-semibold mr-1">Group By:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {((datasetConfig as any)?.aggregation?.groupBy || []).map(
+                          (gb: GroupByColumn, idx: number) => {
+                            const columnName =
+                              availableColumns.find(c => c.id === gb.id)?.name || gb.name;
+                            return (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border border-blue-200 dark:border-blue-700 text-blue-900 dark:text-blue-200 bg-blue-100 dark:bg-blue-900/40"
+                              >
+                                <span>{columnName}</span>
+                                {gb.timeUnit && (
+                                  <span className="text-blue-700 dark:text-blue-300 text-[10px]">
+                                    ({gb.timeUnit})
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {((datasetConfig as any)?.aggregation?.metrics?.length ?? 0) > 0 && (
+                    <div className="text-xs text-blue-900 dark:text-blue-100">
+                      <span className="font-semibold mr-1">Metrics:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {((datasetConfig as any)?.aggregation?.metrics || []).map(
+                          (metric: AggregationMetric, idx: number) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border border-blue-200 dark:border-blue-700 text-blue-900 dark:text-blue-200 bg-blue-100 dark:bg-blue-900/40"
+                            >
+                              <span>
+                                {metric.alias || `${metric.type}(${metric.columnId || 'count'})`}
+                              </span>
+                              <span className="text-blue-700 dark:text-blue-300 text-[10px]">
+                                ({metric.type})
+                              </span>
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

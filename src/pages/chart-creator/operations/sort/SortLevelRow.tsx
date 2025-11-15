@@ -9,7 +9,12 @@ import type { SortLevel } from '@/types/chart';
 interface SortLevelRowProps {
   level: SortLevel;
   levelIndex: number;
-  availableColumns: { id: string; name: string }[];
+  availableColumns: {
+    id: string;
+    name: string;
+    type?: 'text' | 'number' | 'date';
+    dateFormat?: string;
+  }[];
   usedColumnIds: string[];
   onUpdate: (updated: SortLevel) => void;
   onRemove: () => void;
@@ -23,7 +28,10 @@ export const SortLevelRow: React.FC<SortLevelRowProps> = ({
   onUpdate,
   onRemove,
 }) => {
-  const columnName = availableColumns.find(c => c.id === level.columnId)?.name || level.columnId;
+  const selectedColumn = availableColumns.find(c => c.id === level.columnId);
+  const columnName = selectedColumn?.name || level.columnId;
+  const columnType = selectedColumn?.type;
+  const columnDateFormat = selectedColumn?.dateFormat;
 
   // Filter out already used columns, but include the current one
   const availableOptions = availableColumns.filter(
@@ -37,35 +45,64 @@ export const SortLevelRow: React.FC<SortLevelRowProps> = ({
       </div>
 
       <div className="flex gap-2 items-center flex-1 min-w-0">
-        <Select value={level.columnId} onValueChange={columnId => onUpdate({ ...level, columnId })}>
-          <SelectTrigger className="flex-1 min-w-0 h-9 text-xs">
-            <span className="block truncate">{columnName || 'Select column'}</span>
-          </SelectTrigger>
-          <SelectContent>
-            {availableOptions.map(col => (
-              <SelectItem key={col.id} value={col.id}>
-                {col.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex-[3] min-w-0">
+          <Select
+            value={level.columnId}
+            onValueChange={columnId => onUpdate({ ...level, columnId })}
+          >
+            <SelectTrigger className="w-full h-9 text-xs">
+              <div className="flex items-center justify-between w-full min-w-0">
+                <span className="truncate">{columnName || 'Select column'}</span>
+                {columnType && (
+                  <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                    (
+                    {columnType === 'date' && columnDateFormat
+                      ? `${columnType} - ${columnDateFormat}`
+                      : columnType}
+                    )
+                  </span>
+                )}
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {availableOptions.map(col => (
+                <SelectItem key={col.id} value={col.id}>
+                  <div className="flex items-center justify-between w-full">
+                    <span>{col.name}</span>
+                    {col.type && (
+                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                        (
+                        {col.type === 'date' && col.dateFormat
+                          ? `${col.type} - ${col.dateFormat}`
+                          : col.type}
+                        )
+                      </span>
+                    )}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <Select
-          value={level.direction}
-          onValueChange={direction =>
-            onUpdate({ ...level, direction: direction as 'asc' | 'desc' })
-          }
-        >
-          <SelectTrigger className="w-32 h-9 text-xs flex-shrink-0">
-            <span className="block truncate">
-              {level.direction === 'asc' ? 'Ascending' : 'Descending'}
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="asc">Ascending</SelectItem>
-            <SelectItem value="desc">Descending</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex-1 min-w-0">
+          <Select
+            value={level.direction}
+            onValueChange={direction =>
+              onUpdate({ ...level, direction: direction as 'asc' | 'desc' })
+            }
+          >
+            <SelectTrigger className="w-full h-9 text-xs">
+              <span className="block truncate">
+                {level.direction === 'asc' ? 'Ascending' : 'Descending'}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="asc">Ascending</SelectItem>
+              <SelectItem value="desc">Descending</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         <Button
           variant="ghost"

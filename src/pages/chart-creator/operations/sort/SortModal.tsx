@@ -10,7 +10,12 @@ interface SortModalProps {
   isOpen: boolean;
   onClose: () => void;
   onApply: (levels: SortLevel[]) => void;
-  availableColumns: { id: string; name: string }[];
+  availableColumns: {
+    id: string;
+    name: string;
+    type?: 'text' | 'number' | 'date';
+    dateFormat?: string;
+  }[];
   initialLevels?: SortLevel[];
 }
 
@@ -87,8 +92,8 @@ export const SortModal: React.FC<SortModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] flex flex-col">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 select-none">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] flex flex-col select-none">
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Sort Configuration

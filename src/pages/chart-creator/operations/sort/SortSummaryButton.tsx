@@ -7,7 +7,12 @@ import { SortModal } from './SortModal';
 import type { SortLevel } from '@/types/chart';
 
 interface SortSummaryButtonProps {
-  availableColumns: { id: string; name: string }[];
+  availableColumns: {
+    id: string;
+    name: string;
+    type?: 'text' | 'number' | 'date';
+    dateFormat?: string;
+  }[];
   onSortChange?: (levels: SortLevel[]) => void;
   initialLevels?: SortLevel[];
 }
