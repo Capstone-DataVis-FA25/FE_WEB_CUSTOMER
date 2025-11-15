@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import useToast from '@/hooks/useToast';
 import { useChartEditor, useChartEditorRead } from '@/features/chartEditor';
+import { useDataset } from '@/features/dataset/useDataset';
 import { useState } from 'react';
 import ToastContainer from '../ui/toast-container';
 
@@ -13,8 +14,18 @@ const ImportExportSection = () => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const { chartConfig } = useChartEditorRead();
-  const { currentChartType: chartType } = useChartEditorRead();
-  const { setCurrentChartType, setChartConfig } = useChartEditor();
+  const {
+    currentChartType: chartType,
+    editableName,
+    editableDescription,
+    setCurrentChartType,
+    setChartConfig,
+    setEditableName,
+    setEditableDescription,
+    updateOriginals,
+  } = useChartEditor();
+
+  const { getDatasetById, currentDataset } = useDataset();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Toggle import/export section visibility
@@ -190,7 +201,7 @@ const ImportExportSection = () => {
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
   };
 
-  // Export configuration to JSON (config only, no data)
+  // Export configuration to JSON (includes all chart metadata)
   const exportConfigToJSON = () => {
     try {
       if (!chartConfig) {
@@ -204,8 +215,11 @@ const ImportExportSection = () => {
       }
 
       const exportData = {
-        config: chartConfig, // Include chart configuration
-        chartType, // Include chart type in export
+        name: editableName || 'Untitled Chart',
+        description: editableDescription,
+        type: chartType,
+        datasetId: currentDataset?.id || '',
+        config: chartConfig,
       };
 
       const jsonString = JSON.stringify(exportData, null, 2);
@@ -214,7 +228,8 @@ const ImportExportSection = () => {
 
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${chartType}-chart-config-${new Date().toISOString().split('T')[0]}.json`;
+      const fileName = editableName || 'chart';
+      a.download = `${fileName}-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -245,14 +260,26 @@ const ImportExportSection = () => {
             throw new Error('Invalid configuration file structure');
           }
 
-          // Handle chart type if included in import
-          if (importData.chartType && importData.chartType !== chartType) {
-            setCurrentChartType(importData.chartType);
+          // Import all chart properties
+          if (importData.name) {
+            setEditableName(importData.name);
+          }
+          if (importData.description !== undefined) {
+            setEditableDescription(importData.description || '');
+          }
+          if (importData.type) {
+            setCurrentChartType(importData.type);
           }
           if (importData.config) {
             setChartConfig(importData.config);
           }
-          showSuccess(t('chart_editor_configImported', 'Configuration imported'));
+          if (importData.datasetId) {
+            getDatasetById(importData.datasetId);
+          }
+          // Note: datasetId is imported but requires manual dataset selection
+          // as we don't automatically load datasets during config import
+
+          showSuccess(t('chart_editor_configImported', 'Configuration imported successfully'));
         } catch (parseError) {
           showError(t('chart_editor_invalidConfigFile', 'Invalid configuration file'));
         }

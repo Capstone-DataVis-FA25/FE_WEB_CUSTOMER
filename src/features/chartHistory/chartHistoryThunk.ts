@@ -74,6 +74,7 @@ export const compareVersionsThunk = createAsyncThunk(
         name: string;
         description?: string;
         type: string;
+        datasetId: string;
         config: any;
         updatedAt: string;
       };
@@ -100,6 +101,7 @@ export const compareVersionsThunk = createAsyncThunk(
         name: historicalVersion.name,
         description: historicalVersion.description,
         type: historicalVersion.type,
+        datasetId: historicalVersion.datasetId,
         config: historicalVersion.config,
         createdAt: historicalVersion.createdAt,
       });
