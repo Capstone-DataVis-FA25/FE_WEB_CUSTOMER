@@ -71,46 +71,114 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
   );
 
   // Helper: render JSON with highlight for diff keys
-  const renderHighlightedJson = (obj: any, diffKeys: string[], side: 'current' | 'historical') => {
+  const renderHighlightedJson = (
+    obj: any,
+    diffKeys: string[],
+    side: 'current' | 'historical',
+    flatDiffs: FlatDiffs,
+    otherSideObj: any
+  ) => {
     // Convert object to lines with dot notation path
     const lines: string[] = [];
     const highlights: boolean[] = [];
-    function walk(val: any, path: string, indent: number) {
+
+    // Helper: check if this exact path (not children) has a diff
+    const hasExactDiff = (path: string) => diffKeys.includes(path);
+
+    // Helper: check if any child path has a diff
+    const hasChildDiff = (path: string) => diffKeys.some(k => k.startsWith(path + '.'));
+
+    // Helper: get value from other side by path
+    const getValueByPath = (obj: any, path: string): any => {
+      if (!path) return obj;
+      const keys = path.split('.');
+      let value = obj;
+      for (const key of keys) {
+        if (value && typeof value === 'object') {
+          value = value[key];
+        } else {
+          return undefined;
+        }
+      }
+      return value;
+    };
+
+    function walk(val: any, path: string, indent: number, parentHighlight = false) {
       if (typeof val !== 'object' || val === null) {
-        // primitive
+        // primitive - highlight if this exact path has a diff OR parent is highlighted
         const keyPath = path;
-        const highlight = diffKeys.some(k => k === keyPath || k.startsWith(keyPath + '.'));
+        const highlight = parentHighlight || hasExactDiff(keyPath);
         lines.push(`${'  '.repeat(indent)}${JSON.stringify(val)}`);
         highlights.push(highlight);
         return;
       }
       if (Array.isArray(val)) {
+        const arrayHasExactDiff = hasExactDiff(path);
+        const arrayHasChildDiff = hasChildDiff(path);
+        const shouldHighlightArray = arrayHasExactDiff && !arrayHasChildDiff;
+
+        // Get the corresponding array from the other side
+        const otherSideArray = getValueByPath(otherSideObj, path);
+        const otherArrayLength = Array.isArray(otherSideArray) ? otherSideArray.length : 0;
+
         lines.push(`${'  '.repeat(indent)}[`);
-        highlights.push(false);
-        val.forEach((item, idx) => walk(item, path + '[' + idx + ']', indent + 1));
+        // Highlight opening bracket if entire array is different (added/removed/replaced)
+        highlights.push(shouldHighlightArray || parentHighlight);
+
+        // Pass down highlight flag to children if entire array should be highlighted
+        val.forEach((item, idx) => {
+          // Check if this element index exists in the other side
+          const isNewElement = idx >= otherArrayLength;
+          const elementPath = path ? `${path}.${idx}` : `${idx}`;
+
+          // Highlight if: parent highlighted OR element is newly added OR element has changes
+          const shouldHighlightElement = shouldHighlightArray || parentHighlight || isNewElement;
+
+          walk(item, elementPath, indent + 1, shouldHighlightElement);
+        });
+
         lines.push(`${'  '.repeat(indent)}]`);
-        highlights.push(false);
+        // Highlight closing bracket if entire array is different
+        highlights.push(shouldHighlightArray || parentHighlight);
         return;
       }
+
+      const objectHasExactDiff = hasExactDiff(path);
+      const objectHasChildDiff = hasChildDiff(path);
+      const shouldHighlightObject = objectHasExactDiff && !objectHasChildDiff;
+
       lines.push(`${'  '.repeat(indent)}{`);
-      highlights.push(false);
+      // Highlight opening brace if entire object is different (added/removed/replaced)
+      highlights.push(shouldHighlightObject || parentHighlight);
+
       for (const key of Object.keys(val)) {
         const keyPath = path ? path + '.' + key : key;
-        const highlight = diffKeys.some(k => k === keyPath || k.startsWith(keyPath + '.'));
         const value = val[key];
-        if (typeof value === 'object' && value !== null) {
+        const isObject = typeof value === 'object' && value !== null;
+
+        // Highlight property key if:
+        // 1. Parent is highlighted, OR
+        // 2. It's a primitive value AND has exact diff, OR
+        // 3. It's an object/array AND has exact diff (entire object replaced) AND no child diffs
+        const shouldHighlight =
+          parentHighlight || (hasExactDiff(keyPath) && !hasChildDiff(keyPath));
+
+        if (isObject) {
           lines.push(`${'  '.repeat(indent + 1)}"${key}": `);
-          highlights.push(highlight);
-          walk(value, keyPath, indent + 2);
+          highlights.push(shouldHighlight);
+          // Pass shouldHighlight down to children when this specific property should be highlighted
+          walk(value, keyPath, indent + 2, shouldHighlight);
         } else {
           lines.push(`${'  '.repeat(indent + 1)}"${key}": ${JSON.stringify(value)}`);
-          highlights.push(highlight);
+          highlights.push(shouldHighlight);
         }
       }
+
       lines.push(`${'  '.repeat(indent)}}`);
-      highlights.push(false);
+      // Highlight closing brace if entire object is different
+      highlights.push(shouldHighlightObject || parentHighlight);
     }
-    walk(obj, '', 0);
+    walk(obj, '', 0, false);
     return (
       <pre
         className={
@@ -125,14 +193,27 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
           if (typeof window !== 'undefined' && window.document?.documentElement?.classList) {
             isDark = window.document.documentElement.classList.contains('dark');
           }
-          const highlightStyle = highlights[i]
-            ? {
-                background: isDark ? '#665c00' : '#fffbe6', // darker yellow for dark mode
-                borderColor: '#faad14',
-                borderTop: '1px solid #ffffff',
-                borderBottom: '1px solid #ffffff',
-              }
-            : {};
+
+          // Determine highlight color based on side:
+          // - current (green background) → green highlight for additions
+          // - historical (blue background) → red highlight for removals
+          let highlightStyle = {};
+          if (highlights[i]) {
+            if (side === 'current') {
+              // Green highlight for current version (added/changed)
+              highlightStyle = {
+                background: isDark ? '#1a4d2e' : '#d4f4dd', // dark green for dark mode, light green for light mode
+                borderColor: '#52c41a',
+              };
+            } else {
+              // Red highlight for historical version (removed/old)
+              highlightStyle = {
+                background: isDark ? '#5c1a1a' : '#ffd4d4', // dark red for dark mode, light red for light mode
+                borderColor: '#ff4d4f',
+              };
+            }
+          }
+
           return (
             <div key={i} style={highlightStyle}>
               {line}
@@ -249,7 +330,14 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
               onClick={() => setShowCurrentHistory(v => !v)}
               label={t('chartHistory.comparison.current', 'Current Version')}
             />
-            {showCurrentHistory && renderHighlightedJson(currentForRender, diffKeys, 'current')}
+            {showCurrentHistory &&
+              renderHighlightedJson(
+                currentForRender,
+                diffKeys,
+                'current',
+                flatDiffs,
+                historicalForRender
+              )}
           </div>
           <div>
             <SectionToggle
@@ -258,7 +346,13 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
               label={t('chartHistory.comparison.historical', 'Historical Version')}
             />
             {showCurrentHistory &&
-              renderHighlightedJson(historicalForRender, diffKeys, 'historical')}
+              renderHighlightedJson(
+                historicalForRender,
+                diffKeys,
+                'historical',
+                flatDiffs,
+                currentForRender
+              )}
           </div>
         </div>
         {/* Differences Section */}

@@ -529,39 +529,57 @@ const ChartEditorPage: React.FC = () => {
   );
 
   const handleCreateChart = async () => {
-    try {
-      if (!editableName.trim()) {
-        showError('Chart name is required');
-        return;
-      }
-      if (!editableDescription.trim()) {
-        showError('Chart description is required');
-        return;
-      }
-      if (!chartConfig) {
-        showError('Chart configuration is required');
-        return;
-      }
-
-      const createData: ChartRequest = {
-        name: editableName.trim(),
-        description: editableDescription.trim(),
-        datasetId: datasetId || '',
-        type: currentChartType ?? ChartType.Line,
-        config: chartConfig as unknown as ChartRequest['config'],
-      };
-
-      const result = await createChart(createData).unwrap();
-      showSuccess(t('chart_create_success', 'Chart created successfully'));
-
-      // Navigate to edit mode with new chart ID
-      navigate(`${location.pathname}?chartId=${result.id}`, {
-        replace: true,
-      });
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      showError(t('chart_create_error', 'Failed to create chart'), errorMessage);
+    if (!editableName.trim()) {
+      showError('Chart name is required');
+      return;
     }
+    if (!editableDescription.trim()) {
+      showError('Chart description is required');
+      return;
+    }
+    if (!chartConfig) {
+      showError('Chart configuration is required');
+      return;
+    }
+
+    setCurrentModalAction('save');
+    modalConfirm.openConfirm(async () => {
+      try {
+        // Capture chart snapshot before creating
+        let imageUrl: string | undefined;
+        try {
+          const url = await captureAndUploadChartSnapshot('.chart-container');
+          if (url) {
+            imageUrl = url;
+            console.log('Chart snapshot captured and uploaded:', imageUrl);
+          }
+        } catch (error) {
+          console.warn('Failed to capture chart snapshot:', error);
+          // Continue with creation even if snapshot fails
+        }
+
+        const createData: ChartRequest = {
+          name: editableName.trim(),
+          description: editableDescription.trim(),
+          datasetId: datasetId || '',
+          type: currentChartType ?? ChartType.Line,
+          config: chartConfig as unknown as ChartRequest['config'],
+          imageUrl, // Include chart snapshot
+        };
+
+        const result = await createChart(createData).unwrap();
+        showSuccess(t('chart_create_success', 'Chart created successfully'));
+
+        // Navigate to edit mode with new chart ID
+        navigate(`${location.pathname}?chartId=${result.id}`, {
+          replace: true,
+        });
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        showError(t('chart_create_error', 'Failed to create chart'), errorMessage);
+        throw error;
+      }
+    });
   };
 
   const handleUpdateChart = async () => {
@@ -570,13 +588,13 @@ const ChartEditorPage: React.FC = () => {
     setCurrentModalAction('save');
     modalConfirm.openConfirm(async () => {
       try {
-        // Capture and upload chart snapshot before updating
-        let imageUrl: string | undefined;
+        // Capture new chart snapshot for the updated version
+        let newImageUrl: string | undefined;
         try {
           const url = await captureAndUploadChartSnapshot('.chart-container');
           if (url) {
-            imageUrl = url;
-            console.log('Chart snapshot captured and uploaded:', imageUrl);
+            newImageUrl = url;
+            console.log('New chart snapshot captured and uploaded:', newImageUrl);
           }
         } catch (error) {
           console.warn('Failed to capture chart snapshot:', error);
@@ -589,7 +607,7 @@ const ChartEditorPage: React.FC = () => {
           type: currentChartType ?? ChartType.Line,
           config: chartConfig || undefined,
           datasetId: datasetId ?? undefined,
-          imageUrl, // Include the captured image URL
+          imageUrl: newImageUrl, // Ảnh mới của chart sau khi update
         };
 
         const response = await updateChart(chartIdFromUrl, updateData);
@@ -667,11 +685,8 @@ const ChartEditorPage: React.FC = () => {
         console.log('After :', after);
         console.groupEnd();
 
-        // Kết hợp: reset config, loại bỏ chartType và reset datasetConfig về rỗng
-        const { chartType, ...cfgWithoutType } = nextCfg;
         setChartConfig({
-          ...cfgWithoutType,
-          datasetConfig: {} as DatasetConfig,
+          ...nextCfg,
         } as MainChartConfig);
       }
       // Track dirty state relative to original dataset id
@@ -873,10 +888,15 @@ const ChartEditorPage: React.FC = () => {
           }
           message={
             currentModalAction === 'save'
-              ? t(
-                  'chart_save_confirm_message',
-                  'Are you sure you want to save these changes? This will update your chart configuration.'
-                )
+              ? mode === 'create'
+                ? t(
+                    'chart_create_confirm_message',
+                    'Are you sure you want to create this chart? This will save your chart configuration.'
+                  )
+                : t(
+                    'chart_save_confirm_message',
+                    'Are you sure you want to save these changes? This will update your chart configuration.'
+                  )
               : currentModalAction === 'reset'
                 ? t(
                     'chart_reset_confirm_message',
@@ -886,7 +906,9 @@ const ChartEditorPage: React.FC = () => {
           }
           confirmText={
             currentModalAction === 'save'
-              ? t('common_save', 'Save')
+              ? mode === 'create'
+                ? t('chart_create', 'Create Chart')
+                : t('common_save', 'Save')
               : currentModalAction === 'reset'
                 ? t('common_reset', 'Reset')
                 : t('common_confirm', 'Confirm')
