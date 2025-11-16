@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/u
 
 import { Input } from '@/components/ui/input';
 
-import { Plus, X, Eye } from 'lucide-react';
+import { Plus, X, Eye, AlertCircle } from 'lucide-react';
 
 const MAX_METRICS = 5;
 
@@ -172,24 +172,144 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
 
   const handleApply = () => {
     // Use default alias if user didn't provide one (empty or whitespace only)
+    // Track used names to prevent duplicates
+    const usedNames = new Set<string>();
+    const getUniqueName = (baseName: string): string => {
+      if (!usedNames.has(baseName)) {
+        usedNames.add(baseName);
+        return baseName;
+      }
+      // If duplicate, add numeric suffix
+      let counter = 1;
+      let uniqueName = `${baseName}_${counter}`;
+      while (usedNames.has(uniqueName)) {
+        counter++;
+        uniqueName = `${baseName}_${counter}`;
+      }
+      usedNames.add(uniqueName);
+      return uniqueName;
+    };
+
     const processedMetrics = metrics.map(metric => {
       const trimmedAlias = (metric.alias || '').trim();
       if (trimmedAlias === '') {
         // Generate default alias
+        let baseAlias = '';
         if (metric.type === 'count') {
-          return { ...metric, alias: 'count()' };
+          baseAlias = 'count()';
         } else if (metric.columnId) {
           const col = availableColumns.find(c => c.id === metric.columnId);
-          return { ...metric, alias: `${metric.type}(${col?.name || ''})` };
+          baseAlias = `${metric.type}(${col?.name || ''})`;
+        } else {
+          baseAlias = `${metric.type}()`;
         }
+        return { ...metric, alias: getUniqueName(baseAlias) };
       }
-      return { ...metric, alias: trimmedAlias };
+      // Even user-provided aliases need to be unique
+      return { ...metric, alias: getUniqueName(trimmedAlias) };
     });
     onApply?.(groupByColumns, processedMetrics);
     onOpenChange(false);
   };
 
   const aggregableColumns = availableColumns.filter(col => col.type === 'number');
+
+  // Collect all used names from groupBy columns
+  const groupByNames = React.useMemo(() => {
+    const names = new Set<string>();
+    groupByColumns.forEach(gb => {
+      const col = availableColumns.find(c => c.id === gb.id);
+      const name = col?.name || gb.name;
+      const fullName = name + (gb.timeUnit ? ` (${gb.timeUnit})` : '');
+      names.add(fullName);
+    });
+    return names;
+  }, [groupByColumns, availableColumns]);
+
+  // Generate unique names for metrics (for display in placeholder and preview)
+  // Also check for duplicate user-provided aliases
+  const { uniqueMetricNames, duplicateAliases, defaultPlaceholders } = React.useMemo(() => {
+    const usedNames = new Set<string>(groupByNames); // Start with groupBy names
+    const duplicates = new Set<string>();
+    const placeholders = new Map<string, string>();
+
+    const getUniqueName = (baseName: string): string => {
+      if (!usedNames.has(baseName)) {
+        usedNames.add(baseName);
+        return baseName;
+      }
+      let counter = 1;
+      let uniqueName = `${baseName}_${counter}`;
+      while (usedNames.has(uniqueName)) {
+        counter++;
+        uniqueName = `${baseName}_${counter}`;
+      }
+      usedNames.add(uniqueName);
+      return uniqueName;
+    };
+
+    // First pass: collect all user-provided aliases and check for duplicates
+    metrics.forEach(metric => {
+      const trimmedAlias = (metric.alias || '').trim();
+      if (trimmedAlias !== '') {
+        // Check if this user-provided alias conflicts with groupBy or other metrics
+        if (usedNames.has(trimmedAlias)) {
+          duplicates.add(metric.id);
+        } else {
+          usedNames.add(trimmedAlias);
+        }
+      }
+    });
+
+    // Second pass: generate default names and unique names for display
+    const nameMap = new Map<string, string>();
+    usedNames.clear();
+    groupByNames.forEach(name => usedNames.add(name)); // Reset with groupBy names
+
+    metrics.forEach(metric => {
+      const trimmedAlias = (metric.alias || '').trim();
+      let baseName = '';
+      let defaultName = '';
+
+      if (trimmedAlias !== '') {
+        baseName = trimmedAlias;
+        // For user-provided, use as-is (duplicate check already done above)
+        if (!duplicates.has(metric.id)) {
+          usedNames.add(baseName);
+        }
+      } else {
+        // Generate default alias
+        if (metric.type === 'count') {
+          defaultName = 'count()';
+        } else if (metric.columnId) {
+          const col = availableColumns.find(c => c.id === metric.columnId);
+          defaultName = `${metric.type}(${col?.name || ''})`;
+        } else {
+          defaultName = `${metric.type}()`;
+        }
+        baseName = defaultName;
+
+        // Check if default name conflicts, if so show unique version in placeholder
+        if (usedNames.has(defaultName)) {
+          const uniqueDefault = getUniqueName(defaultName);
+          placeholders.set(metric.id, uniqueDefault);
+        } else {
+          placeholders.set(metric.id, defaultName);
+          usedNames.add(defaultName);
+        }
+      }
+
+      // Generate unique name for display (for preview)
+      const uniqueName = getUniqueName(baseName);
+      nameMap.set(metric.id, uniqueName);
+    });
+
+    return {
+      uniqueMetricNames: nameMap,
+      duplicateAliases: duplicates,
+      defaultPlaceholders: placeholders,
+    };
+  }, [metrics, availableColumns, groupByNames]);
 
   const generatePreview = () => {
     const hasGroupBy = groupByColumns.length > 0;
@@ -444,24 +564,39 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <Input
-                              value={metric.alias || ''}
-                              onChange={e =>
-                                setMetrics(
-                                  metrics.map(m =>
-                                    m.id === metric.id ? { ...m, alias: e.target.value } : m
+                            <div className="relative">
+                              <Input
+                                value={metric.alias || ''}
+                                onChange={e =>
+                                  setMetrics(
+                                    metrics.map(m =>
+                                      m.id === metric.id ? { ...m, alias: e.target.value } : m
+                                    )
                                   )
-                                )
-                              }
-                              placeholder={
-                                metric.type === 'count'
-                                  ? 'count()'
-                                  : metricColumn
-                                    ? `${metric.type}(${metricColumn.name})`
-                                    : 'Alias (e.g., Total Revenue)'
-                              }
-                              className="h-9 text-sm"
-                            />
+                                }
+                                placeholder={
+                                  metric.alias?.trim()
+                                    ? 'Alias (e.g., Total Revenue)'
+                                    : defaultPlaceholders.get(metric.id) ||
+                                      'Alias (e.g., Total Revenue)'
+                                }
+                                className={`h-9 text-sm pr-8 ${
+                                  duplicateAliases.has(metric.id)
+                                    ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500'
+                                    : ''
+                                }`}
+                              />
+                              {duplicateAliases.has(metric.id) && (
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 group">
+                                  <AlertCircle className="w-4 h-4 text-red-500" />
+                                  <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-10">
+                                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md px-2 py-1 text-xs text-red-700 dark:text-red-300 whitespace-nowrap shadow-lg">
+                                      Name already exists
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <button
                             onClick={() => removeMetric(metric.id)}
@@ -541,16 +676,9 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
                             <span className="font-semibold mr-1">Metrics:</span>
                             <div className="flex flex-wrap gap-1 mt-1">
                               {preview.metrics.map((metric, idx) => {
-                                const metricColumn = metric.columnId
-                                  ? availableColumns.find(c => c.id === metric.columnId)
-                                  : null;
+                                // Use unique name from the map (shows suffix if duplicate)
                                 const displayAlias =
-                                  metric.alias ||
-                                  (metric.type === 'count'
-                                    ? 'count()'
-                                    : metricColumn
-                                      ? `${metric.type}(${metricColumn.name})`
-                                      : `${metric.type}(${metric.columnId || 'count'})`);
+                                  uniqueMetricNames.get(metric.id) || metric.alias || 'Unknown';
                                 return (
                                   <span
                                     key={idx}
@@ -582,7 +710,11 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
             >
               Cancel
             </Button>
-            <Button onClick={handleApply} disabled={metrics.length === 0} className="gap-2">
+            <Button
+              onClick={handleApply}
+              disabled={metrics.length === 0 || duplicateAliases.size > 0}
+              className="gap-2"
+            >
               Apply
             </Button>
           </div>

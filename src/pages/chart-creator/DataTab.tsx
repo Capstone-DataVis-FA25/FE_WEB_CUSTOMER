@@ -151,18 +151,27 @@ const DataTab: React.FC<DataTabProps> = ({
   const displayData = formattedData;
   const displayHeaders = initialColumns;
 
-  // Stable key to remount grid when headers or highlight inputs change
+  // Stable key to remount grid when headers, filters, sort, or aggregation change
   const excelKey = React.useMemo(() => {
     const colsSig = (displayHeaders || [])
       .map(c => `${c.id ?? ''}|${c.name ?? ''}|${c.type ?? 'text'}`)
       .join('||');
     const hlSig = `${(highlightHeaderIds || []).join(',')}`;
     const sortSig = (datasetConfig?.sort || []).map(l => `${l.columnId}:${l.direction}`).join('|');
+    const filterSig = datasetConfig?.filters
+      ? `filt_${datasetConfig.filters.map(f => `${f.columnId}_${(f.conditions || []).map(c => `${c.operator}_${JSON.stringify(c.value)}`).join(',')}`).join('|')}`
+      : 'nofilt';
     const aggSig = datasetConfig?.aggregation
       ? `agg_${(datasetConfig.aggregation.groupBy || []).map(g => g.id).join(',')}_${(datasetConfig.aggregation.metrics || []).map(m => m.id).join(',')}`
       : 'noagg';
-    return `${colsSig}__${hlSig}__${sortSig}__${aggSig}`;
-  }, [displayHeaders, highlightHeaderIds, datasetConfig?.sort, datasetConfig?.aggregation]);
+    return `${colsSig}__${hlSig}__${sortSig}__${filterSig}__${aggSig}`;
+  }, [
+    displayHeaders,
+    highlightHeaderIds,
+    datasetConfig?.sort,
+    datasetConfig?.filters,
+    datasetConfig?.aggregation,
+  ]);
 
   // React.useEffect(() => {
   //   console.log('[HighlightDebug][DataTab] excelKey & props', {

@@ -1,10 +1,15 @@
 import React from 'react';
 import UnifiedChartEditor from '@/components/charts/UnifiedChartEditor';
+import type { DataHeader } from '@/utils/dataProcessors';
 
-const ChartTab: React.FC = () => {
+interface ChartTabProps {
+  processedHeaders?: DataHeader[];
+}
+
+const ChartTab: React.FC<ChartTabProps> = ({ processedHeaders }) => {
   return (
     <div className="h-full w-full">
-      <UnifiedChartEditor />
+      <UnifiedChartEditor processedHeaders={processedHeaders} />
     </div>
   );
 };

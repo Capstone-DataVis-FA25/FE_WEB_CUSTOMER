@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,18 @@ export type DateGranularity = 'year' | 'year_month' | 'date' | 'datetime';
 
 const displayValueLabel = (value: string) => (value === '' ? '(blank)' : value);
 
+// Helper component for error icon with tooltip
+const ErrorIcon: React.FC<{ message: string }> = ({ message }) => (
+  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 group">
+    <AlertCircle className="w-4 h-4 text-red-500" />
+    <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-10">
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md px-2 py-1 text-xs text-red-700 dark:text-red-300 whitespace-nowrap shadow-lg">
+        {message}
+      </div>
+    </div>
+  </div>
+);
+
 const UniqueValuePicker: React.FC<{
   uniqueValues?: string[];
   selectedValues: string[];
@@ -32,7 +44,8 @@ const UniqueValuePicker: React.FC<{
   columnType?: DatasetColumnType;
   errorMsg?: string | null;
   onRemove?: () => void;
-}> = ({ uniqueValues, selectedValues, onChange, columnType, errorMsg, onRemove }) => {
+  numberFormat?: NumberFormat;
+}> = ({ uniqueValues, selectedValues, onChange, columnType, errorMsg, onRemove, numberFormat }) => {
   const [search, setSearch] = useState('');
 
   const normalizedValues = useMemo(() => {
@@ -81,20 +94,40 @@ const UniqueValuePicker: React.FC<{
     onChange([]);
   };
 
+  // Show selected values first, then unselected values
+  const sortedValues = useMemo(() => {
+    const selected = limitedValues.filter(v => selectedValues.includes(v));
+    const unselected = limitedValues.filter(v => !selectedValues.includes(v));
+    return [...selected, ...unselected];
+  }, [limitedValues, selectedValues]);
+
   return (
     <div className="flex flex-col gap-2 flex-1 min-w-0">
-      <div className="flex gap-2 items-center flex-1 min-w-0">
-        <Input
-          value={search}
-          onChange={event => setSearch(event.target.value)}
-          placeholder="Search"
-          className="h-8 text-xs flex-1 min-w-0"
-        />
-        {errorMsg && (
-          <span className="text-[11px] text-red-500 whitespace-nowrap flex-shrink-0">
-            {errorMsg}
-          </span>
-        )}
+      <div className="flex gap-2 items-end flex-1 min-w-0">
+        <div className="relative flex-1 min-w-0">
+          <Input
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+            placeholder="Search values..."
+            className={`h-9 text-xs flex-1 min-w-0 ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+            onKeyDown={e => {
+              // Allow typing to filter, but don't prevent default behavior
+              if (e.key === 'Enter') {
+                e.preventDefault();
+              }
+            }}
+          />
+          {errorMsg && (
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 group">
+              <AlertCircle className="w-4 h-4 text-red-500" />
+              <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-10">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md px-2 py-1 text-xs text-red-700 dark:text-red-300 whitespace-nowrap shadow-lg">
+                  {errorMsg}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
         {onRemove && (
           <Button
             onClick={onRemove}
@@ -119,24 +152,69 @@ const UniqueValuePicker: React.FC<{
           {limitedValues.length === 0 ? (
             <p className="text-[11px] text-gray-500 dark:text-gray-400">No matches</p>
           ) : (
-            limitedValues.map(value => {
-              const checked = selectedValues.includes(value);
-              return (
-                <label
-                  key={value || '__blank__'}
-                  className="flex items-center gap-2 text-xs cursor-pointer"
-                >
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={() => toggleValue(value)}
-                    className="h-4 w-4"
-                  />
-                  <span className="truncate" title={displayValueLabel(value)}>
-                    {displayValueLabel(value)}
-                  </span>
-                </label>
-              );
-            })
+            <>
+              {/* Show selected values first when no search */}
+              {search.trim() === '' && selectedValues.length > 0 && (
+                <>
+                  <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1 px-1 sticky top-0 bg-white dark:bg-gray-900">
+                    Selected ({selectedValues.length})
+                  </div>
+                  {selectedValues
+                    .filter(v => normalizedValues.includes(v))
+                    .slice(0, 100)
+                    .map(value => {
+                      const checked = selectedValues.includes(value);
+                      return (
+                        <label
+                          key={`selected-${value || '__blank__'}`}
+                          className="flex items-center gap-2 text-xs cursor-pointer bg-blue-50 dark:bg-blue-900/20 rounded px-1 py-0.5 border border-blue-200 dark:border-blue-800"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => toggleValue(value)}
+                            className="h-4 w-4"
+                          />
+                          <span className="truncate" title={displayValueLabel(value)}>
+                            {columnType === 'number'
+                              ? formatNumberDisplay(value, numberFormat)
+                              : displayValueLabel(value)}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  {limitedValues.some(v => !selectedValues.includes(v)) && (
+                    <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1 mt-2 px-1 sticky top-0 bg-white dark:bg-gray-900">
+                      Available
+                    </div>
+                  )}
+                </>
+              )}
+              {/* Show all values (filtered by search, with selected first) */}
+              {sortedValues.map(value => {
+                const checked = selectedValues.includes(value);
+                // Skip if already shown in selected section (when no search)
+                if (search.trim() === '' && checked) return null;
+                return (
+                  <label
+                    key={value || '__blank__'}
+                    className={`flex items-center gap-2 text-xs cursor-pointer ${
+                      checked ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                    }`}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleValue(value)}
+                      className="h-4 w-4"
+                    />
+                    <span className="truncate" title={displayValueLabel(value)}>
+                      {columnType === 'number'
+                        ? formatNumberDisplay(value, numberFormat)
+                        : displayValueLabel(value)}
+                    </span>
+                  </label>
+                );
+              })}
+            </>
           )}
         </div>
       </ScrollArea>
@@ -226,10 +304,17 @@ export const ConditionRow: React.FC<{
       nextValue = null;
       nextValueEnd = null;
     } else {
+      // Switching to a non-array operator (like contains, starts_with, etc.)
       nextValueEnd = undefined;
-      if (Array.isArray(condition.value)) {
-        nextValue = condition.value.length > 0 ? condition.value[0] : null;
+      // Clear the value when switching from array operator to non-array operator
+      // to avoid confusion (e.g., switching from "equals" ["Final", "Quiz"] to "contains" shouldn't show "Final")
+      if (isCurrentArrayOperator) {
+        nextValue = null;
+      } else if (Array.isArray(condition.value)) {
+        // Fallback: if somehow value is still an array, clear it
+        nextValue = null;
       }
+      // Otherwise, preserve the existing string value
     }
 
     onUpdate({
@@ -289,6 +374,7 @@ export const ConditionRow: React.FC<{
               columnType={columnType}
               errorMsg={errorMsg}
               onRemove={canRemove ? onRemove : undefined}
+              numberFormat={numberFormat}
             />
           </div>
         ) : (
@@ -298,33 +384,34 @@ export const ConditionRow: React.FC<{
                 <>
                   {dateGranularity === 'year' && (
                     <>
-                      <Input
-                        type="number"
-                        placeholder="From year"
-                        min={0}
-                        step={1}
-                        required
-                        value={toInputValue(
-                          Array.isArray(condition.value) ? condition.value[0] : condition.value
-                        )}
-                        onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                        className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                      />
-                      <Input
-                        type="number"
-                        placeholder="To year"
-                        min={0}
-                        step={1}
-                        required
-                        value={condition.valueEnd ?? ''}
-                        onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
-                        className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                      />
-                      {errorMsg && (
-                        <span className="text-[11px] text-red-500 whitespace-nowrap flex-shrink-0">
-                          {errorMsg}
-                        </span>
-                      )}
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="number"
+                          placeholder="From year"
+                          min={0}
+                          step={1}
+                          required
+                          value={toInputValue(
+                            Array.isArray(condition.value) ? condition.value[0] : condition.value
+                          )}
+                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                        />
+                        {errorMsg && <ErrorIcon message={errorMsg} />}
+                      </div>
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="number"
+                          placeholder="To year"
+                          min={0}
+                          step={1}
+                          required
+                          value={condition.valueEnd ?? ''}
+                          onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
+                          className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                        />
+                        {errorMsg && <ErrorIcon message={errorMsg} />}
+                      </div>
                       {canRemove && (
                         <Button
                           onClick={onRemove}
@@ -339,27 +426,28 @@ export const ConditionRow: React.FC<{
                   )}
                   {dateGranularity === 'year_month' && (
                     <>
-                      <Input
-                        type="month"
-                        required
-                        value={toInputValue(
-                          Array.isArray(condition.value) ? condition.value[0] : condition.value
-                        )}
-                        onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                        className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                      />
-                      <Input
-                        type="month"
-                        required
-                        value={(condition.valueEnd as string) || ''}
-                        onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
-                        className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                      />
-                      {errorMsg && (
-                        <span className="text-[11px] text-red-500 whitespace-nowrap flex-shrink-0">
-                          {errorMsg}
-                        </span>
-                      )}
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="month"
+                          required
+                          value={toInputValue(
+                            Array.isArray(condition.value) ? condition.value[0] : condition.value
+                          )}
+                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                        />
+                        {errorMsg && <ErrorIcon message={errorMsg} />}
+                      </div>
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="month"
+                          required
+                          value={(condition.valueEnd as string) || ''}
+                          onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
+                          className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                        />
+                        {errorMsg && <ErrorIcon message={errorMsg} />}
+                      </div>
                       {canRemove && (
                         <Button
                           onClick={onRemove}
@@ -374,27 +462,28 @@ export const ConditionRow: React.FC<{
                   )}
                   {dateGranularity === 'date' && (
                     <>
-                      <Input
-                        type="date"
-                        required
-                        value={toInputValue(
-                          Array.isArray(condition.value) ? condition.value[0] : condition.value
-                        )}
-                        onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                        className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                      />
-                      <Input
-                        type="date"
-                        required
-                        value={(condition.valueEnd as string) || ''}
-                        onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
-                        className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                      />
-                      {errorMsg && (
-                        <span className="text-[11px] text-red-500 whitespace-nowrap flex-shrink-0">
-                          {errorMsg}
-                        </span>
-                      )}
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="date"
+                          required
+                          value={toInputValue(
+                            Array.isArray(condition.value) ? condition.value[0] : condition.value
+                          )}
+                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                        />
+                        {errorMsg && <ErrorIcon message={errorMsg} />}
+                      </div>
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="date"
+                          required
+                          value={(condition.valueEnd as string) || ''}
+                          onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
+                          className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                        />
+                        {errorMsg && <ErrorIcon message={errorMsg} />}
+                      </div>
                       {canRemove && (
                         <Button
                           onClick={onRemove}
@@ -409,27 +498,28 @@ export const ConditionRow: React.FC<{
                   )}
                   {dateGranularity === 'datetime' && (
                     <>
-                      <Input
-                        type="datetime-local"
-                        required
-                        value={toInputValue(
-                          Array.isArray(condition.value) ? condition.value[0] : condition.value
-                        )}
-                        onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                        className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                      />
-                      <Input
-                        type="datetime-local"
-                        required
-                        value={(condition.valueEnd as string) || ''}
-                        onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
-                        className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                      />
-                      {errorMsg && (
-                        <span className="text-[11px] text-red-500 whitespace-nowrap flex-shrink-0">
-                          {errorMsg}
-                        </span>
-                      )}
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="datetime-local"
+                          required
+                          value={toInputValue(
+                            Array.isArray(condition.value) ? condition.value[0] : condition.value
+                          )}
+                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                        />
+                        {errorMsg && <ErrorIcon message={errorMsg} />}
+                      </div>
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="datetime-local"
+                          required
+                          value={(condition.valueEnd as string) || ''}
+                          onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
+                          className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                        />
+                        {errorMsg && <ErrorIcon message={errorMsg} />}
+                      </div>
                       {canRemove && (
                         <Button
                           onClick={onRemove}
@@ -447,21 +537,19 @@ export const ConditionRow: React.FC<{
                 <>
                   {dateGranularity === 'year' && (
                     <>
-                      <Input
-                        type="number"
-                        placeholder="Year"
-                        min={0}
-                        step={1}
-                        required
-                        value={singleValueForInputs ?? ''}
-                        onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                        className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                      />
-                      {errorMsg && (
-                        <span className="text-[11px] text-red-500 whitespace-nowrap flex-shrink-0">
-                          {errorMsg}
-                        </span>
-                      )}
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="number"
+                          placeholder="Year"
+                          min={0}
+                          step={1}
+                          required
+                          value={singleValueForInputs ?? ''}
+                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                        />
+                        {errorMsg && <ErrorIcon message={errorMsg} />}
+                      </div>
                       {canRemove && (
                         <Button
                           onClick={onRemove}
@@ -476,18 +564,16 @@ export const ConditionRow: React.FC<{
                   )}
                   {dateGranularity === 'year_month' && (
                     <>
-                      <Input
-                        type="month"
-                        required
-                        value={String(singleValueForInputs ?? '')}
-                        onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                        className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                      />
-                      {errorMsg && (
-                        <span className="text-[11px] text-red-500 whitespace-nowrap flex-shrink-0">
-                          {errorMsg}
-                        </span>
-                      )}
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="month"
+                          required
+                          value={String(singleValueForInputs ?? '')}
+                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                        />
+                        {errorMsg && <ErrorIcon message={errorMsg} />}
+                      </div>
                       {canRemove && (
                         <Button
                           onClick={onRemove}
@@ -502,18 +588,16 @@ export const ConditionRow: React.FC<{
                   )}
                   {dateGranularity === 'date' && (
                     <>
-                      <Input
-                        type="date"
-                        required
-                        value={String(singleValueForInputs ?? '')}
-                        onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                        className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                      />
-                      {errorMsg && (
-                        <span className="text-[11px] text-red-500 whitespace-nowrap flex-shrink-0">
-                          {errorMsg}
-                        </span>
-                      )}
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="date"
+                          required
+                          value={String(singleValueForInputs ?? '')}
+                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                        />
+                        {errorMsg && <ErrorIcon message={errorMsg} />}
+                      </div>
                       {canRemove && (
                         <Button
                           onClick={onRemove}
@@ -528,18 +612,16 @@ export const ConditionRow: React.FC<{
                   )}
                   {dateGranularity === 'datetime' && (
                     <>
-                      <Input
-                        type="datetime-local"
-                        required
-                        value={String(singleValueForInputs ?? '')}
-                        onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                        className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                      />
-                      {errorMsg && (
-                        <span className="text-[11px] text-red-500 whitespace-nowrap flex-shrink-0">
-                          {errorMsg}
-                        </span>
-                      )}
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="datetime-local"
+                          required
+                          value={String(singleValueForInputs ?? '')}
+                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                        />
+                        {errorMsg && <ErrorIcon message={errorMsg} />}
+                      </div>
                       {canRemove && (
                         <Button
                           onClick={onRemove}
@@ -557,46 +639,47 @@ export const ConditionRow: React.FC<{
             ) : operator === 'between' ? (
               columnType === 'number' ? (
                 <>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    required
-                    placeholder={`From e.g. ${formatNumberDisplay('1234.56', numberFormat)}`}
-                    value={formatNumberDisplay(
-                      String(
-                        Array.isArray(condition.value)
-                          ? (condition.value[0] ?? '')
-                          : (condition.value ?? '')
-                      ),
-                      numberFormat
-                    )}
-                    onChange={e =>
-                      onUpdate({
-                        ...condition,
-                        value: normalizeNumberInput(e.target.value, numberFormat),
-                      })
-                    }
-                    className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                  />
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    required
-                    placeholder={`To e.g. ${formatNumberDisplay('1234.56', numberFormat)}`}
-                    value={formatNumberDisplay(String(condition.valueEnd ?? ''), numberFormat)}
-                    onChange={e =>
-                      onUpdate({
-                        ...condition,
-                        valueEnd: normalizeNumberInput(e.target.value, numberFormat),
-                      })
-                    }
-                    className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                  />
-                  {errorMsg && (
-                    <span className="text-[11px] text-red-500 whitespace-nowrap flex-shrink-0">
-                      {errorMsg}
-                    </span>
-                  )}
+                  <div className="relative flex-1 min-w-0">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      required
+                      placeholder={`From e.g. ${formatNumberDisplay('1234.56', numberFormat)}`}
+                      value={formatNumberDisplay(
+                        String(
+                          Array.isArray(condition.value)
+                            ? (condition.value[0] ?? '')
+                            : (condition.value ?? '')
+                        ),
+                        numberFormat
+                      )}
+                      onChange={e =>
+                        onUpdate({
+                          ...condition,
+                          value: normalizeNumberInput(e.target.value, numberFormat),
+                        })
+                      }
+                      className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                    />
+                    {errorMsg && <ErrorIcon message={errorMsg} />}
+                  </div>
+                  <div className="relative flex-1 min-w-0">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      required
+                      placeholder={`To e.g. ${formatNumberDisplay('1234.56', numberFormat)}`}
+                      value={formatNumberDisplay(String(condition.valueEnd ?? ''), numberFormat)}
+                      onChange={e =>
+                        onUpdate({
+                          ...condition,
+                          valueEnd: normalizeNumberInput(e.target.value, numberFormat),
+                        })
+                      }
+                      className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                    />
+                    {errorMsg && <ErrorIcon message={errorMsg} />}
+                  </div>
                   {canRemove && (
                     <Button
                       onClick={onRemove}
@@ -610,29 +693,30 @@ export const ConditionRow: React.FC<{
                 </>
               ) : (
                 <>
-                  <Input
-                    type="text"
-                    required
-                    placeholder="From"
-                    value={toInputValue(
-                      Array.isArray(condition.value) ? condition.value[0] : condition.value
-                    )}
-                    onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                    className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                  />
-                  <Input
-                    type="text"
-                    required
-                    placeholder="To"
-                    value={String(condition.valueEnd ?? '')}
-                    onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
-                    className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                  />
-                  {errorMsg && (
-                    <span className="text-[11px] text-red-500 whitespace-nowrap flex-shrink-0">
-                      {errorMsg}
-                    </span>
-                  )}
+                  <div className="relative flex-1 min-w-0">
+                    <Input
+                      type="text"
+                      required
+                      placeholder="From"
+                      value={toInputValue(
+                        Array.isArray(condition.value) ? condition.value[0] : condition.value
+                      )}
+                      onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                      className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                    />
+                    {errorMsg && <ErrorIcon message={errorMsg} />}
+                  </div>
+                  <div className="relative flex-1 min-w-0">
+                    <Input
+                      type="text"
+                      required
+                      placeholder="To"
+                      value={String(condition.valueEnd ?? '')}
+                      onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
+                      className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                    />
+                    {errorMsg && <ErrorIcon message={errorMsg} />}
+                  </div>
                   {canRemove && (
                     <Button
                       onClick={onRemove}
@@ -647,25 +731,23 @@ export const ConditionRow: React.FC<{
               )
             ) : columnType === 'number' ? (
               <>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  required
-                  placeholder={`e.g. ${formatNumberDisplay('1234.56', numberFormat)}`}
-                  value={formatNumberDisplay(String(singleValueForInputs ?? ''), numberFormat)}
-                  onChange={e =>
-                    onUpdate({
-                      ...condition,
-                      value: normalizeNumberInput(e.target.value, numberFormat),
-                    })
-                  }
-                  className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                />
-                {errorMsg && (
-                  <span className="text-[11px] text-red-500 whitespace-nowrap flex-shrink-0">
-                    {errorMsg}
-                  </span>
-                )}
+                <div className="relative flex-1 min-w-0">
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    required
+                    placeholder={`e.g. ${formatNumberDisplay('1234.56', numberFormat)}`}
+                    value={formatNumberDisplay(String(singleValueForInputs ?? ''), numberFormat)}
+                    onChange={e =>
+                      onUpdate({
+                        ...condition,
+                        value: normalizeNumberInput(e.target.value, numberFormat),
+                      })
+                    }
+                    className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                  />
+                  {errorMsg && <ErrorIcon message={errorMsg} />}
+                </div>
                 {canRemove && (
                   <Button
                     onClick={onRemove}
@@ -679,19 +761,17 @@ export const ConditionRow: React.FC<{
               </>
             ) : (
               <>
-                <Input
-                  type="text"
-                  required
-                  placeholder="Value"
-                  value={toInputValue(singleValueForInputs)}
-                  onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                  className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                />
-                {errorMsg && (
-                  <span className="text-[11px] text-red-500 whitespace-nowrap flex-shrink-0">
-                    {errorMsg}
-                  </span>
-                )}
+                <div className="relative flex-1 min-w-0">
+                  <Input
+                    type="text"
+                    required
+                    placeholder="Value"
+                    value={toInputValue(singleValueForInputs)}
+                    onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                    className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
+                  />
+                  {errorMsg && <ErrorIcon message={errorMsg} />}
+                </div>
                 {canRemove && (
                   <Button
                     onClick={onRemove}

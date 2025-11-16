@@ -41,6 +41,7 @@ import { buildColumnIndexMap, applyMultiLevelSort, applyDatasetFilters } from '@
 import { applyAggregation } from '@/utils/aggregationUtils';
 import ChartEditorHeader from './ChartEditorHeader';
 import { resetBindings } from '@/utils/chartBindings';
+import { cleanupChartConfig } from '@/utils/chartConfigCleanup';
 import { useChartNotes } from '@/features/chartNotes/useChartNotes';
 import { useChartHistory } from '@/features/chartHistory/useChartHistory';
 
@@ -453,10 +454,29 @@ const ChartEditorPage: React.FC = () => {
     };
   }, [excelInitial.initialColumns, excelInitial.initialData, working?.headers, working?.data]);
 
+  // Serialize filters to ensure useMemo detects changes (React does shallow comparison)
+  // Depend on datasetConfig itself to catch any nested changes
+  const filtersKey = useMemo(() => {
+    const key = JSON.stringify(datasetConfig?.filters || []);
+    console.log('[ChartEditorPage] filtersKey updated:', key);
+    return key;
+  }, [datasetConfig]);
+  const aggregationKey = useMemo(() => {
+    const key = JSON.stringify(datasetConfig?.aggregation || {});
+    console.log('[ChartEditorPage] aggregationKey updated:', key);
+    return key;
+  }, [datasetConfig]);
+
   // ============================================================
   // COMPUTE: Processed data (filter → sort → aggregation)
   // ============================================================
   const processedData = useMemo(() => {
+    console.log('[ChartEditorPage] processedData memo recalculating...', {
+      filtersKey,
+      aggregationKey,
+      filtersCount: (datasetConfig as any)?.filters?.length || 0,
+    });
+
     // Always use original dataset for operations (filter/sort/aggregation)
     // working.data/headers might be aggregated, so use originalDataset
     const dataToProcess = originalDataset.data || working?.data;
@@ -466,26 +486,46 @@ const ChartEditorPage: React.FC = () => {
       return { data: undefined, headers: undefined };
     }
 
+    // Get current filters and aggregation from datasetConfig (read fresh each time)
+    const currentFilters = (datasetConfig as any)?.filters;
+    const currentAggregation = datasetConfig?.aggregation;
+
+    console.log('[ChartEditorPage] Processing with:', {
+      dataRows: dataToProcess.length,
+      filters: currentFilters?.length || 0,
+      hasAggregation: !!currentAggregation,
+    });
+
     try {
       // Build column index map from ORIGINAL headers (not aggregated)
       const colIndexMap = buildColumnIndexMap(headersToUse as unknown as DataHeader[]);
 
       // Filter using original data and original headers
       const filtered =
-        applyDatasetFilters(dataToProcess, (datasetConfig as any)?.filters, colIndexMap) ||
-        dataToProcess;
+        applyDatasetFilters(dataToProcess, currentFilters, colIndexMap) || dataToProcess;
+
+      console.log('[ChartEditorPage] After filter:', {
+        originalRows: dataToProcess.length,
+        filteredRows: filtered.length,
+      });
 
       // Sort using filtered data
       const multiSorted = applyMultiLevelSort(filtered, sortLevels, colIndexMap) || filtered;
 
-      // Apply aggregation if configured - use original headers for column references
+      // Apply aggregation if configured - use FILTERED AND SORTED data (multiSorted)
+      // Note: Number formatting is NOT applied here - it will be applied by preformatDataToFormats in DataTab
       const aggregationResult = applyAggregation(
-        multiSorted,
+        multiSorted, // This is the filtered + sorted data
         headersToUse as unknown as DataHeader[],
-        datasetConfig?.aggregation,
-        colIndexMap,
-        excelFormats.initialNumberFormat
+        currentAggregation,
+        colIndexMap
       );
+
+      console.log('[ChartEditorPage] After aggregation:', {
+        sortedRows: multiSorted.length,
+        aggregatedRows: aggregationResult?.data?.length || 0,
+        hasResult: !!aggregationResult,
+      });
 
       // Use aggregated data/headers if aggregation is active, otherwise use sorted data
       const finalHeaders = aggregationResult
@@ -495,6 +535,7 @@ const ChartEditorPage: React.FC = () => {
 
       return { data: finalData, headers: finalHeaders };
     } catch (e) {
+      console.error('[ChartEditorPage] Error processing data:', e);
       return { data: undefined, headers: undefined };
     }
   }, [
@@ -502,9 +543,10 @@ const ChartEditorPage: React.FC = () => {
     originalDataset.headers,
     working?.data,
     working?.headers,
-    datasetConfig?.filters,
+    filtersKey, // Use serialized filters key to detect changes
     sortLevels,
-    datasetConfig?.aggregation,
+    aggregationKey, // Use serialized aggregation key to detect changes
+    datasetConfig, // Also depend on datasetConfig to ensure we read fresh values
     excelFormats.initialNumberFormat,
   ]);
 
@@ -537,6 +579,18 @@ const ChartEditorPage: React.FC = () => {
       }
     }
   }, [processedData.headers, processedData.data, datasetConfig?.aggregation, working, dispatch]);
+
+  // ============================================================
+  // EFFECT: Clean up chart config when headers change (e.g., aggregation changes)
+  // ============================================================
+  useEffect(() => {
+    if (!processedData.headers || !chartConfig) return;
+
+    const cleanedConfig = cleanupChartConfig(chartConfig, processedData.headers);
+    if (cleanedConfig !== chartConfig) {
+      setChartConfig(cleanedConfig);
+    }
+  }, [processedData.headers, chartConfig, setChartConfig]);
 
   // ============================================================
   // EFFECT: Sync chart data from processed data
@@ -903,7 +957,7 @@ const ChartEditorPage: React.FC = () => {
             style={{ display: activeTab === 'chart' ? 'block' : 'none' }}
             className="flex-1 min-h-0 min-w-0"
           >
-            <ChartTab />
+            <ChartTab processedHeaders={processedData.headers} />
           </div>
           <div
             style={{ display: activeTab === 'data' ? 'block' : 'none' }}

@@ -1,7 +1,5 @@
 import type { DataHeader } from '@/utils/dataProcessors';
-import { formatNumberString } from '@/utils/dataProcessors';
 import type { GroupByColumn, AggregationMetric } from '@/types/chart';
-import type { NumberFormat } from '@/contexts/DatasetContext';
 import type { ColumnIndexMap } from './datasetOps';
 
 const extractTimeUnit = (
@@ -96,8 +94,7 @@ export const applyAggregation = (
   data: string[][] | undefined,
   headers: DataHeader[] | undefined,
   aggregation: { groupBy?: GroupByColumn[]; metrics?: AggregationMetric[] } | undefined,
-  colIndex: ColumnIndexMap,
-  numberFormat?: NumberFormat
+  colIndex: ColumnIndexMap
 ): AggregatedResult | null => {
   if (!data || data.length === 0 || !headers || headers.length === 0) {
     return null;
@@ -132,14 +129,34 @@ export const applyAggregation = (
   const aggregatedHeaders: DataHeader[] = [];
 
   // Add groupBy columns to headers
+  // Track used names to prevent duplicates (includes both groupBy and metrics)
+  const usedNames = new Set<string>();
+  const getUniqueName = (baseName: string): string => {
+    if (!usedNames.has(baseName)) {
+      usedNames.add(baseName);
+      return baseName;
+    }
+    // If duplicate, add numeric suffix
+    let counter = 1;
+    let uniqueName = `${baseName}_${counter}`;
+    while (usedNames.has(uniqueName)) {
+      counter++;
+      uniqueName = `${baseName}_${counter}`;
+    }
+    usedNames.add(uniqueName);
+    return uniqueName;
+  };
+
   let headerIndex = 0;
   for (const gb of groupByColumns) {
     const originalColIdx = colIndex.get(gb.id);
     if (originalColIdx != null) {
       const originalHeader = headers[originalColIdx];
+      const baseName = gb.name + (gb.timeUnit ? ` (${gb.timeUnit})` : '');
+      const uniqueName = getUniqueName(baseName);
       aggregatedHeaders.push({
         id: gb.id,
-        name: gb.name + (gb.timeUnit ? ` (${gb.timeUnit})` : ''),
+        name: uniqueName,
         type: originalHeader.type,
         index: headerIndex++,
       });
@@ -147,8 +164,9 @@ export const applyAggregation = (
   }
 
   // Add metric columns to headers
+
   for (const metric of metrics) {
-    const metricName =
+    const baseMetricName =
       metric.alias ||
       (metric.type === 'count'
         ? 'count()'
@@ -158,6 +176,8 @@ export const applyAggregation = (
               metric.columnId
             })`
           : `${metric.type}()`);
+
+    const metricName = getUniqueName(baseMetricName);
 
     aggregatedHeaders.push({
       id: metric.id,
@@ -193,14 +213,11 @@ export const applyAggregation = (
     }
 
     // Calculate metrics
+    // NOTE: We return raw numeric strings here. Formatting will be applied by preformatDataToFormats in DataTab
     for (const metric of metrics) {
       if (metric.type === 'count') {
         const countValue = String(groupRows.length);
-        // Format count as well using number format if available
-        const formattedCount = numberFormat
-          ? formatNumberString(countValue, numberFormat)
-          : countValue;
-        aggregatedRow.push(formattedCount);
+        aggregatedRow.push(countValue);
       } else if (metric.columnId) {
         const metricColIdx = colIndex.get(metric.columnId);
         if (metricColIdx != null) {
@@ -214,18 +231,13 @@ export const applyAggregation = (
             .filter(v => !Number.isNaN(v));
 
           const result = values.length > 0 ? calculateMetric(values, metric.type) : 0;
-          // Format the result using number format if available
-          const formattedResult = numberFormat
-            ? formatNumberString(String(result), numberFormat)
-            : String(result);
-          aggregatedRow.push(formattedResult);
+          // Return raw numeric string - formatting will be applied by preformatDataToFormats
+          aggregatedRow.push(String(result));
         } else {
-          const formattedZero = numberFormat ? formatNumberString('0', numberFormat) : '0';
-          aggregatedRow.push(formattedZero);
+          aggregatedRow.push('0');
         }
       } else {
-        const formattedZero = numberFormat ? formatNumberString('0', numberFormat) : '0';
-        aggregatedRow.push(formattedZero);
+        aggregatedRow.push('0');
       }
     }
 
