@@ -125,6 +125,16 @@ const ChartEditorPage: React.FC = () => {
   // MEMOIZED VALUES
   // ============================================================
   const excelInitial = useMemo(() => {
+    // Only use currentDataset if:
+    // 1. There's a datasetId AND
+    // 2. currentDataset.id matches the datasetId
+    // This prevents showing a dataset that was created but not selected for this chart
+    const shouldUseDataset = datasetId && currentDataset && currentDataset.id === datasetId;
+
+    if (!shouldUseDataset) {
+      return { initialColumns: undefined, initialData: undefined };
+    }
+
     const headers: any[] = (currentDataset?.headers as any[]) || [];
     let initialColumns: DataHeader[] | undefined;
     let initialData: string[][] | undefined;
@@ -166,9 +176,16 @@ const ChartEditorPage: React.FC = () => {
     }
 
     return { initialColumns, initialData };
-  }, [currentDataset?.headers, (currentDataset as any)?.rows]);
+  }, [datasetId, currentDataset?.id, currentDataset?.headers, (currentDataset as any)?.rows]);
 
   const excelFormats = useMemo(() => {
+    // Only use currentDataset if it matches the datasetId
+    const shouldUseDataset = datasetId && currentDataset && currentDataset.id === datasetId;
+
+    if (!shouldUseDataset) {
+      return { initialNumberFormat: undefined, initialDateFormat: undefined };
+    }
+
     const ds: any = currentDataset || {};
     const initialNumberFormat: NumberFormat | undefined =
       ds.detectedNumberFormat ||
@@ -178,7 +195,7 @@ const ChartEditorPage: React.FC = () => {
     const initialDateFormat: DateFormat | undefined =
       ds.detectedDateFormat || ds.dateFormat || undefined;
     return { initialNumberFormat, initialDateFormat };
-  }, [currentDataset]);
+  }, [datasetId, currentDataset?.id, currentDataset]);
 
   const { highlightHeaderIds } = useMemo(() => {
     if (!chartConfig) return { highlightHeaderIds: [] as string[] };

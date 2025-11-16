@@ -147,6 +147,33 @@ export const applyAggregation = (
     return uniqueName;
   };
 
+  // Helper to get date format based on time unit
+  const getDateFormatForTimeUnit = (
+    timeUnit: 'second' | 'minute' | 'hour' | 'day' | 'month' | 'quarter' | 'year' | undefined
+  ): string | undefined => {
+    if (!timeUnit) return undefined;
+    switch (timeUnit) {
+      case 'year':
+        return 'YYYY';
+      case 'quarter':
+        // Format: 2024-Q1 - dayjs can parse this with custom format, but for display we'll use a pattern
+        // Note: dayjs doesn't have built-in quarter support, so we'll use a format that matches the output
+        return 'YYYY-[Q]Q'; // This matches the pattern but may need custom parsing
+      case 'month':
+        return 'YYYY-MM';
+      case 'day':
+        return 'YYYY-MM-DD';
+      case 'hour':
+        return 'YYYY-MM-DD HH:mm';
+      case 'minute':
+        return 'YYYY-MM-DD HH:mm';
+      case 'second':
+        return 'YYYY-MM-DD HH:mm:ss';
+      default:
+        return undefined;
+    }
+  };
+
   let headerIndex = 0;
   for (const gb of groupByColumns) {
     const originalColIdx = colIndex.get(gb.id);
@@ -154,12 +181,21 @@ export const applyAggregation = (
       const originalHeader = headers[originalColIdx];
       const baseName = gb.name + (gb.timeUnit ? ` (${gb.timeUnit})` : '');
       const uniqueName = getUniqueName(baseName);
+
+      // For date columns with time unit, set the appropriate dateFormat
+      const isDateColumn = originalHeader.type === 'date';
+      const dateFormat =
+        isDateColumn && gb.timeUnit
+          ? getDateFormatForTimeUnit(gb.timeUnit)
+          : (originalHeader as any).dateFormat;
+
       aggregatedHeaders.push({
         id: gb.id,
         name: uniqueName,
         type: originalHeader.type,
+        dateFormat: dateFormat,
         index: headerIndex++,
-      });
+      } as any);
     }
   }
 
