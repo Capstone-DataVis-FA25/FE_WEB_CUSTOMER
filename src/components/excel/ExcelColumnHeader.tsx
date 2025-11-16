@@ -25,9 +25,9 @@ import type { DataHeader } from '@/utils/dataProcessors';
 import { useDataset, DATE_FORMATS } from '@/contexts/DatasetContext';
 
 const COLUMN_TYPES = [
-  { label: 'Text', value: 'text', icon: <FileText size={14} /> },
-  { label: 'Number', value: 'number', icon: <FileDigit size={14} /> },
-  { label: 'Date', value: 'date', icon: <Calendar size={14} /> },
+  { label: 'Text', value: 'text', icon: <FileText size={16} /> },
+  { label: 'Number', value: 'number', icon: <FileDigit size={16} /> },
+  { label: 'Date', value: 'date', icon: <Calendar size={16} /> },
 ];
 
 interface ExcelColumnHeaderProps {
@@ -189,7 +189,11 @@ const ExcelColumnHeader = memo(
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-6 px-1 text-xs hover:bg-gray-300 dark:hover:bg-gray-600"
+                      className={`h-7 w-7 p-0 text-xs transition-colors rounded-md ${
+                        isTypeIconHover
+                          ? 'bg-gray-300 dark:bg-gray-600'
+                          : 'hover:bg-gray-300 dark:hover:bg-gray-600'
+                      }`}
                       onClick={e => e.stopPropagation()}
                       onMouseEnter={() => setIsTypeIconHover(true)}
                       onMouseLeave={() => setIsTypeIconHover(false)}
@@ -263,7 +267,11 @@ const ExcelColumnHeader = memo(
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-6 px-1 text-xs opacity-70 cursor-default relative z-10 hover:bg-gray-300 dark:hover:bg-gray-600"
+                className={`h-7 w-7 p-0 text-xs relative z-10 transition-colors rounded-md ${
+                  isTypeIconHover
+                    ? 'bg-gray-300 dark:bg-gray-600 opacity-100'
+                    : 'opacity-70 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
                 title={title}
                 onClick={e => {
                   // prevent header click/select and keep non-interactive behavior

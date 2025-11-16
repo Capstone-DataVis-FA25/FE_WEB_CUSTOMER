@@ -103,7 +103,13 @@ function hasAxisConfigs(config: any): config is { axisConfigs: any } {
   return config && typeof config === 'object' && 'axisConfigs' in config;
 }
 
-const SeriesManagementSection: React.FC = () => {
+import type { DataHeader } from '@/utils/dataProcessors';
+
+interface SeriesManagementSectionProps {
+  processedHeaders?: DataHeader[];
+}
+
+const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ processedHeaders }) => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { chartConfig } = useChartEditorRead();
@@ -137,8 +143,8 @@ const SeriesManagementSection: React.FC = () => {
   // console.log('🔍 SeriesManagementSection - series:', series);
   // console.log('🔍 SeriesManagementSection - chartConfig.axisConfigs:', chartConfig.axisConfigs);
 
-  // DataHeaders from dataset (id, name, type)
-  const dataHeaders = currentDataset?.headers || [];
+  // DataHeaders: Use processed headers (aggregated) if provided, otherwise fall back to original dataset headers
+  const dataHeaders = (processedHeaders as any[]) || currentDataset?.headers || [];
 
   // Filter headers valid for Y-axis (series data) based on chart type
   // For line/bar/area charts, Y-axis must be numeric

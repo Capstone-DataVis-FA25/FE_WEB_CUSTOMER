@@ -3,14 +3,16 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FilterIcon, X } from 'lucide-react';
-import { FilterModal, type FilterColumn, type ColumnType } from './FilterModal';
+import { FilterModal } from './FilterModal';
 import type { NumberFormat } from '@/contexts/DatasetContext';
+import type { DatasetFilterColumn, DatasetColumnType } from '@/types/chart';
 
 interface FilterSummaryButtonProps {
-  availableColumns: { id: string; name: string; type: ColumnType; dateFormat?: string }[];
-  onFilterChange?: (columns: FilterColumn[]) => void;
-  initialColumns?: FilterColumn[];
+  availableColumns: { id: string; name: string; type: DatasetColumnType; dateFormat?: string }[];
+  onFilterChange?: (columns: DatasetFilterColumn[]) => void;
+  initialColumns?: DatasetFilterColumn[];
   numberFormat?: NumberFormat;
+  uniqueValuesByColumn?: Record<string, string[]>;
 }
 
 export const FilterSummaryButton: React.FC<FilterSummaryButtonProps> = ({
@@ -18,16 +20,17 @@ export const FilterSummaryButton: React.FC<FilterSummaryButtonProps> = ({
   onFilterChange,
   initialColumns = [],
   numberFormat,
+  uniqueValuesByColumn,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [filters, setFilters] = useState<FilterColumn[]>(initialColumns);
+  const [filters, setFilters] = useState<DatasetFilterColumn[]>(initialColumns);
 
   // Keep local state in sync with external config changes
   useEffect(() => {
     setFilters(initialColumns);
   }, [initialColumns]);
 
-  const handleApplyFilter = (columns: FilterColumn[]) => {
+  const handleApplyFilter = (columns: DatasetFilterColumn[]) => {
     setFilters(columns);
     onFilterChange?.(columns);
   };
@@ -71,6 +74,7 @@ export const FilterSummaryButton: React.FC<FilterSummaryButtonProps> = ({
         availableColumns={availableColumns}
         initialColumns={filters}
         numberFormat={numberFormat}
+        uniqueValuesByColumn={uniqueValuesByColumn}
       />
     </>
   );

@@ -36,7 +36,6 @@ const DataViewerContent = memo(function DataViewerContent() {
       initialColumns={initialColumns}
       onDataChange={handleDataChange}
       mode="edit" // can be toggled to 'view' where needed
-      disableSelection={true}
     />
   );
 });

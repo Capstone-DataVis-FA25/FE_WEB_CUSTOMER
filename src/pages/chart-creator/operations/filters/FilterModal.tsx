@@ -1,19 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import {
-  Plus,
-  Trash2,
-  ChevronDown,
-  ChevronRight,
-  RotateCcw,
-  Check,
-  X,
-  AlertCircle,
-} from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Plus, RotateCcw, Check, X, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import type { NumberFormat } from '@/contexts/DatasetContext';
 import {
   generateId,
@@ -24,467 +13,20 @@ import {
   validateDateCondition,
   validateNumberCondition,
   validateTextCondition,
-  normalizeNumberInput,
   formatNumberDisplay,
 } from '@/utils/filterUtils';
-
-export type ColumnType = 'text' | 'number' | 'date';
-
-export interface FilterCondition {
-  id: string;
-  operator: string;
-  value: string | number | null;
-  valueEnd?: string | number | null;
-}
-
-export interface FilterColumn {
-  id: string;
-  columnId: string;
-  columnName: string;
-  columnType: ColumnType;
-  conditions: FilterCondition[];
-}
+import type { DatasetColumnType, DatasetFilterColumn, DatasetFilterCondition } from '@/types/chart';
+import { ColumnFilterSection } from './FilterComponents';
 
 interface FilterModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onApply: (columns: FilterColumn[]) => void;
-  availableColumns: { id: string; name: string; type: ColumnType; dateFormat?: string }[];
-  initialColumns?: FilterColumn[];
+  onApply: (columns: DatasetFilterColumn[]) => void;
+  availableColumns: { id: string; name: string; type: DatasetColumnType; dateFormat?: string }[];
+  initialColumns?: DatasetFilterColumn[];
   numberFormat?: NumberFormat;
+  uniqueValuesByColumn?: Record<string, string[]>;
 }
-
-type DateGranularity = 'year' | 'year_month' | 'date' | 'datetime';
-
-const ConditionRow: React.FC<{
-  condition: FilterCondition;
-  operator: string;
-  columnType: ColumnType;
-  dateGranularity?: DateGranularity;
-  onUpdate: (condition: FilterCondition) => void;
-  onRemove: () => void;
-  isOr: boolean;
-  numberFormat?: NumberFormat;
-  canRemove: boolean;
-}> = ({
-  condition,
-  operator,
-  columnType,
-  dateGranularity,
-  onUpdate,
-  onRemove,
-  isOr,
-  numberFormat,
-  canRemove,
-}) => {
-  const operators = getOperatorsForType(columnType);
-
-  let errorMsg: string | null = null;
-  if (columnType === 'date') {
-    errorMsg = validateDateCondition(
-      dateGranularity as any,
-      operator,
-      condition.value,
-      condition.valueEnd
-    );
-  } else if (columnType === 'number') {
-    errorMsg = validateNumberCondition(operator, condition.value, condition.valueEnd);
-  } else if (columnType === 'text') {
-    errorMsg = validateTextCondition(operator, condition.value);
-  }
-
-  return (
-    <div className="flex gap-2 items-end">
-      {isOr && (
-        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">
-          OR
-        </span>
-      )}
-
-      <Select value={operator} onValueChange={value => onUpdate({ ...condition, operator: value })}>
-        <SelectTrigger className="w-28 h-9 text-xs outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 data-[state=open]:ring-0 data-[state=open]:ring-offset-0">
-          <span className="block truncate">{getOperatorLabelLower(columnType, operator)}</span>
-        </SelectTrigger>
-        <SelectContent>
-          {operators.map(op => (
-            <SelectItem key={op.value} value={op.value}>
-              {op.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {columnType === 'date' ? (
-        operator === 'between' ? (
-          <>
-            {dateGranularity === 'year' && (
-              <>
-                <Input
-                  type="number"
-                  placeholder="From year"
-                  min={0}
-                  step={1}
-                  required
-                  value={condition.value ?? ''}
-                  onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                  className={`w-28 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                />
-                <Input
-                  type="number"
-                  placeholder="To year"
-                  min={0}
-                  step={1}
-                  required
-                  value={condition.valueEnd ?? ''}
-                  onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
-                  className={`w-28 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                />
-              </>
-            )}
-            {dateGranularity === 'year_month' && (
-              <>
-                <Input
-                  type="month"
-                  required
-                  value={(condition.value as string) || ''}
-                  onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                  className={`w-28 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                />
-                <Input
-                  type="month"
-                  required
-                  value={(condition.valueEnd as string) || ''}
-                  onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
-                  className={`w-28 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                />
-              </>
-            )}
-            {dateGranularity === 'date' && (
-              <>
-                <Input
-                  type="date"
-                  required
-                  value={(condition.value as string) || ''}
-                  onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                  className={`w-28 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                />
-                <Input
-                  type="date"
-                  required
-                  value={(condition.valueEnd as string) || ''}
-                  onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
-                  className={`w-28 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                />
-              </>
-            )}
-            {dateGranularity === 'datetime' && (
-              <>
-                <Input
-                  type="datetime-local"
-                  required
-                  value={(condition.value as string) || ''}
-                  onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                  className={`w-28 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                />
-                <Input
-                  type="datetime-local"
-                  required
-                  value={(condition.valueEnd as string) || ''}
-                  onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
-                  className={`w-28 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-                />
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            {dateGranularity === 'year' && (
-              <Input
-                type="number"
-                placeholder="Year"
-                min={0}
-                step={1}
-                required
-                value={condition.value ?? ''}
-                onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                className={`flex-1 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-              />
-            )}
-            {dateGranularity === 'year_month' && (
-              <Input
-                type="month"
-                required
-                value={(condition.value as string) || ''}
-                onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                className={`flex-1 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-              />
-            )}
-            {dateGranularity === 'date' && (
-              <Input
-                type="date"
-                required
-                value={(condition.value as string) || ''}
-                onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                className={`flex-1 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-              />
-            )}
-            {dateGranularity === 'datetime' && (
-              <Input
-                type="datetime-local"
-                required
-                value={(condition.value as string) || ''}
-                onChange={e => onUpdate({ ...condition, value: e.target.value })}
-                className={`flex-1 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-              />
-            )}
-          </>
-        )
-      ) : operator === 'between' ? (
-        columnType === 'number' ? (
-          <>
-            <Input
-              type="text"
-              inputMode="decimal"
-              required
-              placeholder={`From e.g. ${formatNumberDisplay('1234.56', numberFormat)}`}
-              value={formatNumberDisplay(String(condition.value ?? ''), numberFormat)}
-              onChange={e =>
-                onUpdate({
-                  ...condition,
-                  value: normalizeNumberInput(e.target.value, numberFormat),
-                })
-              }
-              className={`w-28 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-            />
-            <Input
-              type="text"
-              inputMode="decimal"
-              required
-              placeholder={`To e.g. ${formatNumberDisplay('1234.56', numberFormat)}`}
-              value={formatNumberDisplay(String(condition.valueEnd ?? ''), numberFormat)}
-              onChange={e =>
-                onUpdate({
-                  ...condition,
-                  valueEnd: normalizeNumberInput(e.target.value, numberFormat),
-                })
-              }
-              className={`w-28 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-            />
-          </>
-        ) : (
-          <>
-            <Input
-              type="text"
-              required
-              placeholder="From"
-              value={String(condition.value ?? '')}
-              onChange={e => onUpdate({ ...condition, value: e.target.value })}
-              className={`w-28 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-            />
-            <Input
-              type="text"
-              required
-              placeholder="To"
-              value={String(condition.valueEnd ?? '')}
-              onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
-              className={`w-28 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-            />
-          </>
-        )
-      ) : columnType === 'number' ? (
-        <Input
-          type="text"
-          inputMode="decimal"
-          required
-          placeholder={`e.g. ${formatNumberDisplay('1234.56', numberFormat)}`}
-          value={formatNumberDisplay(String(condition.value ?? ''), numberFormat)}
-          onChange={e =>
-            onUpdate({ ...condition, value: normalizeNumberInput(e.target.value, numberFormat) })
-          }
-          className={`flex-1 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-        />
-      ) : (
-        <Input
-          type="text"
-          required
-          placeholder="Value"
-          value={String(condition.value ?? '')}
-          onChange={e => onUpdate({ ...condition, value: e.target.value })}
-          className={`flex-1 h-9 text-xs ${errorMsg ? 'border-red-500' : ''}`}
-        />
-      )}
-      {errorMsg && <span className="text-[11px] text-red-500 ml-auto">{errorMsg}</span>}
-
-      {canRemove && (
-        <Button
-          onClick={onRemove}
-          variant="ghost"
-          size="sm"
-          className="h-9 w-9 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      )}
-    </div>
-  );
-};
-
-const ColumnFilterSection: React.FC<{
-  column: FilterColumn;
-  availableColumns: { id: string; name: string; type: ColumnType; dateFormat?: string }[];
-  usedColumnIds: string[];
-  onUpdate: (column: FilterColumn) => void;
-  onRemove: () => void;
-  numberFormat?: NumberFormat;
-}> = ({ column, availableColumns, usedColumnIds, onUpdate, onRemove, numberFormat }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
-
-  const handleAddCondition = () => {
-    const newCondition: FilterCondition = {
-      id: generateId(),
-      operator: getOperatorsForType(column.columnType)[0]?.value || 'equals',
-      value: null,
-    };
-    onUpdate({
-      ...column,
-      conditions: [...column.conditions, newCondition],
-    });
-  };
-
-  const handleUpdateCondition = (index: number, condition: FilterCondition) => {
-    const newConditions = [...column.conditions];
-    newConditions[index] = condition;
-    onUpdate({ ...column, conditions: newConditions });
-  };
-
-  const handleRemoveCondition = (index: number) => {
-    onUpdate({
-      ...column,
-      conditions: column.conditions.filter((_, i) => i !== index),
-    });
-  };
-
-  const handleColumnChange = (newColumnId: string) => {
-    const selectedColumn = availableColumns.find(c => c.id === newColumnId);
-    if (selectedColumn) {
-      if (selectedColumn.type === column.columnType) {
-        onUpdate({
-          ...column,
-          columnId: newColumnId,
-          columnName: selectedColumn.name,
-          columnType: selectedColumn.type,
-          conditions: [...column.conditions],
-        });
-      } else {
-        const newCondition: FilterCondition = {
-          id: generateId(),
-          operator: getOperatorsForType(selectedColumn.type)[0]?.value || 'equals',
-          value: null,
-        };
-        onUpdate({
-          ...column,
-          columnId: newColumnId,
-          columnName: selectedColumn.name,
-          columnType: selectedColumn.type,
-          conditions: [newCondition],
-        });
-      }
-    }
-  };
-
-  return (
-    <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/50 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 font-medium text-gray-900 dark:text-gray-100 flex-1 min-w-0"
-        >
-          {isExpanded ? (
-            <ChevronDown className="w-4 h-4 flex-shrink-0" />
-          ) : (
-            <ChevronRight className="w-4 h-4 flex-shrink-0" />
-          )}
-          <span className="text-sm truncate">{column.columnName}</span>
-        </button>
-
-        <Button
-          onClick={onRemove}
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 flex-shrink-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
-
-      {isExpanded && (
-        <>
-          <div>
-            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-              Column
-            </label>
-            <Select value={column.columnId} onValueChange={handleColumnChange}>
-              <SelectTrigger className="w-full h-9 text-xs outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 data-[state=open]:ring-0 data-[state=open]:ring-offset-0">
-                <span className="block truncate">
-                  {(() => {
-                    const sel = availableColumns.find(c => c.id === column.columnId);
-                    const label = sel?.name || column.columnName || column.columnId;
-                    const type = sel?.type || column.columnType;
-                    const fmt = sel?.dateFormat;
-                    const typeWithFmt = type === 'date' && fmt ? `${type} - ${fmt}` : type;
-                    return `${label} (${typeWithFmt})`;
-                  })()}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {availableColumns
-                  .filter(col => !usedColumnIds.includes(col.id) || col.id === column.columnId)
-                  .map(col => (
-                    <SelectItem key={col.id} value={col.id}>
-                      {col.name} (
-                      {col.type === 'date' && col.dateFormat
-                        ? `${col.type} - ${col.dateFormat}`
-                        : col.type}
-                      )
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-col gap-2 space-y-2">
-            {column.conditions.map((condition, index) => (
-              <ConditionRow
-                key={condition.id}
-                condition={condition}
-                operator={condition.operator}
-                columnType={column.columnType}
-                dateGranularity={getGranularityFromFormat(
-                  availableColumns.find(c => c.id === column.columnId)?.dateFormat
-                )}
-                onUpdate={c => handleUpdateCondition(index, c)}
-                onRemove={() => handleRemoveCondition(index)}
-                isOr={index > 0}
-                numberFormat={numberFormat}
-                canRemove={column.conditions.length > 1}
-              />
-            ))}
-          </div>
-
-          <Button
-            onClick={handleAddCondition}
-            variant="outline"
-            size="sm"
-            className="text-xs h-8 gap-1 bg-transparent w-full"
-          >
-            <Plus className="w-3 h-3" />
-            Add Condition
-          </Button>
-        </>
-      )}
-    </div>
-  );
-};
 
 export const FilterModal: React.FC<FilterModalProps> = ({
   isOpen,
@@ -493,9 +35,58 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   availableColumns,
   initialColumns = [],
   numberFormat,
+  uniqueValuesByColumn,
 }) => {
-  const [columns, setColumns] = useState<FilterColumn[]>(initialColumns);
+  const [columns, setColumns] = useState<DatasetFilterColumn[]>(initialColumns);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const resolveUniqueValues = useCallback(
+    (col: DatasetFilterColumn): string[] | undefined => {
+      const meta = availableColumns.find(c => c.id === col.columnId);
+      const candidates = [col.columnId, meta?.id, meta?.name, col.columnName].filter(
+        Boolean
+      ) as string[];
+      for (const candidate of candidates) {
+        if (candidate && uniqueValuesByColumn?.[candidate]) {
+          return uniqueValuesByColumn[candidate];
+        }
+      }
+      return undefined;
+    },
+    [availableColumns, uniqueValuesByColumn]
+  );
+
+  const formatSingleValue = useCallback(
+    (col: DatasetFilterColumn, raw: string | number | null | undefined) => {
+      const meta = availableColumns.find(c => c.id === col.columnId);
+      if (raw == null || raw === '') return '(blank)';
+      if (col.columnType === 'date') {
+        return formatDateDisplay(
+          getGranularityFromFormat(meta?.dateFormat),
+          raw as any,
+          meta?.dateFormat
+        );
+      }
+      if (col.columnType === 'number') {
+        return formatNumberDisplay(String(raw), numberFormat);
+      }
+      return String(raw);
+    },
+    [availableColumns, numberFormat]
+  );
+
+  const formatValueSummary = useCallback(
+    (col: DatasetFilterColumn, cond: DatasetFilterCondition) => {
+      if (Array.isArray(cond.value)) {
+        if (cond.value.length === 0) return '(none selected)';
+        const formatted = cond.value.map(v => formatSingleValue(col, v));
+        if (formatted.length <= 3) return formatted.join(', ');
+        return `${formatted.slice(0, 3).join(', ')}, +${formatted.length - 3} more`;
+      }
+      return formatSingleValue(col, cond.value as any);
+    },
+    [formatSingleValue]
+  );
 
   // Keep modal state in sync with external config
   useEffect(() => {
@@ -508,7 +99,11 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     const usedIds = columns.map(c => c.columnId);
     const candidate = availableColumns.find(c => !usedIds.includes(c.id));
     if (!candidate) return;
-    const newColumn: FilterColumn = {
+    // Use non-unique-picker operators by default to avoid loading all unique values
+    const operators = getOperatorsForType(candidate.type);
+    // Default operators are now at index 0 (contains for text, greater_than for number/date)
+    const defaultOperator = operators[0]?.value || 'contains';
+    const newColumn: DatasetFilterColumn = {
       id: generateId(),
       columnId: candidate.id,
       columnName: candidate.name,
@@ -516,7 +111,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
       conditions: [
         {
           id: generateId(),
-          operator: getOperatorsForType(candidate.type)[0]?.value || 'equals',
+          operator: defaultOperator,
           value: null,
         },
       ],
@@ -524,7 +119,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     setColumns([...columns, newColumn]);
   };
 
-  const handleUpdateColumn = (index: number, column: FilterColumn) => {
+  const handleUpdateColumn = (index: number, column: DatasetFilterColumn) => {
     const newColumns = [...columns];
     newColumns[index] = column;
     setColumns(newColumns);
@@ -541,7 +136,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
   const previewHasLines = columns.length > 0 && columns.some(c => (c.conditions || []).length > 0);
 
-  const hasInvalid = React.useMemo(() => {
+  const hasInvalid = useMemo(() => {
     for (const col of columns) {
       const fmt = availableColumns.find(c => c.id === col.columnId)?.dateFormat;
       const g = getGranularityFromFormat(fmt);
@@ -562,8 +157,8 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] flex flex-col">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 select-none">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] flex flex-col select-none">
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Filter Configuration
@@ -602,6 +197,8 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                       usedColumnIds={columns.map(c => c.columnId)}
                       onUpdate={col => handleUpdateColumn(index, col)}
                       onRemove={() => handleRemoveColumn(index)}
+                      numberFormat={numberFormat}
+                      uniqueValues={resolveUniqueValues(column)}
                     />
                   ))}
                 </div>
@@ -638,50 +235,16 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                               {cond.operator === 'between' ? (
                                 <span>
                                   <span className="font-semibold">
-                                    {col.columnType === 'date'
-                                      ? formatDateDisplay(
-                                          getGranularityFromFormat(
-                                            availableColumns.find(c => c.id === col.columnId)
-                                              ?.dateFormat
-                                          ),
-                                          cond.value as any,
-                                          availableColumns.find(c => c.id === col.columnId)
-                                            ?.dateFormat
-                                        )
-                                      : col.columnType === 'number'
-                                        ? formatNumberDisplay(cond.value as any, numberFormat)
-                                        : String(cond.value ?? '?')}
+                                    {formatSingleValue(col, cond.value as any)}
                                   </span>
                                   <span className="mx-1">and</span>
                                   <span className="font-semibold">
-                                    {col.columnType === 'date'
-                                      ? formatDateDisplay(
-                                          getGranularityFromFormat(
-                                            availableColumns.find(c => c.id === col.columnId)
-                                              ?.dateFormat
-                                          ),
-                                          cond.valueEnd as any,
-                                          availableColumns.find(c => c.id === col.columnId)
-                                            ?.dateFormat
-                                        )
-                                      : col.columnType === 'number'
-                                        ? formatNumberDisplay(cond.valueEnd as any, numberFormat)
-                                        : String(cond.valueEnd ?? '?')}
+                                    {formatSingleValue(col, cond.valueEnd as any)}
                                   </span>
                                 </span>
                               ) : (
                                 <span className="font-semibold">
-                                  {col.columnType === 'date'
-                                    ? formatDateDisplay(
-                                        getGranularityFromFormat(
-                                          availableColumns.find(c => c.id === col.columnId)
-                                            ?.dateFormat
-                                        ),
-                                        cond.value as any,
-                                        availableColumns.find(c => c.id === col.columnId)
-                                          ?.dateFormat
-                                      )
-                                    : String(cond.value ?? '?')}
+                                  {formatValueSummary(col, cond)}
                                 </span>
                               )}
                               {cidx < (col.conditions?.length || 0) - 1 && (
@@ -727,8 +290,8 @@ export const FilterModal: React.FC<FilterModalProps> = ({
       </div>
 
       {showResetConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-sm w-full mx-4 overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 select-none">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-sm w-full mx-4 overflow-hidden select-none">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 Reset all filters?

@@ -25,7 +25,9 @@ export type DateFormat =
   | 'DD Month YYYY'
   | 'YYYY'
   | 'YYYY-MM-DD HH:mm:ss'
-  | 'YYYY-MM-DDTHH:mm:ss';
+  | 'YYYY-MM-DDTHH:mm:ss'
+  | 'YYYY-MM-DD HH:mm'
+  | 'YYYY-[Q]Q';
 
 export const DATE_FORMATS: DateFormat[] = [
   'YYYY-MM-DD',
@@ -41,6 +43,8 @@ export const DATE_FORMATS: DateFormat[] = [
   'DD Month YYYY',
   'YYYY',
   'YYYY-MM-DD HH:mm:ss',
+  'YYYY-MM-DD HH:mm',
+  'YYYY-[Q]Q',
   'YYYY-MM-DDTHH:mm:ss',
 ];
 
@@ -435,9 +439,28 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
           YYYY: 'YYYY',
           'YYYY-MM-DD HH:mm:ss': 'YYYY-MM-DD HH:mm:ss',
           'YYYY-MM-DDTHH:mm:ss': 'YYYY-MM-DDTHH:mm:ss',
+          'YYYY-MM-DD HH:mm': 'YYYY-MM-DD HH:mm',
+          'YYYY-[Q]Q': 'YYYY-[Q]Q', // For quarter format like 2024-Q1
         };
         const djFormat = formatMap[fmt] || 'YYYY-MM-DD';
-        const d = dayjs(v, djFormat, true);
+
+        // Special handling for quarter format (2024-Q1)
+        let d;
+        if (fmt === 'YYYY-[Q]Q') {
+          // Parse quarter format: 2024-Q1
+          const match = v.match(/^(\d{4})-Q(\d)$/);
+          if (match) {
+            const year = parseInt(match[1], 10);
+            const quarter = parseInt(match[2], 10);
+            // Convert quarter to month (Q1=Jan, Q2=Apr, Q3=Jul, Q4=Oct)
+            const month = (quarter - 1) * 3 + 1;
+            d = dayjs(`${year}-${String(month).padStart(2, '0')}-01`);
+          } else {
+            d = dayjs(v, djFormat, true);
+          }
+        } else {
+          d = dayjs(v, djFormat, true);
+        }
         if (!d.isValid()) {
           updateParsedValue(colIndex, rowIndex, undefined);
           return { ok: false, value: original, changed: false };
@@ -445,6 +468,12 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
         let iso: string;
         if (fmt === 'YYYY-MM-DD HH:mm:ss' || fmt === 'YYYY-MM-DDTHH:mm:ss') {
           iso = d.format('YYYY-MM-DD[T]HH:mm:ss');
+        } else if (fmt === 'YYYY-MM-DD HH:mm') {
+          // For hour/minute format, set seconds to 00
+          iso = d.format('YYYY-MM-DD[T]HH:mm:00');
+        } else if (fmt === 'YYYY-[Q]Q') {
+          // For quarter, use the first day of the quarter (already set in d)
+          iso = d.format('YYYY-MM-DD[T]00:00:00');
         } else {
           const datePart = d.format('YYYY-MM-DD');
           iso = `${datePart}T00:00:00`;

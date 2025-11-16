@@ -38,8 +38,10 @@ import { clearCurrentChartNotes } from '@/features/chartNotes/chartNoteSlice';
 import { useChartEditor } from '@/features/chartEditor';
 import type { MainChartConfig, SortLevel, DatasetConfig } from '@/types/chart';
 import { buildColumnIndexMap, applyMultiLevelSort, applyDatasetFilters } from '@/utils/datasetOps';
+import { applyAggregation } from '@/utils/aggregationUtils';
 import ChartEditorHeader from './ChartEditorHeader';
 import { resetBindings } from '@/utils/chartBindings';
+import { cleanupChartConfig } from '@/utils/chartConfigCleanup';
 import { useChartNotes } from '@/features/chartNotes/useChartNotes';
 import { useChartHistory } from '@/features/chartHistory/useChartHistory';
 import { captureAndUploadChartSnapshot } from '@/services/uploadService';
@@ -124,6 +126,16 @@ const ChartEditorPage: React.FC = () => {
   // MEMOIZED VALUES
   // ============================================================
   const excelInitial = useMemo(() => {
+    // Only use currentDataset if:
+    // 1. There's a datasetId AND
+    // 2. currentDataset.id matches the datasetId
+    // This prevents showing a dataset that was created but not selected for this chart
+    const shouldUseDataset = datasetId && currentDataset && currentDataset.id === datasetId;
+
+    if (!shouldUseDataset) {
+      return { initialColumns: undefined, initialData: undefined };
+    }
+
     const headers: any[] = (currentDataset?.headers as any[]) || [];
     let initialColumns: DataHeader[] | undefined;
     let initialData: string[][] | undefined;
@@ -165,9 +177,16 @@ const ChartEditorPage: React.FC = () => {
     }
 
     return { initialColumns, initialData };
-  }, [currentDataset?.headers, (currentDataset as any)?.rows]);
+  }, [datasetId, currentDataset?.id, currentDataset?.headers, (currentDataset as any)?.rows]);
 
   const excelFormats = useMemo(() => {
+    // Only use currentDataset if it matches the datasetId
+    const shouldUseDataset = datasetId && currentDataset && currentDataset.id === datasetId;
+
+    if (!shouldUseDataset) {
+      return { initialNumberFormat: undefined, initialDateFormat: undefined };
+    }
+
     const ds: any = currentDataset || {};
     const initialNumberFormat: NumberFormat | undefined =
       ds.detectedNumberFormat ||
@@ -177,7 +196,7 @@ const ChartEditorPage: React.FC = () => {
     const initialDateFormat: DateFormat | undefined =
       ds.detectedDateFormat || ds.dateFormat || undefined;
     return { initialNumberFormat, initialDateFormat };
-  }, [currentDataset]);
+  }, [datasetId, currentDataset?.id, currentDataset]);
 
   const { highlightHeaderIds } = useMemo(() => {
     if (!chartConfig) return { highlightHeaderIds: [] as string[] };
@@ -445,30 +464,170 @@ const ChartEditorPage: React.FC = () => {
     dispatch,
   ]);
 
+  // Store original dataset (before any processing) - used for filter/sort/aggregation operations
+  const originalDataset = useMemo(() => {
+    return {
+      headers: excelInitial.initialColumns || working?.headers,
+      data: excelInitial.initialData || working?.data,
+    };
+  }, [excelInitial.initialColumns, excelInitial.initialData, working?.headers, working?.data]);
+
+  // Serialize filters to ensure useMemo detects changes (React does shallow comparison)
+  // Depend on datasetConfig itself to catch any nested changes
+  const filtersKey = useMemo(() => {
+    const key = JSON.stringify(datasetConfig?.filters || []);
+    console.log('[ChartEditorPage] filtersKey updated:', key);
+    return key;
+  }, [datasetConfig]);
+  const aggregationKey = useMemo(() => {
+    const key = JSON.stringify(datasetConfig?.aggregation || {});
+    console.log('[ChartEditorPage] aggregationKey updated:', key);
+    return key;
+  }, [datasetConfig]);
+
   // ============================================================
-  // EFFECT: Sync chart data from working dataset
+  // COMPUTE: Processed data (filter → sort → aggregation)
+  // ============================================================
+  const processedData = useMemo(() => {
+    console.log('[ChartEditorPage] processedData memo recalculating...', {
+      filtersKey,
+      aggregationKey,
+      filtersCount: (datasetConfig as any)?.filters?.length || 0,
+    });
+
+    // Always use original dataset for operations (filter/sort/aggregation)
+    // working.data/headers might be aggregated, so use originalDataset
+    const dataToProcess = originalDataset.data || working?.data;
+    const headersToUse = originalDataset.headers || working?.headers;
+
+    if (!headersToUse || !dataToProcess) {
+      return { data: undefined, headers: undefined };
+    }
+
+    // Get current filters and aggregation from datasetConfig (read fresh each time)
+    const currentFilters = (datasetConfig as any)?.filters;
+    const currentAggregation = datasetConfig?.aggregation;
+
+    console.log('[ChartEditorPage] Processing with:', {
+      dataRows: dataToProcess.length,
+      filters: currentFilters?.length || 0,
+      hasAggregation: !!currentAggregation,
+    });
+
+    try {
+      // Build column index map from ORIGINAL headers (not aggregated)
+      const colIndexMap = buildColumnIndexMap(headersToUse as unknown as DataHeader[]);
+
+      // Filter using original data and original headers
+      const filtered =
+        applyDatasetFilters(dataToProcess, currentFilters, colIndexMap) || dataToProcess;
+
+      console.log('[ChartEditorPage] After filter:', {
+        originalRows: dataToProcess.length,
+        filteredRows: filtered.length,
+      });
+
+      // Sort using filtered data
+      const multiSorted = applyMultiLevelSort(filtered, sortLevels, colIndexMap) || filtered;
+
+      // Apply aggregation if configured - use FILTERED AND SORTED data (multiSorted)
+      // Note: Number formatting is NOT applied here - it will be applied by preformatDataToFormats in DataTab
+      const aggregationResult = applyAggregation(
+        multiSorted, // This is the filtered + sorted data
+        headersToUse as unknown as DataHeader[],
+        currentAggregation,
+        colIndexMap
+      );
+
+      console.log('[ChartEditorPage] After aggregation:', {
+        sortedRows: multiSorted.length,
+        aggregatedRows: aggregationResult?.data?.length || 0,
+        hasResult: !!aggregationResult,
+      });
+
+      // Use aggregated data/headers if aggregation is active, otherwise use sorted data
+      const finalHeaders = aggregationResult
+        ? aggregationResult.headers
+        : (headersToUse as unknown as DataHeader[]);
+      const finalData = aggregationResult ? aggregationResult.data : multiSorted;
+
+      return { data: finalData, headers: finalHeaders };
+    } catch (e) {
+      console.error('[ChartEditorPage] Error processing data:', e);
+      return { data: undefined, headers: undefined };
+    }
+  }, [
+    originalDataset.data,
+    originalDataset.headers,
+    working?.data,
+    working?.headers,
+    filtersKey, // Use serialized filters key to detect changes
+    sortLevels,
+    aggregationKey, // Use serialized aggregation key to detect changes
+    datasetConfig, // Also depend on datasetConfig to ensure we read fresh values
+    excelFormats.initialNumberFormat,
+  ]);
+
+  // ============================================================
+  // EFFECT: Update working dataset with aggregated headers when aggregation changes
   // ============================================================
   useEffect(() => {
-    if (!working?.headers || !working?.data) {
+    if (!processedData.headers || !processedData.data) return;
+
+    // Only update if aggregation is active and headers changed
+    if (
+      datasetConfig?.aggregation &&
+      (datasetConfig.aggregation.groupBy?.length || datasetConfig.aggregation.metrics?.length)
+    ) {
+      const headersChanged =
+        processedData.headers.length !== working?.headers.length ||
+        processedData.headers.some((h, idx) => {
+          const existing = working?.headers[idx];
+          return !existing || h.id !== (existing as any).id || h.name !== existing.name;
+        });
+
+      if (headersChanged && working) {
+        dispatch(
+          setWorkingDataset({
+            headers: processedData.headers as any,
+            data: processedData.data,
+            formats: working.formats,
+          })
+        );
+      }
+    }
+  }, [processedData.headers, processedData.data, datasetConfig?.aggregation, working, dispatch]);
+
+  // ============================================================
+  // EFFECT: Clean up chart config when headers change (e.g., aggregation changes)
+  // ============================================================
+  useEffect(() => {
+    if (!processedData.headers || !chartConfig) return;
+
+    const cleanedConfig = cleanupChartConfig(chartConfig, processedData.headers);
+    if (cleanedConfig !== chartConfig) {
+      setChartConfig(cleanedConfig);
+    }
+  }, [processedData.headers, chartConfig, setChartConfig]);
+
+  // ============================================================
+  // EFFECT: Sync chart data from processed data
+  // ============================================================
+  useEffect(() => {
+    if (!processedData.headers || !processedData.data) {
       dispatch(setChartDataAction([]));
       return;
     }
 
     try {
-      const headerNames = working.headers.map(h => h.name);
-      const colIndexMap = buildColumnIndexMap(working.headers as unknown as DataHeader[]);
-      const filtered =
-        applyDatasetFilters(working.data, (datasetConfig as any)?.filters, colIndexMap) ||
-        working.data;
-      const multiSorted = applyMultiLevelSort(filtered, sortLevels, colIndexMap) || filtered;
-
-      const arrayData: (string | number)[][] = [headerNames, ...multiSorted];
+      const headerNames = processedData.headers.map(h => h.name);
+      const arrayData: (string | number)[][] = [headerNames, ...processedData.data];
       const converted = convertToChartData(arrayData);
       dispatch(setChartDataAction(converted));
     } catch (e) {
       dispatch(setChartDataAction([]));
     }
-  }, [working?.version, chartConfig, sortLevels, dispatch]);
+  }, [processedData.headers, processedData.data, dispatch]);
 
   // ============================================================
   // EFFECT: Browser back button prevention
@@ -845,15 +1004,19 @@ const ChartEditorPage: React.FC = () => {
             style={{ display: activeTab === 'chart' ? 'block' : 'none' }}
             className="flex-1 min-h-0 min-w-0"
           >
-            <ChartTab />
+            <ChartTab processedHeaders={processedData.headers} />
           </div>
           <div
             style={{ display: activeTab === 'data' ? 'block' : 'none' }}
             className="flex-1 min-h-0 min-w-0"
           >
             <DataTab
-              initialColumns={working?.headers || excelInitial.initialColumns}
-              initialData={working?.data || excelInitial.initialData}
+              initialColumns={
+                processedData.headers || working?.headers || excelInitial.initialColumns
+              }
+              initialData={processedData.data || working?.data || excelInitial.initialData}
+              originalColumns={originalDataset.headers}
+              originalData={originalDataset.data}
               loading={isDatasetLoading}
               onOpenDatasetModal={() => setShowDatasetModal(true)}
               initialNumberFormat={excelFormats.initialNumberFormat}
