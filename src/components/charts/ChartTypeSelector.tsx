@@ -113,7 +113,20 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
         newValue !== null &&
         !Array.isArray(newValue)
       ) {
-        result[key] = deepMergeConfigs(currentValue, newValue);
+        // Special handling for datasetConfig: preserve it if it has content
+        if (key === 'datasetConfig') {
+          const hasCurrentContent = Object.keys(currentValue).length > 0;
+          const hasNewContent = Object.keys(newValue).length > 0;
+          if (hasCurrentContent && !hasNewContent) {
+            // Preserve current datasetConfig if new default is empty
+            result[key] = currentValue;
+          } else {
+            // Otherwise merge normally
+            result[key] = deepMergeConfigs(currentValue, newValue);
+          }
+        } else {
+          result[key] = deepMergeConfigs(currentValue, newValue);
+        }
       } else if (currentValue !== undefined) {
         result[key] = currentValue;
       } else {

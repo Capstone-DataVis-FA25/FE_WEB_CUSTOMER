@@ -52,4 +52,5 @@ export interface ChartRequest {
   type: ChartType;
   config: MainChartConfig;
   datasetId?: string;
+  imageUrl?: string; // For chart history snapshot
 }

@@ -25,7 +25,15 @@ function hasAxisConfigs(config: any): config is { axisConfigs: any } {
   return config && typeof config === 'object' && 'axisConfigs' in config;
 }
 
-const AxisConfigurationSection: React.FC = () => {
+import type { DataHeader } from '@/utils/dataProcessors';
+
+interface AxisConfigurationSectionProps {
+  processedHeaders?: DataHeader[];
+}
+
+const AxisConfigurationSection: React.FC<AxisConfigurationSectionProps> = ({
+  processedHeaders,
+}) => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { chartConfig } = useChartEditorRead();
@@ -80,8 +88,8 @@ const AxisConfigurationSection: React.FC = () => {
   // Get chart type from config (chartType is at root level of MainChartConfig)
   const chartType = chartConfig.chartType || ChartType.Line;
 
-  // Get headers with id and name for dropdown
-  const dataHeaders = currentDataset?.headers || [];
+  // Get headers: Use processed headers (aggregated) if provided, otherwise fall back to original dataset headers
+  const dataHeaders = (processedHeaders as any[]) || currentDataset?.headers || [];
   const hasDataset = currentDataset && currentDataset.id;
 
   // Normalize chart type and debug
