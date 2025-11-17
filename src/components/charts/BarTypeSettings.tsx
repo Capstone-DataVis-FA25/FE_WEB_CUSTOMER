@@ -4,6 +4,12 @@ import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
 import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
+import BarAdvancedOptions from './BarAdvancedOptions';
+
+enum BarType {
+  Grouped = 'grouped',
+  Stacked = 'stacked',
+}
 
 const BarTypeSettings: React.FC = () => {
   const { t } = useTranslation();
@@ -26,7 +32,8 @@ const BarTypeSettings: React.FC = () => {
   }, [cfg?.barType, cfg?.barWidth, cfg?.barSpacing]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {/* Bar Type Selection */}
       <div>
         <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
           {t('chart_editor_bar_type', 'Bar type')}
@@ -40,11 +47,27 @@ const BarTypeSettings: React.FC = () => {
           }}
           className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
         >
-          <option value="grouped">{t('chart_editor_grouped', 'Grouped')}</option>
-          <option value="stacked">{t('chart_editor_stacked', 'Stacked')}</option>
+          <option value={BarType.Grouped}>
+            {t('chart_editor_grouped', 'Grouped - Compare side by side')}
+          </option>
+          <option value={BarType.Stacked}>
+            {t('chart_editor_stacked', 'Stacked - Show composition')}
+          </option>
         </select>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          {localBarType === BarType.Grouped
+            ? t(
+                'bar_type_grouped_hint',
+                'Grouped bars show each series separately, making it easy to compare individual values'
+              )
+            : t(
+                'bar_type_stacked_hint',
+                'Stacked bars show how each part contributes to the total, useful for seeing composition'
+              )}
+        </p>
       </div>
 
+      {/* Bar Width and Spacing */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -81,6 +104,12 @@ const BarTypeSettings: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Divider */}
+      <div className="border-t border-gray-200 dark:border-gray-700 my-3"></div>
+
+      {/* Advanced Display Options - Now a separate component */}
+      <BarAdvancedOptions />
     </div>
   );
 };

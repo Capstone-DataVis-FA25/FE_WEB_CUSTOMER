@@ -146,6 +146,7 @@ export interface AxisConfig {
   yAxisRotation?: number;
   showAxisLabels?: boolean;
   showAxisTicks?: boolean;
+  showAllXAxisTicks?: boolean; // Show all X-axis ticks without sampling (useful for dense date data with compact formats)
   seriesConfigs?: SeriesConfig[];
 }
 
@@ -294,27 +295,72 @@ export interface FormatterConfig {
   useYFormatter: boolean;
   useXFormatter: boolean;
   yFormatterType:
+    | 'none'
+    | 'number'
     | 'currency'
     | 'percentage'
-    | 'number'
     | 'decimal'
     | 'scientific'
     | 'bytes'
     | 'duration'
     | 'date'
+    | 'compact'
+    | 'ordinal'
     | 'custom';
   xFormatterType:
+    | 'none'
+    | 'number'
     | 'currency'
     | 'percentage'
-    | 'number'
     | 'decimal'
     | 'scientific'
     | 'bytes'
     | 'duration'
     | 'date'
+    | 'compact'
+    | 'ordinal'
     | 'custom';
   customYFormatter: string;
   customXFormatter: string;
+  // Additional formatter options
+  yCurrencySymbol?: string;
+  xCurrencySymbol?: string;
+  yDecimalPlaces?: number;
+  xDecimalPlaces?: number;
+  yLocale?: string;
+  xLocale?: string;
+  // Sub-type variants for each formatter
+  yCurrencyStyle?: 'symbol' | 'code' | 'name'; // $1,234 | USD 1,234 | 1,234 US dollars
+  xCurrencyStyle?: 'symbol' | 'code' | 'name';
+  yNumberNotation?: 'standard' | 'compact' | 'scientific' | 'engineering';
+  xNumberNotation?: 'standard' | 'compact' | 'scientific' | 'engineering';
+  yDateFormat?:
+    | 'auto'
+    | 'numeric'
+    | 'short'
+    | 'medium'
+    | 'long'
+    | 'full'
+    | 'relative'
+    | 'year-only'
+    | 'month-year'
+    | 'iso';
+  xDateFormat?:
+    | 'auto'
+    | 'numeric'
+    | 'short'
+    | 'medium'
+    | 'long'
+    | 'full'
+    | 'relative'
+    | 'year-only'
+    | 'month-year'
+    | 'iso';
+  yDurationFormat?: 'short' | 'narrow' | 'long'; // 1h 23m | 1h23m | 1 hour 23 minutes
+  xDurationFormat?: 'short' | 'narrow' | 'long';
+  // Grouping control (thousands separator)
+  yUseGrouping?: boolean; // false for years (2024), true for regular numbers (1,234)
+  xUseGrouping?: boolean;
 }
 
 export interface PieDonutFormatterConfig {

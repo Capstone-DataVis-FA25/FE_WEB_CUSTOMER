@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../ui/card';
 import { useChartEditorRead } from '@/features/chartEditor';
@@ -15,73 +15,121 @@ import type { SubPieDonutChartConfig, PieDonutFormatterConfig } from '@/types/ch
 import { convertChartDataToArray } from '@/utils/dataConverter';
 import { ChartType } from '@/features/charts/chartTypes';
 import D3PieChart from './D3PieChart';
+import { useFormatter } from '@/hooks/useFormatter';
 
 const ChartDisplaySection: React.FC = () => {
   const { t } = useTranslation();
   const { chartData, chartConfig, currentChartType: chartType } = useChartEditorRead();
   const { currentDataset } = useDataset();
 
-  // Helper: Map DataHeader ID to name
-  const dataHeaders = currentDataset?.headers || [];
-  const getHeaderName = (id: string) => {
-    const header = dataHeaders.find(h => h.id === id);
-    return header ? header.name : id;
-  };
+  // Helper: Map DataHeader ID to name - memoized to prevent recreation
+  const dataHeaders = useMemo(() => currentDataset?.headers || [], [currentDataset?.headers]);
 
-  // Tách logic Pie chart và các chart khác
-  let formatters: any = undefined;
-  let axisConfigs: any = undefined;
-  let colors: any = {};
-  let safeChartConfig: any = null;
-  if (
-    chartType !== ChartType.Pie &&
-    chartType !== ChartType.Donut &&
-    chartConfig &&
-    'axisConfigs' in chartConfig
-  ) {
-    formatters = chartConfig.formatters || {
-      useYFormatter: false,
-      useXFormatter: false,
-      yFormatterType: 'number' as const,
-      xFormatterType: 'number' as const,
-    };
-    axisConfigs = chartConfig.axisConfigs || {};
-    (axisConfigs.seriesConfigs || []).forEach((series: any) => {
-      if (series.dataColumn && series.color) {
-        const columnName = getHeaderName(series.dataColumn);
-        colors[columnName] = {
-          light: series.color,
-          dark: series.color,
-        };
-      }
-    });
-    safeChartConfig = chartConfig.config || null;
-  } else if ((chartType === ChartType.Pie || chartType === ChartType.Donut) && chartConfig) {
-    // Pie chart chỉ lấy config và colors nếu có
-    safeChartConfig = chartConfig.config || null;
-    colors = {};
-  }
-
-  // Unified error panel for chart display
-  const ErrorPanel: React.FC<{ title: string; subtitle?: string; bordered?: boolean }> = ({
-    title,
-    subtitle,
-    bordered = false,
-  }) => (
-    <div
-      className={`flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-800 rounded-lg ${
-        bordered ? 'border-2 border-dashed border-gray-300 dark:border-gray-600' : ''
-      }`}
-    >
-      <div className="text-center">
-        <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500 dark:text-gray-400 mb-2">{title}</p>
-        {subtitle && <p className="text-sm text-gray-400 dark:text-gray-500">{subtitle}</p>}
-      </div>
-    </div>
+  const getHeaderName = useCallback(
+    (id: string) => {
+      const header = dataHeaders.find(h => h.id === id);
+      return header ? header.name : id;
+    },
+    [dataHeaders]
   );
 
-  const renderChart = () => {
+  // Helper: Get the actual key used in chartData (could be ID or name)
+  const getChartDataKey = useCallback(
+    (id: string) => {
+      if (!chartData || chartData.length === 0) return getHeaderName(id);
+
+      const name = getHeaderName(id);
+      const firstDataPoint = chartData[0];
+
+      // Check if name exists in chartData
+      if (name in firstDataPoint) {
+        return name;
+      }
+
+      // Fallback to ID if name not found
+      if (id in firstDataPoint) {
+        return id;
+      }
+
+      // Last resort: return name
+      return name;
+    },
+    [chartData, getHeaderName]
+  );
+
+  // Memoize computed values to prevent recalculation on every render
+  const { formatters, axisConfigs, colors, safeChartConfig } = useMemo(() => {
+    let formatters: any = undefined;
+    let axisConfigs: any = undefined;
+    let colors: any = {};
+    let safeChartConfig: any = null;
+
+    if (
+      chartType !== ChartType.Pie &&
+      chartType !== ChartType.Donut &&
+      chartConfig &&
+      'axisConfigs' in chartConfig
+    ) {
+      formatters = chartConfig.formatters || {
+        useYFormatter: false,
+        useXFormatter: false,
+        yFormatterType: 'number' as const,
+        xFormatterType: 'number' as const,
+      };
+      axisConfigs = chartConfig.axisConfigs || {};
+      (axisConfigs.seriesConfigs || []).forEach((series: any) => {
+        if (series.dataColumn && series.color) {
+          const header = dataHeaders.find(h => h.id === series.dataColumn);
+          const columnName = header ? header.name : series.dataColumn;
+          colors[columnName] = {
+            light: series.color,
+            dark: series.color,
+          };
+        }
+      });
+      safeChartConfig = chartConfig.config || null;
+    } else if ((chartType === ChartType.Pie || chartType === ChartType.Donut) && chartConfig) {
+      // Pie chart chỉ lấy config và colors nếu có
+      safeChartConfig = chartConfig.config || null;
+      colors = {};
+    }
+
+    return { formatters, axisConfigs, colors, safeChartConfig };
+  }, [chartType, chartConfig, dataHeaders]);
+
+  // Get formatter functions from config - MUST be called at top level, not inside renderChart
+  const { yAxisFormatter: yAxisFormatterFn, xAxisFormatter: xAxisFormatterFn } =
+    useFormatter(formatters);
+
+  // Unified error panel for chart display - memoized to prevent recreation
+  const ErrorPanel = useMemo(
+    () =>
+      ({
+        title,
+        subtitle,
+        bordered = false,
+      }: {
+        title: string;
+        subtitle?: string;
+        bordered?: boolean;
+      }) => (
+        <div
+          className={`flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-800 rounded-lg ${
+            bordered ? 'border-2 border-dashed border-gray-300 dark:border-gray-600' : ''
+          }`}
+        >
+          <div className="text-center">
+            <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-gray-400 mb-2">{title}</p>
+            {subtitle && <p className="text-sm text-gray-400 dark:text-gray-500">{subtitle}</p>}
+          </div>
+        </div>
+      ),
+    []
+  );
+
+  // Memoize renderChart to prevent recreation on every render
+  const renderChart = useCallback(() => {
     if (!safeChartConfig || !chartData || chartData.length === 0) {
       return (
         <ErrorPanel
@@ -99,10 +147,16 @@ const ChartDisplaySection: React.FC = () => {
       case ChartType.Area:
       case ChartType.Bar:
       case ChartType.Scatter: {
-        // Convert IDs to names for chart keys
-        const xAxisKeyName = Array.isArray(axisConfigs.xAxisKey)
-          ? getHeaderName(axisConfigs.xAxisKey[0] || '')
-          : getHeaderName(axisConfigs.xAxisKey || '');
+        // Get X-axis key ID and convert to actual key used in chartData
+        const xAxisKeyId = Array.isArray(axisConfigs.xAxisKey)
+          ? axisConfigs.xAxisKey[0] || ''
+          : axisConfigs.xAxisKey || '';
+
+        // Get display name for labels
+        const xAxisKeyName = getHeaderName(xAxisKeyId);
+
+        // Get actual key used in chartData (might be name or ID)
+        const xAxisDataKey = getChartDataKey(xAxisKeyId);
 
         // Validate xAxisKey first
         if (!xAxisKeyName || xAxisKeyName === '') {
@@ -123,9 +177,15 @@ const ChartDisplaySection: React.FC = () => {
           (series: any) => series.visible !== false
         );
 
+        // Get display names for labels
         const yAxisKeysNames = visibleSeries.map((series: any) => {
           const columnName = getHeaderName(series.dataColumn);
           return columnName;
+        });
+
+        // Get actual data keys used in chartData
+        const yAxisDataKeys = visibleSeries.map((series: any) => {
+          return getChartDataKey(series.dataColumn);
         });
 
         // Then check if no series are selected OR no visible series
@@ -160,14 +220,15 @@ const ChartDisplaySection: React.FC = () => {
             chartData.length > 0
               ? [
                   [
-                    // Use converted names instead of IDs
+                    // Use display names for headers
                     xAxisKeyName,
                     ...yAxisKeysNames,
                   ],
                   ...chartData.map((point: any) => {
                     return [
-                      point[xAxisKeyName],
-                      ...yAxisKeysNames.map((name: string) => point[name]),
+                      // Use actual data keys to access values
+                      point[xAxisDataKey],
+                      ...yAxisDataKeys.map((dataKey: string) => point[dataKey]),
                     ];
                   }),
                 ]
@@ -185,83 +246,21 @@ const ChartDisplaySection: React.FC = () => {
             ])
           ),
           title: safeChartConfig.title,
-          xAxisLabel: axisConfigs.xAxisLabel,
-          yAxisLabel: axisConfigs.yAxisLabel,
+          xAxisLabel: axisConfigs.xAxisLabel || xAxisKeyName, // Use column name as default
+          yAxisLabel:
+            axisConfigs.yAxisLabel || (yAxisKeysNames.length === 1 ? yAxisKeysNames[0] : 'Value'), // Use column name for single series, or 'Value' for multiple
           showLegend: safeChartConfig.showLegend,
           showGrid: safeChartConfig.showGrid,
           animationDuration: safeChartConfig.animationDuration,
-          yAxisFormatter: formatters.useYFormatter
-            ? (value: number) => {
-                switch (formatters.yFormatterType) {
-                  case 'currency':
-                    return new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                    }).format(value);
-                  case 'percentage':
-                    return new Intl.NumberFormat('en-US', { style: 'percent' }).format(value / 100);
-                  case 'number':
-                    return new Intl.NumberFormat('en-US').format(value);
-                  case 'decimal':
-                    return value.toFixed(2);
-                  case 'scientific':
-                    return value.toExponential(2);
-                  case 'bytes':
-                    return new Intl.NumberFormat('en-US', { style: 'unit', unit: 'byte' }).format(
-                      value
-                    );
-                  case 'duration':
-                    return new Intl.NumberFormat('en-US', { style: 'unit', unit: 'second' }).format(
-                      value
-                    );
-                  case 'custom':
-                    return (formatters as any).customYFormatter
-                      ? (formatters as any).customYFormatter.replace('{value}', value.toString())
-                      : value.toString();
-                  default:
-                    return value.toString();
-                }
-              }
-            : undefined,
-          xAxisFormatter: formatters.useXFormatter
-            ? (value: number) => {
-                switch (formatters.xFormatterType) {
-                  case 'currency':
-                    return new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                    }).format(value);
-                  case 'percentage':
-                    return new Intl.NumberFormat('en-US', { style: 'percent' }).format(value / 100);
-                  case 'number':
-                    return new Intl.NumberFormat('en-US').format(value);
-                  case 'decimal':
-                    return value.toFixed(2);
-                  case 'scientific':
-                    return value.toExponential(2);
-                  case 'bytes':
-                    return new Intl.NumberFormat('en-US', { style: 'unit', unit: 'byte' }).format(
-                      value
-                    );
-                  case 'duration':
-                    return new Intl.NumberFormat('en-US', { style: 'unit', unit: 'second' }).format(
-                      value
-                    );
-                  case 'custom':
-                    return (formatters as any).customXFormatter
-                      ? (formatters as any).customXFormatter.replace('{value}', value.toString())
-                      : value.toString();
-                  default:
-                    return value.toString();
-                }
-              }
-            : undefined,
           fontSize: {
             axis: safeChartConfig.labelFontSize || 12,
             label: safeChartConfig.labelFontSize || 12,
             title: safeChartConfig.titleFontSize || 16,
           },
         };
+
+        // Use formatter functions from top-level hook call
+        // (already called at component top level to avoid Rules of Hooks violation)
 
         switch (chartType) {
           case 'line': {
@@ -282,7 +281,10 @@ const ChartDisplaySection: React.FC = () => {
                 xAxisRotation={axisConfigs.xAxisRotation}
                 yAxisRotation={axisConfigs.yAxisRotation}
                 showAxisLabels={axisConfigs.showAxisLabels}
+                yAxisFormatter={yAxisFormatterFn}
+                xAxisFormatter={xAxisFormatterFn}
                 showAxisTicks={axisConfigs.showAxisTicks}
+                showAllXAxisTicks={axisConfigs.showAllXAxisTicks}
                 enableZoom={lineConfig.enableZoom}
                 enablePan={lineConfig.enablePan}
                 zoomExtent={lineConfig.zoomExtent}
@@ -373,8 +375,8 @@ const ChartDisplaySection: React.FC = () => {
               xAxisRotation: axisConfigs.xAxisRotation,
 
               // Formatters
-              yAxisFormatter: safeCommonProps.yAxisFormatter,
-              xAxisFormatter: safeCommonProps.xAxisFormatter,
+              yAxisFormatter: yAxisFormatterFn,
+              xAxisFormatter: xAxisFormatterFn,
 
               // Font sizes
               fontSize: safeCommonProps.fontSize,
@@ -420,6 +422,9 @@ const ChartDisplaySection: React.FC = () => {
                 yAxisRotation={axisConfigs.yAxisRotation}
                 showAxisLabels={axisConfigs.showAxisLabels}
                 showAxisTicks={axisConfigs.showAxisTicks}
+                showAllXAxisTicks={axisConfigs.showAllXAxisTicks}
+                yAxisFormatter={yAxisFormatterFn}
+                xAxisFormatter={xAxisFormatterFn}
                 yAxisStart={axisConfigs.yAxisStart}
                 xAxisStart={axisConfigs.xAxisStart}
                 theme={barConfig.theme}
@@ -476,6 +481,8 @@ const ChartDisplaySection: React.FC = () => {
               titleFontSize: areaConfig.titleFontSize,
               labelFontSize: areaConfig.labelFontSize,
               legendFontSize: areaConfig.legendFontSize,
+              yAxisFormatter: yAxisFormatterFn,
+              xAxisFormatter: xAxisFormatterFn,
             };
             return <D3AreaChart {...areaProps} />;
           }
@@ -504,6 +511,9 @@ const ChartDisplaySection: React.FC = () => {
 
         // Use cycleColors from axisConfigs if available, otherwise use default colors
         const cycleColors = axisConfigs.cycleColors || colors;
+
+        // Use formatter functions from top-level hook call (already defined above)
+        // No need to call useFormatter again here
 
         console.log('✅ CyclePlot rendering with:', {
           cycleKey: getHeaderName(axisConfigs.cycleKey),
@@ -567,30 +577,8 @@ const ChartDisplaySection: React.FC = () => {
           zoomExtent: cyclePlotConfig?.zoomExtent,
 
           // Formatters
-          yAxisFormatter: formatters?.useYFormatter
-            ? (value: number) => {
-                switch (formatters.yFormatterType) {
-                  case 'currency':
-                    return new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                    }).format(value);
-                  case 'percentage':
-                    return new Intl.NumberFormat('en-US', { style: 'percent' }).format(value / 100);
-                  case 'decimal':
-                    return value.toFixed(2);
-                  case 'scientific':
-                    return value.toExponential(2);
-                  default:
-                    return value.toString();
-                }
-              }
-            : undefined,
-          xAxisFormatter: formatters?.useXFormatter
-            ? (value: string | number) => {
-                return String(value);
-              }
-            : undefined,
+          yAxisFormatter: yAxisFormatterFn,
+          xAxisFormatter: xAxisFormatterFn,
 
           // Font sizes
           fontSize: cyclePlotConfig?.fontSize || { axis: 12, label: 14, title: 16 },
@@ -752,7 +740,20 @@ const ChartDisplaySection: React.FC = () => {
           />
         );
     }
-  };
+  }, [
+    safeChartConfig,
+    chartData,
+    chartType,
+    axisConfigs,
+    colors,
+    formatters,
+    yAxisFormatterFn,
+    xAxisFormatterFn,
+    getHeaderName,
+    getChartDataKey,
+    ErrorPanel,
+    t,
+  ]);
 
   return (
     <div className="lg:col-span-6 space-y-6">

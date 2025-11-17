@@ -7,10 +7,11 @@ import SeriesManagementSection from './SeriesManagementSection';
 import ChartDisplaySection from './ChartDisplaySection';
 import { useChartEditorRead } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
-import ImportExportSection from './ImportExportSection';
 import ChartSettingsPieSection from './ChartSettingsPieSection';
 import DisplayOptionsPieSection from './DisplayOptionsPieSection';
 import CyclePlotSettingsSection from './CyclePlotSettingsSection';
+import ChartFormatterSettings from './ChartFormatterSettingSection';
+import ImportExportSection from './ImportExportSection';
 
 export interface UnifiedChartEditorProps {}
 
@@ -65,7 +66,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = () => {
                   <CyclePlotSettingsSection />
                 </>
               )}
-
+              <ChartFormatterSettings />
               <ImportExportSection />
             </div>
           </div>

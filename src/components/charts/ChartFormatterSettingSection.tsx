@@ -1,0 +1,440 @@
+import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Card, CardHeader, CardContent } from '../ui/card';
+import { ChevronDown, Settings, Info } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
+import { useDataset } from '@/features/dataset/useDataset';
+import FormatterSection from './FormatterSection';
+import type { FormatterType } from '@/utils/formatValue';
+import type { FormatterConfig } from '@/types/chart';
+
+// Type guard to check if chart config has formatters (not Pie/Donut)
+function hasFormatters(config: any): config is { formatters: Partial<FormatterConfig> } {
+  return (
+    config &&
+    typeof config === 'object' &&
+    'formatters' in config &&
+    config.formatters &&
+    'yFormatterType' in config.formatters
+  );
+}
+
+const ChartFormatterSettings: React.FC = () => {
+  const { t } = useTranslation();
+  const [isCollapsed, setIsCollapsed] = useState(true);
+  const { chartConfig } = useChartEditorRead();
+  const { handleConfigChange } = useChartEditorActions();
+  const { currentDataset } = useDataset();
+
+  // Only show for charts that support X/Y axis formatters (not Pie/Donut)
+  if (!chartConfig || !hasFormatters(chartConfig)) {
+    return null;
+  }
+
+  const formatters = chartConfig.formatters || {
+    useYFormatter: false,
+    useXFormatter: false,
+    yFormatterType: 'none' as const,
+    xFormatterType: 'none' as const,
+  };
+
+  // Get axis configuration to find selected columns
+  const axisConfigs = 'axisConfigs' in chartConfig ? chartConfig.axisConfigs : null;
+
+  // Detect data types for X and Y axis columns
+  const { xAxisDataType, yAxisDataTypes, xAxisColumnName, yAxisColumnNames } = useMemo(() => {
+    if (!axisConfigs || !currentDataset?.headers) {
+      return {
+        xAxisDataType: null,
+        yAxisDataTypes: [],
+        xAxisColumnName: null,
+        yAxisColumnNames: [],
+      };
+    }
+
+    // Get X-axis column ID
+    const xAxisKeyId = Array.isArray(axisConfigs.xAxisKey)
+      ? axisConfigs.xAxisKey[0]
+      : axisConfigs.xAxisKey;
+
+    // Find X-axis header
+    const xAxisHeader = currentDataset.headers.find(h => h.id === xAxisKeyId);
+    const xAxisDataType = xAxisHeader?.type || null;
+    const xAxisColumnName = xAxisHeader?.name || null;
+
+    // Get Y-axis column IDs from series configs
+    const seriesConfigs = axisConfigs.seriesConfigs || [];
+    const yAxisHeaders = seriesConfigs
+      .map((series: any) => {
+        const header = currentDataset.headers.find(h => h.id === series.dataColumn);
+        return header;
+      })
+      .filter(Boolean);
+
+    const yAxisDataTypes = yAxisHeaders.map(h => h!.type);
+    const yAxisColumnNames = yAxisHeaders.map(h => h!.name);
+
+    return {
+      xAxisDataType,
+      yAxisDataTypes,
+      xAxisColumnName,
+      yAxisColumnNames,
+    };
+  }, [axisConfigs, currentDataset?.headers]);
+
+  // Y-Axis Formatter Handlers
+  const handleYFormatterTypeChange = (type: FormatterType) => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        yFormatterType: type,
+        useYFormatter: type !== 'none',
+      },
+    });
+  };
+
+  const handleYCustomFormatChange = (format: string) => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        customYFormatter: format,
+      },
+    });
+  };
+
+  const handleYCurrencySymbolChange = (symbol: string) => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        yCurrencySymbol: symbol,
+      },
+    });
+  };
+
+  const handleYDecimalPlacesChange = (places: number) => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        yDecimalPlaces: places,
+      },
+    });
+  };
+
+  // Y-Axis Sub-options Handlers
+  const handleYCurrencyStyleChange = (style: 'symbol' | 'code' | 'name') => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        yCurrencyStyle: style,
+      },
+    });
+  };
+
+  const handleYNumberNotationChange = (
+    notation: 'standard' | 'compact' | 'scientific' | 'engineering'
+  ) => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        yNumberNotation: notation,
+      },
+    });
+  };
+
+  const handleYDateFormatChange = (
+    format:
+      | 'auto'
+      | 'numeric'
+      | 'short'
+      | 'medium'
+      | 'long'
+      | 'full'
+      | 'relative'
+      | 'year-only'
+      | 'month-year'
+      | 'iso'
+  ) => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        yDateFormat: format,
+      },
+    });
+  };
+
+  const handleYDurationFormatChange = (format: 'short' | 'narrow' | 'long') => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        yDurationFormat: format,
+      },
+    });
+  };
+
+  // X-Axis Formatter Handlers
+  const handleXFormatterTypeChange = (type: FormatterType) => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        xFormatterType: type,
+        useXFormatter: type !== 'none',
+      },
+    });
+  };
+
+  const handleXCustomFormatChange = (format: string) => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        customXFormatter: format,
+      },
+    });
+  };
+
+  const handleXCurrencySymbolChange = (symbol: string) => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        xCurrencySymbol: symbol,
+      },
+    });
+  };
+
+  const handleXDecimalPlacesChange = (places: number) => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        xDecimalPlaces: places,
+      },
+    });
+  };
+
+  // X-Axis Sub-options Handlers
+  const handleXCurrencyStyleChange = (style: 'symbol' | 'code' | 'name') => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        xCurrencyStyle: style,
+      },
+    });
+  };
+
+  const handleXNumberNotationChange = (
+    notation: 'standard' | 'compact' | 'scientific' | 'engineering'
+  ) => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        xNumberNotation: notation,
+      },
+    });
+  };
+
+  const handleXDateFormatChange = (
+    format:
+      | 'auto'
+      | 'numeric'
+      | 'short'
+      | 'medium'
+      | 'long'
+      | 'full'
+      | 'relative'
+      | 'year-only'
+      | 'month-year'
+      | 'iso'
+  ) => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        xDateFormat: format,
+      },
+    });
+  };
+
+  const handleXDurationFormatChange = (format: 'short' | 'narrow' | 'long') => {
+    handleConfigChange({
+      formatters: {
+        ...formatters,
+        xDurationFormat: format,
+      },
+    });
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.6, delay: 0.2 }}
+    >
+      <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-hidden rounded-lg">
+        <CardHeader
+          className="pb-3 cursor-pointer hover:bg-gray-700/10 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          <div className="flex items-center justify-between w-full">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Axis Formatter
+            </h3>
+            <div className="flex items-center gap-2">
+              <motion.div
+                animate={{ rotate: isCollapsed ? 0 : 180 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+              >
+                <ChevronDown className="h-5 w-5 text-gray-500" />
+              </motion.div>
+            </div>
+          </div>
+        </CardHeader>
+
+        <AnimatePresence mode="wait">
+          {!isCollapsed && (
+            <motion.div
+              key="formatter-settings-content"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              <CardContent className="space-y-6 mt-4">
+                {/* Data Type Detection Info */}
+                {(xAxisDataType || yAxisDataTypes.length > 0) && (
+                  <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
+                    <div className="flex gap-3">
+                      <Info className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-green-800 dark:text-green-200">
+                        <strong className="font-semibold">
+                          {t('chart_editor_detected_data_types', 'Detected Data Types:')}
+                        </strong>
+                        <ul className="mt-2 space-y-1">
+                          {xAxisColumnName && xAxisDataType && (
+                            <li>
+                              <strong>X-Axis ({xAxisColumnName}):</strong>{' '}
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100">
+                                {xAxisDataType.toUpperCase()}
+                              </span>
+                            </li>
+                          )}
+                          {yAxisColumnNames.length > 0 && (
+                            <li>
+                              <strong>Y-Axis:</strong>{' '}
+                              {yAxisColumnNames.map((name, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center px-2 py-0.5 ml-1 rounded text-xs font-medium bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100"
+                                >
+                                  {name} ({yAxisDataTypes[idx]?.toUpperCase() || 'UNKNOWN'})
+                                </span>
+                              ))}
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Info Banner */}
+                <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+                  <div className="flex gap-3">
+                    <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-blue-800 dark:text-blue-200">
+                      <strong className="font-semibold">
+                        {t('chart_editor_how_formatters_work', 'How Formatters Work:')}
+                      </strong>
+                      <ul className="mt-2 space-y-1 list-disc list-inside">
+                        <li>
+                          <strong>Y-Axis:</strong> Applies to all numeric values on the vertical
+                          axis and tooltips
+                        </li>
+                        <li>
+                          <strong>X-Axis:</strong> Applies to labels on the horizontal axis (useful
+                          for dates, numeric categories)
+                        </li>
+                        <li>
+                          <strong>{t('chart_editor_live_preview', 'Live Preview:')}</strong>{' '}
+                          {t(
+                            'chart_editor_preview_hint',
+                            'See how your data will look before applying'
+                          )}
+                        </li>
+                        <li>
+                          <strong>{t('chart_editor_custom_format', 'Custom Format:')}</strong>{' '}
+                          {t(
+                            'chart_editor_custom_format_hint',
+                            'Use placeholders like {value}, {round}, {fixed2} for advanced formatting'
+                          )}
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Y-Axis Formatter */}
+                <div className="space-y-4">
+                  <FormatterSection
+                    axis="y"
+                    label={t('chart_editor_y_axis_formatter', 'Y-Axis (Values) Formatter')}
+                    formatterType={formatters.yFormatterType || 'none'}
+                    onFormatterTypeChange={handleYFormatterTypeChange}
+                    customFormat={formatters.customYFormatter || '{value}'}
+                    onCustomFormatChange={handleYCustomFormatChange}
+                    currencySymbol={formatters.yCurrencySymbol || '$'}
+                    onCurrencySymbolChange={handleYCurrencySymbolChange}
+                    decimalPlaces={formatters.yDecimalPlaces || 2}
+                    onDecimalPlacesChange={handleYDecimalPlacesChange}
+                    sampleValue={12345.67}
+                    // Data type detection
+                    detectedDataType={(yAxisDataTypes[0] as 'text' | 'number' | 'date') || null}
+                    columnName={yAxisColumnNames[0] || null}
+                    // Sub-options
+                    currencyStyle={formatters.yCurrencyStyle || 'symbol'}
+                    onCurrencyStyleChange={handleYCurrencyStyleChange}
+                    numberNotation={formatters.yNumberNotation || 'standard'}
+                    onNumberNotationChange={handleYNumberNotationChange}
+                    dateFormat={formatters.yDateFormat || 'short'}
+                    onDateFormatChange={handleYDateFormatChange}
+                    durationFormat={formatters.yDurationFormat || 'short'}
+                    onDurationFormatChange={handleYDurationFormatChange}
+                  />
+                </div>
+
+                {/* X-Axis Formatter */}
+                <div className="space-y-4">
+                  <FormatterSection
+                    axis="x"
+                    label={t('chart_editor_x_axis_formatter', 'X-Axis (Categories/Time) Formatter')}
+                    formatterType={formatters.xFormatterType || 'none'}
+                    onFormatterTypeChange={handleXFormatterTypeChange}
+                    customFormat={formatters.customXFormatter || '{value}'}
+                    onCustomFormatChange={handleXCustomFormatChange}
+                    currencySymbol={formatters.xCurrencySymbol || '$'}
+                    onCurrencySymbolChange={handleXCurrencySymbolChange}
+                    decimalPlaces={formatters.xDecimalPlaces || 2}
+                    onDecimalPlacesChange={handleXDecimalPlacesChange}
+                    sampleValue={2024}
+                    // Data type detection
+                    detectedDataType={(xAxisDataType as 'text' | 'number' | 'date') || null}
+                    columnName={xAxisColumnName || null}
+                    // Sub-options
+                    currencyStyle={formatters.xCurrencyStyle || 'symbol'}
+                    onCurrencyStyleChange={handleXCurrencyStyleChange}
+                    numberNotation={formatters.xNumberNotation || 'standard'}
+                    onNumberNotationChange={handleXNumberNotationChange}
+                    dateFormat={formatters.xDateFormat || 'short'}
+                    onDateFormatChange={handleXDateFormatChange}
+                    durationFormat={formatters.xDurationFormat || 'short'}
+                    onDurationFormatChange={handleXDurationFormatChange}
+                  />
+                </div>
+              </CardContent>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Card>
+    </motion.div>
+  );
+};
+
+export default ChartFormatterSettings;

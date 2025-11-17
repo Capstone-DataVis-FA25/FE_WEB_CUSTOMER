@@ -10,6 +10,14 @@ import {
   MOBILE_MARGIN_BOTTOM_FACTOR,
   MOBILE_MARGIN_LEFT_FACTOR,
 } from '@/constants/response-breakpoint';
+import {
+  renderD3Tooltip,
+  createHeader,
+  createStatLine,
+  createPercentLine,
+  createRankLine,
+  createSeparator,
+} from './ChartTooltip';
 
 export interface ChartDataPoint {
   [key: string]: number | string;
@@ -197,8 +205,22 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
   useEffect(() => {
     if (!svgRef.current || !data.length) return;
 
-    const currentWidth = dimensions.width;
+    // Calculate dynamic width based on number of data points
+    const xValues = data.map(d => d[xAxisKey]);
+    const hasStringXValues = xValues.some(v => typeof v === 'string');
+    // Minimum width per data point (adjust based on rotation)
+    const minWidthPerPoint = xAxisRotation === 0 ? 60 : 30; // More space for horizontal labels
+    const calculatedMinWidth = hasStringXValues
+      ? Math.max(dimensions.width, data.length * minWidthPerPoint)
+      : dimensions.width;
+
+    const currentWidth = calculatedMinWidth;
     const currentHeight = dimensions.height;
+
+    // Auto-enable pan when chart is wider than container (due to many data points)
+    const isChartExpanded = currentWidth > dimensions.width;
+    const shouldEnablePan = enablePan || isChartExpanded;
+    const shouldEnableZoom = enableZoom; // Keep zoom as user preference
 
     // Reset auto-adjust state only when key chart inputs change (avoid infinite loops)
     const configKey = `${data.length}-${dimensions.width}-${dimensions.height}-${xAxisKey}-${yAxisKeys.join(',')}-${xAxisRotation}-${yAxisRotation}`;
@@ -410,25 +432,49 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     } else {
       // For overlapping areas
       const enabledAreas = yAxisKeys.filter(key => !disabledLines.includes(key));
-      const allYValues = data.flatMap(d => enabledAreas.map(key => d[key] as number));
 
-      // Ensure domain starts from 0 for consistent positioning
+      // Filter and validate Y values - exclude null, undefined, NaN
+      const allYValues = data.flatMap(d =>
+        enabledAreas.map(key => d[key] as number).filter(val => val != null && !isNaN(val))
+      );
+
+      // Ensure domain includes 0 for proper baseline
       const maxValue = d3.max(allYValues) || 0;
-      const minValue = Math.min(0, d3.min(allYValues) || 0);
+      const minValue = d3.min(allYValues) || 0;
 
-      yScale = d3.scaleLinear().domain([minValue, maxValue]).nice().range([innerHeight, 0]);
+      // Always include 0 in domain for area charts to have proper baseline
+      const domainMin = Math.min(0, minValue);
+      const domainMax = Math.max(0, maxValue);
+
+      yScale = d3.scaleLinear().domain([domainMin, domainMax]).nice().range([innerHeight, 0]);
+
+      // Get the actual baseline Y position (might not be exactly yScale(0) after .nice())
+      const baselineY = yScale(Math.max(domainMin, Math.min(0, domainMax)));
 
       // Create overlapping areas for enabled areas only
       enabledAreas.forEach((key, index) => {
-        // Area generator
+        // Filter out data points with invalid values for this series
+        const validData = data.filter(d => {
+          const val = d[key];
+          return val != null && !isNaN(Number(val));
+        });
+
+        // Skip if no valid data points
+        if (validData.length === 0) return;
+
+        // Area generator with proper baseline
         const area = d3
           .area<ChartDataPoint>()
           .x(d => xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey])))
-          .y0(yScale(0))
+          .y0(baselineY) // Use calculated baseline instead of yScale(0)
           .y1(d => yScale(d[key] as number))
-          .curve(curve);
+          .curve(curve)
+          .defined(d => {
+            const val = d[key];
+            return val != null && !isNaN(Number(val));
+          });
 
-        // Create area path
+        // Create area path using all data (defined() will handle gaps)
         const areaPath = g
           .append('path')
           .datum(data)
@@ -444,7 +490,11 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             .line<ChartDataPoint>()
             .x(d => xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey])))
             .y(d => yScale(d[key] as number))
-            .curve(curve);
+            .curve(curve)
+            .defined(d => {
+              const val = d[key];
+              return val != null && !isNaN(Number(val));
+            });
 
           const strokePath = g
             .append('path')
@@ -486,7 +536,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         // Add data points if enabled
         if (showPoints) {
           g.selectAll(`.point-${index}`)
-            .data(data)
+            .data(validData) // Use validData instead of data
             .enter()
             .append('circle')
             .attr('class', `point-${index}`)
@@ -498,55 +548,89 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             .attr('stroke-width', 2)
             .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
             .on('mouseover', function (_event, d) {
+              if (!showTooltip) return;
+
               d3.select(this)
                 .transition()
                 .duration(200)
                 .attr('r', currentWidth < MOBILE_BREAKPOINT ? 5 : 6)
                 .attr('stroke-width', 3);
 
-              // Create tooltip
-              const tooltip = g
-                .append('g')
-                .attr('class', 'tooltip')
-                .attr(
-                  'transform',
-                  `translate(${xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey]))}, ${yScale(d[key] as number) - 15})`
-                );
+              // Calculate statistics for detailed tooltip (filter null values)
+              const value = d[key] as number;
+              const allValues = data
+                .map(item => item[key] as number)
+                .filter(val => val != null && !isNaN(val));
+              const total = d3.sum(allValues);
+              const average = d3.mean(allValues) || 0;
+              const percentage = total > 0 ? (value / total) * 100 : 0;
 
-              tooltip
-                .append('rect')
-                .attr('x', -30)
-                .attr('y', -30)
-                .attr('width', 60)
-                .attr('height', 25)
-                .attr('fill', isDarkMode ? '#1f2937' : '#ffffff')
-                .attr('stroke', currentColors[key])
-                .attr('stroke-width', 2)
-                .attr('rx', 6)
-                .style('filter', 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))')
-                .style('opacity', 0)
-                .transition()
-                .duration(200)
-                .style('opacity', 0.95);
+              // Calculate ranking
+              const sortedValues = [...allValues].sort((a, b) => b - a);
+              const rank = sortedValues.indexOf(value) + 1;
 
-              const value = typeof d[key] === 'number' ? d[key].toLocaleString() : d[key];
-              tooltip
-                .append('text')
-                .attr('text-anchor', 'middle')
-                .attr('y', -12)
-                .attr('fill', textColor)
-                .style('font-size', `${fontSize.axis}px`)
-                .style('font-weight', '600')
-                .style('opacity', 0)
-                .text(value as string)
-                .transition()
-                .duration(200)
-                .style('opacity', 1);
+              // Determine comparison text
+              const diffFromAvg = value - average;
+              const diffPercentage = average > 0 ? (diffFromAvg / average) * 100 : 0;
+              const comparisonText =
+                diffFromAvg > 0
+                  ? `+${diffPercentage.toFixed(1)}% above average`
+                  : `${diffPercentage.toFixed(1)}% below average`;
+
+              // Build tooltip content lines
+              const tooltipLines = [
+                createHeader(key, { color: currentColors[key] }),
+                createSeparator(),
+                createStatLine('Value', yAxisFormatter ? yAxisFormatter(value) : String(value), {
+                  prefix: '📊 ',
+                }),
+                createPercentLine('Percentage', percentage),
+                createStatLine(
+                  'Average',
+                  yAxisFormatter ? yAxisFormatter(average) : String(average),
+                  { prefix: '〰️ ' }
+                ),
+                createStatLine('Comparison', comparisonText, {
+                  prefix: diffFromAvg >= 0 ? '📈 ' : '📉 ',
+                }),
+                createRankLine(rank, data.length),
+              ];
+
+              // Get position for tooltip
+              const xPos = xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey]));
+              const yPos = yScale(value);
+
+              // Reuse existing tooltip group or create if doesn't exist
+              let tooltipGroup = g.select('.tooltip') as d3.Selection<
+                SVGGElement,
+                unknown,
+                null,
+                undefined
+              >;
+              if (tooltipGroup.empty()) {
+                tooltipGroup = g.append('g').attr('class', 'tooltip').style('opacity', 0);
+              }
+
+              // Render enhanced tooltip (this updates content)
+              renderD3Tooltip(tooltipGroup, {
+                lines: tooltipLines,
+                isDarkMode,
+                textColor,
+                strokeColor: currentColors[key],
+                position: { x: xPos, y: yPos },
+                containerWidth: innerWidth,
+                containerHeight: innerHeight,
+                preferPosition: 'auto',
+              });
+
+              // Smooth fade in
+              tooltipGroup.transition().duration(200).style('opacity', 1);
             })
             .on('mouseout', function () {
               d3.select(this).transition().duration(200).attr('r', 4).attr('stroke-width', 2);
 
-              g.select('.tooltip').transition().duration(150).style('opacity', 0).remove();
+              // Smooth fade out instead of immediate remove
+              g.select('.tooltip').transition().duration(150).style('opacity', 0);
             })
             .transition()
             .delay(animationDuration * 2 + index * 100)
@@ -588,6 +672,122 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         .attr('stroke-width', 1)
         .attr('stroke-dasharray', '3,3')
         .attr('opacity', gridOpacity * 0.7);
+    }
+
+    // Add interactive overlay for hover tooltips (even without points)
+    if (showTooltip && !showPoints) {
+      const enabledAreas = yAxisKeys.filter(key => !disabledLines.includes(key));
+
+      // Create invisible overlay rectangles for each data point area
+      enabledAreas.forEach(key => {
+        const pointWidth = innerWidth / data.length;
+
+        g.selectAll(`.hover-area-${key}`)
+          .data(data)
+          .enter()
+          .append('rect')
+          .attr('class', `hover-area-${key}`)
+          .attr('x', d => {
+            const xPos = xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey]));
+            return xPos - pointWidth / 2;
+          })
+          .attr('y', 0)
+          .attr('width', pointWidth)
+          .attr('height', innerHeight)
+          .attr('fill', 'transparent')
+          .attr('pointer-events', 'all')
+          .style('cursor', 'crosshair')
+          .on('mouseover', function (_event, d) {
+            // Check if this data point has valid value
+            const value = d[key] as number;
+            if (value == null || isNaN(value)) return; // Skip invalid data points
+
+            // Highlight the area
+            d3.selectAll(`path[fill="${currentColors[key]}"]`)
+              .transition()
+              .duration(200)
+              .attr('fill-opacity', Math.min(opacity + 0.2, 1));
+
+            // Calculate statistics for detailed tooltip (filter null values)
+            const allValues = data
+              .map(item => item[key] as number)
+              .filter(val => val != null && !isNaN(val));
+            const total = d3.sum(allValues);
+            const average = d3.mean(allValues) || 0;
+            const percentage = total > 0 ? (value / total) * 100 : 0;
+
+            // Calculate ranking
+            const sortedValues = [...allValues].sort((a, b) => b - a);
+            const rank = sortedValues.indexOf(value) + 1;
+
+            // Determine comparison text
+            const diffFromAvg = value - average;
+            const diffPercentage = average > 0 ? (diffFromAvg / average) * 100 : 0;
+            const comparisonText =
+              diffFromAvg > 0
+                ? `+${diffPercentage.toFixed(1)}% above average`
+                : `${diffPercentage.toFixed(1)}% below average`;
+
+            // Build tooltip content lines
+            const tooltipLines = [
+              createHeader(key, { color: currentColors[key] }),
+              createSeparator(),
+              createStatLine('Value', yAxisFormatter ? yAxisFormatter(value) : String(value), {
+                prefix: '📊 ',
+              }),
+              createPercentLine('Percentage', percentage),
+              createStatLine(
+                'Average',
+                yAxisFormatter ? yAxisFormatter(average) : String(average),
+                { prefix: '〰️ ' }
+              ),
+              createStatLine('Comparison', comparisonText, {
+                prefix: diffFromAvg >= 0 ? '📈 ' : '📉 ',
+              }),
+              createRankLine(rank, data.length),
+            ];
+
+            // Get position for tooltip
+            const xPos = xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey]));
+            const yPos = yScale(value);
+
+            // Reuse existing tooltip group or create if doesn't exist
+            let tooltipGroup = g.select('.tooltip') as d3.Selection<
+              SVGGElement,
+              unknown,
+              null,
+              undefined
+            >;
+            if (tooltipGroup.empty()) {
+              tooltipGroup = g.append('g').attr('class', 'tooltip').style('opacity', 0);
+            }
+
+            // Render enhanced tooltip (this updates content)
+            renderD3Tooltip(tooltipGroup, {
+              lines: tooltipLines,
+              isDarkMode,
+              textColor,
+              strokeColor: currentColors[key],
+              position: { x: xPos, y: yPos },
+              containerWidth: innerWidth,
+              containerHeight: innerHeight,
+              preferPosition: 'auto',
+            });
+
+            // Smooth fade in
+            tooltipGroup.transition().duration(200).style('opacity', 1);
+          })
+          .on('mouseout', function () {
+            // Reset area opacity
+            d3.selectAll(`path[fill="${currentColors[key]}"]`)
+              .transition()
+              .duration(200)
+              .attr('fill-opacity', opacity);
+
+            // Smooth fade out instead of immediate remove
+            g.select('.tooltip').transition().duration(150).style('opacity', 0);
+          });
+      });
     }
 
     // X Axis
@@ -633,7 +833,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         if (yAxisFormatter) {
           return yAxisFormatter(value);
         }
-        return value.toLocaleString();
+        return String(value);
       })
       .tickSizeInner(showAxisTicks ? -5 : 0)
       .tickSizeOuter(showAxisTicks ? 6 : 0)
@@ -1092,7 +1292,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     }
 
     // Enhanced zoom and pan with mouse interactions (similar to BarChart)
-    if (enableZoom || enablePan) {
+    // Use shouldEnablePan to auto-enable when chart is expanded
+    if (shouldEnableZoom || shouldEnablePan) {
       let zoomLevel = 1;
       let translateX = 0;
       let translateY = 0;
@@ -1103,7 +1304,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       let dragStartTranslateY = 0;
 
       // Mouse wheel zoom - only if enableZoom is true
-      if (enableZoom) {
+      if (shouldEnableZoom) {
         svg.on('wheel', function (event) {
           event.preventDefault();
 
@@ -1137,8 +1338,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         });
       }
 
-      // Mouse drag to pan - only if enablePan is true
-      if (enablePan) {
+      // Mouse drag to pan - only if shouldEnablePan is true (includes auto-enable)
+      if (shouldEnablePan) {
         svg.on('mousedown', function (event) {
           if (event.button !== 0) return; // Only left mouse button
 
@@ -1158,7 +1359,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         svg.on('mousemove', function (event) {
           if (!isDragging) {
             // Show grab cursor when pan is enabled
-            if (enablePan) {
+            if (shouldEnablePan) {
               svg.style('cursor', 'grab');
             } else {
               svg.style('cursor', 'default');
@@ -1183,7 +1384,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             isDragging = false;
 
             // Reset cursor
-            if (enablePan) {
+            if (shouldEnablePan) {
               svg.style('cursor', 'grab');
             } else {
               svg.style('cursor', 'default');
@@ -1201,7 +1402,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       }
 
       // Double-click to reset zoom and pan
-      if (enableZoom || enablePan) {
+      if (shouldEnableZoom || shouldEnablePan) {
         svg.on('dblclick', function () {
           zoomLevel = 1;
           translateX = 0;

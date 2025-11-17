@@ -154,6 +154,8 @@ export interface D3LineChartProps {
   showPointValues?: boolean; // Show values on data points
   // Preview variant: render without frame/background card
   variant?: 'default' | 'preview';
+  // Show all X-axis ticks without sampling (useful for date data with compact formatting)
+  showAllXAxisTicks?: boolean;
 }
 
 const D3LineChart: React.FC<D3LineChartProps> = ({
@@ -212,6 +214,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   legendFontSize = 11,
   showPointValues = false, // Default to not showing values on points
   variant = 'default',
+  showAllXAxisTicks = false, // Default to sampling ticks
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -459,9 +462,24 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       return;
     }
 
-    // Use responsive dimensions
-    const currentWidth = dimensions.width;
+    // Calculate dynamic width based on number of data points for categorical X-axis
+    const xValues = processedData.map(d => d[xAxisKey]);
+    const hasStringXValues = xValues.some(v => typeof v === 'string');
+
+    // Minimum width per data point (adjust based on rotation)
+    const minWidthPerPoint = xAxisRotation === 0 ? 60 : 30; // More space for horizontal labels
+    const calculatedMinWidth = hasStringXValues
+      ? Math.max(dimensions.width, processedData.length * minWidthPerPoint)
+      : dimensions.width;
+
+    // Use responsive dimensions (with dynamic width for categorical data)
+    const currentWidth = calculatedMinWidth;
     const currentHeight = dimensions.height;
+
+    // Auto-enable pan when chart is wider than container (due to many data points)
+    const isChartExpanded = currentWidth > dimensions.width;
+    const shouldEnablePan = enablePan || isChartExpanded;
+    const shouldEnableZoom = enableZoom; // Keep zoom as user preference
 
     // Get current theme colors for enabled lines only
     const getCurrentColors = () => {
@@ -567,14 +585,19 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top})`);
 
     // Enhanced scales with support for categorical X-axis
-    const xValues = processedData.map(d => d[xAxisKey]);
-    const hasStringXValues = xValues.some(v => typeof v === 'string');
+    // xValues and hasStringXValues already calculated earlier for dynamic width
     let xScale: any;
 
     if (hasStringXValues) {
-      // Use ordinal scale for categorical data (like city names)
-      const uniqueXValues = [...new Set(xValues)] as string[];
-      xScale = d3.scaleBand().domain(uniqueXValues).range([0, innerWidth]).padding(0.1);
+      // For categorical data (like dates or city names), preserve original order
+      // Do NOT use Set to avoid losing duplicates and changing order
+      const xDomain = processedData.map((d, idx) => {
+        const val = d[xAxisKey];
+        // For duplicate values, append index to make them unique for positioning
+        return `${val}_${idx}`;
+      });
+
+      xScale = d3.scaleBand().domain(xDomain).range([0, innerWidth]).padding(0.1);
     } else {
       // Use linear scale for numeric data
       const numericXValues = xValues.filter(v => typeof v === 'number' && !isNaN(v)) as number[];
@@ -684,12 +707,11 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     let xAxis: any;
 
     if (hasStringXValues) {
-      // For categorical data, use all unique values as ticks
+      // For categorical data (including date strings), show ALL labels
       const domainVals = (xScale as any).domain() as string[];
-      const approxLabelW = Math.max(48, responsiveFontSize.axis * 3.2);
-      const maxTicks = Math.max(2, Math.floor(innerWidth / approxLabelW));
-      const step = Math.max(1, Math.ceil(domainVals.length / maxTicks));
-      const tickVals = domainVals.filter((_v, i) => i % step === 0);
+
+      // Show all labels - chart width already adjusted to fit all
+      const tickVals: string[] = domainVals;
 
       xAxis = d3
         .axisBottom(xScale)
@@ -697,18 +719,38 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .tickSizeInner(showAxisTicks ? 6 : 0)
         .tickSizeOuter(showAxisTicks ? 6 : 0)
         .tickFormat((d: any) => {
-          const displayName = xAxisNames[String(d)] || String(d);
+          // Remove the _index suffix to get the original value
+          const rawValue = String(d).replace(/_\d+$/, '');
+
+          // Try to format as date if xAxisFormatter exists
+          if (xAxisFormatter) {
+            // Check if it's a date string (ISO format or timestamp)
+            const dateTest = new Date(rawValue);
+            if (!isNaN(dateTest.getTime())) {
+              // It's a valid date, format it
+              return xAxisFormatter(dateTest.getTime());
+            }
+
+            // Try as number
+            const numValue = Number(rawValue);
+            if (!isNaN(numValue)) {
+              return xAxisFormatter(numValue);
+            }
+          }
+
+          // Fallback to display name or raw value
+          const displayName = xAxisNames[rawValue] || rawValue;
           return displayName;
         });
     } else {
-      // For numeric data, use actual data values as ticks
+      // For numeric data, use default linear scale behavior
       const uniqueXValues = [...new Set(processedData.map(d => d[xAxisKey] as number))].sort(
         (a, b) => a - b
       );
-      const approxLabelW = Math.max(48, responsiveFontSize.axis * 3.2);
-      const maxTicks = Math.max(2, Math.floor(innerWidth / approxLabelW));
-      const step = Math.max(1, Math.ceil(uniqueXValues.length / maxTicks));
-      const tickVals = uniqueXValues.filter((_v, i) => i % step === 0);
+
+      // For numeric data, use D3's default tick algorithm
+      const tickVals: number[] = uniqueXValues;
+
       xAxis = d3
         .axisBottom(xScale)
         .tickValues(tickVals)
@@ -746,11 +788,11 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .axisLeft(yScale)
       .tickFormat(d => {
         const value = d.valueOf();
-        // Use custom formatter if provided, otherwise use simple number formatting
+        // Use custom formatter if provided, otherwise fallback to simple string
         if (yAxisFormatter) {
           return yAxisFormatter(value);
         }
-        return value.toLocaleString();
+        return String(value);
       })
       .tickSizeInner(showAxisTicks ? -5 : 0) // Control inner tick size
       .tickSizeOuter(showAxisTicks ? 6 : 0) // Control outer tick size
@@ -820,13 +862,14 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       // Custom line generator for this specific key with validation
       const keyLine = d3
         .line<ChartDataPoint>()
-        .x(d => {
+        .x((d, i) => {
           const xVal = d[xAxisKey];
           let scaledVal: number;
 
           if (hasStringXValues) {
-            // For categorical data, use band scale
-            scaledVal = (xScale as any)(xVal) + (xScale as any).bandwidth() / 2;
+            // For categorical data, use the indexed key for positioning
+            const indexedKey = `${xVal}_${i}`;
+            scaledVal = (xScale as any)(indexedKey) + (xScale as any).bandwidth() / 2;
           } else {
             // For numeric data, use linear scale
             scaledVal = xScale(xVal as number);
@@ -934,13 +977,14 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           .enter()
           .append('path')
           .attr('class', `point-${index}`)
-          .attr('transform', d => {
+          .attr('transform', (d, i) => {
             const xVal = d[xAxisKey];
             let x: number;
 
             if (hasStringXValues) {
-              // For categorical data, use band scale
-              x = (xScale as any)(xVal) + (xScale as any).bandwidth() / 2;
+              // For categorical data, use the indexed key for positioning
+              const indexedKey = `${xVal}_${i}`;
+              x = (xScale as any)(indexedKey) + (xScale as any).bandwidth() / 2;
             } else {
               // For numeric data, use linear scale
               x = xScale(xVal as number);
@@ -963,6 +1007,9 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           .on('mouseenter', function (_event, d) {
             if (!showTooltip) return;
 
+            // Find the index of this data point in the original processedData
+            const dataIndex = processedData.findIndex(item => item === d);
+
             // Clear any existing timeout to prevent auto-hide
             clearTooltipTimeout();
 
@@ -978,16 +1025,28 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
             // Create enhanced tooltip
             const rawXValue = d[xAxisKey];
-            const xValue = typeof rawXValue === 'number' ? rawXValue.toLocaleString() : rawXValue;
+            const xValue =
+              typeof rawXValue === 'number'
+                ? xAxisFormatter
+                  ? xAxisFormatter(rawXValue)
+                  : String(rawXValue)
+                : rawXValue;
             // Use xAxisNames to get display name for X-axis value
             const xDisplayName = xAxisNames[String(rawXValue)] || xValue;
-            const yValue = typeof d[key] === 'number' ? d[key].toLocaleString() : d[key];
+            const yValue =
+              typeof d[key] === 'number'
+                ? yAxisFormatter
+                  ? yAxisFormatter(d[key])
+                  : String(d[key])
+                : d[key];
             const seriesName = seriesNames[key] || key;
 
             const pointX = (() => {
               const xVal = d[xAxisKey];
               if (hasStringXValues) {
-                return (xScale as any)(xVal) + (xScale as any).bandwidth() / 2;
+                // Use the indexed key to get correct position
+                const indexedKey = `${xVal}_${dataIndex}`;
+                return (xScale as any)(indexedKey) + (xScale as any).bandwidth() / 2;
               } else {
                 return xScale(xVal as number);
               }
@@ -1092,10 +1151,12 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
             .enter()
             .append('text')
             .attr('class', `point-value-${index}`)
-            .attr('x', d => {
+            .attr('x', (d, i) => {
               const xVal = d[xAxisKey];
               if (hasStringXValues) {
-                return (xScale as any)(xVal) + (xScale as any).bandwidth() / 2;
+                // Use the indexed key for positioning
+                const indexedKey = `${xVal}_${i}`;
+                return (xScale as any)(indexedKey) + (xScale as any).bandwidth() / 2;
               } else {
                 return xScale(xVal as number);
               }
@@ -1117,7 +1178,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
               if (yAxisFormatter) {
                 return yAxisFormatter(yValue);
               }
-              return typeof yValue === 'number' ? yValue.toLocaleString() : String(yValue);
+              return String(yValue); // ép kiểu về string type
             })
             .transition()
             .delay(animationDuration + index * 100 + 300) // Show after points are drawn
@@ -1128,7 +1189,8 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     });
 
     // Enhanced zoom and pan with mouse interactions
-    if (enableZoom || enablePan) {
+    // Use shouldEnablePan instead of enablePan to auto-enable when chart is expanded
+    if (shouldEnableZoom || shouldEnablePan) {
       let zoomLevel = 1;
       let translateX = 0;
       let translateY = 0;
@@ -1139,7 +1201,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       let dragStartTranslateY = 0;
 
       // Mouse wheel zoom - only if enableZoom is true
-      if (enableZoom) {
+      if (shouldEnableZoom) {
         svg.on('wheel', function (event) {
           event.preventDefault();
 
@@ -1173,8 +1235,8 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         });
       }
 
-      // Mouse drag to pan - only if enablePan is true
-      if (enablePan) {
+      // Mouse drag to pan - only if shouldEnablePan is true (includes auto-enable)
+      if (shouldEnablePan) {
         svg.on('mousedown', function (event) {
           if (event.button !== 0) return; // Only left mouse button
 
@@ -1194,7 +1256,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         svg.on('mousemove', function (event) {
           if (!isDragging) {
             // Show grab cursor when pan is enabled
-            if (enablePan) {
+            if (shouldEnablePan) {
               svg.style('cursor', 'grab');
             } else {
               svg.style('cursor', 'default');
@@ -1219,7 +1281,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
             isDragging = false;
 
             // Reset cursor
-            if (enablePan) {
+            if (shouldEnablePan) {
               svg.style('cursor', 'grab');
             } else {
               svg.style('cursor', 'default');
@@ -1240,7 +1302,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       }
 
       // Double-click to reset zoom and pan
-      if (enableZoom || enablePan) {
+      if (shouldEnableZoom || shouldEnablePan) {
         svg.on('dblclick', function () {
           zoomLevel = 1;
           translateX = 0;
@@ -1660,6 +1722,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     xFormatterType,
     showPointValues,
     variant,
+    showAllXAxisTicks,
   ]);
 
   return (

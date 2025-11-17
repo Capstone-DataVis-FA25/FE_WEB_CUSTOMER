@@ -8,7 +8,9 @@ import CurveTypeSetting from './CurveTypeSetting';
 import { useChartEditor } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
 import BarTypeSettings from './BarTypeSettings';
+import AreaTypeSettings from './AreaTypeSettings';
 import DisplayOptionsSettings from './DisplayOptionsSettings';
+import ChartFormatterSettings from './ChartFormatterSettingSection';
 
 const BasicChartSettingsSection: React.FC = () => {
   const { t } = useTranslation();
@@ -65,6 +67,13 @@ const BasicChartSettingsSection: React.FC = () => {
                   </div>
                 )}
 
+                {/* Area Type Settings */}
+                {currentChartType === ChartType.Area && (
+                  <div>
+                    <AreaTypeSettings />
+                  </div>
+                )}
+
                 {/* Bar Type */}
                 {currentChartType === ChartType.Bar && (
                   <div>
@@ -76,6 +85,13 @@ const BasicChartSettingsSection: React.FC = () => {
                 <div>
                   <DisplayOptionsSettings />
                 </div>
+
+                {/* Formatter Settings - Show for charts with X/Y axes (not Pie/Donut) */}
+                {currentChartType !== ChartType.Pie && currentChartType !== ChartType.Donut && (
+                  <div>
+                    <ChartFormatterSettings />
+                  </div>
+                )}
               </CardContent>
             </motion.div>
           )}

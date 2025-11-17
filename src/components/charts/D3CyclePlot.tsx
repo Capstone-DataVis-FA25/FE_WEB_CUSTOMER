@@ -932,8 +932,11 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
               const pct = avgVal !== 0 ? (delta / avgVal) * 100 : undefined;
               const icon = delta >= 0 ? '📈' : '📉';
               const direction = delta >= 0 ? 'above' : 'below';
+              const deltaFormatted = yAxisFormatter
+                ? yAxisFormatter(Math.abs(delta))
+                : String(Math.abs(delta));
               tooltipContent.push(
-                `${icon} ${Math.abs(delta).toFixed(0)} ${direction} average${
+                `${icon} ${deltaFormatted} ${direction} average${
                   typeof pct === 'number' ? ` (${Math.abs(pct).toFixed(1)}%)` : ''
                 }`
               );
@@ -942,8 +945,11 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
             if (showTooltipDelta && typeof yoyDelta === 'number') {
               const icon = yoyDelta >= 0 ? '⬆️' : '⬇️';
               const change = yoyDelta >= 0 ? 'increase' : 'decrease';
+              const yoyDeltaFormatted = yAxisFormatter
+                ? yAxisFormatter(Math.abs(yoyDelta))
+                : String(Math.abs(yoyDelta));
               tooltipContent.push(
-                `${icon} ${Math.abs(yoyDelta).toFixed(0)} ${change} vs last cycle${
+                `${icon} ${yoyDeltaFormatted} ${change} vs last cycle${
                   typeof yoyPct === 'number' ? ` (${Math.abs(yoyPct).toFixed(1)}%)` : ''
                 }`
               );
@@ -966,7 +972,12 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
             if (otherKeys.length > 0) {
               tooltipContent.push(''); // Empty line as separator
               otherKeys.forEach(k => {
-                const val = typeof d[k] === 'number' ? d[k].toLocaleString() : String(d[k]);
+                const val =
+                  typeof d[k] === 'number'
+                    ? yAxisFormatter
+                      ? yAxisFormatter(d[k])
+                      : String(d[k])
+                    : String(d[k]);
                 tooltipContent.push(`• ${k}: ${val}`);
               });
             }
