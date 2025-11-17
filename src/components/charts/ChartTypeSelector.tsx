@@ -202,7 +202,7 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
 
         <CardContent className="relative overflow-visible">
           <div className="relative z-50">
-            <Select value={currentChartType} onValueChange={handleChartTypeChange}>
+            <Select value={currentChartType || ''} onValueChange={handleChartTypeChange}>
               <SelectTrigger className="w-full" disabled={disabled}>
                 <div className="flex items-center gap-2 min-h-[20px]">{renderSelectedValue()}</div>
               </SelectTrigger>

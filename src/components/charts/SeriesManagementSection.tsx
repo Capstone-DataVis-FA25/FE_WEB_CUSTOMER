@@ -21,6 +21,7 @@ import { filterHeadersByAxisType } from '@/utils/chartValidation';
 import { ChartType } from '@/features/charts/chartTypes';
 import WarningPanel from './WarningPanel';
 import colors from '@/theme/colors';
+import { getFormatterTypeFromDataType, isYearData } from '@/utils/formatValue';
 
 // Generate a random vibrant color that is visually distinct
 const generateRandomColor = (existingColors: string[] = []): string => {
@@ -169,14 +170,49 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
           }
         : s
     );
+
+    const configUpdates: any = {
+      axisConfigs: {
+        ...chartConfig.axisConfigs,
+        seriesConfigs: newSeries,
+      },
+    };
+
+    // Auto-detect and update Y-axis formatter if dataColumn changed for the first series
+    if (updates.dataColumn && series.length > 0 && series[0].id === seriesId) {
+      const selectedHeader = dataHeaders.find(h => h.id === updates.dataColumn);
+      if (selectedHeader && selectedHeader.type) {
+        const autoFormatterType = getFormatterTypeFromDataType(
+          selectedHeader.type as 'text' | 'number' | 'date'
+        );
+
+        const currentFormatters = (chartConfig as any).formatters || {};
+        const formatterUpdates: any = {
+          ...currentFormatters,
+          yFormatterType: autoFormatterType,
+          useYFormatter: autoFormatterType !== 'none',
+        };
+
+        // For number type, check if data looks like years (disable grouping)
+        if (
+          selectedHeader.type === 'number' &&
+          selectedHeader.data &&
+          Array.isArray(selectedHeader.data)
+        ) {
+          if (isYearData(selectedHeader.data)) {
+            formatterUpdates.yUseGrouping = false; // No thousands separator for years
+          } else {
+            formatterUpdates.yUseGrouping = true; // Use thousands separator
+          }
+        }
+
+        configUpdates.formatters = formatterUpdates;
+      }
+    }
+
     // Update at root level: axisConfigs
     if (hasAxisConfigs(chartConfig)) {
-      handleConfigChange({
-        axisConfigs: {
-          ...chartConfig.axisConfigs,
-          seriesConfigs: newSeries,
-        },
-      } as any);
+      handleConfigChange(configUpdates);
     }
   };
 
@@ -214,14 +250,49 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
         visible: true,
       },
     ];
+
+    const updates: any = {
+      axisConfigs: {
+        ...chartConfig.axisConfigs,
+        seriesConfigs: newSeries,
+      },
+    };
+
+    // Auto-detect and set Y-axis formatter type if this is the first series
+    if (series.length === 0) {
+      const selectedHeader = dataHeaders.find(h => h.id === firstUnusedCol);
+      if (selectedHeader && selectedHeader.type) {
+        const autoFormatterType = getFormatterTypeFromDataType(
+          selectedHeader.type as 'text' | 'number' | 'date'
+        );
+
+        const currentFormatters = (chartConfig as any).formatters || {};
+        const formatterUpdates: any = {
+          ...currentFormatters,
+          yFormatterType: autoFormatterType,
+          useYFormatter: autoFormatterType !== 'none',
+        };
+
+        // For number type, check if data looks like years (disable grouping)
+        if (
+          selectedHeader.type === 'number' &&
+          selectedHeader.data &&
+          Array.isArray(selectedHeader.data)
+        ) {
+          if (isYearData(selectedHeader.data)) {
+            formatterUpdates.yUseGrouping = false; // No thousands separator for years
+          } else {
+            formatterUpdates.yUseGrouping = true; // Use thousands separator
+          }
+        }
+
+        updates.formatters = formatterUpdates;
+      }
+    }
+
     // Update at root level: axisConfigs
     if (hasAxisConfigs(chartConfig)) {
-      handleConfigChange({
-        axisConfigs: {
-          ...chartConfig.axisConfigs,
-          seriesConfigs: newSeries,
-        },
-      } as any);
+      handleConfigChange(updates);
     }
   };
 

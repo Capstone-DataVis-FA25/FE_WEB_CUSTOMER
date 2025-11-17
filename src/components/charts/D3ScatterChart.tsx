@@ -14,6 +14,14 @@ const defaultColorsChart: Record<string, { light: string; dark: string }> = {
   color8: { light: '#84cc16', dark: '#a3e635' },
 };
 
+import {
+  renderD3Tooltip,
+  createHeader,
+  createStatLine,
+  createSeparator,
+  type TooltipLine,
+} from './ChartTooltip';
+
 export interface ScatterDataPoint {
   [key: string]: number | string;
 }
@@ -739,22 +747,54 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
         .attr('opacity', gridOpacity);
     }
 
-    // X Axis
+    // X Axis with adaptive tick density to prevent overlap
     if (showAxisTicks) {
-      const xAxis = d3.axisBottom(xScale).ticks(8);
+      // Calculate optimal number of X-axis ticks based on chart width
+      const minLabelWidth = 40; // Minimum space needed per label (px)
+      const optimalXTickCount = Math.max(5, Math.min(15, Math.floor(innerWidth / minLabelWidth)));
+
+      const xAxis = d3.axisBottom(xScale).ticks(optimalXTickCount);
       if (xAxisFormatter) {
         xAxis.tickFormat(d => xAxisFormatter(+d));
       }
+
       const xAxisGroup = chartGroup
         .append('g')
         .attr('transform', `translate(0,${innerHeight})`)
         .call(xAxis);
-      xAxisGroup
-        .selectAll('text')
+
+      // Smart label handling: measure labels and adjust if needed
+      const xLabels = xAxisGroup.selectAll('text');
+
+      // Measure label widths to detect overlap
+      let needsRotation = false;
+      let maxLabelWidth = 0;
+
+      try {
+        xLabels.each(function () {
+          const bbox = (this as SVGTextElement).getBBox();
+          if (bbox.width > maxLabelWidth) maxLabelWidth = bbox.width;
+        });
+
+        // If average label width > available space per tick, rotate
+        const availableSpacePerTick = innerWidth / optimalXTickCount;
+        if (maxLabelWidth > availableSpacePerTick * 0.8) {
+          needsRotation = true;
+        }
+      } catch (_) {
+        // Fallback: use rotation prop
+        needsRotation = xAxisRotation !== 0;
+      }
+
+      // Apply rotation if needed (either from prop or auto-detected)
+      const finalRotation = needsRotation ? (xAxisRotation !== 0 ? xAxisRotation : -45) : 0;
+
+      xLabels
         .attr('fill', textColor)
         .attr('font-size', fontSize.axis || 12)
-        .attr('transform', `rotate(${xAxisRotation})`)
-        .style('text-anchor', xAxisRotation !== 0 ? 'end' : 'middle');
+        .attr('transform', `rotate(${finalRotation})`)
+        .style('text-anchor', finalRotation !== 0 ? 'end' : 'middle')
+        .style('font-weight', '500');
 
       // Y Axis (dynamic tick density to prevent overlap)
       const minTickSpacing = (fontSize.axis || 12) * 1.6;
@@ -945,6 +985,8 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
               .duration(150)
               .attr('opacity', adaptiveStyles.opacity * 0.3);
 
+            // No need to remove - renderD3Tooltip will clear and update content
+            // IMPORTANT: Must clear old tooltip content before drawing new one
             tooltipGroup.selectAll('*').remove();
 
             const xVal = xAxisFormatter ? xAxisFormatter(+d[xAxisKey]) : String(d[xAxisKey]);
@@ -1056,6 +1098,9 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
             }
 
             tooltipGroup.attr('transform', `translate(${tx},${ty})`);
+
+            // Smooth fade in
+            tooltipGroup.transition().duration(200).style('opacity', 1);
           })
           .on('mouseout', function () {
             // Restore point size and opacity
@@ -1075,7 +1120,8 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
               .duration(150)
               .attr('opacity', adaptiveStyles.opacity);
 
-            tooltipGroup.selectAll('*').remove();
+            // Smooth fade out instead of immediate remove
+            tooltipGroup.transition().duration(150).style('opacity', 0);
           })
           .transition()
           .duration(animationDuration)
@@ -1130,22 +1176,27 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
             .duration(150)
             .attr('opacity', adaptiveStyles.opacity * 0.3);
 
-          tooltipGroup.selectAll('*').remove();
+          // No need to remove - renderD3Tooltip will clear and update content
+          // tooltipGroup.selectAll('*').remove();
 
           const xVal = xAxisFormatter ? xAxisFormatter(+d[xAxisKey]) : String(d[xAxisKey]);
           const yVal = yAxisFormatter ? yAxisFormatter(+d[yAxisKey]) : String(d[yAxisKey]);
 
-          // Build comprehensive tooltip with all available data
-          const lines: string[] = [];
+          // Build comprehensive tooltip using utility functions
+          const scatterTooltipLines: TooltipLine[] = [];
 
           // Add series name as header if available
           if (seriesName && seriesName !== yAxisKey) {
-            lines.push(`📊 ${seriesName}`);
+            scatterTooltipLines.push(createHeader(seriesName, { fontSize: 13 }));
           }
 
           // Add X and Y values with clear labels
-          lines.push(`📈 ${xAxisKey}: ${xVal}`);
-          lines.push(`📉 ${yAxisKey}: ${yVal}`);
+          scatterTooltipLines.push(
+            createStatLine(xAxisKey, xVal, { fontSize: 12, fontWeight: '600' })
+          );
+          scatterTooltipLines.push(
+            createStatLine(yAxisKey, yVal, { fontSize: 12, fontWeight: '600' })
+          );
 
           // Add other important columns (non-numeric or identifier columns)
           const allKeys = Object.keys(d);
@@ -1163,82 +1214,48 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
             .slice(0, 3); // Limit to 3 additional fields
 
           if (otherKeys.length > 0) {
-            lines.push(''); // Empty line as separator
+            scatterTooltipLines.push(createSeparator());
             otherKeys.forEach(k => {
               const val = typeof d[k] === 'number' ? d[k].toLocaleString() : String(d[k]);
-              lines.push(`• ${k}: ${val}`);
+              scatterTooltipLines.push(createStatLine(k, val, { fontSize: 11 }));
             });
           }
 
           // Add color category if available
           if (colorKey && d[colorKey]) {
-            lines.push(''); // Empty line as separator
-            lines.push(`🏷️ ${colorKey}: ${d[colorKey]}`);
+            scatterTooltipLines.push(createSeparator());
+            scatterTooltipLines.push(
+              createStatLine(colorKey, String(d[colorKey]), {
+                fontSize: 11,
+                fontWeight: '500',
+              })
+            );
           }
 
           // Add size value if available
           if (sizeKey && d[sizeKey]) {
             const sizeVal =
               typeof d[sizeKey] === 'number' ? d[sizeKey].toLocaleString() : String(d[sizeKey]);
-            lines.push(`📏 ${sizeKey}: ${sizeVal}`);
+            scatterTooltipLines.push(
+              createStatLine(sizeKey, sizeVal, { fontSize: 11, fontWeight: '500' })
+            );
           }
 
-          const textColorLocal = isDarkMode ? '#fff' : '#222';
-          const textEl = tooltipGroup
-            .append('text')
-            .attr('fill', textColorLocal)
-            .style('font-size', '12px')
-            .style('font-family', 'system-ui, -apple-system, sans-serif');
+          // Get pointer position
+          const mouse = d3.pointer(event, chartGroup.node());
 
-          lines.forEach((line, i) => {
-            const tspan = textEl
-              .append('tspan')
-              .attr('x', 12)
-              .attr('y', 14 + i * 18)
-              .text(line);
-
-            // Make first line (header) bold
-            if (i === 0 && seriesName && seriesName !== yAxisKey) {
-              tspan.style('font-weight', '600').style('font-size', '13px');
-            }
-
-            // Reduce spacing for empty lines
-            if (line === '') {
-              tspan.attr('y', 14 + i * 18 - 6);
-            }
+          // Render tooltip using utility function
+          renderD3Tooltip(tooltipGroup, {
+            lines: scatterTooltipLines,
+            isDarkMode,
+            position: { x: mouse[0], y: mouse[1] },
+            containerWidth: innerWidth,
+            containerHeight: innerHeight,
+            preferPosition: 'above',
           });
 
-          const bbox = (textEl.node() as SVGTextElement).getBBox();
-          tooltipGroup
-            .insert('rect', 'text')
-            .attr('width', bbox.width + 20)
-            .attr('height', bbox.height + 10)
-            .attr('fill', isDarkMode ? '#222' : '#fff')
-            .attr('stroke', isDarkMode ? '#eee' : '#333')
-            .attr('rx', 8)
-            .attr('opacity', 0.95);
-
-          const mouse = d3.pointer(event, chartGroup.node());
-          const tooltipWidth = bbox.width + 20;
-          const tooltipHeight = bbox.height + 10;
-
-          // Always position tooltip above the point
-          let tx = mouse[0] - tooltipWidth / 2; // Center horizontally on point
-          let ty = mouse[1] - tooltipHeight - 15; // Position above with 15px gap
-
-          // Adjust horizontal position if tooltip goes off left/right edges
-          if (tx < 0) {
-            tx = 5; // Minimum left padding
-          } else if (tx + tooltipWidth > innerWidth) {
-            tx = innerWidth - tooltipWidth - 5; // Maximum right padding
-          }
-
-          // If tooltip would go off top, position below the point instead
-          if (ty < 0) {
-            ty = mouse[1] + 15; // Position below with 15px gap
-          }
-
-          tooltipGroup.attr('transform', `translate(${tx},${ty})`);
+          // Smooth fade in
+          tooltipGroup.transition().duration(200).style('opacity', 1);
         })
         .on('mouseout', function () {
           // Restore point size and opacity
@@ -1258,7 +1275,8 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
             .duration(150)
             .attr('opacity', adaptiveStyles.opacity);
 
-          tooltipGroup.selectAll('*').remove();
+          // Smooth fade out instead of immediate remove
+          tooltipGroup.transition().duration(150).style('opacity', 0);
         })
         .transition()
         .duration(animationDuration)
@@ -1409,7 +1427,15 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     }
 
     // Tooltip group created AFTER all points/lines so it renders on top
-    const tooltipGroup = chartGroup.append('g').attr('class', 'scatter-tooltip-group');
+    // Initialize with opacity 0 for smooth fade in on hover
+    // Remove any existing tooltip group first to prevent duplicates
+    chartGroup.selectAll('.scatter-tooltip-group').remove();
+
+    const tooltipGroup = chartGroup
+      .append('g')
+      .attr('class', 'scatter-tooltip-group')
+      .style('opacity', 0)
+      .style('pointer-events', 'none'); // Prevent tooltip from interfering with mouse events
 
     // Zoom and Pan
     if (enableZoom || enablePan) {

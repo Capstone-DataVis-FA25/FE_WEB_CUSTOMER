@@ -1,6 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { defaultColorsChart } from '@/utils/Utils';
+import {
+  renderD3Tooltip,
+  createHeader,
+  createStatLine,
+  createPercentLine,
+  createRankLine,
+  createSeparator,
+  type TooltipLine,
+} from './ChartTooltip';
 
 function convertArrayToChartData(arrayData: (string | number)[][]): ChartDataPoint[] {
   if (!arrayData || arrayData.length === 0) return [];
@@ -13,13 +22,20 @@ function convertArrayToChartData(arrayData: (string | number)[][]): ChartDataPoi
     headers.forEach((header, index) => {
       const value = row[index];
 
+      // Skip null/undefined values
+      if (value === null || value === undefined) {
+        return;
+      }
+
       if (index === 0) {
         // First column is typically the X-axis (categories)
         dataPoint[String(header)] = String(value);
       } else {
         // Other columns are numeric values
-        dataPoint[String(header)] =
-          typeof value === 'number' ? value : parseFloat(String(value)) || 0;
+        const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+        if (!isNaN(numValue)) {
+          dataPoint[String(header)] = numValue;
+        }
       }
     });
     return dataPoint;
@@ -42,7 +58,6 @@ export interface D3BarChartProps {
   colors?: Record<string, { light: string; dark: string }>;
   seriesNames?: Record<string, string>; // Add series names mapping (match LineChart)
   xAxisNames?: Record<string, string>; // Map X-axis values from ID to display name
-  // Individual series configurations (similar to LineChart axisConfigs)
   axisConfigs?: Record<
     string,
     {
@@ -115,6 +130,8 @@ export interface D3BarChartProps {
   showPointValues?: boolean; // Show values on bars (similar to LineChart showPointValues)
   // Preview variant: render without frame/background card
   variant?: 'default' | 'preview';
+  // Show all X-axis ticks without sampling (useful for date data with compact formatting)
+  showAllXAxisTicks?: boolean;
 }
 
 const D3BarChart: React.FC<D3BarChartProps> = ({
@@ -175,6 +192,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   legendFontSize = 11,
   showPointValues = false, // Show values on bars (similar to LineChart showPointValues)
   variant = 'default',
+  showAllXAxisTicks = false, // Default to sampling ticks
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -218,11 +236,34 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     currentWidth: number,
     baseMargin: { top: number; right: number; bottom: number; left: number }
   ) => {
+    // Calculate max Y value to determine if we need more space for labels
+    let maxYValue = 0;
+    if (processedData.length > 0) {
+      if (barType === 'stacked') {
+        maxYValue = Math.max(
+          ...processedData.map(d =>
+            yAxisKeys.reduce((sum, key) => sum + ((d[key] as number) || 0), 0)
+          )
+        );
+      } else {
+        maxYValue = Math.max(
+          ...processedData.map(d => Math.max(...yAxisKeys.map(key => (d[key] as number) || 0)))
+        );
+      }
+    }
+
+    // Increase left margin based on the number of digits in max value
+    const numDigits = Math.max(3, maxYValue.toString().replace(/[.,]/g, '').length);
+    const extraLeftSpace = Math.max(0, (numDigits - 3) * 8); // 8px per extra digit
+
     const responsiveMargin = {
       top: currentWidth < 640 ? baseMargin.top * 0.8 : baseMargin.top,
       right: currentWidth < 640 ? baseMargin.right * 0.7 : baseMargin.right,
       bottom: currentWidth < 640 ? baseMargin.bottom * 0.8 : baseMargin.bottom,
-      left: currentWidth < 640 ? baseMargin.left * 0.8 : baseMargin.left,
+      left: Math.max(
+        currentWidth < 640 ? baseMargin.left * 0.8 : baseMargin.left,
+        baseMargin.left + extraLeftSpace
+      ),
     };
 
     // Reserve space for legend when positioned top/bottom to avoid overlap (matching LineChart behavior)
@@ -259,9 +300,10 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       currentTooltipRef.current
         .transition()
         .duration(200) // Fast fade out transition
-        .style('opacity', 0)
-        .remove();
-      currentTooltipRef.current = null;
+        .style('opacity', 0);
+      // Don't remove - keep for reuse
+      // .remove();
+      // currentTooltipRef.current = null;
     }
   };
 
@@ -294,6 +336,40 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       const newWidth = Math.min(containerWidth - 16, width); // 16px for minimal padding
       let newHeight = newWidth * aspectRatio;
 
+      // Auto-adjust height based on Y-axis value range to prevent label overlap
+      if (processedData.length > 0) {
+        // Calculate Y-axis range
+        let maxValue: number;
+        if (barType === 'stacked') {
+          maxValue =
+            Math.max(
+              ...processedData.map(d =>
+                yAxisKeys.reduce((sum, key) => sum + ((d[key] as number) || 0), 0)
+              )
+            ) || 0;
+        } else {
+          maxValue =
+            Math.max(
+              ...processedData.map(d => Math.max(...yAxisKeys.map(key => (d[key] as number) || 0)))
+            ) || 0;
+        }
+
+        // Estimate number of Y-axis ticks (D3 usually creates ~5-10 ticks)
+        const estimatedTicks = Math.min(10, Math.max(5, Math.floor(maxValue / 100)));
+        const minSpacingPerTick = 40; // Minimum 40px between each tick label
+        const requiredHeight = estimatedTicks * minSpacingPerTick + 100; // +100 for margins
+
+        // If required height is more than current, increase height
+        if (requiredHeight > newHeight) {
+          newHeight = Math.min(requiredHeight, newHeight * 2); // Cap at 2x original
+        }
+
+        // For very large values, ensure enough space for long numbers
+        if (maxValue > 10000) {
+          newHeight = Math.max(newHeight, 500);
+        }
+      }
+
       // Add extra height for axis labels (matching LineChart exactly)
       const hasXAxisLabel = xAxisLabel && showAxisLabels;
 
@@ -315,7 +391,17 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     const ro = new ResizeObserver(updateDimensions);
     if (containerRef.current) ro.observe(containerRef.current);
     return () => ro.disconnect();
-  }, [width, height, showLegend, legendPosition, showAxisLabels, xAxisLabel]);
+  }, [
+    width,
+    height,
+    showLegend,
+    legendPosition,
+    showAxisLabels,
+    xAxisLabel,
+    processedData,
+    yAxisKeys,
+    barType,
+  ]);
 
   // Theme
   useEffect(() => {
@@ -344,8 +430,18 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   useEffect(() => {
     if (!svgRef.current || !processedData.length) return;
 
-    const currentWidth = dimensions.width;
+    // Calculate dynamic width based on number of data points
+    // Minimum width per data point (adjust based on rotation)
+    const minWidthPerPoint = xAxisRotation === 0 ? 60 : 30; // More space for horizontal labels
+    const calculatedMinWidth = Math.max(dimensions.width, processedData.length * minWidthPerPoint);
+
+    const currentWidth = calculatedMinWidth;
     const currentHeight = dimensions.height;
+
+    // Auto-enable pan when chart is wider than container (due to many data points)
+    const isChartExpanded = currentWidth > dimensions.width;
+    const shouldEnablePan = enablePan || isChartExpanded;
+    const shouldEnableZoom = enableZoom; // Keep zoom as user preference
 
     // Coerce potentially string props from editor into numbers so updates take effect
     const effectiveBarWidthProp = typeof barWidth === 'string' ? parseFloat(barWidth) : barWidth;
@@ -438,9 +534,12 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
 
     // Scales
     // Note: xAxisStart doesn't apply to categorical X-axis (scaleBand) - it's maintained for interface consistency with LineChart
+    // IMPORTANT: Preserve original data order - do not sort domain
+    const xDomain = processedData.map(d => String(d[xAxisKey]));
+
     const xScale = d3
       .scaleBand()
-      .domain(processedData.map(d => String(d[xAxisKey])))
+      .domain(xDomain) // Use original order from data
       .range([0, innerWidth])
       .padding(0.1); // Reduce padding for wider bars
 
@@ -513,43 +612,110 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         .attr('opacity', Math.max(0, Math.min(1, gridOpacity * 0.7)));
     }
 
-    // Axes
+    // X-Axis - show all labels (chart width already adjusted to fit all)
     const xAxis = d3.axisBottom(xScale).tickFormat(d => {
-      if (xAxisFormatter) return xAxisFormatter(Number(d));
-      // Use xAxisNames to map ID to display name, fallback to original value
-      const displayName = xAxisNames[String(d)] || String(d);
+      const rawValue = String(d);
+
+      // Try to format as date if xAxisFormatter exists
+      if (xAxisFormatter) {
+        // Check if it's a date string (ISO format or timestamp)
+        const dateTest = new Date(rawValue);
+        if (!isNaN(dateTest.getTime())) {
+          // It's a valid date, format it
+          return xAxisFormatter(dateTest.getTime());
+        }
+
+        // Try as number
+        const numValue = Number(rawValue);
+        if (!isNaN(numValue)) {
+          return xAxisFormatter(numValue);
+        }
+      }
+
+      // Fallback to display name or raw value
+      const displayName = xAxisNames[rawValue] || rawValue;
       return displayName;
     });
+
     const xAxisGroup = g.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis);
-    xAxisGroup
-      .selectAll('text')
+
+    // Smart label handling: measure labels and adjust if needed
+    const xLabels = xAxisGroup.selectAll('text');
+
+    // Measure label widths to detect overlap
+    let needsRotation = false;
+    let maxLabelWidth = 0;
+
+    try {
+      // Only measure visible labels (non-empty text)
+      let visibleLabelCount = 0;
+      xLabels.each(function () {
+        const text = (this as SVGTextElement).textContent;
+        if (text && text.trim() !== '') {
+          const bbox = (this as SVGTextElement).getBBox();
+          if (bbox.width > maxLabelWidth) maxLabelWidth = bbox.width;
+          visibleLabelCount++;
+        }
+      });
+
+      // Calculate available space per visible label
+      const availableSpacePerLabel =
+        visibleLabelCount > 0 ? innerWidth / visibleLabelCount : innerWidth;
+
+      // If average label width > 80% of available space, rotate
+      if (maxLabelWidth > availableSpacePerLabel * 0.8) {
+        needsRotation = true;
+      }
+    } catch (_) {
+      // Fallback: use rotation prop if measurement fails
+      needsRotation = xAxisRotation !== 0;
+    }
+
+    // Apply rotation if needed (either from prop or auto-detected)
+    const finalRotation = needsRotation ? (xAxisRotation !== 0 ? xAxisRotation : -45) : 0;
+
+    xLabels
       .attr('fill', textColor)
       .style('font-size', `${responsiveFontSize.axis}px`)
       .style('font-weight', '500')
-      .attr('transform', `rotate(${xAxisRotation})`)
-      .style('text-anchor', xAxisRotation === 0 ? 'middle' : xAxisRotation > 0 ? 'start' : 'end');
+      .attr('transform', `rotate(${finalRotation})`)
+      .style('text-anchor', finalRotation === 0 ? 'middle' : finalRotation > 0 ? 'start' : 'end')
+      .style('opacity', function () {
+        // Ensure sampled-out labels are completely hidden
+        const text = (this as SVGTextElement).textContent;
+        return text && text.trim() !== '' ? 1 : 0;
+      });
+
     xAxisGroup.select('.domain').attr('stroke', axisColor).attr('stroke-width', 2);
     if (showAxisTicks) xAxisGroup.selectAll('.tick line').attr('stroke', axisColor);
     else xAxisGroup.selectAll('.tick line').attr('opacity', 0);
 
+    // Smart Y-axis formatter to prevent label overlap
+    const formatYAxisValue = (value: number): string => {
+      if (yAxisFormatter) return yAxisFormatter(value);
+      // Fallback to simple number display if no formatter provided
+      return String(value);
+    };
+
+    // Calculate optimal number of ticks based on chart height
+    const optimalTickCount = Math.max(5, Math.min(10, Math.floor(innerHeight / 50)));
+
     const yAxis = d3
       .axisLeft(yScale)
-      .tickFormat(d => {
-        const value = d.valueOf();
-        if (yAxisFormatter) return yAxisFormatter(value);
-        return value.toLocaleString();
-      })
+      .ticks(optimalTickCount) // Limit number of ticks to prevent overlap
+      .tickFormat(d => formatYAxisValue(d.valueOf()))
       .tickSize(showAxisTicks ? -5 : 0)
-      .tickPadding(8);
+      .tickPadding(10); // Increase padding for better spacing
     const yAxisGroup = g.append('g').call(yAxis);
     yAxisGroup
       .selectAll('text')
       .attr('fill', textColor)
-      .style('font-size', `${responsiveFontSize.axis}px`)
+      .style('font-size', `${Math.max(10, responsiveFontSize.axis - 1)}px`) // Slightly smaller font
       .style('font-weight', '600')
       .style('font-family', 'system-ui, -apple-system, sans-serif')
       .attr('text-anchor', 'end')
       .attr('x', -10)
+      .attr('dy', '0.32em') // Better vertical centering
       .attr('transform', `rotate(${yAxisRotation})`);
     yAxisGroup
       .select('.domain')
@@ -617,64 +783,143 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
               .style('filter', 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))')
               .attr('opacity', 0.8);
 
-            const tooltip = g
-              .append('g')
-              .attr('class', 'tooltip')
-              .attr(
-                'transform',
-                `translate(${(xScale(String(d[xAxisKey])) || 0) + (xSubScale(key) || 0) + xSubScale.bandwidth() / 2}, ${yScale(d[key] as number) - 15})`
-              );
-
-            tooltip
-              .append('rect')
-              .attr('x', -40)
-              .attr('y', -35)
-              .attr('width', 80)
-              .attr('height', 30)
-              .attr('fill', isDarkMode ? '#1f2937' : '#ffffff')
-              .attr('stroke', currentColors[key])
-              .attr('stroke-width', 2)
-              .attr('rx', 6)
-              .style('filter', 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))')
-              .style('opacity', 0)
-              .transition()
-              .duration(200)
-              .style('opacity', 0.95);
-
-            const value =
-              typeof d[key] === 'number' ? (d[key] as number).toLocaleString() : (d[key] as string);
-            // Get display name for X-axis value
+            // Calculate statistics for enhanced tooltip
+            const currentValue = d[key] as number;
             const xDisplayName = xAxisNames[String(d[xAxisKey])] || String(d[xAxisKey]);
             const seriesDisplayName = seriesNames[key] || key;
 
-            tooltip
-              .append('text')
-              .attr('text-anchor', 'middle')
-              .attr('y', -20)
-              .attr('fill', textColor)
-              .style('font-size', `${responsiveFontSize.axis - 1}px`)
-              .style('font-weight', '600')
-              .style('opacity', 0)
-              .text(`${xDisplayName}`)
-              .transition()
-              .duration(200)
-              .style('opacity', 1);
+            // Calculate total for this category (all series)
+            const categoryTotal = yAxisKeys.reduce((sum, k) => sum + ((d[k] as number) || 0), 0);
+            const percentOfCategory = categoryTotal > 0 ? (currentValue / categoryTotal) * 100 : 0;
 
-            tooltip
-              .append('text')
-              .attr('text-anchor', 'middle')
-              .attr('y', -8)
-              .attr('fill', textColor)
-              .style('font-size', `${responsiveFontSize.axis}px`)
-              .style('font-weight', '700')
-              .style('opacity', 0)
-              .text(`${seriesDisplayName}: ${value}`)
-              .transition()
-              .duration(200)
-              .style('opacity', 1);
+            // Calculate average for this series across all data
+            const seriesValues = processedData
+              .map(item => item[key] as number)
+              .filter(v => !isNaN(v));
+            const seriesAverage =
+              seriesValues.length > 0
+                ? seriesValues.reduce((a, b) => a + b, 0) / seriesValues.length
+                : 0;
+            const diffFromAvg = currentValue - seriesAverage;
+            const diffPercent = seriesAverage > 0 ? (diffFromAvg / seriesAverage) * 100 : 0;
 
-            // Keep a reference to the current tooltip so we can hide it later
-            currentTooltipRef.current = tooltip;
+            // Calculate rank (1 = highest value in this series)
+            const sortedValues = [...seriesValues].sort((a, b) => b - a);
+            const rank = sortedValues.indexOf(currentValue) + 1;
+
+            // Build tooltip content
+            const tooltipLines: Array<{
+              text: string;
+              fontSize: number;
+              fontWeight: string;
+              color?: string;
+            }> = [
+              { text: xDisplayName, fontSize: responsiveFontSize.axis + 1, fontWeight: '700' },
+              {
+                text: `${seriesDisplayName}: ${yAxisFormatter ? yAxisFormatter(currentValue) : currentValue}`,
+                fontSize: responsiveFontSize.axis + 2,
+                fontWeight: '800',
+                color: currentColors[key],
+              },
+            ];
+
+            // Add percentage if multiple series
+            if (yAxisKeys.length > 1) {
+              tooltipLines.push({
+                text: `${percentOfCategory.toFixed(1)}% of total`,
+                fontSize: responsiveFontSize.axis - 1,
+                fontWeight: '500',
+              });
+            }
+
+            // Add comparison with average
+            const diffSign = diffFromAvg >= 0 ? '+' : '';
+            const diffColor =
+              diffFromAvg >= 0
+                ? isDarkMode
+                  ? '#10b981'
+                  : '#059669'
+                : isDarkMode
+                  ? '#ef4444'
+                  : '#dc2626';
+            tooltipLines.push({
+              text: `Avg: ${yAxisFormatter ? yAxisFormatter(seriesAverage) : seriesAverage} (${diffSign}${diffPercent.toFixed(1)}%)`,
+              fontSize: responsiveFontSize.axis - 1,
+              fontWeight: '500',
+              color: diffColor,
+            });
+
+            // Add rank
+            tooltipLines.push({
+              text: `Rank: #${rank} of ${seriesValues.length}`,
+              fontSize: responsiveFontSize.axis - 1,
+              fontWeight: '500',
+            });
+
+            // Build tooltip using utility functions
+            const tooltipLinesNew: TooltipLine[] = [
+              createHeader(xDisplayName, { fontSize: responsiveFontSize.axis + 1 }),
+              createStatLine(seriesDisplayName, currentValue, {
+                fontSize: responsiveFontSize.axis + 2,
+                fontWeight: '800',
+                color: currentColors[key],
+              }),
+            ];
+
+            // Add percentage if multiple series
+            if (yAxisKeys.length > 1) {
+              tooltipLinesNew.push(
+                createStatLine('Of total', `${percentOfCategory.toFixed(1)}%`, {
+                  fontSize: responsiveFontSize.axis - 1,
+                  fontWeight: '500',
+                })
+              );
+            }
+
+            // Add comparison with average
+            tooltipLinesNew.push(
+              createStatLine('Average', seriesAverage, {
+                fontSize: responsiveFontSize.axis - 1,
+                fontWeight: '500',
+              })
+            );
+            tooltipLinesNew.push(
+              createPercentLine('vs Avg', diffPercent, {
+                isDarkMode,
+                showSign: true,
+                fontSize: responsiveFontSize.axis - 1,
+              })
+            );
+
+            // Add rank
+            tooltipLinesNew.push(
+              createRankLine(rank, seriesValues.length, { fontSize: responsiveFontSize.axis - 1 })
+            );
+
+            // Reuse existing tooltip or create new one
+            let tooltip = currentTooltipRef.current;
+            if (!tooltip || tooltip.empty()) {
+              tooltip = g.append('g').attr('class', 'tooltip').style('opacity', 0);
+              currentTooltipRef.current = tooltip;
+            }
+
+            const pointerX =
+              (xScale(String(d[xAxisKey])) || 0) +
+              (xSubScale(key) || 0) +
+              xSubScale.bandwidth() / 2;
+            const pointerY = yScale(d[key] as number);
+
+            renderD3Tooltip(tooltip, {
+              lines: tooltipLinesNew,
+              isDarkMode,
+              position: { x: pointerX, y: pointerY },
+              containerWidth: innerWidth,
+              containerHeight: innerHeight,
+              preferPosition: 'above',
+            });
+
+            // Smooth fade in
+            tooltip.transition().duration(200).style('opacity', 1);
           })
           .on('mouseout', function () {
             d3.select(this)
@@ -720,10 +965,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
             )
             .text(d => {
               const yValue = d[key] as number;
-              if (yAxisFormatter) {
-                return yAxisFormatter(yValue);
-              }
-              return yValue.toLocaleString();
+              return yAxisFormatter ? yAxisFormatter(yValue) : String(yValue);
             })
             .transition()
             .delay(keyIndex * 100 + animationDuration)
@@ -761,40 +1003,87 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
               .duration(200)
               .style('filter', 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))')
               .attr('opacity', 0.8);
-            const value = d[1] - d[0];
-            const tooltip = g
-              .append('g')
-              .attr('class', 'tooltip')
-              .attr(
-                'transform',
-                `translate(${(xScale(String(d.data[xAxisKey])) || 0) + xScale.bandwidth() / 2}, ${yScale(d[1]) - 10})`
-              );
-            const tooltipBg = tooltip
-              .append('rect')
-              .attr('x', -25)
-              .attr('y', -20)
-              .attr('width', 50)
-              .attr('height', 16)
-              .attr('fill', isDarkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.95)')
-              .attr('stroke', currentColors[yAxisKeys[seriesIndex]])
-              .attr('stroke-width', 1)
-              .attr('rx', 3)
-              .style('filter', 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2))')
-              .style('opacity', 0);
-            tooltip
-              .append('text')
-              .attr('text-anchor', 'middle')
-              .attr('y', -8)
-              .attr('fill', textColor)
-              .style('font-size', '11px')
-              .style('font-weight', '500')
-              .style('font-family', 'monospace')
-              .style('opacity', 0)
-              .text(value.toLocaleString());
-            tooltipBg.transition().duration(100).style('opacity', 1);
-            tooltip.selectAll('text').transition().duration(100).style('opacity', 1);
 
-            currentTooltipRef.current = tooltip;
+            const currentKey = yAxisKeys[seriesIndex];
+            const currentValue = d[1] - d[0];
+            const xDisplayName = xAxisNames[String(d.data[xAxisKey])] || String(d.data[xAxisKey]);
+            const seriesDisplayName = seriesNames[currentKey] || currentKey;
+
+            // Calculate total for this stack (all series)
+            const stackTotal = yAxisKeys.reduce((sum, k) => sum + ((d.data[k] as number) || 0), 0);
+            const percentOfStack = stackTotal > 0 ? (currentValue / stackTotal) * 100 : 0;
+
+            // Calculate cumulative percentage up to this layer
+            let cumulativeValue = 0;
+            for (let i = 0; i <= seriesIndex; i++) {
+              cumulativeValue += (d.data[yAxisKeys[i]] as number) || 0;
+            }
+            const cumulativePercent = stackTotal > 0 ? (cumulativeValue / stackTotal) * 100 : 0;
+
+            // Calculate average for this series
+            const seriesValues = processedData
+              .map(item => item[currentKey] as number)
+              .filter(v => !isNaN(v));
+            const seriesAverage =
+              seriesValues.length > 0
+                ? seriesValues.reduce((a, b) => a + b, 0) / seriesValues.length
+                : 0;
+            const diffFromAvg = currentValue - seriesAverage;
+            const diffPercent = seriesAverage > 0 ? (diffFromAvg / seriesAverage) * 100 : 0;
+
+            // Build tooltip content for stacked bars using utility functions
+            const stackedTooltipLines: TooltipLine[] = [
+              createHeader(xDisplayName, { fontSize: responsiveFontSize.axis + 1 }),
+              createStatLine(seriesDisplayName, currentValue, {
+                fontSize: responsiveFontSize.axis + 2,
+                fontWeight: '800',
+                color: currentColors[currentKey],
+              }),
+              createStatLine('Of stack', `${percentOfStack.toFixed(1)}%`, {
+                fontSize: responsiveFontSize.axis - 1,
+                fontWeight: '500',
+              }),
+              createStatLine('Cumulative', `${cumulativePercent.toFixed(1)}%`, {
+                fontSize: responsiveFontSize.axis - 1,
+                fontWeight: '500',
+              }),
+              createStatLine('Average', seriesAverage, {
+                fontSize: responsiveFontSize.axis - 1,
+                fontWeight: '500',
+              }),
+              createPercentLine('vs Avg', diffPercent, {
+                isDarkMode,
+                showSign: true,
+                fontSize: responsiveFontSize.axis - 1,
+              }),
+              createSeparator(),
+              createStatLine('Stack total', stackTotal, {
+                fontSize: responsiveFontSize.axis - 1,
+                fontWeight: '600',
+              }),
+            ];
+
+            // Reuse existing tooltip or create new one
+            let tooltip = currentTooltipRef.current;
+            if (!tooltip || tooltip.empty()) {
+              tooltip = g.append('g').attr('class', 'tooltip').style('opacity', 0);
+              currentTooltipRef.current = tooltip;
+            }
+
+            const pointerX = (xScale(String(d.data[xAxisKey])) || 0) + xScale.bandwidth() / 2;
+            const pointerY = yScale(d[1]);
+
+            renderD3Tooltip(tooltip, {
+              lines: stackedTooltipLines,
+              isDarkMode,
+              position: { x: pointerX, y: pointerY },
+              containerWidth: innerWidth,
+              containerHeight: innerHeight,
+              preferPosition: 'above',
+            });
+
+            // Smooth fade in
+            tooltip.transition().duration(200).style('opacity', 1);
           })
           .on('mouseout', function () {
             d3.select(this)
@@ -1170,7 +1459,8 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     }
 
     // Enhanced zoom and pan with mouse interactions
-    if (enableZoom || enablePan) {
+    // Use shouldEnablePan to auto-enable when chart is expanded
+    if (shouldEnableZoom || shouldEnablePan) {
       let zoomLevel = 1;
       let translateX = 0;
       let translateY = 0;
@@ -1181,7 +1471,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       let dragStartTranslateY = 0;
 
       // Mouse wheel zoom
-      if (enableZoom) {
+      if (shouldEnableZoom) {
         svg.on('wheel', function (event) {
           event.preventDefault();
 
@@ -1216,7 +1506,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       }
 
       // Mouse drag to pan
-      if (enablePan) {
+      if (shouldEnablePan) {
         svg.on('mousedown', function (event) {
           if (event.button !== 0) return; // Only left mouse button
 
@@ -1235,8 +1525,8 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
 
         svg.on('mousemove', function (event) {
           if (!isDragging) {
-            // Show grab cursor when zoomed in
-            if (zoomLevel > 1) {
+            // Show grab cursor when pan is enabled or zoomed in
+            if (shouldEnablePan || zoomLevel > 1) {
               svg.style('cursor', 'grab');
             } else {
               svg.style('cursor', 'default');
@@ -1261,7 +1551,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
             isDragging = false;
 
             // Reset cursor
-            if (zoomLevel > 1) {
+            if (shouldEnablePan || zoomLevel > 1) {
               svg.style('cursor', 'grab');
             } else {
               svg.style('cursor', 'default');
@@ -1300,7 +1590,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     }
 
     // Global mouseleave handler for tooltip management (even when zoom/pan disabled)
-    if (!enableZoom && !enablePan && showTooltip) {
+    if (!shouldEnableZoom && !shouldEnablePan && showTooltip) {
       svg.on('mouseleave', function () {
         clearTooltipTimeout();
         hideCurrentTooltip();
@@ -1352,6 +1642,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     responsiveFontSize.axis,
     responsiveFontSize.label,
     responsiveFontSize.title, // Add missing title font dependency
+    showAllXAxisTicks, // Add showAllXAxisTicks dependency
   ]);
 
   return (

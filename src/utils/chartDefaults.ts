@@ -138,10 +138,14 @@ const defaultSubDonutConfig: SubPieDonutChartConfig = {
 const defaultFormatterConfig: Partial<FormatterConfig> = {
   useYFormatter: false,
   useXFormatter: false,
-  yFormatterType: 'number',
-  xFormatterType: 'number',
-  customYFormatter: '',
-  customXFormatter: '',
+  yFormatterType: 'none',
+  xFormatterType: 'none',
+  customYFormatter: '{value}',
+  customXFormatter: '{value}',
+  yCurrencySymbol: '$',
+  xCurrencySymbol: '$',
+  yDecimalPlaces: 2,
+  xDecimalPlaces: 2,
 };
 
 const defaultPieDonutFormatterConfig: Partial<PieDonutFormatterConfig> = {

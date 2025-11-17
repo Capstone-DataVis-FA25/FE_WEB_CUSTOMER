@@ -18,6 +18,7 @@ import {
 import { ChartType } from '@/features/charts/chartTypes';
 import WarningPanel from './WarningPanel';
 import AxisLabelsSettings from './AxisLabelsSettings';
+import { getFormatterTypeFromDataType, isYearData } from '@/utils/formatValue';
 
 // Type guard: check if chartConfig has axisConfigs
 function hasAxisConfigs(config: any): config is { axisConfigs: any } {
@@ -187,12 +188,47 @@ const AxisConfigurationSection: React.FC<AxisConfigurationSectionProps> = ({
                       value={currentXAxisId || 'placeholder'}
                       onChange={e => {
                         if (e.target.value !== 'placeholder' && hasAxisConfigs(chartConfig)) {
-                          handleConfigChange({
+                          // Find the selected header to get its data type
+                          const selectedHeader = dataHeaders.find(h => h.id === e.target.value);
+                          const updates: any = {
                             axisConfigs: {
                               ...chartConfig.axisConfigs,
                               xAxisKey: e.target.value,
                             },
-                          });
+                          };
+
+                          // Auto-detect and set formatter type based on column data type
+                          if (selectedHeader && selectedHeader.type) {
+                            const autoFormatterType = getFormatterTypeFromDataType(
+                              selectedHeader.type as 'text' | 'number' | 'date'
+                            );
+
+                            // Update formatters with auto-detected type
+                            const currentFormatters = (chartConfig as any).formatters || {};
+                            const formatterUpdates: any = {
+                              ...currentFormatters,
+                              xFormatterType: autoFormatterType,
+                              useXFormatter: autoFormatterType !== 'none',
+                            };
+
+                            // For number type, check if data looks like years (disable grouping)
+                            if (
+                              selectedHeader.type === 'number' &&
+                              selectedHeader.data &&
+                              Array.isArray(selectedHeader.data)
+                            ) {
+                              // Import isYearData helper
+                              if (isYearData(selectedHeader.data)) {
+                                formatterUpdates.xUseGrouping = false; // No thousands separator for years
+                              } else {
+                                formatterUpdates.xUseGrouping = true; // Use thousands separator
+                              }
+                            }
+
+                            updates.formatters = formatterUpdates;
+                          }
+
+                          handleConfigChange(updates);
                         }
                       }}
                       className="mt-1 w-full h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
@@ -387,6 +423,42 @@ const AxisConfigurationSection: React.FC<AxisConfigurationSectionProps> = ({
                         {t('lineChart_editor_showAxisTicks', 'Show Axis Ticks')}
                       </Label>
                     </div>
+
+                    {/* Show All X-Axis Ticks */}
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="showAllXAxisTicks"
+                        checked={!!chartConfig.axisConfigs?.showAllXAxisTicks}
+                        onCheckedChange={checked => {
+                          if (hasAxisConfigs(chartConfig)) {
+                            handleConfigChange({
+                              axisConfigs: {
+                                ...chartConfig.axisConfigs,
+                                showAllXAxisTicks: !!checked,
+                              },
+                            });
+                          }
+                        }}
+                      />
+                      <Label
+                        htmlFor="showAllXAxisTicks"
+                        className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                      >
+                        {t('lineChart_editor_showAllXAxisTicks', 'Show All X-Axis Ticks')}
+                      </Label>
+                    </div>
+
+                    {/* Info about Show All X-Axis Ticks */}
+                    {chartConfig.axisConfigs?.showAllXAxisTicks && (
+                      <div className="col-span-2 text-xs bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md px-2.5 py-2">
+                        <p className="text-blue-800 dark:text-blue-200">
+                          💡 <strong>Tip:</strong> Showing all X-axis ticks works best with{' '}
+                          <strong>compact date formats</strong> (Numeric, Year Only, Month-Year) or{' '}
+                          <strong>rotated labels</strong>. Consider reducing chart width or using
+                          ultra-compact formats for large datasets (200+ records).
+                        </p>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                       {/* X-Axis Rotation */}
