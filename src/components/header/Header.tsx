@@ -56,6 +56,7 @@ const Header: React.FC<HeaderProps> = ({
           { name: 'Charts', href: `${Routers.WORKSPACE_CHARTS}` },
         ]
       : []),
+    { name: t('navigation_pricing'), href: '/pricing' },
     { name: t('navigation_about'), href: '/about-us' },
   ];
 

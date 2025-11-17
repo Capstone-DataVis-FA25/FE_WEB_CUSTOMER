@@ -1,6 +1,7 @@
 export interface ChartHistory {
   id: string;
   chartId: string;
+  datasetId: string;
   name: string;
   description?: string;
   type: string;
@@ -8,6 +9,7 @@ export interface ChartHistory {
   createdAt: string;
   updatedBy: string;
   changeNote?: string;
+  imageUrl?: string;
 }
 
 export interface ChartHistoryState {
@@ -28,6 +30,7 @@ export interface ComparisonResult {
     name: string;
     description?: string;
     type: string;
+    datasetId: string;
     config: any;
     updatedAt: string;
   };
@@ -35,8 +38,10 @@ export interface ComparisonResult {
     name: string;
     description?: string;
     type: string;
+    datasetId: string;
     config: any;
     createdAt: string;
+    imageUrl?: string;
   };
   differences: Record<
     string,

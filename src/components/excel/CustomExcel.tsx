@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect, useCallback, useRef, useMemo, useDeferredValue } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useDataset } from '@/contexts/DatasetContext';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
@@ -9,7 +9,6 @@ import {
   setSelectedRow,
   setTouchedCells,
   setInfoMessage,
-  setSortConfig,
   setDuplicateColumns,
   setEmptyColumns,
   setParseErrors,
@@ -18,7 +17,6 @@ import {
   setNumberFormat,
   selectSelectedColumn,
   selectInfoMessage,
-  selectSortConfig,
   selectDuplicateColumns,
   selectParseErrors,
   clearUIState,
@@ -69,13 +67,13 @@ const DEFAULT_COLS: DataHeader[] = [
   { name: 'Column 1', type: 'text', width: 200, index: 0 },
   { name: 'Column 2', type: 'text', width: 200, index: 1 },
 ];
-const DEFAULT_ROWS: string[][] = Array.from({ length: 8 }, () =>
-  Array(DEFAULT_COLS.length).fill('')
-);
+const createEmptyGrid = (rows: number, cols: number): string[][] =>
+  Array.from({ length: rows }, () => Array(cols).fill(''));
+const DEFAULT_ROWS: string[][] = createEmptyGrid(8, DEFAULT_COLS.length);
 
 const CustomExcel: React.FC<CustomExcelProps> = ({
-  initialData = DEFAULT_ROWS,
-  initialColumns = DEFAULT_COLS,
+  initialData,
+  initialColumns,
   onDataChange,
   className = '',
   mode = 'edit',
@@ -118,7 +116,6 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // Only subscribe to selectors that CustomExcel actually needs for its own rendering
   const selectedColumn = useAppSelector(selectSelectedColumn);
   const infoMessage = useAppSelector(selectInfoMessage);
-  const sortConfig = useAppSelector(selectSortConfig);
   const filters = useAppSelector(selectFilters);
   const duplicateColumns = useAppSelector(selectDuplicateColumns);
   // const currentEmptyColumns = useAppSelector(selectEmptyColumns); // unused
@@ -171,14 +168,25 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   // Shared initializer used on first mount and on Change Data
   const initializeFromProps = useCallback(() => {
     // init from incoming props
-    const initCols = (initialColumns.length ? initialColumns : DEFAULT_COLS).map(c => ({
+    const incomingColumns =
+      Array.isArray(initialColumns) && initialColumns.length > 0 ? initialColumns : DEFAULT_COLS;
+    const initCols = incomingColumns.map(c => ({
       ...c,
       id: (c as any).id ?? (c as any).headerId ?? undefined,
       width: c.width || DEFAULT_WIDTH,
     }));
-    const initData = initialData.length
-      ? initialData
-      : DEFAULT_ROWS.map(() => Array(initCols.length).fill(''));
+
+    const providedData = Array.isArray(initialData) ? initialData : undefined;
+    const hasProvidedData = providedData !== undefined;
+    const shouldUseBlankFallback =
+      mode === 'edit' && (!hasProvidedData || providedData.length === 0);
+    const initData = shouldUseBlankFallback
+      ? createEmptyGrid(8, initCols.length)
+      : hasProvidedData
+        ? providedData.map(row => [...row])
+        : mode === 'view'
+          ? []
+          : createEmptyGrid(8, initCols.length);
     // Capture original snapshot (deep-ish copy) for Reset
     originalColsRef.current = initCols.map(c => ({ ...c }));
     originalDataRef.current = initData.map(r => [...r]);
@@ -285,12 +293,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     setExcelErrors({ parseErrors: reduxParseErrors || {} });
   }, [reduxParseErrors, setExcelErrors]);
 
-  // Expose sorting changes to parent for chart synchronization
-  useEffect(() => {
-    if (onSorting) {
-      onSorting(sortConfig);
-    }
-  }, [sortConfig, onSorting]);
+  // Sorting moved out of grid; do not emit sorting changes from here
 
   // Recompute parseErrors when number/date formats or typed column sets change (quiet on name-only changes)
   const prevNumberColsRef = useRef<number[] | null>(null);
@@ -717,17 +720,9 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     const nextColIndex = Math.min(c, nc.length - 1);
     // Clear selection momentarily to avoid stale highlights during update
     dispatch(setSelectedColumn(null));
-    setSortConfig(null);
     // Update columns locally without notifying parent
     dispatch(setColumnsRedux(nc));
-    // If current sorting references this column, clear it; if it was after, shift left
-    if (sortConfig) {
-      if (sortConfig.column === c) {
-        dispatch(setSortConfig(null));
-      } else if (sortConfig.column > c) {
-        dispatch(setSortConfig({ column: sortConfig.column - 1, direction: sortConfig.direction }));
-      }
-    }
+    // Sorting removed from grid: no need to adjust sort state on column removal
     commit(nd, nc, {
       dataChanged: true, // Update data cells
       columnsChanged: false, // columns already updated locally; avoid parent notify
@@ -779,98 +774,11 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     );
   }, [data, filters]);
 
-  // Defer heavy filtered data propagation to keep typing/editing responsive
-  const deferredFilteredData = useDeferredValue(filteredData);
+  const sortedFilteredData = filteredData;
 
-  // Apply sorting to the filtered view only; do not mutate base data
-  const sortedFilteredData = useMemo(() => {
-    if (!sortConfig) return deferredFilteredData;
-    const { column, direction } = sortConfig;
-    const type = columns[column]?.type ?? 'text';
-    const out = [...deferredFilteredData];
-    out.sort((a, b) => {
-      const aVal = a.row[column] || '';
-      const bVal = b.row[column] || '';
-      if (!aVal && !bVal) return 0;
-      if (!aVal) return direction === 'asc' ? 1 : -1;
-      if (!bVal) return direction === 'asc' ? -1 : 1;
-      if (type === 'number') {
-        const aNum = Number.parseFloat(aVal) || 0;
-        const bNum = Number.parseFloat(bVal) || 0;
-        return direction === 'asc' ? aNum - bNum : bNum - aNum;
-      }
-      if (type === 'date') {
-        const fmt = columns[column]?.dateFormat as string | undefined;
-        const aParsed = fmt ? dayjs(aVal, fmt, true) : dayjs(aVal);
-        const bParsed = fmt ? dayjs(bVal, fmt, true) : dayjs(bVal);
-        let aT = aParsed.isValid() ? aParsed.valueOf() : NaN;
-        let bT = bParsed.isValid() ? bParsed.valueOf() : NaN;
-        // Fallback to native Date if strict parse fails
-        if (Number.isNaN(aT)) aT = new Date(aVal).getTime();
-        if (Number.isNaN(bT)) bT = new Date(bVal).getTime();
-        const aSafe = Number.isNaN(aT) ? Number.NEGATIVE_INFINITY : aT;
-        const bSafe = Number.isNaN(bT) ? Number.NEGATIVE_INFINITY : bT;
-        return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
-      }
-      return direction === 'asc'
-        ? aVal.toLowerCase().localeCompare(bVal.toLowerCase())
-        : bVal.toLowerCase().localeCompare(aVal.toLowerCase());
-    });
-    return out;
-  }, [deferredFilteredData, sortConfig, columns]);
+  // Sorting removed from grid
 
-  // In view mode, also persist sorting to the base dataset so charts use the same order
-  useEffect(() => {
-    if (mode !== 'view') return;
-    if (!sortConfig) return;
-    const { column, direction } = sortConfig;
-    const type = columns[column]?.type ?? 'text';
-    // Build sorted copy of the entire base data (not filtered)
-    const baseIndexed = data.map((row, i) => ({ row, i }));
-    const sorted = [...baseIndexed].sort((a, b) => {
-      const aVal = a.row[column] || '';
-      const bVal = b.row[column] || '';
-      if (!aVal && !bVal) return 0;
-      if (!aVal) return direction === 'asc' ? 1 : -1;
-      if (!bVal) return direction === 'asc' ? -1 : 1;
-      if (type === 'number') {
-        const aNum = Number.parseFloat(aVal) || 0;
-        const bNum = Number.parseFloat(bVal) || 0;
-        return direction === 'asc' ? aNum - bNum : bNum - aNum;
-      }
-      if (type === 'date') {
-        const fmt = columns[column]?.dateFormat as string | undefined;
-        const aParsed = fmt ? dayjs(aVal, fmt, true) : dayjs(aVal);
-        const bParsed = fmt ? dayjs(bVal, fmt, true) : dayjs(bVal);
-        let aT = aParsed.isValid() ? aParsed.valueOf() : NaN;
-        let bT = bParsed.isValid() ? bParsed.valueOf() : NaN;
-        // Fallback to native Date if strict parse fails
-        if (Number.isNaN(aT)) aT = new Date(aVal).getTime();
-        if (Number.isNaN(bT)) bT = new Date(bVal).getTime();
-        const aSafe = Number.isNaN(aT) ? Number.NEGATIVE_INFINITY : aT;
-        const bSafe = Number.isNaN(bT) ? Number.NEGATIVE_INFINITY : bT;
-        return direction === 'asc' ? aSafe - bSafe : bSafe - aSafe;
-      }
-      return direction === 'asc'
-        ? String(aVal).toLowerCase().localeCompare(String(bVal).toLowerCase())
-        : String(bVal).toLowerCase().localeCompare(String(aVal).toLowerCase());
-    });
-    const nextData = sorted.map(s => s.row);
-    // Skip commit if order is unchanged
-    let changed = false;
-    for (let i = 0; i < nextData.length; i++) {
-      if (nextData[i] !== data[i]) {
-        changed = true;
-        break;
-      }
-    }
-    if (!changed) return;
-    commit(nextData, columns, {
-      dataChanged: true,
-      columnsChanged: false,
-      scheduleRevalidate: false,
-    });
-  }, [mode, sortConfig, columns, data, commit]);
+  // Sorting persistence removed from grid
 
   // Virtualization calculations: robustly measure visible height
   useEffect(() => {
@@ -1061,7 +969,6 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       dispatch(setColumnsRedux(restoredCols));
 
       // Clear UI state tied to current edits
-      dispatch(setSortConfig(null));
       dispatch(setFilters(Array(restoredCols.length).fill('')));
 
       // Restore data
@@ -1359,18 +1266,11 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
               </button>
             </div>
           )}
-          <p>
-            {sortConfig &&
-              `Sorted by "${columns[sortConfig.column]?.name}" (${sortConfig.direction})`}
-          </p>
+          {/* Sorting footer removed */}
         </div>
       )}
 
-      {mode !== 'edit' && sortConfig && (
-        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          <p>{`Sorted by "${columns[sortConfig.column]?.name}" (${sortConfig.direction})`}</p>
-        </div>
-      )}
+      {/* View-mode sorting footer removed */}
 
       <ModalConfirm
         isOpen={modalConfirm.isOpen}

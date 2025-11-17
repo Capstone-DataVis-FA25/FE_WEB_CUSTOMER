@@ -22,7 +22,13 @@ function isPieDonutConfig(config: any): config is SubPieDonutChartConfig {
   );
 }
 
-const ChartSettingsPieSection: React.FC = () => {
+import type { DataHeader } from '@/utils/dataProcessors';
+
+interface ChartSettingsPieSectionProps {
+  processedHeaders?: DataHeader[];
+}
+
+const ChartSettingsPieSection: React.FC<ChartSettingsPieSectionProps> = ({ processedHeaders }) => {
   const { chartConfig } = useChartEditor();
   const { currentDataset } = useDataset();
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -37,7 +43,8 @@ const ChartSettingsPieSection: React.FC = () => {
     );
   }, [chartConfig?.chartType]);
 
-  const headers = (currentDataset?.headers as any[]) || [];
+  // Use processed headers (aggregated) if provided, otherwise fall back to original dataset headers
+  const headers = (processedHeaders as any[]) || (currentDataset?.headers as any[]) || [];
   const normalizeType = (t?: string) => (t || '').toLowerCase();
   const validLabelHeaders = useMemo(
     () => headers.filter(h => roleRules.label.allowedTypes.includes(normalizeType(h.type) as any)),

@@ -15,16 +15,22 @@ import type { SubPieDonutChartConfig, PieDonutFormatterConfig } from '@/types/ch
 import { convertChartDataToArray } from '@/utils/dataConverter';
 import { ChartType } from '@/features/charts/chartTypes';
 import D3PieChart from './D3PieChart';
+import type { DataHeader } from '@/utils/dataProcessors';
 
-const ChartDisplaySection: React.FC = () => {
+interface ChartDisplaySectionProps {
+  processedHeaders?: DataHeader[];
+}
+
+const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHeaders }) => {
   const { t } = useTranslation();
   const { chartData, chartConfig, currentChartType: chartType } = useChartEditorRead();
   const { currentDataset } = useDataset();
 
   // Helper: Map DataHeader ID to name
-  const dataHeaders = currentDataset?.headers || [];
+  // Use processed headers (aggregated) if provided, otherwise use original dataset headers
+  const dataHeaders = (processedHeaders as any[]) || currentDataset?.headers || [];
   const getHeaderName = (id: string) => {
-    const header = dataHeaders.find(h => h.id === id);
+    const header = dataHeaders.find(h => (h as any).id === id || (h as any).headerId === id);
     return header ? header.name : id;
   };
 

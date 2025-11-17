@@ -6,6 +6,56 @@ export type ColorConfig = Record<string, { light: string; dark: string }>;
 
 // CHART TYPE GENERATION
 
+// Dataset-level configuration (optional per chart)
+export interface SortLevel {
+  columnId: string;
+  direction: 'asc' | 'desc';
+}
+
+export interface GroupByColumn {
+  id: string;
+  name: string;
+  timeUnit?: 'second' | 'minute' | 'hour' | 'day' | 'month' | 'quarter' | 'year';
+}
+
+export interface AggregationMetric {
+  id: string;
+  type: 'sum' | 'average' | 'min' | 'max' | 'count';
+  columnId?: string;
+  alias?: string;
+}
+
+export interface DatasetConfig {
+  // Multi-level sort: applied in array order (stable sort semantics)
+  sort?: SortLevel[];
+  // Optional dataset-level filters (UI schema)
+  filters?: DatasetFilterColumn[];
+  // Optional aggregation configuration
+  aggregation?: {
+    groupBy?: GroupByColumn[];
+    metrics?: AggregationMetric[];
+  };
+}
+
+export type DatasetColumnType = 'text' | 'number' | 'date';
+
+export type DatasetFilterValue = string | number | null | (string | number | null)[];
+
+export interface DatasetFilterCondition {
+  id: string;
+  operator: string;
+  value: DatasetFilterValue;
+  valueEnd?: string | number | null;
+}
+
+export interface DatasetFilterColumn {
+  id: string;
+  columnId: string;
+  columnName: string;
+  columnType: DatasetColumnType;
+  conditions: DatasetFilterCondition[]; // OR semantics within a column
+}
+
 export type MainChartConfig =
   | LineChartConfig
   | BarChartConfig
@@ -31,6 +81,7 @@ export interface ScatterChartConfig {
   config: SubScatterChartConfig;
   formatters: Partial<FormatterConfig>;
   axisConfigs: AxisConfig;
+  datasetConfig?: DatasetConfig;
   chartType: 'scatter';
 }
 
@@ -38,6 +89,7 @@ export interface LineChartConfig {
   config: SubLineChartConfig;
   formatters: Partial<FormatterConfig>;
   axisConfigs: AxisConfig;
+  datasetConfig?: DatasetConfig;
   chartType: 'line';
 }
 
@@ -45,6 +97,7 @@ export interface BarChartConfig {
   config: SubBarChartConfig;
   formatters: Partial<FormatterConfig>;
   axisConfigs: AxisConfig;
+  datasetConfig?: DatasetConfig;
   chartType: 'bar';
 }
 
@@ -52,18 +105,21 @@ export interface AreaChartConfig {
   config: SubAreaChartConfig;
   formatters: Partial<FormatterConfig>;
   axisConfigs: AxisConfig;
+  datasetConfig?: DatasetConfig;
   chartType: 'area';
 }
 
 export interface PieChartConfig {
   config: SubPieDonutChartConfig;
   formatters: Partial<PieDonutFormatterConfig>;
+  datasetConfig?: DatasetConfig;
   chartType: 'pie';
 }
 
 export interface DonutChartConfig {
   config: SubPieDonutChartConfig;
   formatters: Partial<PieDonutFormatterConfig>;
+  datasetConfig?: DatasetConfig;
   chartType: 'donut';
 }
 
@@ -83,6 +139,7 @@ export interface CyclePlotConfig {
   config: SubCyclePlotChartConfig;
   formatters: Partial<FormatterConfig>;
   axisConfigs: CyclePlotAxisConfig;
+  datasetConfig?: DatasetConfig;
   chartType: 'cycleplot';
 }
 

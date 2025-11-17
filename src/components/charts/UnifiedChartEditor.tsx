@@ -11,10 +11,13 @@ import ImportExportSection from './ImportExportSection';
 import ChartSettingsPieSection from './ChartSettingsPieSection';
 import DisplayOptionsPieSection from './DisplayOptionsPieSection';
 import CyclePlotSettingsSection from './CyclePlotSettingsSection';
+import type { DataHeader } from '@/utils/dataProcessors';
 
-export interface UnifiedChartEditorProps {}
+export interface UnifiedChartEditorProps {
+  processedHeaders?: DataHeader[];
+}
 
-const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = () => {
+const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({ processedHeaders }) => {
   const { currentChartType: chartType } = useChartEditorRead();
 
   return (
@@ -39,17 +42,17 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = () => {
                   <BasicChartSettingsSection />
 
                   {/* Axis Configuration Section */}
-                  <AxisConfigurationSection />
+                  <AxisConfigurationSection processedHeaders={processedHeaders} />
 
                   {/* Series Management Section */}
-                  <SeriesManagementSection />
+                  <SeriesManagementSection processedHeaders={processedHeaders} />
                 </>
               )}
 
               {(chartType == ChartType.Pie || chartType == ChartType.Donut) && (
                 <>
                   {/* Basic Chart Settings Section */}
-                  <ChartSettingsPieSection />
+                  <ChartSettingsPieSection processedHeaders={processedHeaders} />
 
                   {/* Display Options Section */}
                   <DisplayOptionsPieSection />
@@ -70,7 +73,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = () => {
             </div>
           </div>
           {/* Right Side - Chart Display */}
-          <ChartDisplaySection />
+          <ChartDisplaySection processedHeaders={processedHeaders} />
         </div>
       </div>
     </div>
