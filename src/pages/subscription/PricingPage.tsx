@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import useToast from '@/hooks/useToast';
+import { selectUser } from '@/features/auth/authSelector';
+import { useSelector } from 'react-redux';
 
 const PricingPage: React.FC = () => {
+  const user = useSelector(selectUser);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +33,10 @@ const PricingPage: React.FC = () => {
     };
     load();
   }, []);
+
+  const isSubscribed = (plan: SubscriptionPlan) => {
+    return user?.subscriptionPlanId === plan.id;
+  };
 
   const onSubscribe = async (plan: SubscriptionPlan) => {
     const planId = plan.id;
@@ -133,12 +140,14 @@ const PricingPage: React.FC = () => {
               {/* Subscribe Button */}
               <div className="mt-6 flex items-center justify-between">
                 <Button
-                  className="rounded-full px-6 py-2.5 font-semibold shadow-lg transition-all duration-300 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 hover:shadow-xl"
+                  className={`rounded-full px-6 py-2.5 font-semibold shadow-lg transition-all duration-300 bg-gradient-to-r ${isSubscribed(plan) ? 'from-gray-600 to-gray-700 disabled' : 'from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'}  hover:shadow-xl`}
                   onClick={() => onSubscribe(plan)}
                   disabled={!!checkoutLoading}
                 >
                   {checkoutLoading === plan.id ? (
                     <span className="flex items-center gap-2">Processing...</span>
+                  ) : isSubscribed(plan) ? (
+                    'Subscribed'
                   ) : (
                     'Subscribe'
                   )}
