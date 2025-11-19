@@ -19,9 +19,10 @@ export interface User {
   isVerified?: boolean;
   currentHashedRefreshToken: string | null;
   isActive: boolean;
-  isSocialAccount ?: boolean;
+  isSocialAccount?: boolean;
   createdAt: string;
   updatedAt: string;
+  subscriptionPlanId?: string | null;
 }
 
 // ## REQUEST
@@ -60,7 +61,7 @@ export interface ResendEmailResponse {
 
 export interface RefreshTokenResponse {
   access_token: string;
-  refresh_token: string
+  refresh_token: string;
 }
 
 // ## INITSTATE - Dựa theo initialState trong authSlice
