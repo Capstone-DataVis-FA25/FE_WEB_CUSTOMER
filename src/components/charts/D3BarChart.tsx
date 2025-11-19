@@ -940,41 +940,60 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .attr('y', d => yScale(d[key] as number))
           .attr('height', d => innerHeight - yScale(d[key] as number));
 
-        // Add bar values if showPointValues is enabled (matching LineChart behavior)
-        if (showPointValues) {
-          g.selectAll(`.bar-value-${keyIndex}`)
-            .data(processedData)
-            .enter()
-            .append('text')
-            .attr('class', `bar-value-${keyIndex}`)
-            .attr('x', d => {
-              const base = (xScale(String(d[xAxisKey])) || 0) + (xSubScale(key) || 0);
-              return base + xSubScale.bandwidth() / 2;
-            })
-            .attr('y', d => {
-              return yScale(d[key] as number) - 8; // Position above the bar
-            })
-            .attr('text-anchor', 'middle')
-            .attr('fill', textColor)
-            .style('font-size', `${Math.max(responsiveFontSize.axis - 2, 9)}px`)
-            .style('font-weight', '600')
-            .style('opacity', 0)
-            .style(
-              'text-shadow',
-              isDarkMode ? '1px 1px 2px rgba(0,0,0,0.8)' : '1px 1px 2px rgba(255,255,255,0.8)'
-            )
-            .text(d => {
-              const yValue = d[key] as number;
-              return yAxisFormatter ? yAxisFormatter(yValue) : String(yValue);
-            })
-            .transition()
-            .delay(keyIndex * 100 + animationDuration)
-            .duration(300)
-            .ease(d3.easeBackOut)
-            .style('opacity', 1);
-        }
+        // Note: Bar values are now shown as category totals outside the loop
       });
-    } else {
+    }
+
+    // Add aggregated values for grouped bars if showPointValues is enabled
+    // Show one value per X-axis category (total of all series) instead of per bar
+    if (barType === 'grouped' && showPointValues) {
+      // Calculate totals for each x-axis category
+      const categoryTotals = processedData.map(d => {
+        const total = yAxisKeys
+          .filter(k => !disabledBars.includes(k))
+          .reduce((sum, key) => sum + ((d[key] as number) || 0), 0);
+        return { xValue: d[xAxisKey], total };
+      });
+
+      g.selectAll('.grouped-bar-total')
+        .data(categoryTotals)
+        .enter()
+        .append('text')
+        .attr('class', 'grouped-bar-total')
+        .attr('x', d => (xScale(String(d.xValue)) || 0) + xScale.bandwidth() / 2)
+        .attr('y', d => {
+          // Find the highest bar in this category group
+          const maxValue = Math.max(
+            ...yAxisKeys
+              .filter(k => !disabledBars.includes(k))
+              .map(k => {
+                const dataPoint = processedData.find(p => p[xAxisKey] === d.xValue);
+                return (dataPoint?.[k] as number) || 0;
+              })
+          );
+          return yScale(maxValue) - 8;
+        })
+        .attr('text-anchor', 'middle')
+        .attr('fill', textColor)
+        .style('font-size', `${Math.max(responsiveFontSize.axis - 2, 9)}px`)
+        .style('font-weight', '600')
+        .style('opacity', 0)
+        .style(
+          'text-shadow',
+          isDarkMode ? '1px 1px 2px rgba(0,0,0,0.8)' : '1px 1px 2px rgba(255,255,255,0.8)'
+        )
+        .text(d => {
+          return yAxisFormatter ? yAxisFormatter(d.total) : String(d.total);
+        })
+        .transition()
+        .delay(animationDuration)
+        .duration(300)
+        .ease(d3.easeBackOut)
+        .style('opacity', 1);
+    }
+
+    // Stacked bars logic
+    if (barType === 'stacked') {
       const stackedData = d3
         .stack<ChartDataPoint>()
         .keys(yAxisKeys)
@@ -1103,6 +1122,40 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .attr('y', d => yScale(d[1]))
           .attr('height', d => yScale(d[0]) - yScale(d[1]));
       });
+
+      // Add total values on top of stacked bars if showPointValues is enabled
+      if (showPointValues) {
+        // Calculate totals for each x-axis category
+        const totals = processedData.map(d => {
+          const total = yAxisKeys.reduce((sum, key) => sum + ((d[key] as number) || 0), 0);
+          return { xValue: d[xAxisKey], total };
+        });
+
+        g.selectAll('.stacked-bar-total')
+          .data(totals)
+          .enter()
+          .append('text')
+          .attr('class', 'stacked-bar-total')
+          .attr('x', d => (xScale(String(d.xValue)) || 0) + xScale.bandwidth() / 2)
+          .attr('y', d => yScale(d.total) - 5)
+          .attr('text-anchor', 'middle')
+          .attr('fill', textColor)
+          .style('font-size', `${Math.max(responsiveFontSize.axis - 3, 8)}px`)
+          .style('font-weight', '500')
+          .style('opacity', 0)
+          .style(
+            'text-shadow',
+            isDarkMode ? '1px 1px 2px rgba(0,0,0,0.8)' : '1px 1px 2px rgba(255,255,255,0.8)'
+          )
+          .text(d => {
+            return yAxisFormatter ? yAxisFormatter(d.total) : String(d.total);
+          })
+          .transition()
+          .delay(animationDuration)
+          .duration(300)
+          .ease(d3.easeBackOut)
+          .style('opacity', 1);
+      }
     }
 
     // Axis labels with formatter symbols (matching LineChart implementation)

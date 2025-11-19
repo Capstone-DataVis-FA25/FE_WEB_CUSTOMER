@@ -16,7 +16,7 @@ const DisplayOptionsSettings: React.FC = () => {
       {/* Always visible */}
       <DisplayCheckboxes />
 
-      {/* Line chart only */}
+      {/* Line chart only (already includes LineAdvancedOptions inside) */}
       {currentChartType === ChartType.Line && <LineChartStyling />}
 
       {/* Always visible */}
