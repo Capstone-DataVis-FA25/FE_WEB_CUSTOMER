@@ -27,22 +27,10 @@ const ChartFormatterSettings: React.FC = () => {
   const { handleConfigChange } = useChartEditorActions();
   const { currentDataset } = useDataset();
 
-  // Only show for charts that support X/Y axis formatters (not Pie/Donut)
-  if (!chartConfig || !hasFormatters(chartConfig)) {
-    return null;
-  }
+  // Get axis configuration to find selected columns (MUST be before any early returns)
+  const axisConfigs = chartConfig && 'axisConfigs' in chartConfig ? chartConfig.axisConfigs : null;
 
-  const formatters = chartConfig.formatters || {
-    useYFormatter: false,
-    useXFormatter: false,
-    yFormatterType: 'none' as const,
-    xFormatterType: 'none' as const,
-  };
-
-  // Get axis configuration to find selected columns
-  const axisConfigs = 'axisConfigs' in chartConfig ? chartConfig.axisConfigs : null;
-
-  // Detect data types for X and Y axis columns
+  // Detect data types for X and Y axis columns (MUST be before any early returns)
   const { xAxisDataType, yAxisDataTypes, xAxisColumnName, yAxisColumnNames } = useMemo(() => {
     if (!axisConfigs || !currentDataset?.headers) {
       return {
@@ -82,6 +70,19 @@ const ChartFormatterSettings: React.FC = () => {
       yAxisColumnNames,
     };
   }, [axisConfigs, currentDataset?.headers]);
+
+  // Only show for charts that support X/Y axis formatters (not Pie/Donut)
+  // IMPORTANT: This early return MUST be AFTER all hooks
+  if (!chartConfig || !hasFormatters(chartConfig)) {
+    return null;
+  }
+
+  const formatters = chartConfig.formatters || {
+    useYFormatter: false,
+    useXFormatter: false,
+    yFormatterType: 'none' as const,
+    xFormatterType: 'none' as const,
+  };
 
   // Y-Axis Formatter Handlers
   const handleYFormatterTypeChange = (type: FormatterType) => {

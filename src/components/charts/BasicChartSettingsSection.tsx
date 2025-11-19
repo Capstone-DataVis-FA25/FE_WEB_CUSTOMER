@@ -9,8 +9,8 @@ import { useChartEditor } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
 import BarTypeSettings from './BarTypeSettings';
 import AreaTypeSettings from './AreaTypeSettings';
+import ScatterTypeSettings from './ScatterTypeSettings';
 import DisplayOptionsSettings from './DisplayOptionsSettings';
-import ChartFormatterSettings from './ChartFormatterSettingSection';
 
 const BasicChartSettingsSection: React.FC = () => {
   const { t } = useTranslation();
@@ -81,17 +81,17 @@ const BasicChartSettingsSection: React.FC = () => {
                   </div>
                 )}
 
+                {/* Scatter Type Settings */}
+                {currentChartType === ChartType.Scatter && (
+                  <div>
+                    <ScatterTypeSettings />
+                  </div>
+                )}
+
                 {/* Display Options */}
                 <div>
                   <DisplayOptionsSettings />
                 </div>
-
-                {/* Formatter Settings - Show for charts with X/Y axes (not Pie/Donut) */}
-                {currentChartType !== ChartType.Pie && currentChartType !== ChartType.Donut && (
-                  <div>
-                    <ChartFormatterSettings />
-                  </div>
-                )}
               </CardContent>
             </motion.div>
           )}

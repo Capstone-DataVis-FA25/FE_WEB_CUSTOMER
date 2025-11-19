@@ -960,9 +960,15 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
 
     // Add axis labels
     if (xAxisLabel && showAxisLabels) {
+      // Position X-axis label considering legend position
+      const xLabelYPosition =
+        legendPosition === 'bottom'
+          ? innerHeight + (currentWidth < 768 ? 30 : 35) // Closer to axis when legend below
+          : innerHeight + (currentWidth < 768 ? 40 : 50); // Normal position otherwise
+
       g.append('text')
         .attr('x', innerWidth / 2)
-        .attr('y', innerHeight + (currentWidth < 768 ? 40 : 50))
+        .attr('y', xLabelYPosition)
         .attr('text-anchor', 'middle')
         .attr('fill', textColor)
         .style('font-size', `${fontSize.label}px`)

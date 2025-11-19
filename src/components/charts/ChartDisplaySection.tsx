@@ -324,7 +324,7 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
               xAxisKey: xAxisKeyName,
               // Support multiple series: pass all visible series as yAxisKeys
               yAxisKey: yKey,
-              yAxisKeys: yAxisKeysNames as string[],
+              yAxisKeys: yAxisKeysNames as string[], // Pass all series for multi-series scatter
 
               // Optional: colorKey for grouping by category
               colorKey: scatterConfig.colorKey, // Should be a column name from dataset
@@ -351,8 +351,10 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
 
               // Title and labels
               title: safeChartConfig.title,
-              xAxisLabel: axisConfigs.xAxisLabel,
-              yAxisLabel: axisConfigs.yAxisLabel,
+              xAxisLabel: axisConfigs.xAxisLabel || xAxisKeyName, // Use column name as default
+              yAxisLabel:
+                axisConfigs.yAxisLabel ||
+                (yAxisKeysNames.length === 1 ? yAxisKeysNames[0] : 'Value'), // Use column name for single series, or 'Value' for multiple
 
               // Display options
               showGrid: safeChartConfig.showGrid,
@@ -432,6 +434,7 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
                 theme={barConfig.theme}
                 backgroundColor={barConfig.backgroundColor}
                 showTooltip={barConfig.showTooltip}
+                showPointValues={barConfig.showPointValues}
                 titleFontSize={barConfig.titleFontSize}
                 labelFontSize={barConfig.labelFontSize}
                 legendFontSize={barConfig.legendFontSize}
@@ -459,13 +462,16 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
               yAxisKeys: yAxisKeysNames as string[],
               colors: colors,
               title: safeChartConfig.title,
-              xAxisLabel: axisConfigs.xAxisLabel,
-              yAxisLabel: axisConfigs.yAxisLabel,
+              xAxisLabel: axisConfigs.xAxisLabel || xAxisKeyName, // Use column name as default
+              yAxisLabel:
+                axisConfigs.yAxisLabel ||
+                (yAxisKeysNames.length === 1 ? yAxisKeysNames[0] : 'Value'), // Use column name for single series, or 'Value' for multiple
               showLegend: safeChartConfig.showLegend,
               showGrid: safeChartConfig.showGrid,
               animationDuration: safeChartConfig.animationDuration,
               disabledLines: areaConfig.disabledLines,
               showPoints: areaConfig.showPoints,
+              showPointValues: areaConfig.showPointValues,
               showStroke: areaConfig.showStroke,
               curve: curveOptions[areaConfig.curve as keyof typeof curveOptions],
               enableZoom: areaConfig.enableZoom,
