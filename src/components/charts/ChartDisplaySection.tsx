@@ -283,8 +283,8 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
                 xAxisRotation={axisConfigs.xAxisRotation}
                 yAxisRotation={axisConfigs.yAxisRotation}
                 showAxisLabels={axisConfigs.showAxisLabels}
-                yAxisFormatter={yAxisFormatterFn}
-                xAxisFormatter={xAxisFormatterFn}
+                yAxisFormatter={formatters.useYFormatter ? yAxisFormatterFn : undefined}
+                xAxisFormatter={formatters.useXFormatter ? xAxisFormatterFn : undefined}
                 showAxisTicks={axisConfigs.showAxisTicks}
                 showAllXAxisTicks={axisConfigs.showAllXAxisTicks}
                 enableZoom={lineConfig.enableZoom}
@@ -379,8 +379,8 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
               xAxisRotation: axisConfigs.xAxisRotation,
 
               // Formatters
-              yAxisFormatter: yAxisFormatterFn,
-              xAxisFormatter: xAxisFormatterFn,
+              yAxisFormatter: formatters.useYFormatter ? yAxisFormatterFn : undefined,
+              xAxisFormatter: formatters.useXFormatter ? xAxisFormatterFn : undefined,
 
               // Font sizes
               fontSize: safeCommonProps.fontSize,
@@ -427,8 +427,8 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
                 showAxisLabels={axisConfigs.showAxisLabels}
                 showAxisTicks={axisConfigs.showAxisTicks}
                 showAllXAxisTicks={axisConfigs.showAllXAxisTicks}
-                yAxisFormatter={yAxisFormatterFn}
-                xAxisFormatter={xAxisFormatterFn}
+                yAxisFormatter={formatters.useYFormatter ? yAxisFormatterFn : undefined}
+                xAxisFormatter={formatters.useXFormatter ? xAxisFormatterFn : undefined}
                 yAxisStart={axisConfigs.yAxisStart}
                 xAxisStart={axisConfigs.xAxisStart}
                 theme={barConfig.theme}
@@ -489,8 +489,8 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
               titleFontSize: areaConfig.titleFontSize,
               labelFontSize: areaConfig.labelFontSize,
               legendFontSize: areaConfig.legendFontSize,
-              yAxisFormatter: yAxisFormatterFn,
-              xAxisFormatter: xAxisFormatterFn,
+              yAxisFormatter: formatters.useYFormatter ? yAxisFormatterFn : undefined,
+              xAxisFormatter: formatters.useXFormatter ? xAxisFormatterFn : undefined,
             };
             return <D3AreaChart {...areaProps} />;
           }
@@ -585,8 +585,8 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
           zoomExtent: cyclePlotConfig?.zoomExtent,
 
           // Formatters
-          yAxisFormatter: yAxisFormatterFn,
-          xAxisFormatter: xAxisFormatterFn,
+          yAxisFormatter: formatters.useYFormatter ? yAxisFormatterFn : undefined,
+          xAxisFormatter: formatters.useXFormatter ? xAxisFormatterFn : undefined,
 
           // Font sizes
           fontSize: cyclePlotConfig?.fontSize || { axis: 12, label: 14, title: 16 },

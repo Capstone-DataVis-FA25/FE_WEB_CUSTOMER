@@ -203,7 +203,26 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
   }, [theme]);
 
   useEffect(() => {
-    if (!svgRef.current || !data.length) return;
+    if (!svgRef.current || !data.length) {
+      // Clear SVG if no data
+      if (svgRef.current) {
+        d3.select(svgRef.current).selectAll('*').remove();
+      }
+      return;
+    }
+
+    // Validate that xAxisKey exists in data
+    if (!data[0] || !(xAxisKey in data[0])) {
+      console.error('D3AreaChart: xAxisKey not found in data:', xAxisKey);
+      return;
+    }
+
+    // Validate that at least one yAxisKey exists in data
+    const validYKeys = yAxisKeys.filter(key => key in data[0]);
+    if (validYKeys.length === 0) {
+      console.error('D3AreaChart: No valid yAxisKeys found in data:', yAxisKeys);
+      return;
+    }
 
     // Calculate dynamic width based on number of data points
     const xValues = data.map(d => d[xAxisKey]);
@@ -547,7 +566,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             .attr('stroke', chartBackgroundColor)
             .attr('stroke-width', 2)
             .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
-            .on('mouseover', function (_event, d) {
+            .on('mouseover', function (event, d) {
               if (!showTooltip) return;
 
               d3.select(this)
@@ -596,9 +615,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
                 createRankLine(rank, data.length),
               ];
 
-              // Get position for tooltip
-              const xPos = xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey]));
-              const yPos = yScale(value);
+              // Get mouse position relative to the chart
+              const [mouseX, mouseY] = d3.pointer(event, g.node());
 
               // Reuse existing tooltip group or create if doesn't exist
               let tooltipGroup = g.select('.tooltip') as d3.Selection<
@@ -611,20 +629,48 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
                 tooltipGroup = g.append('g').attr('class', 'tooltip').style('opacity', 0);
               }
 
-              // Render enhanced tooltip (this updates content)
-              renderD3Tooltip(tooltipGroup, {
+              // Store tooltip config for mousemove updates
+              const tooltipConfig = {
                 lines: tooltipLines,
                 isDarkMode,
                 textColor,
                 strokeColor: currentColors[key],
-                position: { x: xPos, y: yPos },
+                position: { x: mouseX, y: mouseY },
                 containerWidth: innerWidth,
                 containerHeight: innerHeight,
-                preferPosition: 'auto',
-              });
+                preferPosition: 'auto' as const,
+              };
+
+              // Store config on the element for mousemove
+              (tooltipGroup.node() as any).__tooltipConfig = tooltipConfig;
+
+              // Render enhanced tooltip (this updates content)
+              renderD3Tooltip(tooltipGroup, tooltipConfig);
 
               // Smooth fade in
               tooltipGroup.transition().duration(200).style('opacity', 1);
+            })
+            .on('mousemove', function (event) {
+              if (!showTooltip) return;
+
+              // Update tooltip position on mouse move
+              const [mouseX, mouseY] = d3.pointer(event, g.node());
+
+              const tooltipGroup = g.select('.tooltip') as d3.Selection<
+                SVGGElement,
+                unknown,
+                null,
+                undefined
+              >;
+
+              if (!tooltipGroup.empty()) {
+                // Get stored config and update position
+                const tooltipConfig = (tooltipGroup.node() as any).__tooltipConfig;
+                if (tooltipConfig) {
+                  tooltipConfig.position = { x: mouseX, y: mouseY };
+                  renderD3Tooltip(tooltipGroup, tooltipConfig);
+                }
+              }
             })
             .on('mouseout', function () {
               d3.select(this).transition().duration(200).attr('r', 4).attr('stroke-width', 2);
@@ -697,7 +743,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
           .attr('fill', 'transparent')
           .attr('pointer-events', 'all')
           .style('cursor', 'crosshair')
-          .on('mouseover', function (_event, d) {
+          .on('mouseover', function (event, d) {
             // Check if this data point has valid value
             const value = d[key] as number;
             if (value == null || isNaN(value)) return; // Skip invalid data points
@@ -747,9 +793,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
               createRankLine(rank, data.length),
             ];
 
-            // Get position for tooltip
-            const xPos = xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey]));
-            const yPos = yScale(value);
+            // Get mouse position relative to the chart
+            const [mouseX, mouseY] = d3.pointer(event, g.node());
 
             // Reuse existing tooltip group or create if doesn't exist
             let tooltipGroup = g.select('.tooltip') as d3.Selection<
@@ -762,20 +807,46 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
               tooltipGroup = g.append('g').attr('class', 'tooltip').style('opacity', 0);
             }
 
-            // Render enhanced tooltip (this updates content)
-            renderD3Tooltip(tooltipGroup, {
+            // Store tooltip config for mousemove updates
+            const tooltipConfig = {
               lines: tooltipLines,
               isDarkMode,
               textColor,
               strokeColor: currentColors[key],
-              position: { x: xPos, y: yPos },
+              position: { x: mouseX, y: mouseY },
               containerWidth: innerWidth,
               containerHeight: innerHeight,
-              preferPosition: 'auto',
-            });
+              preferPosition: 'auto' as const,
+            };
+
+            // Store config on the element for mousemove
+            (tooltipGroup.node() as any).__tooltipConfig = tooltipConfig;
+
+            // Render enhanced tooltip (this updates content)
+            renderD3Tooltip(tooltipGroup, tooltipConfig);
 
             // Smooth fade in
             tooltipGroup.transition().duration(200).style('opacity', 1);
+          })
+          .on('mousemove', function (event) {
+            // Update tooltip position on mouse move
+            const [mouseX, mouseY] = d3.pointer(event, g.node());
+
+            const tooltipGroup = g.select('.tooltip') as d3.Selection<
+              SVGGElement,
+              unknown,
+              null,
+              undefined
+            >;
+
+            if (!tooltipGroup.empty()) {
+              // Get stored config and update position
+              const tooltipConfig = (tooltipGroup.node() as any).__tooltipConfig;
+              if (tooltipConfig) {
+                tooltipConfig.position = { x: mouseX, y: mouseY };
+                renderD3Tooltip(tooltipGroup, tooltipConfig);
+              }
+            }
           })
           .on('mouseout', function () {
             // Reset area opacity

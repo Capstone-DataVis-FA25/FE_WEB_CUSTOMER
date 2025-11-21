@@ -9,6 +9,7 @@ import BarAdvancedOptions from './BarAdvancedOptions';
 enum BarType {
   Grouped = 'grouped',
   Stacked = 'stacked',
+  Diverging = 'diverging',
 }
 
 const BarTypeSettings: React.FC = () => {
@@ -20,7 +21,9 @@ const BarTypeSettings: React.FC = () => {
 
   const cfg: any = chartConfig.config || {};
 
-  const [localBarType, setLocalBarType] = useState<'grouped' | 'stacked'>(cfg.barType ?? 'grouped');
+  const [localBarType, setLocalBarType] = useState<'grouped' | 'stacked' | 'diverging'>(
+    cfg.barType ?? 'grouped'
+  );
   const [localBarWidth, setLocalBarWidth] = useState<number>(cfg.barWidth ?? 24);
   const [localBarSpacing, setLocalBarSpacing] = useState<number>(cfg.barSpacing ?? 8);
 
@@ -41,7 +44,7 @@ const BarTypeSettings: React.FC = () => {
         <select
           value={localBarType}
           onChange={e => {
-            const v = e.target.value as 'grouped' | 'stacked';
+            const v = e.target.value as 'grouped' | 'stacked' | 'diverging';
             setLocalBarType(v);
             handleConfigChange({ config: { barType: v } as any });
           }}
@@ -53,6 +56,9 @@ const BarTypeSettings: React.FC = () => {
           <option value={BarType.Stacked}>
             {t('chart_editor_stacked', 'Stacked - Show composition')}
           </option>
+          <option value={BarType.Diverging}>
+            {t('chart_editor_diverging', 'Diverging Stacked - Positive vs Negative')}
+          </option>
         </select>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
           {localBarType === BarType.Grouped
@@ -60,10 +66,15 @@ const BarTypeSettings: React.FC = () => {
                 'bar_type_grouped_hint',
                 'Grouped bars show each series separately, making it easy to compare individual values'
               )
-            : t(
-                'bar_type_stacked_hint',
-                'Stacked bars show how each part contributes to the total, useful for seeing composition'
-              )}
+            : localBarType === BarType.Stacked
+              ? t(
+                  'bar_type_stacked_hint',
+                  'Stacked bars show how each part contributes to the total, useful for seeing composition'
+                )
+              : t(
+                  'bar_type_diverging_hint',
+                  'Diverging stacked bars split positive and negative contributions around a zero baseline'
+                )}
         </p>
       </div>
 
