@@ -49,7 +49,7 @@ export const CHART_VALIDATION_RULES: Partial<
       description: 'X-axis should be categorical data (text)',
     },
     yAxis: {
-      allowedTypes: ['number'],
+      allowedTypes: ['number', 'date'],
       description: 'Y-axis must be numeric values',
     },
   },

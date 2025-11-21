@@ -312,7 +312,7 @@ export interface SubBarChartConfig extends BaseChartConfig {
   disabledBars: string[];
   showPoints: boolean;
   showPointValues: boolean; // Show values on bars
-  barType: 'grouped' | 'stacked';
+  barType: 'grouped' | 'stacked' | 'diverging';
   barWidth: number;
   barSpacing: number;
 }

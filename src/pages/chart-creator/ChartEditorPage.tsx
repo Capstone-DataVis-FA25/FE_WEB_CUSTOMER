@@ -373,6 +373,13 @@ const ChartEditorPage: React.FC = () => {
     if (initialDatasetId && initialDatasetId !== datasetId) {
       console.log('[ChartEditorPage] Setting initial datasetId in create mode', initialDatasetId);
       setDatasetId(initialDatasetId);
+
+      // Update URL to persist datasetId
+      if (!datasetIdFromUrl) {
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.set('datasetId', initialDatasetId);
+        navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
+      }
     }
   }, [mode]); // Only run when mode changes
 
@@ -701,6 +708,17 @@ const ChartEditorPage: React.FC = () => {
       return;
     }
 
+    // Validate datasetId
+    if (!datasetId) {
+      console.error('[handleCreateChart] No datasetId available', {
+        datasetId,
+        datasetIdFromUrl,
+        locationState: locationState?.datasetId,
+      });
+      showError('Dataset is required to create a chart');
+      return;
+    }
+
     setCurrentModalAction('save');
     modalConfirm.openConfirm(async () => {
       try {
@@ -720,11 +738,17 @@ const ChartEditorPage: React.FC = () => {
         const createData: ChartRequest = {
           name: editableName.trim(),
           description: editableDescription.trim(),
-          datasetId: datasetId || '',
+          datasetId: datasetId,
           type: currentChartType ?? ChartType.Line,
           config: chartConfig as unknown as ChartRequest['config'],
           imageUrl, // Include chart snapshot
         };
+
+        console.log('[handleCreateChart] Creating chart with data:', {
+          name: createData.name,
+          datasetId: createData.datasetId,
+          type: createData.type,
+        });
 
         const result = await createChart(createData).unwrap();
         showSuccess(t('chart_create_success', 'Chart created successfully'));
@@ -797,6 +821,13 @@ const ChartEditorPage: React.FC = () => {
   const handleDatasetSelected = async (selectedDatasetId: string) => {
     setDatasetId(selectedDatasetId);
     setShowDatasetModal(false);
+
+    // Update URL with datasetId to persist it
+    if (mode === 'create') {
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.set('datasetId', selectedDatasetId);
+      navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
+    }
 
     try {
       if (chartConfig) {

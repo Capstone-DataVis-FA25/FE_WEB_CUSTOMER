@@ -147,9 +147,23 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
   // DataHeaders: Use processed headers (aggregated) if provided, otherwise fall back to original dataset headers
   const dataHeaders = (processedHeaders as any[]) || currentDataset?.headers || [];
 
+  // Get barType from config to check for diverging mode
+  const barType =
+    chartType === ChartType.Bar && hasAxisConfigs(chartConfig)
+      ? (chartConfig.axisConfigs as any)?.barType
+      : undefined;
+
   // Filter headers valid for Y-axis (series data) based on chart type
   // For line/bar/area charts, Y-axis must be numeric
-  const validYAxisHeaders = filterHeadersByAxisType(dataHeaders, chartType, 'y');
+  // Exception: For diverging bar charts, allow date columns as well (to represent positive/negative timelines)
+  let validYAxisHeaders = filterHeadersByAxisType(dataHeaders, chartType, 'y');
+  if (chartType === ChartType.Bar && barType === 'diverging') {
+    // For diverging bars, also allow date columns
+    const dateHeaders = dataHeaders.filter((h: any) => h.type === 'date');
+    // Merge numeric + date headers, remove duplicates by id
+    const combinedHeaders = [...validYAxisHeaders, ...dateHeaders];
+    validYAxisHeaders = Array.from(new Map(combinedHeaders.map((h: any) => [h.id, h])).values());
+  }
 
   // Available columns: Only headers that are valid for Y-axis (series)
   const availableColumns = validYAxisHeaders.map(h => h.id);
@@ -190,7 +204,8 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
         const formatterUpdates: any = {
           ...currentFormatters,
           yFormatterType: autoFormatterType,
-          useYFormatter: autoFormatterType !== 'none',
+          // Do NOT auto-enable formatter; user decides explicitly
+          useYFormatter: false,
         };
 
         // For number type, check if data looks like years (disable grouping)
@@ -270,7 +285,8 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
         const formatterUpdates: any = {
           ...currentFormatters,
           yFormatterType: autoFormatterType,
-          useYFormatter: autoFormatterType !== 'none',
+          // Default off; let user opt-in to formatted display
+          useYFormatter: false,
         };
 
         // For number type, check if data looks like years (disable grouping)
@@ -538,9 +554,11 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
                                       </option>
                                     ))}
                                 </select>
-                                {/* Hint: standardized across charts */}
+                                {/* Hint: diverging allows date, others require number */}
                                 <p className="text-xs text-muted-foreground italic mt-1">
-                                  {`💡 Value must be numeric values (number)`}
+                                  {barType === 'diverging'
+                                    ? `💡 Value can be numeric or date (for timeline positive/negative split)`
+                                    : `💡 Value must be numeric values (number)`}
                                 </p>
                               </div>
                             </div>
