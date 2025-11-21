@@ -4,12 +4,13 @@ import type { DataHeader } from '@/utils/dataProcessors';
 
 interface ChartTabProps {
   processedHeaders?: DataHeader[];
+  setDataId: (dataId: string) => void;
 }
 
-const ChartTab: React.FC<ChartTabProps> = ({ processedHeaders }) => {
+const ChartTab: React.FC<ChartTabProps> = ({ processedHeaders, setDataId }) => {
   return (
     <div className="h-full w-full">
-      <UnifiedChartEditor processedHeaders={processedHeaders} />
+      <UnifiedChartEditor processedHeaders={processedHeaders} setDataId={setDataId} />
     </div>
   );
 };
