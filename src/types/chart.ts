@@ -46,6 +46,8 @@ export interface DatasetFilterCondition {
   operator: string;
   value: DatasetFilterValue;
   valueEnd?: string | number | null;
+  includeStart?: boolean;
+  includeEnd?: boolean;
 }
 
 export interface DatasetFilterColumn {
@@ -53,7 +55,7 @@ export interface DatasetFilterColumn {
   columnId: string;
   columnName: string;
   columnType: DatasetColumnType;
-  conditions: DatasetFilterCondition[]; // OR semantics within a column
+  conditions: DatasetFilterCondition[]; // AND semantics within a column (OR logic covered by equals/not_equals with multiple values)
 }
 
 export type MainChartConfig =
