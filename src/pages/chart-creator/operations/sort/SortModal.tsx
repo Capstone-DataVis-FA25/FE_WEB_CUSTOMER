@@ -70,6 +70,16 @@ export const SortModal: React.FC<SortModalProps> = ({
     setLevels(levels.filter((_, i) => i !== index));
   };
 
+  const handleMoveLevel = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= levels.length) return;
+    const newLevels = [...levels];
+    const temp = newLevels[targetIndex];
+    newLevels[targetIndex] = newLevels[index];
+    newLevels[index] = temp;
+    setLevels(newLevels);
+  };
+
   const handleReset = () => {
     setLevels([]);
     setShowResetConfirm(false);
@@ -134,6 +144,10 @@ export const SortModal: React.FC<SortModalProps> = ({
                       usedColumnIds={levels.map(l => l.columnId)}
                       onUpdate={updated => handleUpdateLevel(index, updated)}
                       onRemove={() => handleRemoveLevel(index)}
+                      onMoveUp={() => handleMoveLevel(index, 'up')}
+                      onMoveDown={() => handleMoveLevel(index, 'down')}
+                      disableMoveUp={index === 0}
+                      disableMoveDown={index === levels.length - 1}
                     />
                   ))}
                 </div>
@@ -180,33 +194,16 @@ export const SortModal: React.FC<SortModalProps> = ({
 
           <div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700">
             <div className="flex gap-2">
-              {showResetConfirm ? (
-                <>
-                  <Button
-                    onClick={handleReset}
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Confirm Reset
-                  </Button>
-                  <Button onClick={() => setShowResetConfirm(false)} variant="outline" size="sm">
-                    Cancel
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  onClick={() => setShowResetConfirm(true)}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  disabled={levels.length === 0}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Reset
-                </Button>
-              )}
+              <Button
+                onClick={() => setShowResetConfirm(true)}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                disabled={levels.length === 0}
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reset
+              </Button>
             </div>
             <div className="flex gap-2">
               <Button onClick={handleCancel} variant="outline" size="sm">
@@ -225,6 +222,33 @@ export const SortModal: React.FC<SortModalProps> = ({
           </div>
         </div>
       </div>
+
+      {showResetConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 select-none">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-sm w-full mx-4 overflow-hidden select-none">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Reset all sort levels?
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Are you sure you want to reset all sort levels? This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-2 p-6 border-t border-gray-200 dark:border-gray-700">
+              <Button
+                onClick={() => setShowResetConfirm(false)}
+                variant="outline"
+                className="flex-1 bg-transparent"
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleReset} variant="destructive" className="flex-1">
+                Confirm Reset
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

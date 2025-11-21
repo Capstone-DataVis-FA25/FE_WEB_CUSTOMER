@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import type { SortLevel } from '@/types/chart';
@@ -18,6 +18,10 @@ interface SortLevelRowProps {
   usedColumnIds: string[];
   onUpdate: (updated: SortLevel) => void;
   onRemove: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  disableMoveUp?: boolean;
+  disableMoveDown?: boolean;
 }
 
 export const SortLevelRow: React.FC<SortLevelRowProps> = ({
@@ -27,6 +31,10 @@ export const SortLevelRow: React.FC<SortLevelRowProps> = ({
   usedColumnIds,
   onUpdate,
   onRemove,
+  onMoveUp,
+  onMoveDown,
+  disableMoveUp,
+  disableMoveDown,
 }) => {
   const selectedColumn = availableColumns.find(c => c.id === level.columnId);
   const columnName = selectedColumn?.name || level.columnId;
@@ -104,15 +112,37 @@ export const SortLevelRow: React.FC<SortLevelRowProps> = ({
           </Select>
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 w-9 p-0 flex-shrink-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500"
-          onClick={onRemove}
-          title="Remove sort level"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 p-0 flex-shrink-0 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:pointer-events-none"
+            onClick={onMoveUp}
+            title="Move up"
+            disabled={disableMoveUp}
+          >
+            <ArrowUp className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 p-0 flex-shrink-0 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:pointer-events-none"
+            onClick={onMoveDown}
+            title="Move down"
+            disabled={disableMoveDown}
+          >
+            <ArrowDown className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 p-0 flex-shrink-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500"
+            onClick={onRemove}
+            title="Remove sort level"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

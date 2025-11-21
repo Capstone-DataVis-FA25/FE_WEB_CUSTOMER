@@ -17,22 +17,34 @@ export const getOperatorsForType = (type: SimpleColumnType): { value: string; la
         { value: 'not_equals', label: 'not equals' },
         { value: 'starts_with', label: 'starts with' },
         { value: 'ends_with', label: 'ends with' },
+        { value: 'is_empty', label: 'is empty' },
+        { value: 'is_not_empty', label: 'is not empty' },
       ];
     case 'number':
       return [
         { value: 'greater_than', label: 'greater than' },
+        { value: 'greater_or_equal', label: 'greater or equal' },
         { value: 'less_than', label: 'less than' },
+        { value: 'less_or_equal', label: 'less or equal' },
         { value: 'equals', label: 'equals' },
         { value: 'not_equals', label: 'not equals' },
-        { value: 'between', label: 'between' },
+        { value: 'between', label: 'between (inclusive)' },
+        { value: 'between_exclusive', label: 'between (exclusive)' },
+        { value: 'is_empty', label: 'is empty' },
+        { value: 'is_not_empty', label: 'is not empty' },
       ];
     case 'date':
       return [
-        { value: 'greater_than', label: 'greater than' },
-        { value: 'less_than', label: 'less than' },
+        { value: 'greater_than', label: 'after' },
+        { value: 'greater_or_equal', label: 'on or after' },
+        { value: 'less_than', label: 'before' },
+        { value: 'less_or_equal', label: 'on or before' },
         { value: 'equals', label: 'equals' },
         { value: 'not_equals', label: 'not equals' },
-        { value: 'between', label: 'between' },
+        { value: 'between', label: 'between (inclusive)' },
+        { value: 'between_exclusive', label: 'between (exclusive)' },
+        { value: 'is_empty', label: 'is empty' },
+        { value: 'is_not_empty', label: 'is not empty' },
       ];
   }
 };
@@ -41,21 +53,36 @@ export const getOperatorsForType = (type: SimpleColumnType): { value: string; la
 export const validateNumberCondition = (
   operator: string,
   value: FilterValueInput,
-  valueEnd?: string | number | null | undefined
+  valueEnd?: string | number | null | undefined,
+  includeStart?: boolean,
+  includeEnd?: boolean
 ): string | null => {
   const isEmpty = (x: any) => x === null || x === undefined || x === '';
   const toNum = (x: any) => (typeof x === 'number' ? x : Number(x));
+  // is_empty and is_not_empty don't require a value
+  if (operator === 'is_empty' || operator === 'is_not_empty') {
+    return null;
+  }
   if (operator === 'equals' || operator === 'not_equals') {
     if (Array.isArray(value)) {
       return value.length === 0 ? 'Select at least one value.' : null;
     }
   }
-  if (operator === 'between') {
+  const isRange = operator === 'between' || operator === 'between_exclusive';
+  if (isRange) {
     if (isEmpty(value) || isEmpty(valueEnd)) return 'Both values are required.';
     const a = toNum(value);
     const b = toNum(valueEnd);
     if (!Number.isFinite(a) || !Number.isFinite(b)) return 'Values must be valid numbers.';
-    if (a > b) return 'Start must be less than or equal to end.';
+    const defaultIncludeStart = operator === 'between';
+    const defaultIncludeEnd = operator === 'between';
+    const leftInclusive = includeStart ?? defaultIncludeStart;
+    const rightInclusive = includeEnd ?? defaultIncludeEnd;
+    const allowEqual = leftInclusive && rightInclusive;
+    if (allowEqual ? a > b : a >= b)
+      return allowEqual
+        ? 'Start must be less than or equal to end.'
+        : 'Start must be less than end.';
     return null;
   }
   if (isEmpty(value)) return 'Value is required.';
@@ -67,6 +94,10 @@ export const validateNumberCondition = (
 // Validate a text condition: required non-empty value
 export const validateTextCondition = (operator: string, value: FilterValueInput): string | null => {
   const isEmpty = (x: any) => x === null || x === undefined || x === '';
+  // is_empty and is_not_empty don't require a value
+  if (operator === 'is_empty' || operator === 'is_not_empty') {
+    return null;
+  }
   if (operator === 'equals' || operator === 'not_equals') {
     if (Array.isArray(value)) {
       return value.length === 0 ? 'Select at least one value.' : null;
@@ -110,15 +141,22 @@ export const validateDateCondition = (
   g: DateGranularity,
   operator: string,
   value: FilterValueInput,
-  valueEnd?: string | number | null | undefined
+  valueEnd?: string | number | null | undefined,
+  includeStart?: boolean,
+  includeEnd?: boolean
 ): string | null => {
   const isEmpty = (x: any) => x === null || x === undefined || x === '';
+  // is_empty and is_not_empty don't require a value
+  if (operator === 'is_empty' || operator === 'is_not_empty') {
+    return null;
+  }
   if (operator === 'equals' || operator === 'not_equals') {
     if (Array.isArray(value)) {
       return value.length === 0 ? 'Select at least one value.' : null;
     }
   }
-  if (operator === 'between') {
+  const isRange = operator === 'between' || operator === 'between_exclusive';
+  if (isRange) {
     if (isEmpty(value) || isEmpty(valueEnd)) return 'Both values are required.';
   } else {
     if (isEmpty(value)) return 'Value is required.';
@@ -126,14 +164,22 @@ export const validateDateCondition = (
   if (g === 'year') {
     const a = Number(value);
     if (!Number.isFinite(a) || a < 0) return 'Year must be a non-negative number.';
-    if (operator === 'between') {
+    if (isRange) {
       const b = Number(valueEnd);
       if (!Number.isFinite(b) || b < 0) return 'Year must be a non-negative number.';
-      if (a > b) return 'Start year must be before or equal to end year.';
+      const defaultIncludeStart = operator === 'between';
+      const defaultIncludeEnd = operator === 'between';
+      const leftInclusive = includeStart ?? defaultIncludeStart;
+      const rightInclusive = includeEnd ?? defaultIncludeEnd;
+      const allowEqual = leftInclusive && rightInclusive;
+      if (allowEqual ? a > b : a >= b)
+        return allowEqual
+          ? 'Start year must be before or equal to end year.'
+          : 'Start year must be before end year.';
     }
     return null;
   }
-  if (operator === 'between' && typeof value === 'string' && typeof valueEnd === 'string') {
+  if (isRange && typeof value === 'string' && typeof valueEnd === 'string') {
     const toTime = (s: string) => {
       if (g === 'year_month') return new Date(`${s}-01`).getTime();
       if (g === 'date' || g === 'datetime') return new Date(s).getTime();
@@ -141,8 +187,14 @@ export const validateDateCondition = (
     };
     const a = toTime(value);
     const b = toTime(valueEnd);
-    if (!Number.isFinite(a) || !Number.isFinite(b) || a > b)
-      return 'Start must be before or equal to end.';
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return 'Start must be before end.';
+    const defaultIncludeStart = operator === 'between';
+    const defaultIncludeEnd = operator === 'between';
+    const leftInclusive = includeStart ?? defaultIncludeStart;
+    const rightInclusive = includeEnd ?? defaultIncludeEnd;
+    const allowEqual = leftInclusive && rightInclusive;
+    if (allowEqual ? a > b : a >= b)
+      return allowEqual ? 'Start must be before or equal to end.' : 'Start must be before end.';
   }
   return null;
 };

@@ -24,6 +24,10 @@ import type { DatasetColumnType, DatasetFilterCondition, DatasetFilterColumn } f
 export type DateGranularity = 'year' | 'year_month' | 'date' | 'datetime';
 
 const displayValueLabel = (value: string) => (value === '' ? '(blank)' : value);
+const isRangeOperator = (operator: string) =>
+  operator === 'between' || operator === 'between_exclusive';
+const isNoValueOperator = (operator: string) =>
+  operator === 'is_empty' || operator === 'is_not_empty';
 
 // Helper component for error icon with tooltip
 const ErrorIcon: React.FC<{ message: string }> = ({ message }) => (
@@ -282,11 +286,19 @@ export const ConditionRow: React.FC<{
   const handleOperatorChange = (nextOperator: string) => {
     let nextValue: DatasetFilterCondition['value'] = condition.value;
     let nextValueEnd: DatasetFilterCondition['valueEnd'] = condition.valueEnd;
+    let nextIncludeStart = condition.includeStart;
+    let nextIncludeEnd = condition.includeEnd;
 
     const isCurrentArrayOperator = operator === 'equals' || operator === 'not_equals';
     const isNextArrayOperator = nextOperator === 'equals' || nextOperator === 'not_equals';
 
-    if (nextOperator === 'equals' || nextOperator === 'not_equals') {
+    if (isNoValueOperator(nextOperator)) {
+      // is_empty and is_not_empty don't need values
+      nextValue = null;
+      nextValueEnd = undefined;
+      nextIncludeStart = undefined;
+      nextIncludeEnd = undefined;
+    } else if (nextOperator === 'equals' || nextOperator === 'not_equals') {
       // If switching from a non-array operator (like contains) to an array operator (equals/not_equals),
       // clear the value to avoid preserving old values
       if (!isCurrentArrayOperator) {
@@ -300,9 +312,14 @@ export const ConditionRow: React.FC<{
             : [];
       }
       nextValueEnd = undefined;
-    } else if (nextOperator === 'between') {
+      nextIncludeStart = undefined;
+      nextIncludeEnd = undefined;
+    } else if (isRangeOperator(nextOperator)) {
       nextValue = null;
       nextValueEnd = null;
+      const defaultInclusive = nextOperator === 'between';
+      nextIncludeStart = defaultInclusive;
+      nextIncludeEnd = defaultInclusive;
     } else {
       // Switching to a non-array operator (like contains, starts_with, etc.)
       nextValueEnd = undefined;
@@ -315,6 +332,8 @@ export const ConditionRow: React.FC<{
         nextValue = null;
       }
       // Otherwise, preserve the existing string value
+      nextIncludeStart = undefined;
+      nextIncludeEnd = undefined;
     }
 
     onUpdate({
@@ -322,8 +341,17 @@ export const ConditionRow: React.FC<{
       operator: nextOperator,
       value: nextValue,
       valueEnd: nextValueEnd,
+      includeStart: nextIncludeStart,
+      includeEnd: nextIncludeEnd,
     });
   };
+
+  const effectiveIncludeStart =
+    condition.includeStart ??
+    (operator === 'between' ? true : operator === 'between_exclusive' ? false : true);
+  const effectiveIncludeEnd =
+    condition.includeEnd ??
+    (operator === 'between' ? true : operator === 'between_exclusive' ? false : true);
 
   let errorMsg: string | null = null;
   if (columnType === 'date') {
@@ -331,10 +359,18 @@ export const ConditionRow: React.FC<{
       dateGranularity as any,
       operator,
       condition.value,
-      condition.valueEnd
+      condition.valueEnd,
+      effectiveIncludeStart,
+      effectiveIncludeEnd
     );
   } else if (columnType === 'number') {
-    errorMsg = validateNumberCondition(operator, condition.value, condition.valueEnd);
+    errorMsg = validateNumberCondition(
+      operator,
+      condition.value,
+      condition.valueEnd,
+      effectiveIncludeStart,
+      effectiveIncludeEnd
+    );
   } else if (columnType === 'text') {
     errorMsg = validateTextCondition(operator, condition.value);
   }
@@ -347,7 +383,7 @@ export const ConditionRow: React.FC<{
     <div className={containerClass}>
       {isOr && (
         <span className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded flex-shrink-0">
-          OR
+          AND
         </span>
       )}
 
@@ -365,7 +401,11 @@ export const ConditionRow: React.FC<{
       </Select>
 
       <div className="flex gap-2 items-end flex-1 min-w-0">
-        {uniquePickerEnabled ? (
+        {isNoValueOperator(operator) ? (
+          <div className="flex-1 min-w-0 text-sm text-gray-600 dark:text-gray-400 italic">
+            No value required
+          </div>
+        ) : uniquePickerEnabled ? (
           <div className="flex-1 min-w-0">
             <UniqueValuePicker
               uniqueValues={uniqueValues}
@@ -380,8 +420,50 @@ export const ConditionRow: React.FC<{
         ) : (
           <>
             {columnType === 'date' ? (
-              operator === 'between' ? (
+              isRangeOperator(operator) ? (
                 <>
+                  <div className="flex flex-wrap gap-2 text-[11px] text-gray-600 dark:text-gray-300 mb-2">
+                    <div className="flex items-center gap-1">
+                      <span>Left bound</span>
+                      <Select
+                        value={effectiveIncludeStart ? 'inclusive' : 'exclusive'}
+                        onValueChange={val =>
+                          onUpdate({
+                            ...condition,
+                            includeStart: val === 'inclusive',
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-7 w-24 text-[11px]">
+                          {effectiveIncludeStart ? '≥ Start' : '> Start'}
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inclusive">≥ Start</SelectItem>
+                          <SelectItem value="exclusive">&gt; Start</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span>Right bound</span>
+                      <Select
+                        value={effectiveIncludeEnd ? 'inclusive' : 'exclusive'}
+                        onValueChange={val =>
+                          onUpdate({
+                            ...condition,
+                            includeEnd: val === 'inclusive',
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-7 w-24 text-[11px]">
+                          {effectiveIncludeEnd ? 'End ≤' : 'End <'}
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inclusive">End ≤</SelectItem>
+                          <SelectItem value="exclusive">End &lt;</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   {dateGranularity === 'year' && (
                     <>
                       <div className="relative flex-1 min-w-0">
@@ -636,9 +718,51 @@ export const ConditionRow: React.FC<{
                   )}
                 </>
               )
-            ) : operator === 'between' ? (
+            ) : isRangeOperator(operator) ? (
               columnType === 'number' ? (
                 <>
+                  <div className="flex flex-wrap gap-2 text-[11px] text-gray-600 dark:text-gray-300 mb-2">
+                    <div className="flex items-center gap-1">
+                      <span>Left bound</span>
+                      <Select
+                        value={effectiveIncludeStart ? 'inclusive' : 'exclusive'}
+                        onValueChange={val =>
+                          onUpdate({
+                            ...condition,
+                            includeStart: val === 'inclusive',
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-7 w-24 text-[11px]">
+                          {effectiveIncludeStart ? '≥ Start' : '> Start'}
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inclusive">≥ Start</SelectItem>
+                          <SelectItem value="exclusive">&gt; Start</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span>Right bound</span>
+                      <Select
+                        value={effectiveIncludeEnd ? 'inclusive' : 'exclusive'}
+                        onValueChange={val =>
+                          onUpdate({
+                            ...condition,
+                            includeEnd: val === 'inclusive',
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-7 w-24 text-[11px]">
+                          {effectiveIncludeEnd ? 'End ≤' : 'End <'}
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inclusive">End ≤</SelectItem>
+                          <SelectItem value="exclusive">End &lt;</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <div className="relative flex-1 min-w-0">
                     <Input
                       type="text"
@@ -693,6 +817,48 @@ export const ConditionRow: React.FC<{
                 </>
               ) : (
                 <>
+                  <div className="flex flex-wrap gap-2 text-[11px] text-gray-600 dark:text-gray-300 mb-2">
+                    <div className="flex items-center gap-1">
+                      <span>Left bound</span>
+                      <Select
+                        value={effectiveIncludeStart ? 'inclusive' : 'exclusive'}
+                        onValueChange={val =>
+                          onUpdate({
+                            ...condition,
+                            includeStart: val === 'inclusive',
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-7 w-24 text-[11px]">
+                          {effectiveIncludeStart ? '≥ Start' : '> Start'}
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inclusive">≥ Start</SelectItem>
+                          <SelectItem value="exclusive">&gt; Start</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span>Right bound</span>
+                      <Select
+                        value={effectiveIncludeEnd ? 'inclusive' : 'exclusive'}
+                        onValueChange={val =>
+                          onUpdate({
+                            ...condition,
+                            includeEnd: val === 'inclusive',
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-7 w-24 text-[11px]">
+                          {effectiveIncludeEnd ? 'End ≤' : 'End <'}
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inclusive">End ≤</SelectItem>
+                          <SelectItem value="exclusive">End &lt;</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <div className="relative flex-1 min-w-0">
                     <Input
                       type="text"
@@ -819,7 +985,7 @@ export const ColumnFilterSection: React.FC<{
       id: generateId(),
       operator: defaultOperator,
       value: null,
-      valueEnd: defaultOperator === 'between' ? null : undefined,
+      valueEnd: isRangeOperator(defaultOperator) ? null : undefined,
     } as DatasetFilterCondition;
   };
 

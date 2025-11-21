@@ -10,7 +10,11 @@ import { useDataset } from '@/features/dataset/useDataset';
 import { useState } from 'react';
 import ToastContainer from '../ui/toast-container';
 
-const ImportExportSection = () => {
+export interface ImportExportSectionProps {
+  setDataId: (dataId: string) => void;
+}
+
+const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const { chartConfig } = useChartEditorRead();
@@ -274,7 +278,7 @@ const ImportExportSection = () => {
             setChartConfig(importData.config);
           }
           if (importData.datasetId) {
-            getDatasetById(importData.datasetId);
+            setDataId(importData.datasetId);
           }
           // Note: datasetId is imported but requires manual dataset selection
           // as we don't automatically load datasets during config import

@@ -38,25 +38,27 @@ export const applyDatasetFilters = (
 
   const toComparableString = (value: unknown) => (value == null ? '' : String(value));
 
-  // AND semantics across columns, OR semantics within a column's conditions
+  // AND semantics across columns, AND semantics within a column's conditions
+  // (OR logic is already covered by equals/not_equals with multiple values)
   const keep = (row: string[]): boolean => {
     for (const col of filters) {
       const idx = colIndex.get(String(col.columnId));
       if (idx == null) continue; // unknown column -> ignore filter
       const value = row[idx] ?? '';
       const valueAsString = toComparableString(value);
-      const passThisColumn = (col.conditions || []).some(cond => {
+      const passThisColumn = (col.conditions || []).every(cond => {
         const op = cond.operator;
-        if (op === 'between') {
+        if (op === 'between' || op === 'between_exclusive') {
           // numeric or date range; try number first then date
           const { va } = cmpNumbers(value, undefined);
+          const inclusive = op === 'between';
           if (va != null) {
             const a = Number.parseFloat(String(cond.value ?? ''));
             const b = Number.parseFloat(String(cond.valueEnd ?? ''));
             if (Number.isNaN(a) || Number.isNaN(b)) return false;
             const lo = Math.min(a, b);
             const hi = Math.max(a, b);
-            return va >= lo && va <= hi;
+            return inclusive ? va >= lo && va <= hi : va > lo && va < hi;
           }
           const tv = parseDate(value);
           const ta = parseDate(String(cond.value ?? ''));
@@ -64,9 +66,25 @@ export const applyDatasetFilters = (
           if (Number.isNaN(tv) || Number.isNaN(ta) || Number.isNaN(tb)) return false;
           const lo = Math.min(ta, tb);
           const hi = Math.max(ta, tb);
-          return tv >= lo && tv <= hi;
+          return inclusive ? tv >= lo && tv <= hi : tv > lo && tv < hi;
         }
         switch (op) {
+          case 'is_empty': {
+            // Check if value is null, undefined, or empty string
+            // For all types (text, number, date), empty means: null, undefined, '', or whitespace-only
+            const rawValue = row[idx];
+            if (rawValue == null) return true;
+            const str = String(rawValue).trim();
+            return str === '';
+          }
+          case 'is_not_empty': {
+            // Check if value is not null, undefined, or empty string
+            // For all types (text, number, date), not empty means: has actual content (even if invalid)
+            const rawValue = row[idx];
+            if (rawValue == null) return false;
+            const str = String(rawValue).trim();
+            return str !== '';
+          }
           case 'equals': {
             const candidates = Array.isArray(cond.value) ? cond.value : [cond.value];
             if (!candidates || candidates.length === 0) return true;
@@ -89,15 +107,33 @@ export const applyDatasetFilters = (
             return valueAsString
               .toLowerCase()
               .endsWith(toComparableString(cond.value ?? '').toLowerCase());
-          case 'greater_than': {
+          case 'greater_than':
+          case 'greater_or_equal': {
             const { va } = cmpNumbers(value, undefined);
             const vb = Number.parseFloat(String(cond.value ?? ''));
-            return va != null && !Number.isNaN(vb) && va > vb;
+            if (va != null && !Number.isNaN(vb)) {
+              return op === 'greater_than' ? va > vb : va >= vb;
+            }
+            const tv = parseDate(value);
+            const ta = parseDate(String(cond.value ?? ''));
+            if (!Number.isNaN(tv) && !Number.isNaN(ta)) {
+              return op === 'greater_than' ? tv > ta : tv >= ta;
+            }
+            return false;
           }
-          case 'less_than': {
+          case 'less_than':
+          case 'less_or_equal': {
             const { va } = cmpNumbers(value, undefined);
             const vb = Number.parseFloat(String(cond.value ?? ''));
-            return va != null && !Number.isNaN(vb) && va < vb;
+            if (va != null && !Number.isNaN(vb)) {
+              return op === 'less_than' ? va < vb : va <= vb;
+            }
+            const tv = parseDate(value);
+            const ta = parseDate(String(cond.value ?? ''));
+            if (!Number.isNaN(tv) && !Number.isNaN(ta)) {
+              return op === 'less_than' ? tv < ta : tv <= ta;
+            }
+            return false;
           }
           case 'after': {
             const tv = parseDate(value);

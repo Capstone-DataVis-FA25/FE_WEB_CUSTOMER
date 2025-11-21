@@ -1035,7 +1035,7 @@ const ChartEditorPage: React.FC = () => {
             style={{ display: activeTab === 'chart' ? 'block' : 'none' }}
             className="flex-1 min-h-0 min-w-0"
           >
-            <ChartTab processedHeaders={processedData.headers} />
+            <ChartTab processedHeaders={processedData.headers} setDataId={setDatasetId} />
           </div>
           <div
             style={{ display: activeTab === 'data' ? 'block' : 'none' }}

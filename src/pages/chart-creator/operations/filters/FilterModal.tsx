@@ -248,7 +248,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                                 </span>
                               )}
                               {cidx < (col.conditions?.length || 0) - 1 && (
-                                <span className="text-blue-700 dark:text-blue-300">OR</span>
+                                <span className="text-blue-700 dark:text-blue-300">AND</span>
                               )}
                             </span>
                           ))}
