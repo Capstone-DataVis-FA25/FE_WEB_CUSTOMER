@@ -6,15 +6,15 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import useToast from '@/hooks/useToast';
 import { useChartEditor, useChartEditorRead } from '@/features/chartEditor';
-import { useDataset } from '@/features/dataset/useDataset';
 import { useState } from 'react';
 import ToastContainer from '../ui/toast-container';
 
 export interface ImportExportSectionProps {
   setDataId: (dataId: string) => void;
+  datasetId?: string;
 }
 
-const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId }) => {
+const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId, datasetId }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const { chartConfig } = useChartEditorRead();
@@ -29,7 +29,6 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId }) 
     updateOriginals,
   } = useChartEditor();
 
-  const { getDatasetById, currentDataset } = useDataset();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Toggle import/export section visibility
@@ -222,7 +221,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId }) 
         name: editableName || 'Untitled Chart',
         description: editableDescription,
         type: chartType,
-        datasetId: currentDataset?.id || '',
+        datasetId: datasetId || '',
         config: chartConfig,
       };
 

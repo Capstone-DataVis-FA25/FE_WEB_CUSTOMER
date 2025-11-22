@@ -5,13 +5,13 @@ import {
   AreaChart,
   Database,
   Eye,
-  Share,
   Trash2,
   Clock,
   RefreshCcw,
   Donut,
   Dot,
   ChartPie,
+  Edit3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -216,18 +216,6 @@ const ChartCard: React.FC<ChartCardProps> = ({
             <Eye className="h-3 w-3" />
             View Chart
           </Button>
-          {/* <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleView}
-            className={`px-2 transition-all duration-200 ${
-              isHovered
-                ? 'opacity-100 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                : 'opacity-100 group-hover:opacity-100'
-            }`}
-          >
-            <Edit3 className="h-3 w-3 mr-1" />{' '}
-          </Button> */}
           <Button
             variant="ghost"
             size="sm"
@@ -238,7 +226,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
                 : 'opacity-100 group-hover:opacity-100'
             }`}
           >
-            <Share className="h-3 w-3" />
+            <Edit3 className="h-3 w-3 mr-1" />
           </Button>
           <Button
             variant="ghost"

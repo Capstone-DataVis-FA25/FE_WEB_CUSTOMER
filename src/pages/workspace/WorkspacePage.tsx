@@ -527,12 +527,12 @@ const WorkspacePage: React.FC = () => {
         onConfirm={modalConfirm.confirm}
         loading={modalConfirm.isLoading}
         type="danger"
-        title={t('dataset_deleteConfirmTitle', 'Delete Dataset')}
+        title={t('deleteConfirmTitle', 'Do you want to delete this?')}
         message={t(
-          'dataset_deleteConfirmMessage',
-          'Are you sure you want to delete this dataset? This action cannot be undone.'
+          'deleteConfirmMessage',
+          'This action cannot be undone if you proceed. Are you sure you want to continue?'
         )}
-        confirmText={t('dataset_delete', 'Delete')}
+        confirmText={t('deleteConfirm', 'Delete')}
         cancelText={t('common_cancel', 'Cancel')}
       />
     </div>
