@@ -437,7 +437,7 @@ const DatasetListPage: React.FC = () => {
                           placeholderText="Select date"
                           withPortal
                           portalId="root-portal"
-                          className="w-full h-11 px-4 pr-10 text-base font-semibold border border-blue-300 focus:border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:border-blue-500 hover:bg-blue-100"
+                          className="w-full h-11 px-4 pr-10 text-base font-semibold !border-blue-300 !border-2 focus:!border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-blue-500 hover:bg-blue-100"
                           customInput={
                             <div className="w-full h-11 flex items-center px-4 pr-10 text-base font-semibold border border-blue-300 focus:border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:border-blue-500 hover:bg-blue-100 cursor-pointer">
                               <input
@@ -492,7 +492,7 @@ const DatasetListPage: React.FC = () => {
                           placeholderText="Select date"
                           withPortal
                           portalId="root-portal"
-                          className="w-full h-11 px-4 pr-10 text-base font-semibold border border-purple-300 focus:border-purple-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:border-purple-500 hover:bg-purple-100"
+                          className="w-full h-11 px-4 pr-10 text-base font-semibold !border-blue-300 !border-2 focus:!border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-blue-500 hover:bg-blue-100"
                           customInput={
                             <div className="w-full h-11 flex items-center px-4 pr-10 text-base font-semibold border border-purple-300 focus:border-purple-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:border-purple-500 hover:bg-purple-100 cursor-pointer">
                               <input
@@ -502,7 +502,7 @@ const DatasetListPage: React.FC = () => {
                                 className="bg-transparent outline-none w-full cursor-pointer"
                                 placeholder="Select date"
                               />
-                              <span className="absolute right-3 pointer-events-none text-purple-400">
+                              <span className="absolute right-3 pointer-events-none text-blue-400">
                                 <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
                                   <rect
                                     x="3"
@@ -510,12 +510,12 @@ const DatasetListPage: React.FC = () => {
                                     width="18"
                                     height="16"
                                     rx="4"
-                                    stroke="#a78bfa"
+                                    stroke="#3b82f6"
                                     strokeWidth="2"
                                   />
                                   <path
                                     d="M8 11h8M8 15h8"
-                                    stroke="#a78bfa"
+                                    stroke="#3b82f6"
                                     strokeWidth="2"
                                     strokeLinecap="round"
                                   />
