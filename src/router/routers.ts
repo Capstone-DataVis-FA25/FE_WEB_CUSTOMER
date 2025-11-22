@@ -53,6 +53,7 @@ const Routers = {
   WORKSPACE_CHARTS: '/workspace/charts',
   CHART_CREATOR: '/chart-creator',
   CHART_EDITOR: '/chart-editor',
+  CHART_HISTORY_VIEW: '/chart-history/view',
 
   // Privacy and Terms
   TERMS_OF_SERVICE: '/terms-of-service',

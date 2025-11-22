@@ -39,6 +39,7 @@ const componentMap = {
   DatasetListPage: lazy(() => import('../pages/workspace/DatasetListPage')),
   ChartListPage: lazy(() => import('../pages/workspace/ChartListPage')),
   ChartEditorPage: lazy(() => import('../pages/chart-creator/ChartEditorPage')),
+  ChartHistoryViewPage: lazy(() => import('../pages/chart-history/ChartHistoryViewPage')),
   PieChartEditorDemo: lazy(() => import('../components/charts/page.example/PieChartEditorDemo')),
   TermsOfServicePage: lazy(() => import('../pages/privacy-terms/TermsOfServicePage')),
   PrivacyPolicyPage: lazy(() => import('../pages/privacy-terms/PrivacyPolicyPage')),

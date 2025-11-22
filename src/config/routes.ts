@@ -259,6 +259,19 @@ export const publicRoutes: RouteConfig[] = [
       description: 'Interactive chart editor with customizable settings and data management',
     },
   },
+  {
+    path: Routers.CHART_HISTORY_VIEW,
+    name: 'chart-history-view',
+    component: 'ChartHistoryViewPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Chart History View',
+      description: 'View historical chart versions in read-only mode',
+      hideFromNav: true,
+    },
+  },
 ];
 
 // Auth routes

@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
-import { GitCompare, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { GitCompare, AlertCircle, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import Routers from '@/router/routers';
 import type { ComparisonResult } from '@/features/chartHistory/chartHistoryTypes';
 import type { ChartHistory } from '@/features/chartHistory/chartHistoryTypes';
 
@@ -18,6 +22,7 @@ interface VersionComparisonModalProps {
   isLoading: boolean;
   datasetIdHistory?: string; // eslint-disable-line @typescript-eslint/no-unused-vars
   selectedHistory?: ChartHistory;
+  chartId?: string; // For navigation to history view page
 }
 
 const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
@@ -26,8 +31,10 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
   comparisonResult,
   isLoading,
   selectedHistory,
+  chartId,
 }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   // Helper to flatten nested differences object to dot notation keysf
   type DiffLeaf = { current: any; historical: any };
@@ -54,6 +61,14 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
   const [showCurrentHistory, setShowCurrentHistory] = useState(false);
   const [showDiffs, setShowDiffs] = useState(false);
 
+  // Handle navigation to history view page
+  const handleViewHistoryChart = () => {
+    if (selectedHistory && chartId) {
+      navigate(`${Routers.CHART_HISTORY_VIEW}?historyId=${selectedHistory.id}&chartId=${chartId}`);
+      onOpenChange(false); // Close modal
+    }
+  };
+
   const SectionToggle: React.FC<{ open: boolean; onClick: () => void; label: string }> = ({
     open,
     onClick,
@@ -75,7 +90,7 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
     obj: any,
     diffKeys: string[],
     side: 'current' | 'historical',
-    flatDiffs: FlatDiffs,
+    _flatDiffs: FlatDiffs,
     otherSideObj: any
   ) => {
     // Convert object to lines with dot notation path
@@ -414,6 +429,22 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
             renderJsonDiff()
           )}
         </div>
+
+        {/* Footer with View Chart Button */}
+        {selectedHistory && chartId && (
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="mr-auto">
+              {t('close', 'Close')}
+            </Button>
+            <Button
+              onClick={handleViewHistoryChart}
+              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              {t('chartHistory.viewHistoricalChart', 'View Historical Chart')}
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

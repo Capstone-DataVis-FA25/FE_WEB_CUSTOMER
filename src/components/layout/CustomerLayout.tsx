@@ -9,6 +9,7 @@ import { PageTransition } from '../../theme/animation';
 
 // import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/useAuth';
+import Routers from '@/router/routers';
 
 interface CustomerLayoutProps {
   children?: React.ReactNode;
@@ -19,7 +20,9 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   const { user, isAuthenticated, logout } = useAuth();
   // const { t } = useTranslation();
   const location = useLocation();
-  const isFullScreen = location.pathname.includes('/chart-editor');
+  const isFullScreen =
+    location.pathname.includes('/chart-editor') ||
+    location.pathname.includes(`${Routers.CHART_HISTORY_VIEW}`);
 
   const handleLogin = () => {
     navigate('/auth');
