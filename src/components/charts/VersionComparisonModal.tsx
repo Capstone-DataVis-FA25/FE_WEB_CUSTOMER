@@ -287,16 +287,16 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
             label={t('chartHistory.comparison.historicalChart', 'Historical Chart Preview')}
           />
           {showChart && (
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 flex items-center justify-center min-h-[320px]">
-              {historicalImageUrl ? (
-                <div className="w-full">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 min-h-[320px] flex items-center justify-center">
+              <div className="w-full h-full flex items-center justify-center">
+                {historicalImageUrl ? (
                   <img
                     src={historicalImageUrl}
                     alt={t(
                       'chartHistory.comparison.historicalChartAlt',
                       'Historical chart snapshot'
                     )}
-                    className="max-w-full h-auto rounded-md border border-gray-200 dark:border-gray-700"
+                    className="max-w-full h-auto rounded-md border border-gray-200 dark:border-gray-700 mx-auto"
                     onError={e => {
                       // Fallback if image fails to load
                       const target = e.target as HTMLImageElement;
@@ -307,18 +307,18 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
                       }
                     }}
                   />
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 dark:text-gray-400">
-                  <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>
-                    {t(
-                      'chartHistory.comparison.noImageAvailable',
-                      'No chart preview available for this version'
-                    )}
-                  </p>
-                </div>
-              )}
+                ) : (
+                  <div className="text-center text-gray-500 dark:text-gray-400">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>
+                      {t(
+                        'chartHistory.comparison.noImageAvailable',
+                        'No chart preview available for this version'
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
