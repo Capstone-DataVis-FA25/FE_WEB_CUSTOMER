@@ -1,4 +1,5 @@
-export { default as WorkspacePage } from './WorkspacePage';
+export { default as DatasetListPage } from './DatasetListPage';
+export { default as ChartListPage } from './ChartListPage';
 export { default as DatasetCard } from './components/DatasetCard';
 export { default as ChartCard } from './components/ChartCard';
 export { default as DatasetTab } from './components/DatasetTab';

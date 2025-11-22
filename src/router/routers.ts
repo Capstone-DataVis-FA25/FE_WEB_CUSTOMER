@@ -49,7 +49,6 @@ const Routers = {
   PIE_CHART_EDITOR_DEMO: '/demo/pie-chart-editor',
 
   //Workspace routes
-  WORKSPACE: '/workspace',
   WORKSPACE_DATASETS: '/workspace/datasets',
   WORKSPACE_CHARTS: '/workspace/charts',
   CHART_CREATOR: '/chart-creator',

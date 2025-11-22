@@ -96,7 +96,7 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center justify-between h-16">
             <SlideInDown className="flex items-center space-x-2">
               <Link
-                to={isAuthenticated ? '/workspace' : '/'}
+                to={isAuthenticated ? `${Routers.HOME}` : '/'}
                 className="flex items-center space-x-2 group"
                 aria-label="Go to home"
               >

@@ -33,7 +33,6 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
-  console.log('DatasetCard dataset:', dataset);
 
   const handleView = (e?: React.MouseEvent) => {
     if (e) {
@@ -60,11 +59,6 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
     } else {
       navigate(Routers.CHART_GALLERY);
     }
-  };
-
-  const handleShare = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
-    // Add share functionality here if needed
   };
 
   const handleDelete = (e: React.MouseEvent) => {

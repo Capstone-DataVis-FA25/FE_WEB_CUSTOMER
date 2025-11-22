@@ -42,7 +42,8 @@ const DatasetTab: React.FC<DatasetTabProps> = ({
     );
   }
 
-  if (allFilteredDatasets.length === 0) {
+  // Hiển thị giao diện rỗng nếu không có dataset sau filter
+  if (filteredDatasets.length === 0) {
     return (
       <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm dark:bg-gray-800/80">
         <CardContent className="flex flex-col items-center justify-center py-16">
@@ -50,19 +51,19 @@ const DatasetTab: React.FC<DatasetTabProps> = ({
             <Database className="h-10 w-10 text-white" />
           </div>
           <h3 className="text-2xl font-semibold mb-2">
-            {searchTerm
+            {searchTerm || allFilteredDatasets.length > 0
               ? t('workspace_noDatasetFound', 'No datasets found')
               : t('workspace_noDatasetYet', 'No datasets yet')}
           </h3>
           <p className="text-muted-foreground text-center mb-6 max-w-md">
-            {searchTerm
-              ? t('workspace_adjustSearchTerms', 'Try adjusting your search terms')
+            {searchTerm || allFilteredDatasets.length > 0
+              ? t('workspace_adjustSearchTerms', 'Try adjusting your search terms or filters')
               : t(
                   'workspace_createFirstDataset',
                   'Create your first dataset to get started with data visualization'
                 )}
           </p>
-          {!searchTerm && (
+          {!searchTerm && allFilteredDatasets.length === 0 && (
             <Button
               onClick={onCreateDataset}
               size="lg"
