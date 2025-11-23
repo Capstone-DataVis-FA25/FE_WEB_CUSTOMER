@@ -259,6 +259,19 @@ export const publicRoutes: RouteConfig[] = [
       description: 'Interactive chart editor with customizable settings and data management',
     },
   },
+  {
+    path: Routers.CHART_HISTORY_VIEW,
+    name: 'chart-history-view',
+    component: 'ChartHistoryViewPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Chart History View',
+      description: 'View historical chart versions in read-only mode',
+      hideFromNav: true,
+    },
+  },
 ];
 
 // Auth routes
@@ -493,41 +506,28 @@ export const protectedRoutes: RouteConfig[] = [
   },
   // Workspace routes
   {
-    path: Routers.WORKSPACE,
-    name: 'workspace',
-    component: 'WorkspacePage',
-    layout: 'USER',
-    isProtected: true,
-    roles: [UserRole.USER],
-    permissions: [Permission.VIEW_PROFILE],
-    meta: {
-      title: 'Workspace',
-      description: 'Manage your datasets and charts',
-    },
-  },
-  {
     path: Routers.WORKSPACE_DATASETS,
     name: 'workspace-datasets',
-    component: 'WorkspacePage',
+    component: 'DatasetListPage',
     layout: 'USER',
     isProtected: true,
     roles: [UserRole.USER],
     permissions: [Permission.VIEW_PROFILE],
     meta: {
-      title: 'Workspace - Datasets',
+      title: 'My Datasets',
       description: 'Manage your datasets',
     },
   },
   {
     path: Routers.WORKSPACE_CHARTS,
     name: 'workspace-charts',
-    component: 'WorkspacePage',
+    component: 'ChartListPage',
     layout: 'USER',
     isProtected: true,
     roles: [UserRole.USER],
     permissions: [Permission.VIEW_PROFILE],
     meta: {
-      title: 'Workspace - Charts',
+      title: 'My Charts',
       description: 'Manage your charts',
     },
   },

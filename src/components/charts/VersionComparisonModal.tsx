@@ -1,15 +1,22 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
-import { GitCompare, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { GitCompare, AlertCircle, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import Routers from '@/router/routers';
 import type { ComparisonResult } from '@/features/chartHistory/chartHistoryTypes';
 import type { ChartHistory } from '@/features/chartHistory/chartHistoryTypes';
+import { useChartEditor } from '@/features/chartEditor';
+import { ModalConfirm } from '@/components/ui/modal-confirm';
+import { useModalConfirm } from '@/hooks/useModal';
 
 interface VersionComparisonModalProps {
   open: boolean;
@@ -18,6 +25,7 @@ interface VersionComparisonModalProps {
   isLoading: boolean;
   datasetIdHistory?: string; // eslint-disable-line @typescript-eslint/no-unused-vars
   selectedHistory?: ChartHistory;
+  chartId?: string; // For navigation to history view page
 }
 
 const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
@@ -26,8 +34,12 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
   comparisonResult,
   isLoading,
   selectedHistory,
+  chartId,
 }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { hasChanges, resetToOriginal, clearChartEditor } = useChartEditor();
+  const modalConfirm = useModalConfirm();
 
   // Helper to flatten nested differences object to dot notation keysf
   type DiffLeaf = { current: any; historical: any };
@@ -54,6 +66,33 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
   const [showCurrentHistory, setShowCurrentHistory] = useState(false);
   const [showDiffs, setShowDiffs] = useState(false);
 
+  // Handle navigation to history view page
+  const handleViewHistoryChart = () => {
+    if (!selectedHistory || !chartId) return;
+
+    // Check if there are unsaved changes
+    if (hasChanges) {
+      modalConfirm.openConfirm(async () => {
+        // User confirmed to leave despite unsaved changes
+        // Reset to original and clear editor state before navigating
+        resetToOriginal();
+        clearChartEditor();
+
+        navigate(
+          `${Routers.CHART_HISTORY_VIEW}?historyId=${selectedHistory.id}&chartId=${chartId}`
+        );
+        onOpenChange(false); // Close modal
+      });
+    } else {
+      // No unsaved changes, navigate directly
+      // Clear editor state to ensure clean state for history view
+      clearChartEditor();
+
+      navigate(`${Routers.CHART_HISTORY_VIEW}?historyId=${selectedHistory.id}&chartId=${chartId}`);
+      onOpenChange(false); // Close modal
+    }
+  };
+
   const SectionToggle: React.FC<{ open: boolean; onClick: () => void; label: string }> = ({
     open,
     onClick,
@@ -75,7 +114,7 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
     obj: any,
     diffKeys: string[],
     side: 'current' | 'historical',
-    flatDiffs: FlatDiffs,
+    _flatDiffs: FlatDiffs,
     otherSideObj: any
   ) => {
     // Convert object to lines with dot notation path
@@ -287,16 +326,16 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
             label={t('chartHistory.comparison.historicalChart', 'Historical Chart Preview')}
           />
           {showChart && (
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 flex items-center justify-center min-h-[320px]">
-              {historicalImageUrl ? (
-                <div className="w-full">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 min-h-[320px] flex items-center justify-center">
+              <div className="w-full h-full flex items-center justify-center">
+                {historicalImageUrl ? (
                   <img
                     src={historicalImageUrl}
                     alt={t(
                       'chartHistory.comparison.historicalChartAlt',
                       'Historical chart snapshot'
                     )}
-                    className="max-w-full h-auto rounded-md border border-gray-200 dark:border-gray-700"
+                    className="max-w-full h-auto rounded-md border border-gray-200 dark:border-gray-700 mx-auto"
                     onError={e => {
                       // Fallback if image fails to load
                       const target = e.target as HTMLImageElement;
@@ -307,18 +346,18 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
                       }
                     }}
                   />
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 dark:text-gray-400">
-                  <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>
-                    {t(
-                      'chartHistory.comparison.noImageAvailable',
-                      'No chart preview available for this version'
-                    )}
-                  </p>
-                </div>
-              )}
+                ) : (
+                  <div className="text-center text-gray-500 dark:text-gray-400">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>
+                      {t(
+                        'chartHistory.comparison.noImageAvailable',
+                        'No chart preview available for this version'
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -414,7 +453,39 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
             renderJsonDiff()
           )}
         </div>
+
+        {/* Footer with View Chart Button */}
+        {selectedHistory && chartId && (
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="mr-auto">
+              {t('close', 'Close')}
+            </Button>
+            <Button
+              onClick={handleViewHistoryChart}
+              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              {t('chartHistory.viewHistoricalChart', 'View Historical Chart')}
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
+
+      {/* Confirmation Modal for Unsaved Changes */}
+      <ModalConfirm
+        isOpen={modalConfirm.isOpen}
+        onClose={modalConfirm.close}
+        onConfirm={modalConfirm.confirm}
+        loading={modalConfirm.isLoading}
+        type="warning"
+        title={t('chart_unsaved_changes_title', 'Unsaved Changes')}
+        message={t(
+          'chart_unsaved_changes_message',
+          'You have unsaved changes. If you leave now, your changes will be lost. Are you sure you want to continue?'
+        )}
+        confirmText={t('leave_anyway', 'Leave Anyway')}
+        cancelText={t('common_cancel', 'Cancel')}
+      />
     </Dialog>
   );
 };
