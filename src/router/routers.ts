@@ -49,11 +49,11 @@ const Routers = {
   PIE_CHART_EDITOR_DEMO: '/demo/pie-chart-editor',
 
   //Workspace routes
-  WORKSPACE: '/workspace',
   WORKSPACE_DATASETS: '/workspace/datasets',
   WORKSPACE_CHARTS: '/workspace/charts',
   CHART_CREATOR: '/chart-creator',
   CHART_EDITOR: '/chart-editor',
+  CHART_HISTORY_VIEW: '/chart-history/view',
 
   // Privacy and Terms
   TERMS_OF_SERVICE: '/terms-of-service',

@@ -18,9 +18,14 @@ import type { DataHeader } from '@/utils/dataProcessors';
 export interface UnifiedChartEditorProps {
   processedHeaders?: DataHeader[];
   setDataId: (dataId: string) => void;
+  datasetId?: string;
 }
 
-const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({ processedHeaders, setDataId }) => {
+const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
+  processedHeaders,
+  setDataId,
+  datasetId,
+}) => {
   const { currentChartType: chartType } = useChartEditorRead();
 
   return (
@@ -75,7 +80,7 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({ processedHeader
                 </>
               )}
               <ChartFormatterSettings />
-              <ImportExportSection setDataId={setDataId} />
+              <ImportExportSection setDataId={setDataId} datasetId={datasetId} />
             </div>
           </div>
           {/* Right Side - Chart Display */}

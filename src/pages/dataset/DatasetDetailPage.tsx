@@ -175,7 +175,7 @@ const DatasetDetailPage: React.FC = () => {
         // Show unsaved changes modal
         setPendingNavigation(() => () => {
           // Navigate to workspace datasets when confirmed
-          navigate('/workspace', { replace: true, state: { tab: 'datasets' } });
+          navigate(Routers.WORKSPACE_DATASETS, { replace: true });
         });
         setShowUnsavedModal(true);
       }

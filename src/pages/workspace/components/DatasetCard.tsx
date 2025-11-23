@@ -33,7 +33,6 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
-  const { getDatasetById } = useDataset();
 
   const handleView = (e?: React.MouseEvent) => {
     if (e) {
@@ -60,11 +59,6 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
     } else {
       navigate(Routers.CHART_GALLERY);
     }
-  };
-
-  const handleShare = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
-    // Add share functionality here if needed
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -152,23 +146,11 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
             onClick={handleView}
             className={`px-2 transition-all duration-200 ${
               isHovered
-                ? 'opacity-100 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                : 'opacity-100 group-hover:opacity-100'
-            }`}
-          >
-            <Edit3 className="h-3 w-3 mr-1" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleShare}
-            className={`px-2 transition-all duration-200 ${
-              isHovered
                 ? 'opacity-100 bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400'
                 : 'opacity-100 group-hover:opacity-100'
             }`}
           >
-            <Share className="h-3 w-3" />
+            <Edit3 className="h-3 w-3 mr-1" />
           </Button>
           <Button
             variant="ghost"
