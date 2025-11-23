@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, RotateCcw, Eye, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Eye, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import dayjs from 'dayjs';
@@ -10,20 +10,29 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 dayjs.extend(customParseFormat);
 
 import ChartTab from '../chart-creator/ChartTab';
+import DataTab from '../chart-creator/DataTab';
 import type { DataHeader } from '@/utils/dataProcessors';
+import type { NumberFormat, DateFormat } from '@/contexts/DatasetContext';
 import { useDataset } from '@/features/dataset/useDataset';
 import { convertToChartData } from '@/utils/dataConverter';
 import { useCharts } from '@/features/charts/useCharts';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useToast } from '@/hooks/useToast';
 import ToastContainer from '@/components/ui/toast-container';
-import { useAppDispatch } from '@/store/hooks';
-import { setChartData as setChartDataAction } from '@/features/chartEditor/chartEditorSlice';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import {
+  setChartData as setChartDataAction,
+  setWorkingDataset,
+} from '@/features/chartEditor/chartEditorSlice';
+import { selectWorkingDataset } from '@/features/chartEditor/chartEditorSelectors';
 import { useChartEditor } from '@/features/chartEditor';
+import type { SortLevel, DatasetConfig } from '@/types/chart';
+import { buildColumnIndexMap, applyMultiLevelSort, applyDatasetFilters } from '@/utils/datasetOps';
+import { applyAggregation } from '@/utils/aggregationUtils';
 import { useChartHistory } from '@/features/chartHistory/useChartHistory';
-import Utils from '@/utils/Utils';
 import Routers from '@/router/routers';
 import RestoreConfirmDialog from '@/components/charts/RestoreConfirmDialog';
+import Utils from '@/utils/Utils';
 
 const normalizeDateFormat = (fmt?: string) => {
   if (!fmt) return fmt;
@@ -45,20 +54,22 @@ const ChartHistoryViewPage: React.FC = () => {
   // LOCAL STATE
   // ============================================================
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chart' | 'data'>('chart');
 
   // ============================================================
   // HOOKS
   // ============================================================
   const {
-    setChartData,
     setChartConfig,
     setCurrentChartType,
     setEditableName,
     setEditableDescription,
+    clearChartEditor,
   } = useChartEditor();
 
   const { getDatasetById, currentDataset, loading: isDatasetLoading } = useDataset();
   const { getChartById } = useCharts();
+  const working = useAppSelector(selectWorkingDataset);
 
   const { selectedHistory, restoring, getHistoryById, restoreFromHistory, getChartHistory } =
     useChartHistory();
@@ -139,32 +150,111 @@ const ChartHistoryViewPage: React.FC = () => {
     return { initialColumns, initialData };
   }, [currentDataset]);
 
-  const processedHeaders = useMemo(() => {
-    const { initialColumns } = excelInitial;
-    if (!initialColumns) return undefined;
-    return initialColumns.map(col => ({ ...col }));
-  }, [excelInitial]);
+  const excelFormats = useMemo(() => {
+    if (!currentDataset) {
+      return { initialNumberFormat: undefined, initialDateFormat: undefined };
+    }
+
+    const ds: any = currentDataset || {};
+    const initialNumberFormat: NumberFormat | undefined =
+      ds.detectedNumberFormat ||
+      (ds.decimalSeparator && ds.thousandsSeparator
+        ? { decimalSeparator: ds.decimalSeparator, thousandsSeparator: ds.thousandsSeparator }
+        : ds.numberFormat || undefined);
+    const initialDateFormat: DateFormat | undefined =
+      ds.detectedDateFormat || ds.dateFormat || undefined;
+    return { initialNumberFormat, initialDateFormat };
+  }, [currentDataset]);
 
   // ============================================================
-  // CONVERT TO CHART DATA
+  // highlightHeaderIds - Same as ChartEditorPage
+  // ============================================================
+  const chartConfig = useMemo(() => selectedHistory?.config, [selectedHistory?.config]);
+
+  const { highlightHeaderIds } = useMemo(() => {
+    if (!chartConfig) return { highlightHeaderIds: [] as string[] };
+    const ids = new Set<string>();
+    const nameToId = new Map<string, string>();
+    const idSet = new Set<string>();
+
+    const collect = (arr?: any[]) => {
+      (arr || []).forEach(h => {
+        if (h?.name && (h?.id || h?.headerId)) {
+          const key = String(h.name).trim().toLowerCase();
+          const val = (h.id ?? h.headerId) as string;
+          if (key && val && !nameToId.has(key)) nameToId.set(key, val);
+        }
+        const hid = (h?.id ?? h?.headerId) as string | undefined;
+        if (hid) idSet.add(hid);
+      });
+    };
+
+    const headersFromDataset = (currentDataset?.headers as any[]) || [];
+    const headersFromWorking = (working?.headers as any[]) || [];
+    const headersFromInitial = excelInitial.initialColumns || [];
+    collect(headersFromDataset);
+    collect(headersFromWorking);
+    collect(headersFromInitial as any[]);
+
+    const visit = (node: any) => {
+      if (!node || typeof node !== 'object') return;
+      if (Array.isArray(node)) {
+        node.forEach(visit);
+        return;
+      }
+      for (const [k, v] of Object.entries(node)) {
+        if (k === 'headerId' && typeof v === 'string' && v) {
+          ids.add(v);
+        } else if (k.endsWith('Key') && typeof v === 'string' && v) {
+          const raw = String(v).trim();
+          const mapped = nameToId.get(raw.toLowerCase());
+          if (mapped) ids.add(mapped);
+          else if (idSet.has(raw)) ids.add(raw);
+        } else if (k === 'dataColumn' && typeof v === 'string' && v) {
+          const raw = String(v).trim();
+          const mapped = nameToId.get(raw.toLowerCase());
+          if (mapped) ids.add(mapped);
+          else if (idSet.has(raw)) ids.add(raw);
+        } else if (k.endsWith('ColumnId') && typeof v === 'string' && v) {
+          const raw = String(v).trim();
+          if (idSet.has(raw)) ids.add(raw);
+        } else if (v && typeof v === 'object') {
+          visit(v);
+        }
+      }
+    };
+
+    visit(chartConfig);
+    const outAll = Array.from(ids);
+    const out = outAll.filter(id => idSet.has(id));
+    return { highlightHeaderIds: out };
+  }, [chartConfig, currentDataset?.headers, working?.headers, excelInitial.initialColumns]);
+
+  // ============================================================
+  // EFFECT: Initialize working dataset from loaded dataset
   // ============================================================
   useEffect(() => {
-    const { initialColumns, initialData } = excelInitial;
-    if (!initialColumns || !initialData) {
-      dispatch(setChartDataAction([]));
-      return;
-    }
+    if (!excelInitial.initialColumns || !excelInitial.initialData) return;
 
-    try {
-      const headerNames = initialColumns.map(h => h.name);
-      const arrayData: (string | number)[][] = [headerNames, ...initialData];
-      const converted = convertToChartData(arrayData);
-      setChartData(converted);
-    } catch (err) {
-      console.error('[ChartHistoryViewPage] Error converting data:', err);
-      dispatch(setChartDataAction([]));
-    }
-  }, [excelInitial, dispatch, setChartData]);
+    const formats = {
+      number: excelFormats.initialNumberFormat,
+      date: excelFormats.initialDateFormat,
+    };
+
+    dispatch(
+      setWorkingDataset({
+        headers: excelInitial.initialColumns,
+        data: excelInitial.initialData,
+        formats,
+      })
+    );
+  }, [
+    excelInitial.initialColumns,
+    excelInitial.initialData,
+    excelFormats.initialNumberFormat,
+    excelFormats.initialDateFormat,
+    dispatch,
+  ]);
 
   // ============================================================
   // HANDLE RESTORE
@@ -196,12 +286,152 @@ const ChartHistoryViewPage: React.FC = () => {
   };
 
   const handleBack = () => {
+    // Clear chart editor state before navigating back to ensure ChartEditorPage loads fresh data
+    clearChartEditor();
+
     if (chartId) {
       navigate(`${Routers.CHART_EDITOR}?chartId=${chartId}`);
     } else {
       navigate(Routers.WORKSPACE_CHARTS);
     }
   };
+
+  // ============================================================
+  // PROCESS DATA (filter → sort → aggregation) - Same as ChartEditorPage
+  // ============================================================
+
+  // Store original dataset (before any processing)
+  const originalDataset = useMemo(() => {
+    return {
+      headers: excelInitial.initialColumns || working?.headers,
+      data: excelInitial.initialData || working?.data,
+    };
+  }, [excelInitial.initialColumns, excelInitial.initialData, working?.headers, working?.data]);
+
+  // Get datasetConfig from selectedHistory config
+  const datasetConfig: DatasetConfig | undefined = useMemo(() => {
+    if (!selectedHistory?.config) return undefined;
+    return (selectedHistory.config as any)?.datasetConfig as DatasetConfig | undefined;
+  }, [selectedHistory?.config]);
+
+  const sortLevels: SortLevel[] = useMemo(() => datasetConfig?.sort ?? [], [datasetConfig]);
+
+  // Serialize filters and aggregation for dependency tracking
+  const filtersKey = useMemo(() => {
+    return JSON.stringify(datasetConfig?.filters || []);
+  }, [datasetConfig]);
+
+  const aggregationKey = useMemo(() => {
+    return JSON.stringify(datasetConfig?.aggregation || {});
+  }, [datasetConfig]);
+
+  // Compute processedData với filter → sort → aggregation
+  const processedData = useMemo(() => {
+    const dataToProcess = originalDataset.data || working?.data;
+    const headersToUse = originalDataset.headers || working?.headers;
+
+    if (!headersToUse || !dataToProcess) {
+      return { data: undefined, headers: undefined };
+    }
+
+    const currentFilters = (datasetConfig as any)?.filters;
+    const currentAggregation = datasetConfig?.aggregation;
+
+    try {
+      // Build column index map
+      const colIndexMap = buildColumnIndexMap(headersToUse as unknown as DataHeader[]);
+
+      // Filter
+      const filtered =
+        applyDatasetFilters(dataToProcess, currentFilters, colIndexMap) || dataToProcess;
+
+      // Sort
+      const multiSorted = applyMultiLevelSort(filtered, sortLevels, colIndexMap) || filtered;
+
+      // Aggregation
+      const aggregationResult = applyAggregation(
+        multiSorted,
+        headersToUse as unknown as DataHeader[],
+        currentAggregation,
+        colIndexMap
+      );
+
+      // Use aggregated data/headers if aggregation is active
+      const finalHeaders = aggregationResult
+        ? aggregationResult.headers
+        : (headersToUse as unknown as DataHeader[]);
+      const finalData = aggregationResult ? aggregationResult.data : multiSorted;
+
+      return { data: finalData, headers: finalHeaders };
+    } catch (e) {
+      console.error('[ChartHistoryViewPage] Error processing data:', e);
+      return { data: undefined, headers: undefined };
+    }
+  }, [
+    originalDataset.data,
+    originalDataset.headers,
+    working?.data,
+    working?.headers,
+    filtersKey,
+    sortLevels,
+    aggregationKey,
+    datasetConfig,
+  ]);
+
+  // ============================================================
+  // EFFECT: Update working dataset with aggregated headers when aggregation changes
+  // ============================================================
+  useEffect(() => {
+    if (!processedData.headers || !processedData.data) return;
+
+    // Only update if aggregation is active and headers changed
+    if (
+      datasetConfig?.aggregation &&
+      (datasetConfig.aggregation.groupBy?.length || datasetConfig.aggregation.metrics?.length)
+    ) {
+      const headersChanged =
+        processedData.headers.length !== working?.headers.length ||
+        processedData.headers.some((h, idx) => {
+          const existing = working?.headers[idx];
+          return !existing || h.id !== (existing as any).id || h.name !== existing.name;
+        });
+
+      if (headersChanged && working) {
+        dispatch(
+          setWorkingDataset({
+            headers: processedData.headers as any,
+            data: processedData.data,
+            formats: working.formats,
+          })
+        );
+      }
+    }
+  }, [processedData.headers, processedData.data, datasetConfig?.aggregation, working, dispatch]);
+
+  // ============================================================
+  // EFFECT: Sync chart data from processed data
+  // ============================================================
+  useEffect(() => {
+    if (!processedData.headers || !processedData.data) {
+      dispatch(setChartDataAction([]));
+      return;
+    }
+
+    try {
+      const headerNames = processedData.headers.map(h => h.name);
+      const arrayData: (string | number)[][] = [headerNames, ...processedData.data];
+      const converted = convertToChartData(arrayData);
+      dispatch(setChartDataAction(converted));
+    } catch (e) {
+      dispatch(setChartDataAction([]));
+    }
+  }, [processedData.headers, processedData.data, dispatch]);
+
+  // Compute processedHeaders from processedData
+  const processedHeaders = useMemo(() => {
+    if (!processedData.headers) return undefined;
+    return processedData.headers.map(col => ({ ...col }));
+  }, [processedData.headers]);
 
   // ============================================================
   // LOADING STATE
@@ -217,6 +447,7 @@ const ChartHistoryViewPage: React.FC = () => {
     );
   }
 
+  console.log('Processed Data:', processedData);
   // ============================================================
   // RENDER
   // ============================================================
@@ -261,6 +492,32 @@ const ChartHistoryViewPage: React.FC = () => {
                   </p>
                 )}
               </div>
+
+              <div className="border-l border-gray-300 dark:border-gray-600 h-8"></div>
+
+              {/* Tabs */}
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => setActiveTab('chart')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    activeTab === 'chart'
+                      ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  {t('chart', 'Chart')}
+                </button>
+                <button
+                  onClick={() => setActiveTab('data')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    activeTab === 'data'
+                      ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  {t('data', 'Data')}
+                </button>
+              </div>
             </div>
 
             {/* Right Section - Restore Button */}
@@ -296,19 +553,43 @@ const ChartHistoryViewPage: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Chart Preview */}
-      <div className="flex-1 min-h-0 bg-gray-900">
+      {/* Chart/Data Content */}
+      <div className="flex-1 min-h-0 min-w-0 bg-gray-900">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="h-full"
+          className="h-full min-h-0 min-w-0 flex"
         >
-          <ChartTab
-            processedHeaders={processedHeaders}
-            setDataId={() => {}} // No-op in view mode
-            datasetId={selectedHistory.datasetId}
-          />
+          <div
+            style={{ display: activeTab === 'chart' ? 'block' : 'none' }}
+            className="w-full h-full min-h-0"
+          >
+            <ChartTab
+              processedHeaders={processedHeaders}
+              setDataId={() => {}} // No-op in view mode
+              datasetId={selectedHistory.datasetId}
+            />
+          </div>
+
+          <div
+            style={{ display: activeTab === 'data' ? 'block' : 'none' }}
+            className="w-full h-full min-h-0"
+          >
+            <DataTab
+              initialColumns={processedData.headers}
+              initialData={processedData.data}
+              originalColumns={originalDataset.headers}
+              originalData={originalDataset.data}
+              initialNumberFormat={excelFormats.initialNumberFormat}
+              initialDateFormat={excelFormats.initialDateFormat}
+              onDataChange={() => {}} // No-op in view mode - read only
+              highlightHeaderIds={highlightHeaderIds}
+              datasetName={currentDataset?.name || ''}
+              datasetConfig={datasetConfig}
+              onDatasetConfigChange={() => {}} // No-op in view mode
+            />
+          </div>
         </motion.div>
       </div>
 

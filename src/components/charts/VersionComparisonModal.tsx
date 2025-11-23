@@ -14,6 +14,9 @@ import { useTranslation } from 'react-i18next';
 import Routers from '@/router/routers';
 import type { ComparisonResult } from '@/features/chartHistory/chartHistoryTypes';
 import type { ChartHistory } from '@/features/chartHistory/chartHistoryTypes';
+import { useChartEditor } from '@/features/chartEditor';
+import { ModalConfirm } from '@/components/ui/modal-confirm';
+import { useModalConfirm } from '@/hooks/useModal';
 
 interface VersionComparisonModalProps {
   open: boolean;
@@ -35,6 +38,8 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { hasChanges, resetToOriginal, clearChartEditor } = useChartEditor();
+  const modalConfirm = useModalConfirm();
 
   // Helper to flatten nested differences object to dot notation keysf
   type DiffLeaf = { current: any; historical: any };
@@ -63,7 +68,26 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
 
   // Handle navigation to history view page
   const handleViewHistoryChart = () => {
-    if (selectedHistory && chartId) {
+    if (!selectedHistory || !chartId) return;
+
+    // Check if there are unsaved changes
+    if (hasChanges) {
+      modalConfirm.openConfirm(async () => {
+        // User confirmed to leave despite unsaved changes
+        // Reset to original and clear editor state before navigating
+        resetToOriginal();
+        clearChartEditor();
+
+        navigate(
+          `${Routers.CHART_HISTORY_VIEW}?historyId=${selectedHistory.id}&chartId=${chartId}`
+        );
+        onOpenChange(false); // Close modal
+      });
+    } else {
+      // No unsaved changes, navigate directly
+      // Clear editor state to ensure clean state for history view
+      clearChartEditor();
+
       navigate(`${Routers.CHART_HISTORY_VIEW}?historyId=${selectedHistory.id}&chartId=${chartId}`);
       onOpenChange(false); // Close modal
     }
@@ -446,6 +470,22 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
           </DialogFooter>
         )}
       </DialogContent>
+
+      {/* Confirmation Modal for Unsaved Changes */}
+      <ModalConfirm
+        isOpen={modalConfirm.isOpen}
+        onClose={modalConfirm.close}
+        onConfirm={modalConfirm.confirm}
+        loading={modalConfirm.isLoading}
+        type="warning"
+        title={t('chart_unsaved_changes_title', 'Unsaved Changes')}
+        message={t(
+          'chart_unsaved_changes_message',
+          'You have unsaved changes. If you leave now, your changes will be lost. Are you sure you want to continue?'
+        )}
+        confirmText={t('leave_anyway', 'Leave Anyway')}
+        cancelText={t('common_cancel', 'Cancel')}
+      />
     </Dialog>
   );
 };
