@@ -11,7 +11,6 @@ import ChartTab from './ChartTab';
 import DataTab from './DataTab';
 import type { DataHeader } from '@/utils/dataProcessors';
 import type { NumberFormat, DateFormat } from '@/contexts/DatasetContext';
-import { useDataset } from '@/features/dataset/useDataset';
 import { convertToChartData } from '@/utils/dataConverter';
 import { useCharts } from '@/features/charts/useCharts';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -26,6 +25,7 @@ import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectio
 import { getDefaultChartConfig } from '@/utils/chartDefaults';
 import { ChartType, type ChartRequest } from '@/features/charts';
 import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
+import { fetchDatasetById, fetchDatasets } from '@/features/dataset/datasetThunk';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   setWorkingDataset,
@@ -115,7 +115,22 @@ const ChartEditorPage: React.FC = () => {
     createChart,
   } = useCharts();
 
-  const { getDatasetById, currentDataset, loading: isDatasetLoading } = useDataset();
+  // Only subscribe to currentDataset to avoid re-renders when datasets list changes
+  const currentDataset = useAppSelector(state => state.dataset.currentDataset);
+
+  // Track if we're currently fetching a dataset by ID (not the list)
+  // Only show loading when we have a datasetId and are actively fetching it
+  const [isFetchingDatasetById, setIsFetchingDatasetById] = React.useState(false);
+
+  // Only show loading spinner when fetching a specific dataset, not when fetching the list
+  const isDatasetLoading = isFetchingDatasetById;
+
+  // Get action functions without subscribing to datasets state (prevents re-render on dataset list refresh)
+  const getDatasetById = React.useCallback(
+    (id: string) => dispatch(fetchDatasetById(id)),
+    [dispatch]
+  );
+  const getDatasets = React.useCallback(() => dispatch(fetchDatasets()), [dispatch]);
   const working = useAppSelector(selectWorkingDataset);
 
   // Background fetch helpers (notes & history)
@@ -258,13 +273,20 @@ const ChartEditorPage: React.FC = () => {
   }, [chartConfig, currentDataset?.headers, working?.headers, excelInitial.initialColumns]);
 
   // ============================================================
-  // EFFECT: Clear everything on mount
+  // EFFECT: Clear everything on mount and fetch datasets once
   // ============================================================
+  const datasetsFetchedRef = React.useRef(false);
   useEffect(() => {
     // console.log('[ChartEditorPage] Mount - clearing all state');
     clearCurrentChart();
     dispatch(clearCurrentDataset());
     dispatch(clearCurrentChartNotes());
+
+    // Fetch datasets once on mount (for dataset selection dialog)
+    if (!datasetsFetchedRef.current) {
+      getDatasets();
+      datasetsFetchedRef.current = true;
+    }
 
     return () => {
       // console.log('[ChartEditorPage] Unmount - clearing all state');
@@ -273,7 +295,7 @@ const ChartEditorPage: React.FC = () => {
       dispatch(clearCurrentChartNotes());
       dispatch(clearChartEditor());
     };
-  }, []);
+  }, [clearCurrentChart, dispatch, getDatasets]);
 
   // ============================================================
   // EFFECT: Load chart when chartId changes (EDIT MODE)
@@ -394,9 +416,11 @@ const ChartEditorPage: React.FC = () => {
 
     if (!datasetId) {
       setChartData([]);
+      setIsFetchingDatasetById(false);
       return;
     }
 
+    setIsFetchingDatasetById(true);
     (async () => {
       try {
         // console.log('[ChartEditorPage] getDatasetById -> start', datasetId);
@@ -411,6 +435,8 @@ const ChartEditorPage: React.FC = () => {
       } catch (e: any) {
         const msg = e?.message || 'Error loading dataset';
         showError(msg);
+      } finally {
+        setIsFetchingDatasetById(false);
       }
     })();
   }, [datasetId, getDatasetById]);
@@ -994,8 +1020,26 @@ const ChartEditorPage: React.FC = () => {
     }
   }, [mode, currentChart, datasetId]);
 
-  const handleToggleHistorySidebar = () => setIsHistorySidebarOpen(v => !v);
-  const handleToggleNotesSidebar = () => setIsNotesSidebarOpen(!isNotesSidebarOpen);
+  const handleToggleHistorySidebar = () => {
+    setIsHistorySidebarOpen(v => {
+      const newValue = !v;
+      // Close notes sidebar if opening history sidebar
+      if (newValue) {
+        setIsNotesSidebarOpen(false);
+      }
+      return newValue;
+    });
+  };
+  const handleToggleNotesSidebar = () => {
+    setIsNotesSidebarOpen(v => {
+      const newValue = !v;
+      // Close history sidebar if opening notes sidebar
+      if (newValue) {
+        setIsHistorySidebarOpen(false);
+      }
+      return newValue;
+    });
+  };
 
   // ============================================================
   // RENDER
@@ -1022,6 +1066,8 @@ const ChartEditorPage: React.FC = () => {
         onToggleHistorySidebar={handleToggleHistorySidebar}
         mode={mode}
         dirty={hasChanges || datasetDirty}
+        onOpenDatasetModal={() => setShowDatasetModal(true)}
+        currentDatasetName={currentDataset?.name}
       />
 
       <div className="flex-1 min-h-0 min-w-0 bg-gray-900">

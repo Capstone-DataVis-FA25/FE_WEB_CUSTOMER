@@ -11,6 +11,7 @@ import ChartSettingsPieSection from './ChartSettingsPieSection';
 import DisplayOptionsPieSection from './DisplayOptionsPieSection';
 import CyclePlotSettingsSection from './CyclePlotSettingsSection';
 import ChartFormatterSettings from './ChartFormatterSettingSection';
+import DatasetOperationSection from './DatasetOperationSection';
 import ImportExportSection from './ImportExportSection';
 import type { DataHeader } from '@/utils/dataProcessors';
 
@@ -34,6 +35,9 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({ processedHeader
 
               {/* Basic Settings Section */}
               <BasicSettingsSection />
+
+              {/* Dataset Operation Section */}
+              <DatasetOperationSection processedHeaders={processedHeaders} />
 
               {(chartType == ChartType.Line ||
                 chartType == ChartType.Bar ||

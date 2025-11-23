@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { Button } from '@/components/ui/button';
 
@@ -322,9 +323,10 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
 
   if (!open) return null;
 
-  return (
+  // Use portal to render modal at body level to avoid z-index/overflow issues
+  const modalContent = (
     <>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 select-none">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] select-none">
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-7xl h-[85vh] flex flex-col select-none">
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -722,4 +724,12 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
       </div>
     </>
   );
+
+  // Only use portal if document.body exists (client-side)
+  if (typeof document !== 'undefined' && document.body) {
+    return createPortal(modalContent, document.body);
+  }
+
+  // Fallback for SSR
+  return modalContent;
 };

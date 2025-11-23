@@ -6,8 +6,9 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import useToast from '@/hooks/useToast';
 import { useChartEditor, useChartEditorRead } from '@/features/chartEditor';
-import { useDataset } from '@/features/dataset/useDataset';
-import { useState } from 'react';
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { fetchDatasetById } from '@/features/dataset/datasetThunk';
+import { useState, useCallback } from 'react';
 import ToastContainer from '../ui/toast-container';
 
 export interface ImportExportSectionProps {
@@ -29,7 +30,10 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId }) 
     updateOriginals,
   } = useChartEditor();
 
-  const { getDatasetById, currentDataset } = useDataset();
+  const dispatch = useAppDispatch();
+  // Only subscribe to currentDataset to avoid re-renders when datasets list is refreshed
+  const currentDataset = useAppSelector(state => state.dataset.currentDataset);
+  const getDatasetById = useCallback((id: string) => dispatch(fetchDatasetById(id)), [dispatch]);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Toggle import/export section visibility

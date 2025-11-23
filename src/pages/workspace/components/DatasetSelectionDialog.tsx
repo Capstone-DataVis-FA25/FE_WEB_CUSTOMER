@@ -28,29 +28,20 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
   currentDatasetId,
   // onSelectSameDataset removed
 }) => {
-  const { datasets, loading, getDatasets } = useDataset();
+  const { datasets, loadingList, getDatasets } = useDataset();
   const [selectedDatasetId, setSelectedDatasetId] = useState<string>('');
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
-  // ✅ OPTIMIZATION: Only fetch if not loaded yet OR datasets is empty
-  // This prevents unnecessary API calls on every modal open
+  // Datasets are already fetched in ChartEditorPage on mount
+  // Just sync selectedDatasetId when dialog opens/closes
   useEffect(() => {
     if (open) {
       // Always sync selectedDatasetId to currentDatasetId when dialog opens
       setSelectedDatasetId(currentDatasetId || '');
-
-      // Only fetch if:
-      // 1. Never loaded before AND datasets is empty
-      // Check both conditions together to prevent re-fetch on datasets.length change
-      if (!hasLoadedOnce && datasets.length === 0) {
-        getDatasets();
-        setHasLoadedOnce(true);
-      }
     } else {
       // When dialog closes, clear selection to prevent stale state
       setSelectedDatasetId('');
     }
-  }, [open, currentDatasetId, datasets.length, getDatasets, hasLoadedOnce]);
+  }, [open, currentDatasetId]);
 
   // Auto-scroll to the current/selected dataset item when dialog opens
   useEffect(() => {
@@ -103,7 +94,7 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
               Select a Dataset
             </DialogTitle>
             {/* ✅ OPTIMIZATION 2: Manual refresh button */}
-            {!loading && datasets.length > 0 && (
+            {!loadingList && datasets.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -143,7 +134,7 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
+        {loadingList ? (
           <div className="flex justify-center items-center h-[300px]">
             <LoadingSpinner />
           </div>
@@ -240,7 +231,7 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={!selectedDatasetId || loading}
+            disabled={!selectedDatasetId || loadingList}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
           >
             Switch to Dataset
