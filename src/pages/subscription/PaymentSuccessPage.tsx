@@ -132,7 +132,7 @@ const PaymentSuccessPage: React.FC = () => {
             <Link to={Routers.PRICING}>Back to Pricing</Link>
           </Button>
           <Button asChild variant="secondary" className="flex-1">
-            <Link to={Routers.WORKSPACE}>Go to Workspace</Link>
+            <Link to={Routers.WORKSPACE_DATASETS}>Go to Workspace</Link>
           </Button>
         </div>
         <div className="mt-6 text-xs text-muted-foreground">

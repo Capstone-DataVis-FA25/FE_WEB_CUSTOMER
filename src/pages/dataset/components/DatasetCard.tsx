@@ -13,6 +13,7 @@ import Utils from '@/utils/Utils';
 
 interface DatasetCardProps {
   dataset: Dataset;
+  index: number;
   onDelete: (dataset: Dataset) => void;
   onView?: (dataset: Dataset) => void;
   onEdit?: (dataset: Dataset) => void;
@@ -26,6 +27,7 @@ const getDatasetColor = () => {
 
 const DatasetCard: React.FC<DatasetCardProps> = ({
   dataset,
+  index,
   onDelete,
   onView,
   isDeleting = false,
@@ -33,7 +35,6 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
-  const { getDatasetById } = useDataset();
 
   const handleView = (e?: React.MouseEvent) => {
     if (e) {
@@ -62,11 +63,6 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
     }
   };
 
-  const handleShare = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
-    // Add share functionality here if needed
-  };
-
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
     onDelete(dataset);
@@ -74,6 +70,7 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
 
   return (
     <Card
+      id={`dataset-card-${index}`}
       className="group relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 overflow-hidden cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -147,30 +144,20 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
             Create Chart
           </Button>
           <Button
+            id={`dataset-card-${index}-edit`}
             variant="ghost"
             size="sm"
             onClick={handleView}
-            className={`px-2 transition-all duration-200 ${
-              isHovered
-                ? 'opacity-100 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                : 'opacity-100 group-hover:opacity-100'
-            }`}
-          >
-            <Edit3 className="h-3 w-3 mr-1" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleShare}
             className={`px-2 transition-all duration-200 ${
               isHovered
                 ? 'opacity-100 bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400'
                 : 'opacity-100 group-hover:opacity-100'
             }`}
           >
-            <Share className="h-3 w-3" />
+            <Edit3 className="h-3 w-3 mr-1" />
           </Button>
           <Button
+            id={`dataset-card-${index}-delete`}
             variant="ghost"
             size="sm"
             onClick={handleDelete}

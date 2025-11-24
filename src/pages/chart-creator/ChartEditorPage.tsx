@@ -22,7 +22,6 @@ import { useBeforeUnload } from '@/hooks/useBeforeUnload';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal';
 import ToastContainer from '@/components/ui/toast-container';
 import ChartNoteSidebar from '@/components/charts/ChartNoteSidebar';
-import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
 import { getDefaultChartConfig } from '@/utils/chartDefaults';
 import { ChartType, type ChartRequest } from '@/features/charts';
 import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
@@ -45,6 +44,7 @@ import { cleanupChartConfig } from '@/utils/chartConfigCleanup';
 import { useChartNotes } from '@/features/chartNotes/useChartNotes';
 import { useChartHistory } from '@/features/chartHistory/useChartHistory';
 import { captureAndUploadChartSnapshot } from '@/services/uploadService';
+import DatasetSelectionDialog from '../chart/components/DatasetSelectionDialog';
 
 const normalizeDateFormat = (fmt?: string) => {
   if (!fmt) return fmt;
@@ -1035,7 +1035,11 @@ const ChartEditorPage: React.FC = () => {
             style={{ display: activeTab === 'chart' ? 'block' : 'none' }}
             className="flex-1 min-h-0 min-w-0"
           >
-            <ChartTab processedHeaders={processedData.headers} setDataId={setDatasetId} />
+            <ChartTab
+              processedHeaders={processedData.headers}
+              datasetId={datasetId}
+              setDataId={setDatasetId}
+            />
           </div>
           <div
             style={{ display: activeTab === 'data' ? 'block' : 'none' }}

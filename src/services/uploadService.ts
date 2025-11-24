@@ -141,13 +141,65 @@ export const captureAndUploadChartSnapshot = async (
     const chartContainer = document.querySelector(chartContainerSelector);
     const svgElement = chartContainer?.querySelector('svg') || document.querySelector('svg');
 
-    if (!svgElement) {
-      console.warn('No SVG element found for chart snapshot');
-      return null;
+    let pngBlob: Blob;
+    // Check if SVG is missing or is just an icon (ChevronDown, etc.)
+    let isIconSVG = false;
+    if (svgElement) {
+      // Check by class name or size
+      const className = svgElement.getAttribute('class') || '';
+      const width = Number(svgElement.getAttribute('width')) || svgElement.clientWidth || 0;
+      const height = Number(svgElement.getAttribute('height')) || svgElement.clientHeight || 0;
+      // If class contains lucide-chevron-down or lucide, or size is small (<= 32x32), treat as icon
+      if (
+        className.includes('lucide-chevron-down') ||
+        className.includes('lucide') ||
+        (width <= 32 && height <= 32)
+      ) {
+        isIconSVG = true;
+      }
     }
 
-    // Convert SVG to PNG blob
-    const pngBlob = await svgToPngBlob(svgElement);
+    if (!svgElement || isIconSVG) {
+      // Fallback: create error image
+      const width = 600;
+      const height = 400;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#222';
+        ctx.fillRect(0, 0, width, height);
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 32px Arial';
+        ctx.fillStyle = '#fff';
+        const mainText = 'Chart Image Export Failed';
+        const subText = 'No Chart Found';
+        const mainFontSize = 32;
+        const subFontSize = 18;
+        const totalTextHeight = mainFontSize + subFontSize + 16;
+        const startY = height / 2 - totalTextHeight / 2 + mainFontSize;
+        ctx.fillText(mainText, width / 2, startY);
+        ctx.font = '18px Arial';
+        ctx.fillText(subText, width / 2, startY + subFontSize + 16);
+        pngBlob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob(
+            blob => {
+              if (blob) resolve(blob);
+              else reject(new Error('Failed to create error PNG blob'));
+            },
+            'image/png',
+            1.0
+          );
+        });
+      } else {
+        console.warn('No SVG element found for chart snapshot and cannot create error image');
+        return null;
+      }
+    } else {
+      // Convert SVG to PNG blob
+      pngBlob = await svgToPngBlob(svgElement);
+    }
 
     // Upload to server
     const uploadResult = await uploadImage(pngBlob);

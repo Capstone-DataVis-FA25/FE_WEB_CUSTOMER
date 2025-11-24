@@ -1,6 +1,7 @@
-import React, { lazy } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { allRoutes, type RouteConfig } from '@/config/routes';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import CustomerLayout from '../components/layout/CustomerLayout';
 import { FadeIn } from '../theme/animation';
 import { useAuth } from '@/features/auth/useAuth';
@@ -36,8 +37,10 @@ const componentMap = {
   CreateDatasetPage: lazy(() => import('../pages/dataset/CreateDatasetPage')),
   DatasetDetailPage: lazy(() => import('../pages/dataset/DatasetDetailPage')),
   ChartGalleryPickerPage: lazy(() => import('../pages/chart-gallery/ChartGalleryPickerPage')),
-  WorkspacePage: lazy(() => import('../pages/workspace/WorkspacePage')),
+  DatasetListPage: lazy(() => import('../pages/dataset/DatasetListPage')),
+  ChartListPage: lazy(() => import('../pages/chart/ChartListPage')),
   ChartEditorPage: lazy(() => import('../pages/chart-creator/ChartEditorPage')),
+  ChartHistoryViewPage: lazy(() => import('../pages/chart-history/ChartHistoryViewPage')),
   PieChartEditorDemo: lazy(() => import('../components/charts/page.example/PieChartEditorDemo')),
   TermsOfServicePage: lazy(() => import('../pages/privacy-terms/TermsOfServicePage')),
   PrivacyPolicyPage: lazy(() => import('../pages/privacy-terms/PrivacyPolicyPage')),
@@ -110,9 +113,9 @@ const RouteRenderer: React.FC<{ route: RouteConfig }> = ({ route }) => {
   return (
     <ProtectedRoute route={route}>
       <LayoutWrapper route={route}>
-        {/* <Suspense fallback={<LoadingSpinner />}> */}
-        <Component />
-        {/* </Suspense> */}
+        <Suspense fallback={<LoadingSpinner />}>
+          <Component />
+        </Suspense>
       </LayoutWrapper>
     </ProtectedRoute>
   );

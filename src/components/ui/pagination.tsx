@@ -99,24 +99,6 @@ const Pagination: React.FC<PaginationProps> = ({
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-      {/* Info text */}
-      {showInfo && (
-        <div className="text-sm text-muted-foreground">
-          {itemRange ? (
-            <>
-              Hiển thị <span className="font-medium">{itemRange.start}</span> đến{' '}
-              <span className="font-medium">{itemRange.end}</span> trong tổng số{' '}
-              <span className="font-medium">{totalItems}</span> kết quả
-            </>
-          ) : (
-            <>
-              Trang <span className="font-medium">{currentPage}</span> trong tổng số{' '}
-              <span className="font-medium">{totalPages}</span> trang
-            </>
-          )}
-        </div>
-      )}
-
       {/* Pagination controls */}
       <div className="flex items-center space-x-1">
         {/* Previous button */}

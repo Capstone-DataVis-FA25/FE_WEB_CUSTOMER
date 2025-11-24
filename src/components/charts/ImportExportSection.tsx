@@ -6,15 +6,15 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import useToast from '@/hooks/useToast';
 import { useChartEditor, useChartEditorRead } from '@/features/chartEditor';
-import { useDataset } from '@/features/dataset/useDataset';
 import { useState } from 'react';
 import ToastContainer from '../ui/toast-container';
 
 export interface ImportExportSectionProps {
   setDataId: (dataId: string) => void;
+  datasetId?: string;
 }
 
-const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId }) => {
+const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId, datasetId }) => {
   const { t } = useTranslation();
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const { chartConfig } = useChartEditorRead();
@@ -29,7 +29,6 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId }) 
     updateOriginals,
   } = useChartEditor();
 
-  const { getDatasetById, currentDataset } = useDataset();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Toggle import/export section visibility
@@ -44,15 +43,77 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId }) 
       const chartContainer = document.querySelector('.chart-container');
       const svgElement = chartContainer?.querySelector('svg') || document.querySelector('svg');
 
-      if (!svgElement) {
-        showError('Chart not found for export');
+      console.log('SVG Element for export:', svgElement);
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `${chartType || 'chart'}-${timestamp}`;
+
+      // Check if SVG is missing or is just an icon (ChevronDown, etc.)
+      let isIconSVG = false;
+      if (svgElement) {
+        // Check by class name or size
+        const className = svgElement.getAttribute('class') || '';
+        const width = Number(svgElement.getAttribute('width')) || svgElement.clientWidth || 0;
+        const height = Number(svgElement.getAttribute('height')) || svgElement.clientHeight || 0;
+        // If class contains lucide-chevron-down or lucide, or size is small (<= 32x32), treat as icon
+        if (
+          className.includes('lucide-chevron-down') ||
+          className.includes('lucide') ||
+          (width <= 32 && height <= 32)
+        ) {
+          isIconSVG = true;
+        }
+      }
+
+      if (!svgElement || isIconSVG) {
+        // Fallback: Export error image (no icon)
+        const canvas = document.createElement('canvas');
+        const width = 600;
+        const height = 400;
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          // Background
+          ctx.fillStyle = '#222';
+          ctx.fillRect(0, 0, width, height);
+          // Centered error text
+          ctx.textAlign = 'center';
+          // Main text
+          ctx.font = 'bold 32px Arial';
+          ctx.fillStyle = '#fff';
+          // Calculate vertical center for both lines
+          const mainText = 'Chart export failed';
+          const subText = 'No chart found';
+          const mainFontSize = 32;
+          const subFontSize = 18;
+          // Estimate text height
+          const totalTextHeight = mainFontSize + subFontSize + 16; // 16px gap
+          const startY = height / 2 - totalTextHeight / 2 + mainFontSize;
+          ctx.fillText(mainText, width / 2, startY);
+          ctx.font = '18px Arial';
+          ctx.fillText(subText, width / 2, startY + subFontSize + 16);
+          canvas.toBlob(blob => {
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `${filename}-error.png`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            } else {
+              showError('Cannot create error image');
+            }
+          }, 'image/png');
+        } else {
+          showError('Cannot create canvas for error image');
+        }
         return;
       }
 
-      // Get chart title for filename
-      const timestamp = new Date().toISOString().split('T')[0];
-      const filename = `${chartType}-${timestamp}`;
-
+      // ...existing code for SVG and PNG/JPEG export...
       if (format === 'svg') {
         // Export as SVG - preserve vector format
         const svgData = new XMLSerializer().serializeToString(svgElement);
@@ -222,7 +283,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId }) 
         name: editableName || 'Untitled Chart',
         description: editableDescription,
         type: chartType,
-        datasetId: currentDataset?.id || '',
+        datasetId: datasetId || '',
         config: chartConfig,
       };
 
