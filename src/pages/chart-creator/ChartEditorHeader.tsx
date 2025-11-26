@@ -36,6 +36,8 @@ interface ChartEditorHeaderProps {
   onToggleHistorySidebar?: () => void;
   mode: 'create' | 'edit';
   dirty?: boolean;
+  onOpenDatasetModal?: () => void;
+  currentDatasetName?: string;
 }
 
 const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
@@ -48,6 +50,8 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
   onToggleHistorySidebar,
   mode,
   dirty,
+  onOpenDatasetModal,
+  currentDatasetName,
 }) => {
   const { t } = useTranslation();
   const { currentChart, creating } = useCharts();
@@ -233,6 +237,16 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                     <BarChart3 className="w-3 h-3" />
                     {chartInfo.name}
                   </Badge>
+                  {currentDatasetName && (
+                    <Badge
+                      variant="outline"
+                      className="flex items-center gap-1 text-xs border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-700 dark:text-blue-200 dark:bg-blue-900/30"
+                      title={currentDatasetName}
+                    >
+                      <Database className="w-3 h-3" />
+                      <span className="max-w-[250px] truncate">{currentDatasetName}</span>
+                    </Badge>
+                  )}
                   {combinedHasChanges && mode === 'edit' && (
                     <Badge
                       variant="outline"
@@ -380,6 +394,19 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                 >
                   <RotateCcw className="w-4 h-4" />
                   {t('common_reset', 'Reset')}
+                </Button>
+              )}
+              {onOpenDatasetModal && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onOpenDatasetModal}
+                  className="flex items-center gap-2"
+                >
+                  <Database className="w-4 h-4" />
+                  {currentDatasetName
+                    ? t('chart_change_dataset', 'Change Dataset')
+                    : t('chart_select_dataset', 'Select Dataset')}
                 </Button>
               )}
               <Button

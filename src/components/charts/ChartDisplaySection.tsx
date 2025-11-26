@@ -2,7 +2,7 @@ import React, { useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../ui/card';
 import { useChartEditorRead } from '@/features/chartEditor';
-import { useDataset } from '@/features/dataset/useDataset';
+import { useAppSelector } from '@/store/hooks';
 import D3LineChart from '@/components/charts/D3LineChart';
 import D3BarChart from '@/components/charts/D3BarChart';
 import D3AreaChart from '@/components/charts/D3AreaChart';
@@ -25,7 +25,8 @@ interface ChartDisplaySectionProps {
 const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHeaders }) => {
   const { t } = useTranslation();
   const { chartData, chartConfig, currentChartType: chartType } = useChartEditorRead();
-  const { currentDataset } = useDataset();
+  // Only subscribe to currentDataset to avoid re-renders when datasets list is refreshed
+  const currentDataset = useAppSelector(state => state.dataset.currentDataset);
 
   // Helper: Map DataHeader ID to name
   // Use processed headers (aggregated) if provided, otherwise use original dataset headers
