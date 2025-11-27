@@ -93,8 +93,8 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
               <Database className="w-6 h-6 text-blue-600" />
               Select a Dataset
             </DialogTitle>
-            {/* ✅ OPTIMIZATION 2: Manual refresh button */}
-            {!loadingList && datasets.length > 0 && (
+            {/* Manual refresh button - always available when not loading */}
+            {!loadingList && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -148,6 +148,16 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
               You need to create a dataset first before creating a chart. Click "New Dataset" to get
               started.
             </p>
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="default"
+                onClick={handleRefresh}
+                disabled={loadingList}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Refresh List
+              </Button>
+            </div>
           </div>
         ) : (
           <ScrollArea className="max-h-[400px] pr-4 pointer-events-auto">

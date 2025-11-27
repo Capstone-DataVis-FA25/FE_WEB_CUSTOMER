@@ -4,6 +4,7 @@ import { Settings, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader } from '../ui/card';
+import DragDropDatasetOperation from './DragDropDatasetOperation';
 import FilterConfiguration from './FilterConfiguration';
 import SortConfiguration from './SortConfiguration';
 import AggregationConfiguration from './AggregationConfiguration';
@@ -34,13 +35,21 @@ const DatasetOperationSection: React.FC<DatasetOperationSectionProps> = ({
   const datasetConfig = (chartConfig as any)?.datasetConfig;
 
   // Get available columns from currentDataset or processedHeaders
+  const datasetDateFormat =
+    (currentDataset as any)?.detectedDateFormat || currentDataset?.dateFormat;
+
   const availableColumns = useMemo(() => {
+    const fallbackFormat = datasetDateFormat;
+
     if (currentDataset?.headers) {
       return (currentDataset.headers as any[]).map((h: any) => ({
         id: h.id || h.headerId || String(h.name || ''),
         name: h.name || '',
         type: (h.type as DatasetColumnType) || 'text',
-        dateFormat: h.dateFormat,
+        dateFormat:
+          ((h.type as DatasetColumnType) || 'text') === 'date'
+            ? h.dateFormat || fallbackFormat
+            : undefined,
       }));
     }
     if (processedHeaders) {
@@ -48,11 +57,14 @@ const DatasetOperationSection: React.FC<DatasetOperationSectionProps> = ({
         id: (h as any).id || (h as any).headerId || String(h.name || `col_${idx + 1}`),
         name: h.name || '',
         type: ((h as any).type as DatasetColumnType) || 'text',
-        dateFormat: (h as any).dateFormat,
+        dateFormat:
+          (((h as any).type as DatasetColumnType) || 'text') === 'date'
+            ? (h as any).dateFormat || fallbackFormat
+            : undefined,
       }));
     }
     return [];
-  }, [currentDataset?.headers, processedHeaders]);
+  }, [currentDataset?.headers, processedHeaders, datasetDateFormat]);
 
   // Get number format from dataset
   const numberFormat = useMemo(() => {
@@ -103,105 +115,8 @@ const DatasetOperationSection: React.FC<DatasetOperationSectionProps> = ({
 
   const hasDataset = currentDataset && availableColumns.length > 0;
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6, delay: 0.25 }}
-      className={`select-none ${className}`}
-    >
-      <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-hidden rounded-lg">
-        <CardHeader
-          className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
-          onClick={toggleCollapse}
-        >
-          <div className="flex items-center justify-between w-full">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              {t('chart_editor_dataset_operation', 'Dataset Operation')}
-            </h3>
-            <motion.div
-              className="flex items-center gap-2"
-              animate={{ rotate: isCollapsed ? 0 : 180 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-            >
-              <ChevronDown className="h-5 w-5 text-gray-500" />
-            </motion.div>
-          </div>
-        </CardHeader>
-
-        <AnimatePresence mode="wait">
-          {!isCollapsed && (
-            <motion.div
-              key="dataset-operation-content"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-            >
-              <CardContent className="space-y-4 mt-4">
-                {!hasDataset ? (
-                  <div className="text-sm text-gray-600 dark:text-gray-400 text-center py-8">
-                    {t(
-                      'chart_editor_dataset_operation_no_dataset',
-                      'Select a dataset to enable filter operations.'
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    <FilterConfiguration
-                      availableColumns={availableColumns}
-                      filters={(datasetConfig?.filters as unknown as DatasetFilterColumn[]) || []}
-                      numberFormat={numberFormat}
-                      uniqueValuesByColumn={uniqueValuesByColumn}
-                      onFilterChange={cols =>
-                        handleConfigChange({
-                          datasetConfig: {
-                            ...(datasetConfig || {}),
-                            filters: cols.length ? (cols as any) : undefined,
-                          },
-                        } as any)
-                      }
-                    />
-                    <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
-                    <SortConfiguration
-                      availableColumns={availableColumns}
-                      sortLevels={datasetConfig?.sort || []}
-                      onSortChange={(levels: any[]) =>
-                        handleConfigChange({
-                          datasetConfig: {
-                            ...(datasetConfig || {}),
-                            sort: levels.length ? levels : undefined,
-                          },
-                        } as any)
-                      }
-                    />
-                    <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
-                    <AggregationConfiguration
-                      availableColumns={availableColumns}
-                      groupBy={datasetConfig?.aggregation?.groupBy || []}
-                      metrics={datasetConfig?.aggregation?.metrics || []}
-                      onAggregationChange={(groupBy, metrics) =>
-                        handleConfigChange({
-                          datasetConfig: {
-                            ...(datasetConfig || {}),
-                            aggregation:
-                              groupBy.length > 0 || metrics.length > 0
-                                ? { groupBy, metrics }
-                                : undefined,
-                          },
-                        } as any)
-                      }
-                    />
-                  </>
-                )}
-              </CardContent>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </Card>
-    </motion.div>
-  );
+  // Use the new drag-and-drop interface
+  return <DragDropDatasetOperation className={className} processedHeaders={processedHeaders} />;
 };
 
 export default DatasetOperationSection;

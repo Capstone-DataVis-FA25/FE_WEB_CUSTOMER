@@ -1,0 +1,565 @@
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core';
+import { snapCenterToCursor } from '@dnd-kit/modifiers';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Settings, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
+import { Card, CardContent, CardHeader } from '../ui/card';
+import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
+import type {
+  DatasetFilterColumn,
+  DatasetColumnType,
+  SortLevel,
+  GroupByColumn,
+  AggregationMetric,
+} from '@/types/chart';
+import type { DataHeader } from '@/utils/dataProcessors';
+import { useAppSelector } from '@/store/hooks';
+import { selectWorkingDataset } from '@/features/chartEditor/chartEditorSelectors';
+import ColumnPalette, { ColumnChipOverlay } from './drag-drop/ColumnPalette';
+import OperationTabs, { type OperationTab } from './drag-drop/OperationTabs';
+import FilterTab from './drag-drop/FilterTab';
+import SortTab from './drag-drop/SortTab';
+import AggregationTab from './drag-drop/AggregationTab';
+import PivotTab from './drag-drop/PivotTab';
+import OperationsPreview from './drag-drop/OperationsPreview';
+
+interface DragDropDatasetOperationProps {
+  className?: string;
+  processedHeaders?: DataHeader[];
+}
+
+interface DraggedColumn {
+  id: string;
+  name: string;
+  type: DatasetColumnType;
+  dateFormat?: string;
+}
+
+interface DragItem {
+  type: 'column';
+  column: DraggedColumn;
+}
+
+const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
+  className = '',
+  processedHeaders,
+}) => {
+  const { t } = useTranslation();
+  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [activeTab, setActiveTab] = useState<OperationTab>('filter');
+  const [activeColumn, setActiveColumn] = useState<DraggedColumn | null>(null);
+  const [overlayContainer, setOverlayContainer] = useState<HTMLElement | null>(null);
+  const [activeDropZone, setActiveDropZone] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      setOverlayContainer(document.body);
+    }
+  }, []);
+  const { chartConfig } = useChartEditorRead();
+  const { handleConfigChange } = useChartEditorActions();
+  const currentDataset = useAppSelector(state => state.dataset.currentDataset);
+  const working = useAppSelector(selectWorkingDataset);
+
+  const datasetConfig = (chartConfig as any)?.datasetConfig;
+
+  // Get available columns
+  const datasetDateFormat =
+    (currentDataset as any)?.detectedDateFormat || currentDataset?.dateFormat;
+
+  const availableColumns = useMemo(() => {
+    const fallbackFormat = datasetDateFormat;
+
+    if (currentDataset?.headers) {
+      return (currentDataset.headers as any[]).map((h: any) => ({
+        id: h.id || h.headerId || String(h.name || ''),
+        name: h.name || '',
+        type: (h.type as DatasetColumnType) || 'text',
+        dateFormat:
+          ((h.type as DatasetColumnType) || 'text') === 'date'
+            ? h.dateFormat || fallbackFormat
+            : undefined,
+      }));
+    }
+    if (processedHeaders) {
+      return processedHeaders.map((h, idx) => ({
+        id: (h as any).id || (h as any).headerId || String(h.name || `col_${idx + 1}`),
+        name: h.name || '',
+        type: ((h as any).type as DatasetColumnType) || 'text',
+        dateFormat:
+          (((h as any).type as DatasetColumnType) || 'text') === 'date'
+            ? (h as any).dateFormat || fallbackFormat
+            : undefined,
+      }));
+    }
+    return [];
+  }, [currentDataset?.headers, processedHeaders, datasetDateFormat]);
+
+  const numberFormat = useMemo(() => {
+    if (currentDataset) {
+      const ds: any = currentDataset;
+      return (
+        ds.detectedNumberFormat ||
+        (ds.decimalSeparator && ds.thousandsSeparator
+          ? { decimalSeparator: ds.decimalSeparator, thousandsSeparator: ds.thousandsSeparator }
+          : ds.numberFormat || undefined)
+      );
+    }
+    return undefined;
+  }, [currentDataset]);
+
+  const uniqueValuesByColumn = useMemo(() => {
+    // Always derive uniques from the original dataset headers, not the aggregated working dataset.
+    if (!currentDataset?.headers) return {} as Record<string, string[]>;
+
+    const headers = currentDataset.headers as any[];
+    const MAX_TRACKED_UNIQUE_VALUES = Number.POSITIVE_INFINITY;
+    const result: Record<string, string[]> = {};
+
+    headers.forEach((h: any, idx: number) => {
+      // BackendDataHeader keeps column data in `data`
+      const colData: any[] = Array.isArray(h.data) ? h.data : [];
+      const map = new Map<string, string>();
+
+      colData.forEach(cell => {
+        if (cell != null && cell !== '') {
+          const str = String(cell).trim();
+          if (str) map.set(str, str);
+        }
+      });
+
+      const colId = h.id || h.headerId || String(h.name || `col_${idx + 1}`);
+      const unique = Array.from(map.values()).sort();
+      result[colId] =
+        unique.length > MAX_TRACKED_UNIQUE_VALUES
+          ? unique.slice(0, MAX_TRACKED_UNIQUE_VALUES)
+          : unique;
+    });
+
+    return result;
+  }, [currentDataset?.headers]);
+
+  // dnd-kit sensors & handlers
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const data = event.active.data.current as DragItem | undefined;
+    if (data?.type === 'column') {
+      setActiveColumn(data.column);
+    }
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      const activeData = active?.data?.current as DragItem | undefined;
+      const zone = (over?.data?.current as { zone?: string } | undefined)?.zone;
+      if (!activeData || activeData.type !== 'column' || !zone) {
+        setActiveColumn(null);
+        setActiveDropZone(null);
+        return;
+      }
+
+      const column = activeData.column;
+
+      switch (zone) {
+        case 'filter': {
+          const currentFilters = (datasetConfig?.filters as DatasetFilterColumn[]) || [];
+          if (!currentFilters.find(f => f.columnId === column.id)) {
+            const newFilter: DatasetFilterColumn = {
+              id: `filter_${Date.now()}`,
+              columnId: column.id,
+              columnName: column.name,
+              columnType: column.type,
+              conditions: [
+                {
+                  id: `cond_${Date.now()}`,
+                  operator:
+                    column.type === 'number'
+                      ? 'greater_than'
+                      : column.type === 'date'
+                        ? 'greater_than'
+                        : 'contains',
+                  value: null,
+                },
+              ],
+            };
+            handleConfigChange({
+              datasetConfig: {
+                ...(datasetConfig || {}),
+                filters: [...currentFilters, newFilter],
+              },
+            } as any);
+          }
+          setActiveColumn(null);
+          setActiveDropZone(null);
+          break;
+        }
+
+        case 'sort': {
+          const currentSort = (datasetConfig?.sort as SortLevel[]) || [];
+          if (!currentSort.find(s => s.columnId === column.id)) {
+            const newSort: SortLevel = {
+              columnId: column.id,
+              direction: 'asc',
+            };
+            handleConfigChange({
+              datasetConfig: {
+                ...(datasetConfig || {}),
+                sort: [...currentSort, newSort],
+              },
+            } as any);
+          }
+          setActiveColumn(null);
+          setActiveDropZone(null);
+          break;
+        }
+
+        case 'aggregation-groupby': {
+          const currentGroupBy = (datasetConfig?.aggregation?.groupBy as GroupByColumn[]) || [];
+          if (!currentGroupBy.find(g => g.id === column.id)) {
+            const newGroupBy: GroupByColumn = {
+              id: column.id,
+              name: column.name,
+              timeUnit: column.type === 'date' ? 'day' : undefined,
+            };
+            handleConfigChange({
+              datasetConfig: {
+                ...(datasetConfig || {}),
+                aggregation: {
+                  ...(datasetConfig?.aggregation || {}),
+                  groupBy: [...currentGroupBy, newGroupBy],
+                },
+              },
+            } as any);
+          }
+          setActiveColumn(null);
+          setActiveDropZone(null);
+          break;
+        }
+
+        case 'aggregation-metrics': {
+          if (column.type === 'number') {
+            const currentMetrics =
+              (datasetConfig?.aggregation?.metrics as AggregationMetric[]) || [];
+            if (!currentMetrics.find(m => m.columnId === column.id && m.type === 'sum')) {
+              const newMetric: AggregationMetric = {
+                id: `metric_${Date.now()}`,
+                type: 'sum',
+                columnId: column.id,
+                alias: `sum(${column.name})`,
+              };
+              handleConfigChange({
+                datasetConfig: {
+                  ...(datasetConfig || {}),
+                  aggregation: {
+                    ...(datasetConfig?.aggregation || {}),
+                    metrics: [...currentMetrics, newMetric],
+                  },
+                },
+              } as any);
+            }
+          }
+          setActiveColumn(null);
+          setActiveDropZone(null);
+          break;
+        }
+
+        case 'pivot-rows':
+        case 'pivot-columns':
+        case 'pivot-values':
+          setActiveColumn(null);
+          setActiveDropZone(null);
+          break;
+        default:
+          setActiveColumn(null);
+          break;
+      }
+    },
+    [datasetConfig, handleConfigChange]
+  );
+
+  const handleDragCancel = useCallback(() => {
+    setActiveColumn(null);
+    setActiveDropZone(null);
+  }, []);
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const zone = (event.over?.data?.current as { zone?: string } | undefined)?.zone || null;
+    setActiveDropZone(zone);
+  }, []);
+
+  const paletteColumns = useMemo(() => {
+    if (!activeTab) return availableColumns;
+
+    if (activeTab === 'filter') {
+      const filters = (datasetConfig?.filters as DatasetFilterColumn[]) || [];
+      const excludedIds = new Set(filters.map(f => f.columnId));
+      return availableColumns.filter(col => !excludedIds.has(col.id));
+    }
+
+    if (activeTab === 'sort') {
+      const sortLevels = (datasetConfig?.sort as SortLevel[]) || [];
+      const excludedIds = new Set(sortLevels.map(s => s.columnId));
+      return availableColumns.filter(col => !excludedIds.has(col.id));
+    }
+
+    if (activeTab === 'aggregation') {
+      const groupBy = (datasetConfig?.aggregation?.groupBy as GroupByColumn[]) || [];
+      const excludedIds = new Set(groupBy.map(g => g.id));
+      return availableColumns.filter(col => !excludedIds.has(col.id));
+    }
+
+    return availableColumns;
+  }, [
+    activeTab,
+    availableColumns,
+    datasetConfig?.filters,
+    datasetConfig?.sort,
+    datasetConfig?.aggregation?.groupBy,
+  ]);
+
+  const hasDataset = currentDataset && availableColumns.length > 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.6, delay: 0.25 }}
+      className={`select-none ${className}`}
+    >
+      <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-hidden rounded-lg">
+        <CardHeader
+          className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          <div className="flex items-center justify-between w-full">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              {t('chart_editor_dataset_operation', 'Dataset Operation')}
+            </h3>
+            <motion.div
+              className="flex items-center gap-2"
+              animate={{ rotate: isCollapsed ? 0 : 180 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+            >
+              <ChevronDown className="h-5 w-5 text-gray-500" />
+            </motion.div>
+          </div>
+        </CardHeader>
+
+        <AnimatePresence mode="wait">
+          {!isCollapsed && (
+            <motion.div
+              key="dataset-operation-content"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              <CardContent className="space-y-4 mt-4">
+                {!hasDataset ? (
+                  <div className="text-sm text-gray-600 dark:text-gray-400 text-center py-8">
+                    {t(
+                      'chart_editor_dataset_operation_no_dataset',
+                      'Select a dataset to enable filter operations.'
+                    )}
+                  </div>
+                ) : (
+                  <DndContext
+                    sensors={sensors}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragCancel={handleDragCancel}
+                    onDragOver={handleDragOver}
+                  >
+                    <div className="space-y-4">
+                      {/* Column Palette - Top */}
+                      <ColumnPalette columns={paletteColumns} />
+
+                      {/* Operation Tabs */}
+                      <div className="space-y-3 flex flex-col h-full">
+                        <OperationTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+                        {/* Operation Content */}
+                        <div className="flex-1 min-h-0 flex flex-col">
+                          <div className="flex-1 overflow-visible">
+                            <AnimatePresence mode="wait">
+                              {activeTab === 'filter' && (
+                                <FilterTab
+                                  availableColumns={availableColumns}
+                                  filters={
+                                    (datasetConfig?.filters as unknown as DatasetFilterColumn[]) ||
+                                    []
+                                  }
+                                  numberFormat={numberFormat}
+                                  uniqueValuesByColumn={uniqueValuesByColumn}
+                                  onFilterChange={cols =>
+                                    handleConfigChange({
+                                      datasetConfig: {
+                                        ...(datasetConfig || {}),
+                                        filters: cols.length ? (cols as any) : undefined,
+                                      },
+                                    } as any)
+                                  }
+                                />
+                              )}
+
+                              {activeTab === 'sort' && (
+                                <SortTab
+                                  availableColumns={availableColumns}
+                                  sortLevels={(datasetConfig?.sort as SortLevel[]) || []}
+                                  onSortChange={(levels: SortLevel[]) =>
+                                    handleConfigChange({
+                                      datasetConfig: {
+                                        ...(datasetConfig || {}),
+                                        sort: levels.length ? levels : undefined,
+                                      },
+                                    } as any)
+                                  }
+                                />
+                              )}
+
+                              {activeTab === 'aggregation' && (
+                                <AggregationTab
+                                  availableColumns={availableColumns}
+                                  groupBy={
+                                    (datasetConfig?.aggregation?.groupBy as GroupByColumn[]) || []
+                                  }
+                                  metrics={
+                                    (datasetConfig?.aggregation?.metrics as AggregationMetric[]) ||
+                                    []
+                                  }
+                                  onAggregationChange={(groupBy, metrics) =>
+                                    handleConfigChange({
+                                      datasetConfig: {
+                                        ...(datasetConfig || {}),
+                                        aggregation:
+                                          groupBy.length > 0 || metrics.length > 0
+                                            ? {
+                                                ...(datasetConfig?.aggregation || {}),
+                                                groupBy,
+                                                metrics,
+                                              }
+                                            : undefined,
+                                      },
+                                    } as any)
+                                  }
+                                />
+                              )}
+
+                              {activeTab === 'pivot' && <PivotTab />}
+                            </AnimatePresence>
+                          </div>
+
+                          {/* Operations Preview - Fixed height at bottom */}
+                          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                              Applied Operations Preview
+                            </div>
+                            <div className="max-h-[280px] overflow-y-auto preview-scrollbar bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                              <style>{`
+                                .preview-scrollbar::-webkit-scrollbar {
+                                  width: 8px;
+                                }
+                                .preview-scrollbar::-webkit-scrollbar-track {
+                                  background: transparent;
+                                  border-radius: 4px;
+                                }
+                                .preview-scrollbar::-webkit-scrollbar-thumb {
+                                  background: linear-gradient(180deg, rgba(156, 163, 175, 0.4), rgba(156, 163, 175, 0.6));
+                                  border-radius: 4px;
+                                  border: 1px solid rgba(255, 255, 255, 0.1);
+                                }
+                                .preview-scrollbar::-webkit-scrollbar-thumb:hover {
+                                  background: linear-gradient(180deg, rgba(156, 163, 175, 0.6), rgba(156, 163, 175, 0.8));
+                                }
+                                .dark .preview-scrollbar::-webkit-scrollbar-thumb {
+                                  background: linear-gradient(180deg, rgba(75, 85, 99, 0.5), rgba(75, 85, 99, 0.7));
+                                  border: 1px solid rgba(0, 0, 0, 0.2);
+                                }
+                                .dark .preview-scrollbar::-webkit-scrollbar-thumb:hover {
+                                  background: linear-gradient(180deg, rgba(75, 85, 99, 0.7), rgba(75, 85, 99, 0.9));
+                                }
+                                .preview-scrollbar {
+                                  scrollbar-width: thin;
+                                  scrollbar-color: rgba(156, 163, 175, 0.6) transparent;
+                                }
+                                .dark .preview-scrollbar {
+                                  scrollbar-color: rgba(75, 85, 99, 0.7) transparent;
+                                }
+                              `}</style>
+                              <OperationsPreview
+                                availableColumns={availableColumns}
+                                filters={(datasetConfig?.filters as DatasetFilterColumn[]) || []}
+                                sortLevels={(datasetConfig?.sort as SortLevel[]) || []}
+                                groupBy={
+                                  (datasetConfig?.aggregation?.groupBy as GroupByColumn[]) || []
+                                }
+                                metrics={
+                                  (datasetConfig?.aggregation?.metrics as AggregationMetric[]) || []
+                                }
+                                numberFormat={numberFormat}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {overlayContainer &&
+                      createPortal(
+                        <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
+                          {activeColumn ? (
+                            <motion.div
+                              initial={{ scale: 1, opacity: 1 }}
+                              animate={
+                                activeDropZone
+                                  ? { scale: 0.95, opacity: 1 }
+                                  : { scale: 1.02, opacity: 1 }
+                              }
+                              transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+                              className="pointer-events-none"
+                            >
+                              <ColumnChipOverlay
+                                column={activeColumn}
+                                accent={
+                                  activeDropZone === 'filter'
+                                    ? 'filter'
+                                    : activeDropZone === 'sort'
+                                      ? 'sort'
+                                      : activeDropZone?.startsWith('aggregation')
+                                        ? 'aggregation'
+                                        : null
+                                }
+                              />
+                            </motion.div>
+                          ) : null}
+                        </DragOverlay>,
+                        overlayContainer
+                      )}
+                  </DndContext>
+                )}
+              </CardContent>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Card>
+    </motion.div>
+  );
+};
+
+export default DragDropDatasetOperation;
