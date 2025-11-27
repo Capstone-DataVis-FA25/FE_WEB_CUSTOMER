@@ -11,7 +11,11 @@ import {
   Clock,
   Pencil,
   History,
+  HelpCircle,
 } from 'lucide-react';
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
+import { chartEditorSteps } from '@/config/driver-steps';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +75,18 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
   } = useChartEditor();
 
   const combinedHasChanges = typeof dirty === 'boolean' ? dirty : hasChanges;
+
+  // Driver.js tour
+  const startTour = () => {
+    const driverObj = driver({
+      showProgress: true,
+      steps: chartEditorSteps,
+      nextBtnText: t('driver_next', 'Next'),
+      prevBtnText: t('driver_prev', 'Previous'),
+      doneBtnText: t('driver_done', 'Done'),
+    });
+    driverObj.drive();
+  };
 
   const chartInfo: ChartInfo = useMemo(() => {
     switch (currentChartType) {
@@ -348,6 +364,16 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startTour}
+              className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0"
+              title={t('chart_editor_tour', 'Take a tour of the chart editor')}
+            >
+              <HelpCircle className="w-4 h-4" />
+              {t('chart_editor_tour_btn', 'Tour')}
+            </Button>
             <Button
               variant="outline"
               size="sm"

@@ -113,7 +113,13 @@ const RouteRenderer: React.FC<{ route: RouteConfig }> = ({ route }) => {
   return (
     <ProtectedRoute route={route}>
       <LayoutWrapper route={route}>
-        <Suspense fallback={<LoadingSpinner />}>
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center min-h-screen">
+              <LoadingSpinner />
+            </div>
+          }
+        >
           <Component />
         </Suspense>
       </LayoutWrapper>

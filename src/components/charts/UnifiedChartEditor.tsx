@@ -35,10 +35,14 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
           <div className="lg:col-span-2 space-y-6">
             <div className="space-y-4">
               {/* Chart Type Selector */}
-              <ChartTypeSelector />
+              <div id="chart-type-selector">
+                <ChartTypeSelector />
+              </div>
 
               {/* Basic Settings Section */}
-              <BasicSettingsSection />
+              <div id="basic-settings-section">
+                <BasicSettingsSection />
+              </div>
 
               {(chartType == ChartType.Line ||
                 chartType == ChartType.Bar ||
@@ -46,13 +50,19 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                 chartType == ChartType.Scatter) && (
                 <>
                   {/* Basic Chart Settings Section */}
-                  <BasicChartSettingsSection />
+                  <div id="chart-settings-section">
+                    <BasicChartSettingsSection />
+                  </div>
 
                   {/* Axis Configuration Section */}
-                  <AxisConfigurationSection processedHeaders={processedHeaders} />
+                  <div id="axis-configuration-section">
+                    <AxisConfigurationSection processedHeaders={processedHeaders} />
+                  </div>
 
                   {/* Series Management Section */}
-                  <SeriesManagementSection processedHeaders={processedHeaders} />
+                  <div id="series-management-section">
+                    <SeriesManagementSection processedHeaders={processedHeaders} />
+                  </div>
                 </>
               )}
 
@@ -75,12 +85,18 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                   <CyclePlotSettingsSection />
                 </>
               )}
-              <ChartFormatterSettings />
-              <ImportExportSection setDataId={setDataId} datasetId={datasetId} />
+              <div id="chart-formatter-section">
+                <ChartFormatterSettings />
+              </div>
+              <div id="import-export-section">
+                <ImportExportSection setDataId={setDataId} datasetId={datasetId} />
+              </div>
             </div>
           </div>
           {/* Right Side - Chart Display */}
-          <ChartDisplaySection processedHeaders={processedHeaders} />
+          <div id="chart-display-section">
+            <ChartDisplaySection processedHeaders={processedHeaders} />
+          </div>
         </div>
       </div>
     </div>
