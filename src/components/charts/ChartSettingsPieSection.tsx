@@ -4,7 +4,7 @@ import { Card, CardHeader, CardContent } from '../ui/card';
 import { ChevronDown, ChevronUp, Sliders } from 'lucide-react';
 import { Label } from '../ui/label';
 import { useChartEditor, useChartEditorActions } from '@/features/chartEditor';
-import { useDataset } from '@/features/dataset/useDataset';
+import { useAppSelector } from '@/store/hooks';
 import { AnimatePresence, motion } from '@/theme/animation';
 import { CHART_ROLE_VALIDATION_RULES } from '@/utils/chartValidation';
 
@@ -30,7 +30,8 @@ interface ChartSettingsPieSectionProps {
 
 const ChartSettingsPieSection: React.FC<ChartSettingsPieSectionProps> = ({ processedHeaders }) => {
   const { chartConfig } = useChartEditor();
-  const { currentDataset } = useDataset();
+  // Only subscribe to currentDataset to avoid re-renders when datasets list is refreshed
+  const currentDataset = useAppSelector(state => state.dataset.currentDataset);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { handleConfigChange } = useChartEditorActions();
   const config = chartConfig?.config;

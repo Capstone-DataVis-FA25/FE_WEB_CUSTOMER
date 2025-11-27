@@ -12,7 +12,8 @@ import {
 export interface DatasetState {
   datasets: Dataset[];
   currentDataset: Dataset | null;
-  loading: boolean;
+  loading: boolean; // For fetching dataset by ID
+  loadingList: boolean; // For fetching datasets list
   creating: boolean;
   updating: boolean;
   deleting: boolean;
@@ -23,6 +24,7 @@ const initialState: DatasetState = {
   datasets: [],
   currentDataset: null,
   loading: false,
+  loadingList: false,
   creating: false,
   updating: false,
   deleting: false,
@@ -44,15 +46,15 @@ const datasetSlice = createSlice({
     builder
       // Fetch all datasets
       .addCase(fetchDatasets.pending, state => {
-        state.loading = true;
+        state.loadingList = true;
         state.error = null;
       })
       .addCase(fetchDatasets.fulfilled, (state, action: PayloadAction<Dataset[]>) => {
-        state.loading = false;
+        state.loadingList = false;
         state.datasets = action.payload;
       })
       .addCase(fetchDatasets.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingList = false;
         state.error = action.payload as string;
       })
       // Fetch dataset by ID

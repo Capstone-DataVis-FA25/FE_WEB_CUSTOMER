@@ -4,7 +4,7 @@ import { Card, CardHeader, CardContent } from '../ui/card';
 import { ChevronDown, Settings, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
-import { useDataset } from '@/features/dataset/useDataset';
+import { useAppSelector } from '@/store/hooks';
 import FormatterSection from './FormatterSection';
 import type { FormatterType } from '@/utils/formatValue';
 import type { FormatterConfig } from '@/types/chart';
@@ -25,7 +25,8 @@ const ChartFormatterSettings: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { chartConfig } = useChartEditorRead();
   const { handleConfigChange } = useChartEditorActions();
-  const { currentDataset } = useDataset();
+  // Only subscribe to currentDataset to avoid re-renders when datasets list is refreshed
+  const currentDataset = useAppSelector(state => state.dataset.currentDataset);
 
   // Get axis configuration to find selected columns (MUST be before any early returns)
   const axisConfigs = chartConfig && 'axisConfigs' in chartConfig ? chartConfig.axisConfigs : null;

@@ -8,7 +8,6 @@ import {
   type NumberFormat,
   type DateFormat,
 } from '@/contexts/DatasetContext';
-import DataOperationsPanel from './operations/DataOperationsPanel';
 import type { DatasetConfig, SortLevel } from '@/types/chart';
 import { buildColumnIndexMap } from '@/utils/datasetOps';
 
@@ -185,9 +184,9 @@ const DataTab: React.FC<DataTabProps> = ({
   // }, [excelKey, highlightHeaderIds, initialColumns]);
 
   return (
-    <div className="w-full h-full min-h-0 flex bg-white dark:bg-gray-900">
-      {/* Left: Custom Excel */}
-      <div className="flex-1 h-full min-h-0 min-w-0 p-4 overflow-hidden">
+    <div className="w-full h-full min-h-0 bg-white dark:bg-gray-900">
+      {/* Custom Excel - Full Width */}
+      <div className="w-full h-full min-h-0 min-w-0 p-4 overflow-hidden">
         {/* Legend (yellow only) */}
         <div className="mb-2 flex flex-wrap items-center justify-center gap-3 text-xs text-gray-600 dark:text-gray-300">
           <div className="flex items-center gap-2">
@@ -221,22 +220,6 @@ const DataTab: React.FC<DataTabProps> = ({
           )}
         </div>
       </div>
-
-      {/* Right: Operation panel */}
-      <DataOperationsPanel
-        datasetName={datasetName}
-        onOpenDatasetModal={onOpenDatasetModal}
-        availableColumns={(columnsForOperations || []).map((c, idx) => ({
-          id: (c as any).id || (c as any).headerId || String(c.name || `col_${idx + 1}`),
-          name: c.name || String((c as any).id || (c as any).headerId || `Column ${idx + 1}`),
-          type: (c as any).type || 'text',
-          dateFormat: (c as any).dateFormat,
-        }))}
-        datasetConfig={datasetConfig}
-        onDatasetConfigChange={onDatasetConfigChange}
-        numberFormat={initialNumberFormat}
-        uniqueValuesByColumn={uniqueValuesByColumn}
-      />
     </div>
   );
 };
