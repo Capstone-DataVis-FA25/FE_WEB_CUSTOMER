@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import DataViewer from '@/components/dataset/DataViewer';
 import FileUpload from '@/components/dataset/FileUpload';
 import SampleDataUpload from '@/components/dataset/SampleDataUpload';
@@ -43,6 +43,7 @@ function CreateDatasetPageContent() {
   const { showSuccess, showError, showWarning } = useToastContext();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Get form states from FormContext
   const { datasetName, description, resetForm } = useForm();
@@ -86,18 +87,22 @@ function CreateDatasetPageContent() {
   );
 
   const handleCleanDatasetComplete = useCallback(
-    (cleanedData: string | any[][]) => {
+    (cleanedData: any) => {
       try {
+        // Nếu là object kiểu { data: [...] } thì lấy ra .data
+        let matrix = cleanedData;
+        if (cleanedData && typeof cleanedData === 'object' && Array.isArray(cleanedData.data)) {
+          matrix = cleanedData.data;
+        }
         // Nếu là CSV string, xử lý như text
-        if (typeof cleanedData === 'string') {
-          handleTextProcess(cleanedData);
-        } else if (Array.isArray(cleanedData)) {
-          // Nếu là matrix (từ Excel), chuyển đổi thành CSV format
-          const csvContent = cleanedData
-            .map(row =>
+        if (typeof matrix === 'string') {
+          handleTextProcess(matrix);
+        } else if (Array.isArray(matrix)) {
+          // Nếu là matrix (từ Excel hoặc từ BE), chuyển đổi thành CSV format
+          const csvContent = matrix
+            .map((row: any[]) =>
               row
-                .map(cell => {
-                  // Escape quotes và wrap nếu cần
+                .map((cell: any) => {
                   const cellStr = String(cell ?? '');
                   return cellStr.includes(',') || cellStr.includes('"')
                     ? `"${cellStr.replace(/"/g, '""')}"`
@@ -449,6 +454,15 @@ function CreateDatasetPageContent() {
       setNumberFormat,
     ]
   );
+
+  // Khi vào trang, nếu có cleanedData từ location.state thì tự động xử lý
+  useEffect(() => {
+    if (location.state && location.state.cleanedData) {
+      handleCleanDatasetComplete(location.state.cleanedData);
+      setViewMode('view');
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, handleCleanDatasetComplete, navigate, location.pathname]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">

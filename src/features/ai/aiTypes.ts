@@ -23,6 +23,7 @@ export interface CleanCsvRequest {
   dateFormat?: string;
   schemaExample?: string;
   notes?: string;
+  userId?: string;
 }
 
 export interface CleanCsvApiResponse {
