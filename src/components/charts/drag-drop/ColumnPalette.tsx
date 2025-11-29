@@ -71,7 +71,7 @@ const ColumnChip: React.FC<{ column: Column }> = ({ column }) => {
 
 export const ColumnChipOverlay: React.FC<{
   column: Column;
-  accent?: 'filter' | 'sort' | 'aggregation' | null;
+  accent?: 'filter' | 'sort' | 'aggregation' | 'groupby' | 'metric' | null;
 }> = ({ column, accent = null }) => {
   const accentClasses =
     accent === 'filter'
@@ -80,7 +80,11 @@ export const ColumnChipOverlay: React.FC<{
         ? 'ring-2 ring-emerald-400/80'
         : accent === 'aggregation'
           ? 'ring-2 ring-amber-400/80'
-          : 'shadow-md shadow-black/25';
+          : accent === 'groupby'
+            ? 'ring-2 ring-indigo-400/80'
+            : accent === 'metric'
+              ? 'ring-2 ring-purple-400/80'
+              : 'shadow-md shadow-black/25';
 
   return (
     <ColumnChipBase

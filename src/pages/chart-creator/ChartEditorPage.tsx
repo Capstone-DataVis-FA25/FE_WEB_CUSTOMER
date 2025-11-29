@@ -343,7 +343,6 @@ const ChartEditorPage: React.FC = () => {
     //   currentChartId: currentChart.id,
     //   chartIdFromUrl,
     // });
-
     // Only populate if this is the chart we're supposed to be editing
     if (currentChart.id === chartIdFromUrl) {
       setEditableName(currentChart.name || '');
@@ -815,29 +814,6 @@ const ChartEditorPage: React.FC = () => {
 
     try {
       if (chartConfig) {
-        // Debug: print bindings before/after reset
-        const extractBindings = (cfg: MainChartConfig | null, type: any) => {
-          if (!cfg) return {} as any;
-          if (type === 'line' || type === 'bar' || type === 'area' || type === 'scatter') {
-            const axis = (cfg as any)?.axisConfigs;
-            const series = (axis?.seriesConfigs || []).map((s: any) => s?.dataKey);
-            return {
-              chartType: type,
-              xAxisKey: axis?.xAxisKey,
-              seriesDataKeys: series,
-            };
-          }
-          if (type === 'pie' || type === 'donut') {
-            const anyCfg = cfg as any;
-            return {
-              chartType: type,
-              labelKey: anyCfg?.config?.labelKey,
-              valueKey: anyCfg?.config?.valueKey,
-            };
-          }
-          return { chartType: type } as any;
-        };
-
         // Ensure reset uses an actual chart type (state -> config -> default)
         const typeForReset =
           (currentChartType as any) || (chartConfig as any)?.chartType || ChartType.Line;

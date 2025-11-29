@@ -129,7 +129,7 @@ const FilterTab: React.FC<FilterTabProps> = ({
             'relative rounded-xl border-2 border-dashed transition-all duration-300 w-full h-[200px] flex items-center justify-center mb-4 overflow-hidden',
             isOver
               ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/20'
-              : 'border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50'
+              : 'border-blue-500/40 dark:border-blue-500/40 bg-gray-50/50 dark:bg-gray-800/50'
           )}
         >
           {isOver ? (
@@ -155,7 +155,7 @@ const FilterTab: React.FC<FilterTabProps> = ({
         <div
           ref={assignDropZoneRef}
           className={cn(
-            'relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/40 p-3 -mx-2 shadow-inner shadow-black/5 transition-colors',
+            'relative rounded-xl border border-blue-500/40 dark:border-blue-500/40 bg-gray-50/70 dark:bg-gray-900/40 p-3 -mx-2 shadow-inner shadow-black/5 transition-colors',
             isOver ? 'ring-2 ring-blue-400/60' : ''
           )}
         >

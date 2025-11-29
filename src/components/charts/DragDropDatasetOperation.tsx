@@ -318,10 +318,10 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
       return availableColumns.filter(col => !excludedIds.has(col.id));
     }
 
+    // For aggregation we allow reusing the same column in both group-by and metrics,
+    // so keep the full palette visible.
     if (activeTab === 'aggregation') {
-      const groupBy = (datasetConfig?.aggregation?.groupBy as GroupByColumn[]) || [];
-      const excludedIds = new Set(groupBy.map(g => g.id));
-      return availableColumns.filter(col => !excludedIds.has(col.id));
+      return availableColumns;
     }
 
     return availableColumns;
@@ -541,9 +541,13 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
                                     ? 'filter'
                                     : activeDropZone === 'sort'
                                       ? 'sort'
-                                      : activeDropZone?.startsWith('aggregation')
-                                        ? 'aggregation'
-                                        : null
+                                      : activeDropZone === 'aggregation-groupby'
+                                        ? 'groupby'
+                                        : activeDropZone === 'aggregation-metrics'
+                                          ? 'metric'
+                                          : activeDropZone?.startsWith('aggregation')
+                                            ? 'aggregation'
+                                            : null
                                 }
                               />
                             </motion.div>

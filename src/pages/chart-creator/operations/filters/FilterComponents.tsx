@@ -353,7 +353,6 @@ export const ConditionRow: React.FC<{
     let nextIncludeEnd = condition.includeEnd;
 
     const isCurrentArrayOperator = operator === 'equals' || operator === 'not_equals';
-    const isNextArrayOperator = nextOperator === 'equals' || nextOperator === 'not_equals';
 
     if (isNoValueOperator(nextOperator)) {
       // is_empty and is_not_empty don't need values

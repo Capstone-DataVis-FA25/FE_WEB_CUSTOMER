@@ -124,8 +124,8 @@ const SortTab: React.FC<SortTabProps> = ({ availableColumns, sortLevels, onSortC
           className={cn(
             'relative rounded-xl border-2 border-dashed transition-all duration-300 w-full h-[200px] flex items-center justify-center mb-4 overflow-hidden',
             isOver
-              ? 'border-green-500 bg-green-50 dark:bg-green-900/20 shadow-lg shadow-green-500/20'
-              : 'border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50'
+              ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-lg shadow-emerald-500/20'
+              : 'border-emerald-500/40 dark:border-emerald-500/40 bg-gray-50/50 dark:bg-gray-800/50'
           )}
         >
           {isOver ? (
@@ -134,7 +134,7 @@ const SortTab: React.FC<SortTabProps> = ({ availableColumns, sortLevels, onSortC
               animate={{ opacity: 1, scale: 1 }}
               className="text-center"
             >
-              <div className="text-green-600 dark:text-green-400 font-semibold flex items-center gap-2 justify-center text-lg">
+              <div className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-2 justify-center text-lg">
                 <Plus className="w-6 h-6" />
                 Drop column here to add sort level
               </div>
@@ -151,8 +151,8 @@ const SortTab: React.FC<SortTabProps> = ({ availableColumns, sortLevels, onSortC
         <div
           ref={assignDropZoneRef}
           className={cn(
-            'relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/40 p-3 -mx-2 shadow-inner shadow-black/5 transition-colors',
-            isOver ? 'ring-2 ring-green-400/60' : ''
+            'relative rounded-xl border border-emerald-500/40 dark:border-emerald-500/40 bg-gray-50/70 dark:bg-gray-900/40 p-3 -mx-2 shadow-inner shadow-black/5 transition-colors',
+            isOver ? 'ring-2 ring-emerald-400/60' : ''
           )}
         >
           <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2 px-1">
