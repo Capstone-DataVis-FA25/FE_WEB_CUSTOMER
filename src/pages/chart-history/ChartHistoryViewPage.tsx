@@ -569,6 +569,7 @@ const ChartHistoryViewPage: React.FC = () => {
               processedHeaders={processedHeaders}
               setDataId={() => {}} // No-op in view mode
               datasetId={selectedHistory.datasetId}
+              showLeftSidebar={false}
             />
           </div>
 

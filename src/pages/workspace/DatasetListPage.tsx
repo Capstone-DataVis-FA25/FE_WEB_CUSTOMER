@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useTranslation } from 'react-i18next';
-import { Plus, Database } from 'lucide-react';
+import { Plus, Database, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -239,6 +239,17 @@ const DatasetListPage: React.FC = () => {
     navigate(Routers.CREATE_DATASET);
   };
 
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setCreatedAtFrom(null);
+    setCreatedAtTo(new Date());
+    setSortOrder('newest');
+    datasetPagination.setPage(1);
+
+    // Reset URL to clean state
+    navigate('?page=1', { replace: true });
+  };
+
   // While initial fetch is in-flight and no items yet, show only header + a scoped spinner
   const isInitialLoading = loading && allFilteredDatasets.length === 0;
 
@@ -336,7 +347,7 @@ const DatasetListPage: React.FC = () => {
                             updateURL({ sort: v as 'newest' | 'oldest' });
                           }}
                         >
-                          <SelectTrigger className="w-full h-11 px-4 pr-10 text-base font-semibold !border-blue-300 !border-2 focus:!border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-blue-500 hover:bg-blue-100">
+                          <SelectTrigger className="w-full h-11 px-4 pr-10 text-base font-semibold !border-blue-300 !border-2 focus:!border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-blue-500 hover:bg-blue-100 focus:outline-none focus:ring-0">
                             <span className="flex items-center gap-2">
                               {sortOrder === 'newest' ? (
                                 <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
@@ -525,6 +536,17 @@ const DatasetListPage: React.FC = () => {
                           }
                         />
                       </div>
+                    </div>
+                    {/* Reset Button */}
+                    <div className="flex items-end">
+                      <button
+                        onClick={handleResetFilters}
+                        type="button"
+                        className="w-full h-11 pr-10 text-base font-semibold !border-blue-300 !border-2 focus:!border-blue-500 rounded-2xl backdrop-blur-sm px-4 text-left flex items-center justify-between hover:shadow-lg bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-blue-500 hover:bg-blue-100 focus:outline-none focus:ring-0"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-3" />
+                        Reset
+                      </button>
                     </div>
                   </div>
                 </div>
