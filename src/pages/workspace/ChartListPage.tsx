@@ -3,7 +3,6 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useTranslation } from 'react-i18next';
 import { Plus, BarChart3, RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
@@ -376,13 +375,14 @@ const ChartListPage: React.FC = () => {
             </div>
           </div>
           <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
-            <Button
+            <button
               onClick={() => handleCreateChart()}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg hover:shadow-xl transition-all duration-200"
+              type="button"
+              className="h-11 px-6 border-2 border-emerald-300 hover:border-emerald-500 rounded-2xl backdrop-blur-sm text-left flex items-center justify-center shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800 font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100"
             >
               <Plus className="h-4 w-4 mr-2" />
               New Chart
-            </Button>
+            </button>
           </div>
         </div>
 
