@@ -19,73 +19,84 @@ export interface UnifiedChartEditorProps {
   processedHeaders?: DataHeader[];
   setDataId: (dataId: string) => void;
   datasetId?: string;
+  showLeftSidebar?: boolean;
 }
 
 const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
   processedHeaders,
   setDataId,
   datasetId,
+  showLeftSidebar = true,
 }) => {
   const { currentChartType: chartType } = useChartEditorRead();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
       <div className="w-full px-2">
-        <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
-          {/* Left Sidebar - Chart Settings */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="space-y-4">
-              {/* Chart Type Selector */}
-              <ChartTypeSelector />
+        {showLeftSidebar ? (
+          <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
+            {/* Left Sidebar - Chart Settings */}
 
-              {/* Basic Settings Section */}
-              <BasicSettingsSection />
+            <div className="lg:col-span-2 space-y-6">
+              <div className="space-y-4">
+                {/* Chart Type Selector */}
+                <ChartTypeSelector />
 
-              {/* Dataset Operation Section */}
-              <DatasetOperationSection processedHeaders={processedHeaders} />
+                {/* Basic Settings Section */}
+                <BasicSettingsSection />
 
-              {(chartType == ChartType.Line ||
-                chartType == ChartType.Bar ||
-                chartType == ChartType.Area ||
-                chartType == ChartType.Scatter) && (
-                <>
-                  {/* Basic Chart Settings Section */}
-                  <BasicChartSettingsSection />
+                {/* Dataset Operation Section */}
+                <DatasetOperationSection processedHeaders={processedHeaders} />
 
-                  {/* Axis Configuration Section */}
-                  <AxisConfigurationSection processedHeaders={processedHeaders} />
+                {(chartType == ChartType.Line ||
+                  chartType == ChartType.Bar ||
+                  chartType == ChartType.Area ||
+                  chartType == ChartType.Scatter) && (
+                  <>
+                    {/* Basic Chart Settings Section */}
+                    <BasicChartSettingsSection />
 
-                  {/* Series Management Section */}
-                  <SeriesManagementSection processedHeaders={processedHeaders} />
-                </>
-              )}
+                    {/* Axis Configuration Section */}
+                    <AxisConfigurationSection processedHeaders={processedHeaders} />
 
-              {(chartType == ChartType.Pie || chartType == ChartType.Donut) && (
-                <>
-                  {/* Basic Chart Settings Section */}
-                  <ChartSettingsPieSection processedHeaders={processedHeaders} />
+                    {/* Series Management Section */}
+                    <SeriesManagementSection processedHeaders={processedHeaders} />
+                  </>
+                )}
 
-                  {/* Display Options Section */}
-                  <DisplayOptionsPieSection />
-                </>
-              )}
+                {(chartType == ChartType.Pie || chartType == ChartType.Donut) && (
+                  <>
+                    {/* Basic Chart Settings Section */}
+                    <ChartSettingsPieSection processedHeaders={processedHeaders} />
 
-              {chartType == ChartType.CyclePlot && (
-                <>
-                  {/* Basic Chart Settings Section */}
-                  <BasicChartSettingsSection />
+                    {/* Display Options Section */}
+                    <DisplayOptionsPieSection />
+                  </>
+                )}
 
-                  {/* Cycle Plot Specific Settings */}
-                  <CyclePlotSettingsSection />
-                </>
-              )}
-              <ChartFormatterSettings />
-              <ImportExportSection setDataId={setDataId} datasetId={datasetId} />
+                {chartType == ChartType.CyclePlot && (
+                  <>
+                    {/* Basic Chart Settings Section */}
+                    <BasicChartSettingsSection />
+
+                    {/* Cycle Plot Specific Settings */}
+                    <CyclePlotSettingsSection />
+                  </>
+                )}
+                <ChartFormatterSettings />
+                <ImportExportSection setDataId={setDataId} datasetId={datasetId} />
+              </div>
             </div>
+
+            {/* Right Side - Chart Display */}
+            <ChartDisplaySection processedHeaders={processedHeaders} />
           </div>
-          {/* Right Side - Chart Display */}
-          <ChartDisplaySection processedHeaders={processedHeaders} />
-        </div>
+        ) : (
+          <div className="w-full">
+            {/* Right Side - Chart Display */}
+            <ChartDisplaySection processedHeaders={processedHeaders} />
+          </div>
+        )}
       </div>
     </div>
   );

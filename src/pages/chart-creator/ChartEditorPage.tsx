@@ -45,6 +45,7 @@ import { cleanupChartConfig } from '@/utils/chartConfigCleanup';
 import { useChartNotes } from '@/features/chartNotes/useChartNotes';
 import { useChartHistory } from '@/features/chartHistory/useChartHistory';
 import { captureAndUploadChartSnapshot } from '@/services/uploadService';
+import Routers from '@/router/routers';
 
 const normalizeDateFormat = (fmt?: string) => {
   if (!fmt) return fmt;
@@ -638,7 +639,7 @@ const ChartEditorPage: React.FC = () => {
         event.preventDefault();
         window.history.pushState(null, '', window.location.href);
         setPendingNavigation(() => () => {
-          navigate('/workspace', { state: { tab: 'charts' } });
+          navigate(Routers.WORKSPACE_CHARTS);
         });
         setShowUnsavedModal(true);
       }
@@ -851,15 +852,39 @@ const ChartEditorPage: React.FC = () => {
       setCurrentModalAction('reset');
       modalConfirm.openConfirm(async () => {
         try {
-          resetToOriginal();
+          // Determine which datasetId to reload
+          let targetDatasetId: string | undefined;
           if (datasetDirty) {
             // restore datasetId to original snapshot
             const orig = originalDatasetIdRef.current;
             if (typeof orig === 'string') {
               setDatasetId(orig);
+              targetDatasetId = orig;
             }
             setDatasetDirty(false);
+          } else {
+            // Use current datasetId
+            targetDatasetId = datasetId || currentChart?.datasetId;
           }
+
+          // STEP 1: Fetch the dataset FIRST to reset currentDataset in store
+          // This ensures excelInitial → originalDataset → processedData have correct headers
+          if (targetDatasetId) {
+            setIsFetchingDatasetById(true);
+            try {
+              await getDatasetById(targetDatasetId);
+              console.log('Dataset reloaded, now resetting config...');
+            } catch (error) {
+              console.error('Failed to fetch original dataset:', error);
+            } finally {
+              setIsFetchingDatasetById(false);
+            }
+          }
+
+          // STEP 2: Reset config AFTER dataset is loaded
+          // Now resetToOriginal will use the fresh dataset headers
+          resetToOriginal();
+
           showSuccess(t('chart_reset', 'Chart reset to original values'));
         } catch (error) {
           console.error('Error resetting chart:', error);
@@ -872,12 +897,12 @@ const ChartEditorPage: React.FC = () => {
   const handleBack = () => {
     if (hasChanges && mode === 'edit') {
       setPendingNavigation(() => () => {
-        navigate('/workspace', { state: { tab: 'charts' } });
+        navigate(Routers.WORKSPACE_CHARTS);
       });
       setShowUnsavedModal(true);
     } else {
       if (mode === 'edit') {
-        navigate('/workspace', { state: { tab: 'charts' } });
+        navigate(Routers.WORKSPACE_CHARTS);
       } else if (mode === 'create' && datasetId) {
         navigate('/chart-gallery', { state: { datasetId } });
       } else {

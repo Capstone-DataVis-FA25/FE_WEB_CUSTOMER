@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useTranslation } from 'react-i18next';
-import { Plus, Database } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Plus, Database, RotateCcw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
@@ -239,6 +238,17 @@ const DatasetListPage: React.FC = () => {
     navigate(Routers.CREATE_DATASET);
   };
 
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setCreatedAtFrom(null);
+    setCreatedAtTo(new Date());
+    setSortOrder('newest');
+    datasetPagination.setPage(1);
+
+    // Reset URL to clean state
+    navigate('?page=1', { replace: true });
+  };
+
   // While initial fetch is in-flight and no items yet, show only header + a scoped spinner
   const isInitialLoading = loading && allFilteredDatasets.length === 0;
 
@@ -268,13 +278,14 @@ const DatasetListPage: React.FC = () => {
             </div>
           </div>
           <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
-            <Button
+            <button
               onClick={handleCreateDataset}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
+              type="button"
+              className="h-11 px-6 border-2 border-blue-300 hover:border-blue-500 rounded-2xl backdrop-blur-sm text-left flex items-center justify-center shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-100"
             >
               <Plus className="h-4 w-4 mr-2" />
               <span>New Dataset</span>
-            </Button>
+            </button>
           </div>
         </div>
 
@@ -336,7 +347,7 @@ const DatasetListPage: React.FC = () => {
                             updateURL({ sort: v as 'newest' | 'oldest' });
                           }}
                         >
-                          <SelectTrigger className="w-full h-11 px-4 pr-10 text-base font-semibold !border-blue-300 !border-2 focus:!border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-blue-500 hover:bg-blue-100">
+                          <SelectTrigger className="w-full h-11 px-4 pr-10 text-base font-semibold !border-blue-300 !border-2 focus:!border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-blue-500 hover:bg-blue-100 focus:outline-none focus:ring-0">
                             <span className="flex items-center gap-2">
                               {sortOrder === 'newest' ? (
                                 <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
@@ -525,6 +536,17 @@ const DatasetListPage: React.FC = () => {
                           }
                         />
                       </div>
+                    </div>
+                    {/* Reset Button */}
+                    <div className="flex items-end">
+                      <button
+                        onClick={handleResetFilters}
+                        type="button"
+                        className="h-11 px-4 border-2 border-blue-300 hover:border-blue-500 rounded-2xl backdrop-blur-sm flex items-center gap-2 shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-100"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Reset
+                      </button>
                     </div>
                   </div>
                 </div>

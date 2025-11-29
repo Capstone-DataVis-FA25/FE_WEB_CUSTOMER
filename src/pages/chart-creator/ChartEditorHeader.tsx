@@ -79,32 +79,46 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
   const chartInfo: ChartInfo = useMemo(() => {
     switch (currentChartType) {
       case ChartType.Line:
-      case 'line':
         return {
           name: t('chart_type_line', 'Line Chart'),
           icon: '📈',
           color: 'bg-blue-500',
         };
       case ChartType.Bar:
-      case 'bar':
         return {
           name: t('chart_type_bar', 'Bar Chart'),
           icon: '📊',
           color: 'bg-green-500',
         };
       case ChartType.Area:
-      case 'area':
         return {
           name: t('chart_type_area', 'Area Chart'),
           icon: '📉',
           color: 'bg-purple-500',
         };
       case ChartType.Scatter:
-      case 'scatter':
         return {
           name: t('chart_type_scatter', 'Scatter Chart'),
           icon: '⚪️',
           color: 'bg-indigo-500',
+        };
+      case ChartType.Pie:
+        return {
+          name: t('chart_type_pie', 'Pie Chart'),
+          icon: '🥧',
+          color: 'bg-pink-500',
+        };
+      case ChartType.Donut:
+        return {
+          name: t('chart_type_donut', 'Donut Chart'),
+          icon: '🍩',
+          color: 'bg-yellow-500',
+        };
+      case ChartType.CyclePlot:
+        return {
+          name: t('chart_type_cycle_plot', 'Cycle Plot'),
+          icon: '🔄',
+          color: 'bg-teal-500',
         };
       default:
         return {
