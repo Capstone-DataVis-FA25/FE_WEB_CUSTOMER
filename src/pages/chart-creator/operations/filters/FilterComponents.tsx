@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
@@ -14,6 +14,7 @@ import {
   getOperatorLabelLower,
   getGranularityFromFormat,
   formatNumberDisplay,
+  formatDateDisplay,
   normalizeNumberInput,
   validateDateCondition,
   validateNumberCondition,
@@ -24,6 +25,15 @@ import type { DatasetColumnType, DatasetFilterCondition, DatasetFilterColumn } f
 export type DateGranularity = 'year' | 'year_month' | 'date' | 'datetime';
 
 const displayValueLabel = (value: string) => (value === '' ? '(blank)' : value);
+
+// Simple debounce utility (per-instance)
+const debounce = <T extends (...args: any[]) => void>(fn: T, delay: number): T => {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return ((...args: any[]) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  }) as T;
+};
 const isRangeOperator = (operator: string) =>
   operator === 'between' || operator === 'between_exclusive';
 const isNoValueOperator = (operator: string) =>
@@ -49,7 +59,19 @@ const UniqueValuePicker: React.FC<{
   errorMsg?: string | null;
   onRemove?: () => void;
   numberFormat?: NumberFormat;
-}> = ({ uniqueValues, selectedValues, onChange, columnType, errorMsg, onRemove, numberFormat }) => {
+  dateGranularity?: DateGranularity;
+  dateFormat?: string;
+}> = ({
+  uniqueValues,
+  selectedValues,
+  onChange,
+  columnType,
+  errorMsg,
+  onRemove,
+  numberFormat,
+  dateGranularity,
+  dateFormat,
+}) => {
   const [search, setSearch] = useState('');
 
   const normalizedValues = useMemo(() => {
@@ -57,29 +79,66 @@ const UniqueValuePicker: React.FC<{
     return uniqueValues.map(v => (v ?? '').toString());
   }, [uniqueValues]);
 
-  // Normalize search term and values for comparison (remove formatting for numbers)
-  const normalizeForSearch = useCallback(
-    (value: string) => {
-      if (columnType === 'number') {
-        // Remove commas, spaces, and other formatting for number comparison
-        return value.replace(/[,\s]/g, '').toLowerCase();
-      }
-      return value.toLowerCase();
-    },
-    [columnType]
-  );
-
   const filteredValues = useMemo(() => {
-    if (!search.trim()) return normalizedValues;
-    const normalizedTerm = normalizeForSearch(search);
-    return normalizedValues.filter(v => {
-      const normalizedValue = normalizeForSearch(v);
-      return normalizedValue.includes(normalizedTerm);
-    });
-  }, [normalizedValues, search, normalizeForSearch]);
+    const term = search.trim();
+    if (!term) return normalizedValues;
+
+    const lowerTerm = term.toLowerCase();
+
+    if (columnType === 'number') {
+      const normalizedTerm = normalizeNumberInput(term, numberFormat)?.toLowerCase() || '';
+      return normalizedValues.filter(value => {
+        const normalizedValue = normalizeNumberInput(value, numberFormat)?.toLowerCase() || '';
+        if (normalizedTerm && normalizedValue.includes(normalizedTerm)) return true;
+        const formattedLower = formatNumberDisplay(value, numberFormat)?.toLowerCase() || '';
+        return formattedLower.includes(lowerTerm);
+      });
+    }
+
+    if (columnType === 'date') {
+      return normalizedValues.filter(value => {
+        const formattedLower =
+          formatDateDisplay(dateGranularity || 'date', value, dateFormat)?.toLowerCase() || '';
+        const rawLower = value.toLowerCase();
+        return (
+          (formattedLower && formattedLower.includes(lowerTerm)) || rawLower.includes(lowerTerm)
+        );
+      });
+    }
+
+    return normalizedValues.filter(value => value.toLowerCase().includes(lowerTerm));
+  }, [normalizedValues, search, columnType, numberFormat, dateGranularity, dateFormat]);
 
   const limitedValues = useMemo(() => filteredValues.slice(0, 100), [filteredValues]);
   const hasMoreThanLimit = filteredValues.length > 100;
+
+  const formatDisplayValue = useCallback(
+    (value: string) => {
+      if (columnType === 'number') {
+        const formatted = formatNumberDisplay(value, numberFormat);
+        console.log('[UniqueValuePicker] number formatting', {
+          value,
+          formatted,
+          decimalSeparator: numberFormat?.decimalSeparator,
+          thousandsSeparator: numberFormat?.thousandsSeparator,
+        });
+        return formatted === '' ? displayValueLabel(value) : formatted;
+      }
+      if (columnType === 'date') {
+        const formatted = formatDateDisplay(dateGranularity || 'date', value, dateFormat);
+        console.log('[UniqueValuePicker] formatting value', {
+          value,
+          columnType,
+          dateGranularity,
+          dateFormat,
+          formatted,
+        });
+        return !formatted || formatted === '?' ? displayValueLabel(value) : formatted;
+      }
+      return displayValueLabel(value);
+    },
+    [columnType, numberFormat, dateGranularity, dateFormat]
+  );
 
   const toggleValue = (value: string) => {
     const exists = selectedValues.includes(value);
@@ -178,10 +237,8 @@ const UniqueValuePicker: React.FC<{
                             onCheckedChange={() => toggleValue(value)}
                             className="h-4 w-4"
                           />
-                          <span className="truncate" title={displayValueLabel(value)}>
-                            {columnType === 'number'
-                              ? formatNumberDisplay(value, numberFormat)
-                              : displayValueLabel(value)}
+                          <span className="truncate" title={formatDisplayValue(value)}>
+                            {formatDisplayValue(value)}
                           </span>
                         </label>
                       );
@@ -210,10 +267,8 @@ const UniqueValuePicker: React.FC<{
                       onCheckedChange={() => toggleValue(value)}
                       className="h-4 w-4"
                     />
-                    <span className="truncate" title={displayValueLabel(value)}>
-                      {columnType === 'number'
-                        ? formatNumberDisplay(value, numberFormat)
-                        : displayValueLabel(value)}
+                    <span className="truncate" title={formatDisplayValue(value)}>
+                      {formatDisplayValue(value)}
                     </span>
                   </label>
                 );
@@ -236,6 +291,7 @@ export const ConditionRow: React.FC<{
   operator: string;
   columnType: DatasetColumnType;
   dateGranularity?: DateGranularity;
+  dateFormat?: string;
   onUpdate: (condition: DatasetFilterCondition) => void;
   onRemove: () => void;
   isOr: boolean;
@@ -247,6 +303,7 @@ export const ConditionRow: React.FC<{
   operator,
   columnType,
   dateGranularity,
+  dateFormat,
   onUpdate,
   onRemove,
   isOr,
@@ -283,6 +340,12 @@ export const ConditionRow: React.FC<{
 
   const toInputValue = (val: unknown) => (val == null ? '' : String(val));
 
+  // Debounced updater for free-text / numeric / date inputs
+  const debouncedUpdate = useMemo(
+    () => debounce((next: DatasetFilterCondition) => onUpdate(next), 250),
+    [onUpdate, condition.id]
+  );
+
   const handleOperatorChange = (nextOperator: string) => {
     let nextValue: DatasetFilterCondition['value'] = condition.value;
     let nextValueEnd: DatasetFilterCondition['valueEnd'] = condition.valueEnd;
@@ -290,7 +353,6 @@ export const ConditionRow: React.FC<{
     let nextIncludeEnd = condition.includeEnd;
 
     const isCurrentArrayOperator = operator === 'equals' || operator === 'not_equals';
-    const isNextArrayOperator = nextOperator === 'equals' || nextOperator === 'not_equals';
 
     if (isNoValueOperator(nextOperator)) {
       // is_empty and is_not_empty don't need values
@@ -415,6 +477,8 @@ export const ConditionRow: React.FC<{
               errorMsg={errorMsg}
               onRemove={canRemove ? onRemove : undefined}
               numberFormat={numberFormat}
+              dateGranularity={dateGranularity}
+              dateFormat={dateFormat}
             />
           </div>
         ) : (
@@ -476,7 +540,7 @@ export const ConditionRow: React.FC<{
                           value={toInputValue(
                             Array.isArray(condition.value) ? condition.value[0] : condition.value
                           )}
-                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          onChange={e => debouncedUpdate({ ...condition, value: e.target.value })}
                           className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
                         />
                         {errorMsg && <ErrorIcon message={errorMsg} />}
@@ -489,7 +553,9 @@ export const ConditionRow: React.FC<{
                           step={1}
                           required
                           value={condition.valueEnd ?? ''}
-                          onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
+                          onChange={e =>
+                            debouncedUpdate({ ...condition, valueEnd: e.target.value })
+                          }
                           className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
                         />
                         {errorMsg && <ErrorIcon message={errorMsg} />}
@@ -515,7 +581,7 @@ export const ConditionRow: React.FC<{
                           value={toInputValue(
                             Array.isArray(condition.value) ? condition.value[0] : condition.value
                           )}
-                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          onChange={e => debouncedUpdate({ ...condition, value: e.target.value })}
                           className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
                         />
                         {errorMsg && <ErrorIcon message={errorMsg} />}
@@ -525,7 +591,9 @@ export const ConditionRow: React.FC<{
                           type="month"
                           required
                           value={(condition.valueEnd as string) || ''}
-                          onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
+                          onChange={e =>
+                            debouncedUpdate({ ...condition, valueEnd: e.target.value })
+                          }
                           className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
                         />
                         {errorMsg && <ErrorIcon message={errorMsg} />}
@@ -551,7 +619,7 @@ export const ConditionRow: React.FC<{
                           value={toInputValue(
                             Array.isArray(condition.value) ? condition.value[0] : condition.value
                           )}
-                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          onChange={e => debouncedUpdate({ ...condition, value: e.target.value })}
                           className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
                         />
                         {errorMsg && <ErrorIcon message={errorMsg} />}
@@ -561,7 +629,9 @@ export const ConditionRow: React.FC<{
                           type="date"
                           required
                           value={(condition.valueEnd as string) || ''}
-                          onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
+                          onChange={e =>
+                            debouncedUpdate({ ...condition, valueEnd: e.target.value })
+                          }
                           className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
                         />
                         {errorMsg && <ErrorIcon message={errorMsg} />}
@@ -587,7 +657,7 @@ export const ConditionRow: React.FC<{
                           value={toInputValue(
                             Array.isArray(condition.value) ? condition.value[0] : condition.value
                           )}
-                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          onChange={e => debouncedUpdate({ ...condition, value: e.target.value })}
                           className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
                         />
                         {errorMsg && <ErrorIcon message={errorMsg} />}
@@ -597,7 +667,9 @@ export const ConditionRow: React.FC<{
                           type="datetime-local"
                           required
                           value={(condition.valueEnd as string) || ''}
-                          onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
+                          onChange={e =>
+                            debouncedUpdate({ ...condition, valueEnd: e.target.value })
+                          }
                           className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
                         />
                         {errorMsg && <ErrorIcon message={errorMsg} />}
@@ -627,7 +699,7 @@ export const ConditionRow: React.FC<{
                           step={1}
                           required
                           value={singleValueForInputs ?? ''}
-                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          onChange={e => debouncedUpdate({ ...condition, value: e.target.value })}
                           className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
                         />
                         {errorMsg && <ErrorIcon message={errorMsg} />}
@@ -651,7 +723,7 @@ export const ConditionRow: React.FC<{
                           type="month"
                           required
                           value={String(singleValueForInputs ?? '')}
-                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          onChange={e => debouncedUpdate({ ...condition, value: e.target.value })}
                           className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
                         />
                         {errorMsg && <ErrorIcon message={errorMsg} />}
@@ -675,7 +747,7 @@ export const ConditionRow: React.FC<{
                           type="date"
                           required
                           value={String(singleValueForInputs ?? '')}
-                          onChange={e => onUpdate({ ...condition, value: e.target.value })}
+                          onChange={e => debouncedUpdate({ ...condition, value: e.target.value })}
                           className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
                         />
                         {errorMsg && <ErrorIcon message={errorMsg} />}
@@ -965,6 +1037,10 @@ export const ColumnFilterSection: React.FC<{
   onRemove: () => void;
   numberFormat?: NumberFormat;
   uniqueValues?: string[];
+  showRemoveButton?: boolean;
+  showColumnSelector?: boolean;
+  defaultExpanded?: boolean;
+  collapseSignal?: number;
 }> = ({
   column,
   availableColumns,
@@ -973,8 +1049,51 @@ export const ColumnFilterSection: React.FC<{
   onRemove,
   numberFormat,
   uniqueValues,
+  showRemoveButton = true,
+  showColumnSelector = true,
+  defaultExpanded = true,
+  collapseSignal,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  // When collapseSignal changes (e.g. drag started), force collapse to compact header size
+  useEffect(() => {
+    if (collapseSignal != null) {
+      setIsExpanded(false);
+    }
+  }, [collapseSignal]);
+
+  const selectedColumnMeta = useMemo(
+    () => availableColumns.find(c => c.id === column.columnId),
+    [availableColumns, column.columnId]
+  );
+  const columnDateFormat = selectedColumnMeta?.dateFormat;
+  const columnDateGranularity = useMemo(
+    () => getGranularityFromFormat(columnDateFormat),
+    [columnDateFormat]
+  );
+
+  useEffect(() => {
+    console.log('[ColumnFilterSection] unique values snapshot', {
+      columnId: column.columnId,
+      count: uniqueValues?.length || 0,
+    });
+  }, [column.columnId, uniqueValues?.length]);
+
+  useEffect(() => {
+    console.log('[ColumnFilterSection] column meta', {
+      columnId: column.columnId,
+      columnName: column.columnName,
+      columnType: column.columnType,
+      dateFormat: columnDateFormat || '(none)',
+      granularity: columnDateGranularity,
+    });
+  }, [
+    column.columnId,
+    column.columnName,
+    column.columnType,
+    columnDateFormat,
+    columnDateGranularity,
+  ]);
 
   const createDefaultCondition = (columnType: DatasetColumnType): DatasetFilterCondition => {
     // Use non-unique-picker operators by default to avoid loading all unique values
@@ -1036,10 +1155,11 @@ export const ColumnFilterSection: React.FC<{
 
   return (
     <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/50 space-y-3">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 font-medium text-gray-900 dark:text-gray-100 flex-1 min-w-0"
+          className="flex items-center gap-2 font-medium text-gray-900 dark:text-gray-100 min-w-0 cursor-pointer"
+          data-filter-header="true"
         >
           {isExpanded ? (
             <ChevronDown className="w-4 h-4 flex-shrink-0" />
@@ -1047,63 +1167,74 @@ export const ColumnFilterSection: React.FC<{
             <ChevronRight className="w-4 h-4 flex-shrink-0" />
           )}
           <span className="text-sm truncate">{column.columnName}</span>
+          <span className="ml-auto text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            {column.columnType === 'number'
+              ? 'Number'
+              : column.columnType === 'date'
+                ? 'Date'
+                : 'Text'}
+          </span>
         </button>
 
-        <Button
-          onClick={onRemove}
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 flex-shrink-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        {showRemoveButton && (
+          <Button
+            onClick={onRemove}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 flex-shrink-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {isExpanded && (
         <>
-          <div>
-            <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-              Column
-            </label>
-            <Select value={column.columnId} onValueChange={handleColumnChange}>
-              <SelectTrigger className="w-full h-9 text-xs outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 data-[state=open]:ring-0 data-[state=open]:ring-offset-0">
-                {(() => {
-                  const sel = availableColumns.find(c => c.id === column.columnId);
-                  const label = sel?.name || column.columnName || column.columnId;
-                  const type = sel?.type || column.columnType;
-                  const fmt = sel?.dateFormat;
-                  return (
-                    <div className="flex items-center justify-between w-full min-w-0">
-                      <span className="truncate">{label}</span>
-                      {type && (
-                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-                          ({type === 'date' && fmt ? `${type} - ${fmt}` : type})
-                        </span>
-                      )}
-                    </div>
-                  );
-                })()}
-              </SelectTrigger>
-              <SelectContent>
-                {availableColumns
-                  .filter(col => !usedColumnIds.includes(col.id) || col.id === column.columnId)
-                  .map(col => (
-                    <SelectItem key={col.id} value={col.id}>
-                      <div className="flex items-center justify-between w-full">
-                        <span>{col.name}</span>
-                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                          (
-                          {col.type === 'date' && col.dateFormat
-                            ? `${col.type} - ${col.dateFormat}`
-                            : col.type}
-                          )
-                        </span>
+          {showColumnSelector && (
+            <div>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                Column
+              </label>
+              <Select value={column.columnId} onValueChange={handleColumnChange}>
+                <SelectTrigger className="w-full h-9 text-xs outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 data-[state=open]:ring-0 data-[state=open]:ring-offset-0">
+                  {(() => {
+                    const sel = availableColumns.find(c => c.id === column.columnId);
+                    const label = sel?.name || column.columnName || column.columnId;
+                    const type = sel?.type || column.columnType;
+                    const fmt = sel?.dateFormat;
+                    return (
+                      <div className="flex items-center justify-between w-full min-w-0">
+                        <span className="truncate">{label}</span>
+                        {type && (
+                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                            ({type === 'date' && fmt ? `${type} - ${fmt}` : type})
+                          </span>
+                        )}
                       </div>
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
+                    );
+                  })()}
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns
+                    .filter(col => !usedColumnIds.includes(col.id) || col.id === column.columnId)
+                    .map(col => (
+                      <SelectItem key={col.id} value={col.id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{col.name}</span>
+                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                            (
+                            {col.type === 'date' && col.dateFormat
+                              ? `${col.type} - ${col.dateFormat}`
+                              : col.type}
+                            )
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex flex-col gap-2 space-y-2">
             {column.conditions.map((condition, index) => (
@@ -1112,9 +1243,8 @@ export const ColumnFilterSection: React.FC<{
                 condition={condition}
                 operator={condition.operator}
                 columnType={column.columnType}
-                dateGranularity={getGranularityFromFormat(
-                  availableColumns.find(c => c.id === column.columnId)?.dateFormat
-                )}
+                dateGranularity={columnDateGranularity}
+                dateFormat={columnDateFormat}
                 onUpdate={c => handleUpdateCondition(index, c)}
                 onRemove={() => handleRemoveCondition(index)}
                 isOr={index > 0}

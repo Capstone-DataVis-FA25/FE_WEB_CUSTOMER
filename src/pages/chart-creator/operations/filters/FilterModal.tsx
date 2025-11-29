@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, RotateCcw, Check, X, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { NumberFormat } from '@/contexts/DatasetContext';
@@ -56,9 +57,25 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     [availableColumns, uniqueValuesByColumn]
   );
 
+  const logColumnMeta = useCallback(
+    (label: string, col: DatasetFilterColumn) => {
+      const meta = availableColumns.find(c => c.id === col.columnId);
+      console.log('[FilterModal]', label, {
+        columnId: col.columnId,
+        columnName: col.columnName,
+        columnType: col.columnType,
+        detectedFormat: meta?.dateFormat || '(none)',
+      });
+    },
+    [availableColumns]
+  );
+
   const formatSingleValue = useCallback(
     (col: DatasetFilterColumn, raw: string | number | null | undefined) => {
       const meta = availableColumns.find(c => c.id === col.columnId);
+      if (col.columnType === 'date') {
+        logColumnMeta('formatSingleValue', col);
+      }
       if (raw == null || raw === '') return '(blank)';
       if (col.columnType === 'date') {
         return formatDateDisplay(
@@ -155,9 +172,10 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  // Use portal to render modal at body level to avoid z-index/overflow issues
+  const modalContent = (
     <>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 select-none">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] select-none">
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] flex flex-col select-none">
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -290,7 +308,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
       </div>
 
       {showResetConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 select-none">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[101] select-none">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-sm w-full mx-4 overflow-hidden select-none">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -317,6 +335,14 @@ export const FilterModal: React.FC<FilterModalProps> = ({
       )}
     </>
   );
+
+  // Only use portal if document.body exists (client-side)
+  if (typeof document !== 'undefined' && document.body) {
+    return createPortal(modalContent, document.body);
+  }
+
+  // Fallback for SSR
+  return modalContent;
 };
 
 export default FilterModal;

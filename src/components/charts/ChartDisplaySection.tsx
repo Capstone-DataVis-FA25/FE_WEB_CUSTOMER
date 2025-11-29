@@ -2,7 +2,7 @@ import React, { useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../ui/card';
 import { useChartEditorRead } from '@/features/chartEditor';
-import { useDataset } from '@/features/dataset/useDataset';
+import { useAppSelector } from '@/store/hooks';
 import D3LineChart from '@/components/charts/D3LineChart';
 import D3BarChart from '@/components/charts/D3BarChart';
 import D3AreaChart from '@/components/charts/D3AreaChart';
@@ -25,7 +25,10 @@ interface ChartDisplaySectionProps {
 const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHeaders }) => {
   const { t } = useTranslation();
   const { chartData, chartConfig, currentChartType: chartType } = useChartEditorRead();
-  const { currentDataset } = useDataset();
+  // Only subscribe to currentDataset to avoid re-renders when datasets list is refreshed
+  const currentDataset = useAppSelector(state => state.dataset.currentDataset);
+
+  const hasDatasetSelected = Boolean(currentDataset);
 
   // Helper: Map DataHeader ID to name
   // Use processed headers (aggregated) if provided, otherwise use original dataset headers
@@ -132,7 +135,7 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
 
   // Memoize renderChart to prevent recreation on every render
   const renderChart = useCallback(() => {
-    if (!safeChartConfig || !chartData || chartData.length === 0) {
+    if (!hasDatasetSelected) {
       return (
         <ErrorPanel
           title={t('chart_editor_no_data', 'No data available')}
@@ -143,6 +146,20 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
         />
       );
     }
+
+    if (!safeChartConfig) {
+      return (
+        <ErrorPanel
+          title={t('chart_editor_invalid_config', 'Invalid chart configuration')}
+          subtitle={t(
+            'chart_editor_invalid_config_hint',
+            'The chart configuration is invalid or missing.'
+          )}
+          bordered
+        />
+      );
+    }
+
     // Check chart type and render appropriate component
     switch (chartType) {
       case ChartType.Line:
@@ -213,6 +230,10 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
               bordered
             />
           );
+        }
+
+        if (!chartData || chartData.length === 0) {
+          return <div className="h-96" />;
         }
 
         // Common props that are safe for all chart types
@@ -514,6 +535,10 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
           );
         }
 
+        if (!chartData || chartData.length === 0) {
+          return <div className="h-96" />;
+        }
+
         // Convert to array data format
         const arrayData = convertChartDataToArray(chartData);
 
@@ -606,18 +631,6 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
       }
       case ChartType.Pie:
       case ChartType.Donut: {
-        if (!chartData || chartData.length === 0) {
-          return (
-            <ErrorPanel
-              title={t('chart_editor_no_data', 'No data available')}
-              subtitle={t(
-                'chart_editor_no_data_hint',
-                'Please upload data or select a dataset to display the chart.'
-              )}
-            />
-          );
-        }
-
         if (!safeChartConfig || !chartConfig) {
           return (
             <ErrorPanel
@@ -645,6 +658,10 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
               bordered
             />
           );
+        }
+
+        if (!chartData || chartData.length === 0) {
+          return <div className="h-96" />;
         }
 
         // Map labelKey and valueKey (id) to header name for Pie Chart, like other chart types
@@ -761,6 +778,7 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
     getChartDataKey,
     ErrorPanel,
     t,
+    hasDatasetSelected,
   ]);
 
   return (
