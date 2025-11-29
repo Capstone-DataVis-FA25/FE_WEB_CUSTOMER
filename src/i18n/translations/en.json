@@ -1379,9 +1379,13 @@
   "common.add": "Add",
   "chart_editor_seriesManagement": "Series Management",
   "chart_editor_save_chart": "Save Chart",
+  "chart_editor_no_data": "No data available",
+  "chart_editor_no_data_hint": "Please upload data or select a dataset to display the chart.",
   "chart_update_success_message": "Chart has been updated successfully",
   "chart_editor_no_series": "No data series selected",
   "chart_editor_add_series_hint": "Add a data series to display the chart",
+  "chart_editor_no_filtered_data": "No data matches your current filters or operations",
+  "chart_editor_no_filtered_data_hint": "Try adjusting your filters, sorters, or aggregations to see results.",
   "expectedFormat": {
     "number": "number (e.g. {{example}})",
     "date": "date (format: {{format}})",
