@@ -34,6 +34,7 @@ import {
   cleanHeadersRemoveEmptyRows,
 } from '@/utils/dataProcessors';
 import CleanDatasetWithAI from '@/components/dataset/CleanDatasetWithAi';
+import Routers from '@/router/routers';
 
 type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'cleanDataset' | 'view';
 
@@ -263,7 +264,7 @@ function CreateDatasetPageContent() {
         const created = result.payload as any; // dataset object
         if (created && created.id) {
           // Use React Router navigation instead of window.location.href
-          navigate('/workspace', { state: { tab: 'datasets' } });
+          navigate(Routers.WORKSPACE_DATASETS);
         }
 
         // Reset state after successful upload

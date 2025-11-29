@@ -45,6 +45,7 @@ import { cleanupChartConfig } from '@/utils/chartConfigCleanup';
 import { useChartNotes } from '@/features/chartNotes/useChartNotes';
 import { useChartHistory } from '@/features/chartHistory/useChartHistory';
 import { captureAndUploadChartSnapshot } from '@/services/uploadService';
+import Routers from '@/router/routers';
 
 const normalizeDateFormat = (fmt?: string) => {
   if (!fmt) return fmt;
@@ -638,7 +639,7 @@ const ChartEditorPage: React.FC = () => {
         event.preventDefault();
         window.history.pushState(null, '', window.location.href);
         setPendingNavigation(() => () => {
-          navigate('/workspace', { state: { tab: 'charts' } });
+          navigate(Routers.WORKSPACE_CHARTS);
         });
         setShowUnsavedModal(true);
       }
@@ -896,12 +897,12 @@ const ChartEditorPage: React.FC = () => {
   const handleBack = () => {
     if (hasChanges && mode === 'edit') {
       setPendingNavigation(() => () => {
-        navigate('/workspace', { state: { tab: 'charts' } });
+        navigate(Routers.WORKSPACE_CHARTS);
       });
       setShowUnsavedModal(true);
     } else {
       if (mode === 'edit') {
-        navigate('/workspace', { state: { tab: 'charts' } });
+        navigate(Routers.WORKSPACE_CHARTS);
       } else if (mode === 'create' && datasetId) {
         navigate('/chart-gallery', { state: { datasetId } });
       } else {
