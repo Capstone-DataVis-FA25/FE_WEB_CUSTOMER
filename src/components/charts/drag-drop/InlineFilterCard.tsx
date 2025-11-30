@@ -14,6 +14,7 @@ interface InlineFilterCardProps {
   onRemove: () => void;
   onDragStart: (filterId: string, event: React.DragEvent<HTMLDivElement>) => void;
   onDragEnd: (filterId: string, event: React.DragEvent<HTMLDivElement>) => void;
+  excelStyle?: boolean;
 }
 
 const InlineFilterCard: React.FC<InlineFilterCardProps> = ({
@@ -46,20 +47,7 @@ const InlineFilterCard: React.FC<InlineFilterCardProps> = ({
   }, [filter, availableColumns, uniqueValuesByColumn]);
 
   return (
-    <div
-      draggable
-      onDragStart={event => {
-        event.dataTransfer.effectAllowed = 'move';
-        setIsDragging(true);
-        setCollapseSignal(prev => prev + 1);
-        onDragStart(filter.id, event);
-      }}
-      onDragEnd={event => {
-        onDragEnd(filter.id, event);
-        setIsDragging(false);
-      }}
-      className={`cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-0' : 'opacity-100'}`}
-    >
+    <div className={isDragging ? 'opacity-0' : 'opacity-100'}>
       <ColumnFilterSection
         column={filter}
         availableColumns={availableColumns}
@@ -72,6 +60,17 @@ const InlineFilterCard: React.FC<InlineFilterCardProps> = ({
         showColumnSelector={false}
         defaultExpanded={false}
         collapseSignal={collapseSignal}
+        excelStyle={true}
+        onDragStart={event => {
+          event.dataTransfer.effectAllowed = 'move';
+          setIsDragging(true);
+          setCollapseSignal(prev => prev + 1);
+          onDragStart(filter.id, event);
+        }}
+        onDragEnd={event => {
+          onDragEnd(filter.id, event);
+          setIsDragging(false);
+        }}
       />
     </div>
   );

@@ -39,6 +39,7 @@ import { useChartEditor } from '@/features/chartEditor';
 import type { MainChartConfig, SortLevel, DatasetConfig } from '@/types/chart';
 import { buildColumnIndexMap, applyMultiLevelSort, applyDatasetFilters } from '@/utils/datasetOps';
 import { applyAggregation } from '@/utils/aggregationUtils';
+import { applyPivot } from '@/utils/pivotUtils';
 import ChartEditorHeader from './ChartEditorHeader';
 import { resetBindings } from '@/utils/chartBindings';
 import { cleanupChartConfig } from '@/utils/chartConfigCleanup';
@@ -505,13 +506,14 @@ const ChartEditorPage: React.FC = () => {
     () => JSON.stringify(datasetConfig?.aggregation || {}),
     [datasetConfig]
   );
+  const pivotKey = useMemo(() => JSON.stringify(datasetConfig?.pivot || {}), [datasetConfig]);
 
   // ============================================================
-  // COMPUTE: Processed data (filter → sort → aggregation)
+  // COMPUTE: Processed data (filter → sort → aggregation/pivot)
   // ============================================================
   const processedData = useMemo(() => {
-    // Always use original dataset for operations (filter/sort/aggregation)
-    // working.data/headers might be aggregated, so use originalDataset
+    // Always use original dataset for operations (filter/sort/aggregation/pivot)
+    // working.data/headers might be aggregated/pivoted, so use originalDataset
     const dataToProcess = originalDataset.data || working?.data;
     const headersToUse = originalDataset.headers || working?.headers;
 
@@ -519,12 +521,13 @@ const ChartEditorPage: React.FC = () => {
       return { data: undefined, headers: undefined };
     }
 
-    // Get current filters and aggregation from datasetConfig (read fresh each time)
+    // Get current filters, aggregation, and pivot from datasetConfig (read fresh each time)
     const currentFilters = (datasetConfig as any)?.filters;
     const currentAggregation = datasetConfig?.aggregation;
+    const currentPivot = datasetConfig?.pivot;
 
     try {
-      // Build column index map from ORIGINAL headers (not aggregated)
+      // Build column index map from ORIGINAL headers (not aggregated/pivoted)
       const colIndexMap = buildColumnIndexMap(headersToUse as unknown as DataHeader[]);
 
       // Filter using original data and original headers
@@ -534,20 +537,47 @@ const ChartEditorPage: React.FC = () => {
       // Sort using filtered data
       const multiSorted = applyMultiLevelSort(filtered, sortLevels, colIndexMap) || filtered;
 
-      // Apply aggregation if configured - use FILTERED AND SORTED data (multiSorted)
-      // Note: Number formatting is NOT applied here - it will be applied by preformatDataToFormats in DataTab
-      const aggregationResult = applyAggregation(
-        multiSorted, // This is the filtered + sorted data
-        headersToUse as unknown as DataHeader[],
-        currentAggregation,
-        colIndexMap
-      );
+      // Check if pivot is active (pivot takes precedence over aggregation)
+      const hasPivot =
+        currentPivot &&
+        ((currentPivot.rows?.length ?? 0) > 0 ||
+          (currentPivot.columns?.length ?? 0) > 0 ||
+          (currentPivot.values?.length ?? 0) > 0);
 
-      // Use aggregated data/headers if aggregation is active, otherwise use sorted data
-      const finalHeaders = aggregationResult
-        ? aggregationResult.headers
-        : (headersToUse as unknown as DataHeader[]);
-      const finalData = aggregationResult ? aggregationResult.data : multiSorted;
+      let finalHeaders: DataHeader[];
+      let finalData: string[][];
+
+      if (hasPivot) {
+        // Apply pivot transformation - use FILTERED AND SORTED data (multiSorted)
+        // Note: Number formatting is NOT applied here - it will be applied by preformatDataToFormats in DataTab
+        const pivotResult = applyPivot(
+          multiSorted, // This is the filtered + sorted data
+          headersToUse as unknown as DataHeader[],
+          currentPivot,
+          colIndexMap
+        );
+
+        // Use pivoted data/headers if pivot is active, otherwise use sorted data
+        finalHeaders = pivotResult
+          ? pivotResult.headers
+          : (headersToUse as unknown as DataHeader[]);
+        finalData = pivotResult ? pivotResult.data : multiSorted;
+      } else {
+        // Apply aggregation if configured - use FILTERED AND SORTED data (multiSorted)
+        // Note: Number formatting is NOT applied here - it will be applied by preformatDataToFormats in DataTab
+        const aggregationResult = applyAggregation(
+          multiSorted, // This is the filtered + sorted data
+          headersToUse as unknown as DataHeader[],
+          currentAggregation,
+          colIndexMap
+        );
+
+        // Use aggregated data/headers if aggregation is active, otherwise use sorted data
+        finalHeaders = aggregationResult
+          ? aggregationResult.headers
+          : (headersToUse as unknown as DataHeader[]);
+        finalData = aggregationResult ? aggregationResult.data : multiSorted;
+      }
 
       return { data: finalData, headers: finalHeaders };
     } catch (e) {
@@ -562,21 +592,29 @@ const ChartEditorPage: React.FC = () => {
     filtersKey, // Use serialized filters key to detect changes
     sortLevels,
     aggregationKey, // Use serialized aggregation key to detect changes
+    pivotKey, // Use serialized pivot key to detect changes
     datasetConfig, // Also depend on datasetConfig to ensure we read fresh values
     excelFormats.initialNumberFormat,
   ]);
 
   // ============================================================
-  // EFFECT: Update working dataset with aggregated headers when aggregation changes
+  // EFFECT: Update working dataset with aggregated/pivoted headers when aggregation/pivot changes
   // ============================================================
   useEffect(() => {
     if (!processedData.headers || !processedData.data) return;
 
-    // Only update if aggregation is active and headers changed
-    if (
+    // Check if aggregation or pivot is active
+    const hasAggregation =
       datasetConfig?.aggregation &&
-      (datasetConfig.aggregation.groupBy?.length || datasetConfig.aggregation.metrics?.length)
-    ) {
+      (datasetConfig.aggregation.groupBy?.length || datasetConfig.aggregation.metrics?.length);
+    const hasPivot =
+      datasetConfig?.pivot &&
+      ((datasetConfig.pivot.rows?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.columns?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.values?.length ?? 0) > 0);
+
+    // Only update if aggregation or pivot is active and headers changed
+    if (hasAggregation || hasPivot) {
       const headersChanged =
         processedData.headers.length !== working?.headers.length ||
         processedData.headers.some((h, idx) => {
@@ -594,7 +632,14 @@ const ChartEditorPage: React.FC = () => {
         );
       }
     }
-  }, [processedData.headers, processedData.data, datasetConfig?.aggregation, working, dispatch]);
+  }, [
+    processedData.headers,
+    processedData.data,
+    datasetConfig?.aggregation,
+    datasetConfig?.pivot,
+    working,
+    dispatch,
+  ]);
 
   // ============================================================
   // EFFECT: Clean up chart config when headers change (e.g., aggregation changes)

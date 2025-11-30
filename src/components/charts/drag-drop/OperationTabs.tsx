@@ -7,13 +7,18 @@ export type OperationTab = 'filter' | 'sort' | 'aggregation' | 'pivot';
 interface OperationTabsProps {
   activeTab: OperationTab;
   onTabChange: (tab: OperationTab) => void;
+  disabledTabs?: OperationTab[];
 }
 
-const OperationTabs: React.FC<OperationTabsProps> = ({ activeTab, onTabChange }) => {
+const OperationTabs: React.FC<OperationTabsProps> = ({
+  activeTab,
+  onTabChange,
+  disabledTabs = [],
+}) => {
   const tabs = [
     { id: 'filter' as OperationTab, label: 'Filter', icon: Filter, color: 'blue' },
     { id: 'sort' as OperationTab, label: 'Sort', icon: ArrowUpDown, color: 'green' },
-    { id: 'aggregation' as OperationTab, label: 'Aggregation', icon: Layers, color: 'purple' },
+    // { id: 'aggregation' as OperationTab, label: 'Aggregation', icon: Layers, color: 'purple' }, // Hidden - pivot handles everything
     { id: 'pivot' as OperationTab, label: 'Pivot Table', icon: Table2, color: 'amber' },
   ];
 
@@ -69,23 +74,31 @@ const OperationTabs: React.FC<OperationTabsProps> = ({ activeTab, onTabChange })
         `}</style>
         {tabs.map(({ id, label, icon: Icon, color }) => {
           const isActive = activeTab === id;
+          const isDisabled = disabledTabs.includes(id);
           return (
             <button
               key={id}
-              onClick={() => onTabChange(id)}
+              onClick={() => !isDisabled && onTabChange(id)}
+              disabled={isDisabled}
               className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-all duration-200 cursor-pointer flex-shrink-0',
-                getColorClasses(color, isActive),
-                id === 'pivot' && !isActive && 'opacity-60'
+                'flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-all duration-200 flex-1',
+                isDisabled
+                  ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-600'
+                  : 'cursor-pointer',
+                !isDisabled && getColorClasses(color, isActive)
               )}
+              title={
+                isDisabled
+                  ? id === 'aggregation'
+                    ? 'Pivot Table is active. Clear pivot to use aggregation.'
+                    : id === 'pivot'
+                      ? 'Aggregation is active. Clear aggregation to use pivot table.'
+                      : 'This tab is disabled'
+                  : undefined
+              }
             >
               <Icon className="w-4 h-4" />
               {label}
-              {id === 'pivot' && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200">
-                  Soon
-                </span>
-              )}
             </button>
           );
         })}

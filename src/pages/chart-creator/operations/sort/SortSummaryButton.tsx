@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowUpDown, X } from 'lucide-react';
 import { SortModal } from './SortModal';
+import { ModalConfirm } from '@/components/ui/modal-confirm';
 import type { SortLevel } from '@/types/chart';
 
 interface SortSummaryButtonProps {
@@ -23,6 +24,7 @@ export const SortSummaryButton: React.FC<SortSummaryButtonProps> = ({
   initialLevels = [],
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [levels, setLevels] = useState<SortLevel[]>(initialLevels);
 
   // Keep local state in sync with external config changes
@@ -38,6 +40,7 @@ export const SortSummaryButton: React.FC<SortSummaryButtonProps> = ({
   const handleClearSort = () => {
     setLevels([]);
     onSortChange?.([]);
+    setShowClearConfirm(false);
   };
 
   const sortCount = levels.length;
@@ -57,15 +60,26 @@ export const SortSummaryButton: React.FC<SortSummaryButtonProps> = ({
 
         {hasSort && (
           <Button
-            onClick={handleClearSort}
+            onClick={() => setShowClearConfirm(true)}
             variant="ghost"
             size="sm"
-            className="h-10 w-10 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500"
+            className="h-10 w-10 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </Button>
         )}
       </div>
+
+      <ModalConfirm
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={handleClearSort}
+        title="Clear Sort"
+        message="Are you sure you want to clear all sort settings? This action cannot be undone."
+        confirmText="Clear"
+        cancelText="Cancel"
+        type="warning"
+      />
 
       <SortModal
         isOpen={isOpen}

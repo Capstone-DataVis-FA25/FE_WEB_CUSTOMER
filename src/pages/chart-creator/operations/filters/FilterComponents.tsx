@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 import type { NumberFormat } from '@/contexts/DatasetContext';
 import {
   generateId,
@@ -203,15 +204,19 @@ const UniqueValuePicker: React.FC<{
         )}
       </div>
       <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-300">
-        <button type="button" onClick={handleSelectAllVisible} className="hover:underline">
+        <button
+          type="button"
+          onClick={handleSelectAllVisible}
+          className="hover:underline cursor-pointer"
+        >
           Select visible
         </button>
-        <button type="button" onClick={handleClear} className="hover:underline">
+        <button type="button" onClick={handleClear} className="hover:underline cursor-pointer">
           Clear
         </button>
       </div>
       <ScrollArea className="h-40 border border-gray-200 dark:border-gray-700 rounded-md">
-        <div className="p-2 space-y-1">
+        <div className="p-1.5 space-y-1">
           {limitedValues.length === 0 ? (
             <p className="text-[11px] text-gray-500 dark:text-gray-400">No matches</p>
           ) : (
@@ -219,7 +224,7 @@ const UniqueValuePicker: React.FC<{
               {/* Show selected values first when no search */}
               {search.trim() === '' && selectedValues.length > 0 && (
                 <>
-                  <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1 px-1 sticky top-0 bg-white dark:bg-gray-900">
+                  <div className="text-[11px] font-semibold text-gray-700 dark:text-gray-200 mb-1 -mx-1.5 px-3 py-1.5 sticky top-0 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                     Selected ({selectedValues.length})
                   </div>
                   {selectedValues
@@ -230,21 +235,21 @@ const UniqueValuePicker: React.FC<{
                       return (
                         <label
                           key={`selected-${value || '__blank__'}`}
-                          className="flex items-center gap-2 text-xs cursor-pointer bg-blue-50 dark:bg-blue-900/20 rounded px-1 py-0.5 border border-blue-200 dark:border-blue-800"
+                          className="flex items-center gap-2 text-xs cursor-pointer bg-gray-100 dark:bg-gray-800 rounded px-2 py-1.5 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                         >
                           <Checkbox
                             checked={checked}
                             onCheckedChange={() => toggleValue(value)}
                             className="h-4 w-4"
                           />
-                          <span className="truncate" title={formatDisplayValue(value)}>
+                          <span className="truncate flex-1" title={formatDisplayValue(value)}>
                             {formatDisplayValue(value)}
                           </span>
                         </label>
                       );
                     })}
                   {limitedValues.some(v => !selectedValues.includes(v)) && (
-                    <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1 mt-2 px-1 sticky top-0 bg-white dark:bg-gray-900">
+                    <div className="text-[11px] font-semibold text-gray-700 dark:text-gray-200 mb-1 mt-2 -mx-1.5 px-3 py-1.5 sticky top-0 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                       Available
                     </div>
                   )}
@@ -258,8 +263,10 @@ const UniqueValuePicker: React.FC<{
                 return (
                   <label
                     key={value || '__blank__'}
-                    className={`flex items-center gap-2 text-xs cursor-pointer ${
-                      checked ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                    className={`flex items-center gap-2 text-xs cursor-pointer rounded px-2 py-1.5 transition-colors ${
+                      checked
+                        ? 'bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-900/50'
                     }`}
                   >
                     <Checkbox
@@ -267,7 +274,7 @@ const UniqueValuePicker: React.FC<{
                       onCheckedChange={() => toggleValue(value)}
                       className="h-4 w-4"
                     />
-                    <span className="truncate" title={formatDisplayValue(value)}>
+                    <span className="truncate flex-1" title={formatDisplayValue(value)}>
                       {formatDisplayValue(value)}
                     </span>
                   </label>
@@ -1041,6 +1048,9 @@ export const ColumnFilterSection: React.FC<{
   showColumnSelector?: boolean;
   defaultExpanded?: boolean;
   collapseSignal?: number;
+  excelStyle?: boolean;
+  onDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDragEnd?: (event: React.DragEvent<HTMLDivElement>) => void;
 }> = ({
   column,
   availableColumns,
@@ -1053,6 +1063,9 @@ export const ColumnFilterSection: React.FC<{
   showColumnSelector = true,
   defaultExpanded = true,
   collapseSignal,
+  excelStyle = false,
+  onDragStart,
+  onDragEnd,
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   // When collapseSignal changes (e.g. drag started), force collapse to compact header size
@@ -1154,18 +1167,23 @@ export const ColumnFilterSection: React.FC<{
   };
 
   return (
-    <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/50 space-y-3">
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 font-medium text-gray-900 dark:text-gray-100 min-w-0 cursor-pointer"
-          data-filter-header="true"
-        >
-          {isExpanded ? (
-            <ChevronDown className="w-4 h-4 flex-shrink-0" />
-          ) : (
-            <ChevronRight className="w-4 h-4 flex-shrink-0" />
-          )}
+    <div
+      className={cn(
+        'border border-gray-300 dark:border-gray-600 rounded space-y-3',
+        excelStyle ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4'
+      )}
+    >
+      <div
+        draggable={!!onDragStart}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        className={cn(
+          'flex items-center gap-2 h-[48px] px-3',
+          onDragStart && 'cursor-grab active:cursor-grabbing'
+        )}
+        data-filter-header="true"
+      >
+        <div className="flex items-center gap-2 font-medium text-gray-900 dark:text-gray-100 min-w-0 flex-1">
           <span className="text-sm truncate">{column.columnName}</span>
           <span className="ml-auto text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
             {column.columnType === 'number'
@@ -1174,7 +1192,18 @@ export const ColumnFilterSection: React.FC<{
                 ? 'Date'
                 : 'Text'}
           </span>
-        </button>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={e => {
+            e.stopPropagation();
+            setIsExpanded(!isExpanded);
+          }}
+          className="h-8 w-8 text-slate-500 dark:text-slate-300 cursor-pointer flex-shrink-0"
+        >
+          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </Button>
 
         {showRemoveButton && (
           <Button
@@ -1189,7 +1218,7 @@ export const ColumnFilterSection: React.FC<{
       </div>
 
       {isExpanded && (
-        <>
+        <div className={excelStyle ? 'px-3 pb-2' : ''}>
           {showColumnSelector && (
             <div>
               <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
@@ -1264,7 +1293,7 @@ export const ColumnFilterSection: React.FC<{
             <Plus className="w-3 h-3" />
             Add Condition
           </Button>
-        </>
+        </div>
       )}
     </div>
   );
