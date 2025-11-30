@@ -683,6 +683,7 @@ const ChartListPage: React.FC = () => {
                                     pie: ChartType.Pie,
                                     donut: ChartType.Donut,
                                     cycleplot: ChartType.CyclePlot,
+                                    heatmap: ChartType.Heatmap,
                                   };
                                   return labels[chartTypeFilter] || 'Filter by type';
                                 })()}

@@ -8,6 +8,7 @@ import D3BarChart from '@/components/charts/D3BarChart';
 import D3AreaChart from '@/components/charts/D3AreaChart';
 import D3ScatterChart from '@/components/charts/D3ScatterChart';
 import D3CyclePlot from '@/components/charts/D3CyclePlot';
+import D3HeatmapChart from '@/components/charts/D3HeatmapChart';
 import { TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { curveOptions } from '@/types/chart';
@@ -755,6 +756,84 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
         };
 
         return <D3PieChart {...pieProps} />;
+      }
+      case ChartType.Heatmap: {
+        if (!safeChartConfig || !chartConfig) {
+          return (
+            <ErrorPanel
+              title={t('chart_editor_invalid_config', 'Invalid chart configuration')}
+              subtitle={t(
+                'chart_editor_invalid_config_hint',
+                'The chart configuration is invalid or missing.'
+              )}
+              bordered
+            />
+          );
+        }
+
+        // Check if required keys are selected
+        if (!axisConfigs?.xAxisKey || !axisConfigs?.yAxisKey || !axisConfigs?.valueKey) {
+          return (
+            <ErrorPanel
+              title={t('chart_editor_no_heatmap_keys', 'Missing required fields')}
+              subtitle={t(
+                'chart_editor_heatmap_keys_hint',
+                'Please select X-Axis, Y-Axis, and Value columns for the heatmap.'
+              )}
+              bordered
+            />
+          );
+        }
+
+        if (!chartData || chartData.length === 0) {
+          return <div className="h-96" />;
+        }
+
+        // Map keys to header names
+        const xAxisKeyName = getHeaderName(axisConfigs.xAxisKey);
+        const yAxisKeyName = getHeaderName(axisConfigs.yAxisKey);
+        const valueKeyName = getHeaderName(axisConfigs.valueKey);
+
+        const arrayData = convertChartDataToArray(chartData, [
+          xAxisKeyName,
+          yAxisKeyName,
+          valueKeyName,
+        ]);
+
+        const heatmapProps = {
+          arrayData,
+          width: safeChartConfig.width || 800,
+          height: safeChartConfig.height || 600,
+          margin: safeChartConfig.margin || { top: 80, right: 150, bottom: 100, left: 100 },
+          xAxisKey: xAxisKeyName,
+          yAxisKey: yAxisKeyName,
+          valueKey: valueKeyName,
+          colorScheme: safeChartConfig.colorScheme || 'viridis',
+          title: safeChartConfig.title || '',
+          xAxisLabel: axisConfigs.xAxisLabel || '',
+          yAxisLabel: axisConfigs.yAxisLabel || '',
+          showLegend: safeChartConfig.showLegend ?? true,
+          showValues: safeChartConfig.showValues ?? false,
+          cellBorderWidth: safeChartConfig.cellBorderWidth ?? 1,
+          cellBorderColor: safeChartConfig.cellBorderColor || '#ffffff',
+          valuePosition: safeChartConfig.valuePosition || 'center',
+          minValue: safeChartConfig.minValue ?? 'auto',
+          maxValue: safeChartConfig.maxValue ?? 'auto',
+          nullColor: safeChartConfig.nullColor || '#cccccc',
+          legendSteps: safeChartConfig.legendSteps ?? 5,
+          xAxisRotation: axisConfigs.xAxisRotation ?? -45,
+          yAxisRotation: axisConfigs.yAxisRotation ?? 0,
+          showAxisLabels: axisConfigs.showAxisLabels ?? true,
+          theme: safeChartConfig.theme || 'auto',
+          titleFontSize: safeChartConfig.titleFontSize || 20,
+          labelFontSize: safeChartConfig.labelFontSize || 12,
+          legendFontSize: safeChartConfig.legendFontSize || 11,
+          animationDuration: safeChartConfig.animationDuration || 750,
+          showTooltip: safeChartConfig.showTooltip ?? true,
+          valueFormatter: yAxisFormatterFn,
+        };
+
+        return <D3HeatmapChart {...heatmapProps} />;
       }
       default:
         return (

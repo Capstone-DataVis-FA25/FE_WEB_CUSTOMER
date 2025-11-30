@@ -136,6 +136,12 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
           icon: '🔄',
           color: 'bg-teal-500',
         };
+      case ChartType.Heatmap:
+        return {
+          name: t('chart_type_heatmap', 'Heatmap'),
+          icon: '🌡️',
+          color: 'bg-red-500',
+        };
       default:
         return {
           name: t('chart_type_default', 'Chart'),

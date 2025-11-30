@@ -10,6 +10,8 @@ import { ChartType } from '@/features/charts';
 import ChartSettingsPieSection from './ChartSettingsPieSection';
 import DisplayOptionsPieSection from './DisplayOptionsPieSection';
 import CyclePlotSettingsSection from './CyclePlotSettingsSection';
+import HeatmapAxisConfigSection from './HeatmapAxisConfigSection';
+import HeatmapAdvancedOptions from './HeatmapAdvancedOptions';
 import ChartFormatterSettings from './ChartFormatterSettingSection';
 import DatasetOperationSection from './DatasetOperationSection';
 import ImportExportSection from './ImportExportSection';
@@ -93,6 +95,17 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                     <CyclePlotSettingsSection />
                   </>
                 )}
+
+                {chartType == ChartType.Heatmap && (
+                  <>
+                    {/* Heatmap Axis Configuration */}
+                    <HeatmapAxisConfigSection />
+
+                    {/* Heatmap Advanced Options */}
+                    <HeatmapAdvancedOptions />
+                  </>
+                )}
+
                 <div id="chart-formatter-section">
                   <ChartFormatterSettings />
                 </div>

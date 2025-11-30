@@ -23,6 +23,15 @@ export const buildResetBindingsPatch = (chart: MainChartConfig): Partial<MainCha
       };
       return { config } as Partial<MainChartConfig>;
     }
+    case 'heatmap': {
+      const axisConfigs = {
+        ...(chart.axisConfigs || {}),
+        xAxisKey: undefined,
+        yAxisKey: undefined,
+        valueKey: undefined,
+      } as any;
+      return { axisConfigs } as Partial<MainChartConfig>;
+    }
     default:
       return {};
   }
