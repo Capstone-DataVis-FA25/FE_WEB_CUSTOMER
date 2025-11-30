@@ -81,9 +81,10 @@ const DatasetTab: React.FC<DatasetTabProps> = ({
   return (
     <div className="space-y-6">
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filteredDatasets.map(dataset => (
+        {filteredDatasets.map((dataset, index) => (
           <DatasetCard
             key={dataset.id}
+            index={index}
             dataset={dataset}
             onDelete={onDeleteDataset}
             isDeleting={deleting && deletingId === dataset.id}

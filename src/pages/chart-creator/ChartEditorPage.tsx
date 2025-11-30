@@ -21,7 +21,6 @@ import { useBeforeUnload } from '@/hooks/useBeforeUnload';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal';
 import ToastContainer from '@/components/ui/toast-container';
 import ChartNoteSidebar from '@/components/charts/ChartNoteSidebar';
-import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
 import { getDefaultChartConfig } from '@/utils/chartDefaults';
 import { ChartType, type ChartRequest } from '@/features/charts';
 import { clearCurrentDataset } from '@/features/dataset/datasetSlice';
@@ -45,6 +44,7 @@ import { cleanupChartConfig } from '@/utils/chartConfigCleanup';
 import { useChartNotes } from '@/features/chartNotes/useChartNotes';
 import { useChartHistory } from '@/features/chartHistory/useChartHistory';
 import { captureAndUploadChartSnapshot } from '@/services/uploadService';
+import DatasetSelectionDialog from '../chart/components/DatasetSelectionDialog';
 import Routers from '@/router/routers';
 
 const normalizeDateFormat = (fmt?: string) => {

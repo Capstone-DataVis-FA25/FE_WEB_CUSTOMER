@@ -19,15 +19,6 @@ export default function ChartGalleryPickerPage() {
   const initialActiveTab = locationState?.activeTab;
   const datasetIdFromState = locationState?.datasetId;
 
-  // Debug Time
-  // console.log('ChartGalleryPickerPage - Full location object:', location);
-  // console.log('ChartGalleryPickerPage - locationState:', locationState);
-  // console.log('ChartGalleryPickerPage - searchParams:', Object.fromEntries(searchParams));
-  // console.log('ChartGalleryPickerPage - datasetIdFromState:', datasetIdFromState);
-  // console.log('ChartGalleryPickerPage - datasetIdFromQuery:', datasetIdFromQuery);
-  // console.log(`Final Dataset ID: ${datasetId}`);
-  // console.log(`activeTab: ${initialActiveTab}`);
-
   useEffect(() => {
     console.log('ChartGalleryPickerPage - useEffect triggered with:', {
       initialActiveTab,

@@ -9,14 +9,45 @@ import { Badge } from '@/components/ui/badge';
 import useToast from '@/hooks/useToast';
 import { selectUser } from '@/features/auth/authSelector';
 import { useSelector } from 'react-redux';
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
+import { pricingSteps } from '@/config/driver-steps';
+import { HelpCircle } from 'lucide-react';
+import { useAuth } from '@/features/auth/useAuth';
 
 const PricingPage: React.FC = () => {
   const user = useSelector(selectUser);
+  const { isAuthenticated } = useAuth();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const { showError, showSuccess } = useToast();
+
+  // Auto-show tour on first visit
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      const storageKey = `hasShownPricingTour_${user.id}`;
+      const hasShownTour = localStorage.getItem(storageKey);
+
+      if (hasShownTour !== 'true') {
+        const driverObj = driver({
+          steps: pricingSteps,
+          showProgress: true,
+          showButtons: ['next', 'previous', 'close'],
+          nextBtnText: 'Next →',
+          prevBtnText: '← Previous',
+          doneBtnText: 'Done ✓',
+          popoverClass: 'driverjs-theme',
+        });
+
+        setTimeout(() => {
+          driverObj.drive();
+          localStorage.setItem(storageKey, 'true');
+        }, 1000);
+      }
+    }
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     const load = async () => {
@@ -60,15 +91,36 @@ const PricingPage: React.FC = () => {
     }
   };
 
+  const startTour = () => {
+    const driverObj = driver({
+      steps: pricingSteps,
+      showProgress: true,
+      showButtons: ['next', 'previous', 'close'],
+      nextBtnText: 'Next →',
+      prevBtnText: '← Previous',
+      doneBtnText: 'Done ✓',
+    });
+    driverObj.drive();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       <div className="container mx-auto p-6 space-y-8">
         {/* Header */}
-        <div className="text-center space-y-3">
+        <div id="pricing-header" className="text-center space-y-3 relative">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Pricing
           </h1>
           <p className="text-lg text-muted-foreground">Choose a plan that fits your needs.</p>
+
+          {/* Start Tour Button */}
+          <Button
+            onClick={startTour}
+            className="absolute top-0 right-0 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-full px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
+          >
+            <HelpCircle className="w-4 h-4" />
+            Start Tour
+          </Button>
         </div>
 
         {loading && (
@@ -90,44 +142,51 @@ const PricingPage: React.FC = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
+        <div
+          id="pricing-plans-grid"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center"
+        >
           {plans.map(plan => (
             <Card
               key={plan.id}
-              className="w-full max-w-sm p-8 rounded-2xl bg-white/70 backdrop-blur-md border border-gray-200 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 dark:bg-gray-800/70 dark:border-gray-700"
+              className="pricing-plan-card w-full max-w-sm p-8 rounded-2xl bg-white/70 backdrop-blur-md border border-gray-200 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 dark:bg-gray-800/70 dark:border-gray-700"
             >
               {/* Header */}
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <div className="pricing-plan-header flex justify-between items-start mb-6">
+                <div className="pricing-plan-name-section">
+                  <h3 className="pricing-plan-name text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {plan.name}
                   </h3>
                   {plan.description && (
-                    <p className="text-sm text-muted-foreground mt-1">{plan.description}</p>
+                    <p className="pricing-plan-description text-sm text-muted-foreground mt-1">
+                      {plan.description}
+                    </p>
                   )}
                 </div>
                 <Badge
-                  className={
+                  className={`pricing-plan-badge ${
                     plan.isActive
                       ? 'bg-green-500 text-white shadow-md'
                       : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'
-                  }
+                  }`}
                 >
                   {plan.isActive ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
 
               {/* Price */}
-              <div className="text-4xl font-extrabold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                {formatPrice(plan.price, plan.currency)}
-                <span className="text-base font-medium text-gray-600 dark:text-gray-300 ml-2">
+              <div className="pricing-plan-price text-4xl font-extrabold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <span className="pricing-plan-amount">
+                  {formatPrice(plan.price, plan.currency)}
+                </span>
+                <span className="pricing-plan-interval text-base font-medium text-gray-600 dark:text-gray-300 ml-2">
                   {plan.interval ? `/${plan.interval}` : ''}
                 </span>
               </div>
 
               {/* Features */}
               {plan.features && plan.features.length > 0 && (
-                <ul className="mb-6 space-y-2">
+                <ul className="pricing-plan-features mb-6 space-y-2">
                   {plan.features.map((f, i) => (
                     <li key={i} className="flex items-center gap-2">
                       <span className="w-3 h-3 rounded-full bg-blue-600/30 dark:bg-blue-500/40" />
@@ -140,7 +199,7 @@ const PricingPage: React.FC = () => {
               {/* Subscribe Button */}
               <div className="mt-6 flex items-center justify-between">
                 <Button
-                  className={`rounded-full px-6 py-2.5 font-semibold shadow-lg transition-all duration-300 bg-gradient-to-r ${isSubscribed(plan) ? 'from-gray-600 to-gray-700 disabled' : 'from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'}  hover:shadow-xl`}
+                  className={`pricing-subscribe-button rounded-full px-6 py-2.5 font-semibold shadow-lg transition-all duration-300 bg-gradient-to-r ${isSubscribed(plan) ? 'from-gray-600 to-gray-700 disabled' : 'from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'}  hover:shadow-xl`}
                   onClick={() => onSubscribe(plan)}
                   disabled={!!checkoutLoading}
                 >

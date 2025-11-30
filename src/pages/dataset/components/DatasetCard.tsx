@@ -13,6 +13,7 @@ import Utils from '@/utils/Utils';
 
 interface DatasetCardProps {
   dataset: Dataset;
+  index: number;
   onDelete: (dataset: Dataset) => void;
   onView?: (dataset: Dataset) => void;
   onEdit?: (dataset: Dataset) => void;
@@ -26,6 +27,7 @@ const getDatasetColor = () => {
 
 const DatasetCard: React.FC<DatasetCardProps> = ({
   dataset,
+  index,
   onDelete,
   onView,
   isDeleting = false,
@@ -68,6 +70,7 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
 
   return (
     <Card
+      id={`dataset-card-${index}`}
       className="group relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 overflow-hidden cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -141,6 +144,7 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
             Create Chart
           </Button>
           <Button
+            id={`dataset-card-${index}-edit`}
             variant="ghost"
             size="sm"
             onClick={handleView}
@@ -153,6 +157,7 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
             <Edit3 className="h-3 w-3 mr-1" />
           </Button>
           <Button
+            id={`dataset-card-${index}-delete`}
             variant="ghost"
             size="sm"
             onClick={handleDelete}

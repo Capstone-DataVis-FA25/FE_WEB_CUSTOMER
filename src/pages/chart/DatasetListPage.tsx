@@ -12,12 +12,12 @@ import { useDataset } from '@/features/dataset/useDataset';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import type { Dataset } from '@/features/dataset/datasetAPI';
-import DatasetTab from './components/DatasetTab';
 import ToastContainer from '@/components/ui/toast-container';
 import useToast from '@/hooks/useToast';
 import { usePagination } from '@/hooks/usePagination';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import { DatasetTab } from '../workspace';
 
 const DatasetListPage: React.FC = () => {
   const { t } = useTranslation();

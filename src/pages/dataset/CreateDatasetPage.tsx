@@ -1,5 +1,3 @@
-'use client';
-
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -34,6 +32,10 @@ import {
   cleanHeadersRemoveEmptyRows,
 } from '@/utils/dataProcessors';
 import CleanDatasetWithAI from '@/components/dataset/CleanDatasetWithAi';
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
+import { createDatasetSteps } from '@/config/driver-steps/index';
+import { useAuth } from '@/features/auth/useAuth';
 import Routers from '@/router/routers';
 
 type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'cleanDataset' | 'view';
@@ -44,7 +46,28 @@ function CreateDatasetPageContent() {
   const { showSuccess, showError, showWarning } = useToastContext();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const location = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      const storageKey = `hasShownCreateDatasetTour_${user.id}`;
+      const hasShownTour = localStorage.getItem(storageKey);
+
+      if (hasShownTour !== 'true') {
+        const driverObj = driver({
+          showProgress: true,
+          steps: createDatasetSteps,
+          popoverClass: 'driverjs-theme',
+        });
+
+        setTimeout(() => {
+          driverObj.drive();
+          localStorage.setItem(storageKey, 'true');
+        }, 1000);
+      }
+    }
+  }, [isAuthenticated, user]);
 
   // Get form states from FormContext
   const { datasetName, description, resetForm } = useForm();

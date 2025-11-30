@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -47,6 +47,10 @@ import AreaPreview from '@/components/charts/home-chart-preview/AreaPreview';
 import PiePreview from '@/components/charts/home-chart-preview/PiePreview';
 import ScatterPreview from '@/components/charts/home-chart-preview/ScatterPreview';
 import Routers from '@/router/routers';
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
+import { homeSteps } from '@/config/driver-steps/index';
+import { useAuth } from '@/features/auth/useAuth';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ChartDataPoint = any;
@@ -54,6 +58,27 @@ type ChartDataPoint = any;
 const HomePage: React.FC = () => {
   const [selectedChart, setSelectedChart] = useState<string>('bar');
   const { t } = useTranslation();
+  const { user, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      const storageKey = `hasShownHomeTour_${user.id}`;
+      const hasShownTour = localStorage.getItem(storageKey);
+
+      if (hasShownTour !== 'true') {
+        const driverObj = driver({
+          showProgress: true,
+          steps: homeSteps,
+          popoverClass: 'driverjs-theme',
+        });
+
+        setTimeout(() => {
+          driverObj.drive();
+          localStorage.setItem(storageKey, 'true');
+        }, 1500);
+      }
+    }
+  }, [isAuthenticated, user]);
 
   // Chart types data
   const chartTypes = [
@@ -381,6 +406,7 @@ const HomePage: React.FC = () => {
                 className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center"
               >
                 <Button
+                  id="hero-cta-build-chart"
                   size="lg"
                   className="text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group"
                 >
@@ -419,6 +445,7 @@ const HomePage: React.FC = () => {
 
       {/* Chart Types Section */}
       <motion.section
+        id="chart-types-section"
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
@@ -544,6 +571,7 @@ const HomePage: React.FC = () => {
 
       {/* Features Section */}
       <motion.div
+        id="features-section"
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"

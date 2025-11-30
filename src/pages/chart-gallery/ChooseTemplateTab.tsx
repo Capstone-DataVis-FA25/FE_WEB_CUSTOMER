@@ -18,7 +18,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import Pagination from '@/components/ui/pagination';
-import DatasetSelectionDialog from '@/pages/workspace/components/DatasetSelectionDialog';
 import {
   Search,
   Star,
@@ -35,14 +34,18 @@ import { useDataset } from '@/features/dataset/useDataset';
 import type { ChartCategory, ChartTemplate } from '@/types/chart-gallery-types';
 import ChartTemplateCard from './ChartTemplateCard';
 import { isSupportedChartType } from '@/constants/chart-types';
-import { useChartEditor } from '@/features/chartEditor';
+import DatasetSelectionDialog from '../chart/components/DatasetSelectionDialog';
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
+import { chartGallerySteps } from '@/config/driver-steps/index';
+import { useAuth } from '@/features/auth/useAuth';
 
 export default function ChooseTemplateTab() {
   const { t } = useTranslation();
   const location = useLocation();
   const { showError, showSuccess } = useToastContext();
   const navigate = useNavigate();
-  const { clearChartEditor } = useChartEditor();
+  const { user, isAuthenticated } = useAuth();
 
   // Extract data from both location state AND query parameters
   const locationState = location.state as {
@@ -238,6 +241,27 @@ export default function ChooseTemplateTab() {
     loadChartTemplates();
   }, [t, showError]);
 
+  // Tour logic
+  useEffect(() => {
+    if (isAuthenticated && user?.id && categories.length > 0 && !isLoading) {
+      const storageKey = `hasShownChartGalleryTour_${user.id}`;
+      const hasShownTour = localStorage.getItem(storageKey);
+
+      if (hasShownTour !== 'true') {
+        const driverObj = driver({
+          showProgress: true,
+          steps: chartGallerySteps,
+          popoverClass: 'driverjs-theme',
+        });
+
+        setTimeout(() => {
+          driverObj.drive();
+          localStorage.setItem(storageKey, 'true');
+        }, 1000);
+      }
+    }
+  }, [isAuthenticated, user, categories.length, isLoading]);
+
   // Calculate chart counts for filters
   const allTemplates = useMemo(() => {
     return categories.reduce((acc, category) => {
@@ -308,7 +332,7 @@ export default function ChooseTemplateTab() {
       {/* Left Sidebar - Fixed width, clean design */}
       <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
         {/* Dataset Section */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div id="dataset-section" className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-blue-500" />
@@ -343,6 +367,7 @@ export default function ChooseTemplateTab() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
+              id="search-templates"
               type="text"
               placeholder={t('chart_gallery_search_placeholder')}
               value={searchTerm}
@@ -356,7 +381,7 @@ export default function ChooseTemplateTab() {
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-6">
             {/* Featured Filter */}
-            <div className="space-y-3">
+            <div id="featured-filter" className="space-y-3">
               <div className="flex items-center gap-2">
                 <Star className="w-4 h-4 text-orange-500" />
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
@@ -378,7 +403,7 @@ export default function ChooseTemplateTab() {
             <Separator />
 
             {/* Category Filter */}
-            <div className="space-y-3">
+            <div id="category-filter" className="space-y-3">
               <div className="flex items-center gap-2">
                 <Grid3X3 className="w-4 h-4 text-blue-500" />
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
@@ -407,7 +432,7 @@ export default function ChooseTemplateTab() {
             <Separator />
 
             {/* Chart Type Filter */}
-            <div className="space-y-3">
+            <div id="type-filter" className="space-y-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-green-500" />
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
@@ -441,7 +466,7 @@ export default function ChooseTemplateTab() {
             <Separator />
 
             {/* Purpose Filter */}
-            <div className="space-y-3">
+            <div id="purpose-filter" className="space-y-3">
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-purple-500" />
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
@@ -644,7 +669,7 @@ export default function ChooseTemplateTab() {
 
         {/* Templates Grid */}
         <div className="flex-1 overflow-auto">
-          <div className="p-6">
+          <div id="templates-grid" className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {paginatedTemplates.map(template => {
                 const isSelected = selectedTemplate?.id === template.id;

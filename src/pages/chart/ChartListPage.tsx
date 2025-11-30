@@ -19,7 +19,6 @@ import { useCharts } from '@/features/charts/useCharts';
 import { useDataset } from '@/features/dataset/useDataset';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
-import ChartTab from './components/ChartTab';
 import ToastContainer from '@/components/ui/toast-container';
 import useToast from '@/hooks/useToast';
 import { usePagination } from '@/hooks/usePagination';
@@ -45,12 +44,19 @@ type Chart = BaseChart & {
   datasetName?: string;
 };
 
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
+import { chartListSteps } from '@/config/driver-steps/index';
+import { useAuth } from '@/features/auth/useAuth';
+import ChartTab from './components/ChartTab';
+
 const ChartListPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
+  const { user, isAuthenticated } = useAuth();
 
   // Charts API integration - using real charts feature
   const {
@@ -69,6 +75,27 @@ const ChartListPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingChartId, setDeletingChartId] = useState<string | null>(null);
   const [selectingDatasetModal, setSelectingDatasetModal] = useState<boolean>(false);
+
+  // Tour logic
+  useEffect(() => {
+    if (isAuthenticated && user?.id && charts.length > 0 && !chartsLoading) {
+      const storageKey = `hasShownChartListTour_${user.id}`;
+      const hasShownTour = localStorage.getItem(storageKey);
+
+      if (hasShownTour !== 'true') {
+        const driverObj = driver({
+          showProgress: true,
+          steps: chartListSteps,
+          popoverClass: 'driverjs-theme driver-theme-charts',
+        });
+
+        setTimeout(() => {
+          driverObj.drive();
+          localStorage.setItem(storageKey, 'true');
+        }, 1000);
+      }
+    }
+  }, [isAuthenticated, user, charts.length, chartsLoading]);
 
   // Get initial values from URL
   const getInitialFromDate = () => {
@@ -641,6 +668,7 @@ const ChartListPage: React.FC = () => {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
+                              id="chartTypeFilter"
                               type="button"
                               className="w-full h-11 border border-emerald-300 hover:border-emerald-500 rounded-2xl backdrop-blur-sm px-4 text-left flex items-center justify-between shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800"
                             >
@@ -768,6 +796,7 @@ const ChartListPage: React.FC = () => {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
+                              id="datasetFilter"
                               type="button"
                               className="w-full h-11 border border-emerald-300 hover:border-emerald-500 rounded-2xl backdrop-blur-sm px-4 text-left flex items-center justify-between shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800"
                             >
