@@ -11,7 +11,11 @@ import {
   Clock,
   Pencil,
   History,
+  HelpCircle,
 } from 'lucide-react';
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
+import { chartEditorSteps } from '@/config/driver-steps';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,35 +81,61 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
 
   const combinedHasChanges = typeof dirty === 'boolean' ? dirty : hasChanges;
 
+  // Driver.js tour
+  const startTour = () => {
+    const driverObj = driver({
+      showProgress: true,
+      steps: chartEditorSteps,
+      nextBtnText: t('driver_next', 'Next'),
+      prevBtnText: t('driver_prev', 'Previous'),
+      doneBtnText: t('driver_done', 'Done'),
+    });
+    driverObj.drive();
+  };
+
   const chartInfo: ChartInfo = useMemo(() => {
     switch (currentChartType) {
       case ChartType.Line:
-      case 'line':
         return {
           name: t('chart_type_line', 'Line Chart'),
           icon: '📈',
           color: 'bg-blue-500',
         };
       case ChartType.Bar:
-      case 'bar':
         return {
           name: t('chart_type_bar', 'Bar Chart'),
           icon: '📊',
           color: 'bg-green-500',
         };
       case ChartType.Area:
-      case 'area':
         return {
           name: t('chart_type_area', 'Area Chart'),
           icon: '📉',
           color: 'bg-purple-500',
         };
       case ChartType.Scatter:
-      case 'scatter':
         return {
           name: t('chart_type_scatter', 'Scatter Chart'),
           icon: '⚪️',
           color: 'bg-indigo-500',
+        };
+      case ChartType.Pie:
+        return {
+          name: t('chart_type_pie', 'Pie Chart'),
+          icon: '🥧',
+          color: 'bg-pink-500',
+        };
+      case ChartType.Donut:
+        return {
+          name: t('chart_type_donut', 'Donut Chart'),
+          icon: '🍩',
+          color: 'bg-yellow-500',
+        };
+      case ChartType.CyclePlot:
+        return {
+          name: t('chart_type_cycle_plot', 'Cycle Plot'),
+          icon: '🔄',
+          color: 'bg-teal-500',
         };
       default:
         return {
@@ -363,6 +393,16 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startTour}
+              className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0"
+              title={t('chart_editor_tour', 'Take a tour of the chart editor')}
+            >
+              <HelpCircle className="w-4 h-4" />
+              {t('chart_editor_tour_btn', 'Tour')}
+            </Button>
             <Button
               variant="outline"
               size="sm"

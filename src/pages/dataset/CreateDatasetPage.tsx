@@ -1,8 +1,6 @@
-'use client';
-
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import DataViewer from '@/components/dataset/DataViewer';
 import FileUpload from '@/components/dataset/FileUpload';
 import SampleDataUpload from '@/components/dataset/SampleDataUpload';
@@ -34,6 +32,11 @@ import {
   cleanHeadersRemoveEmptyRows,
 } from '@/utils/dataProcessors';
 import CleanDatasetWithAI from '@/components/dataset/CleanDatasetWithAi';
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
+import { createDatasetSteps } from '@/config/driver-steps/index';
+import { useAuth } from '@/features/auth/useAuth';
+import Routers from '@/router/routers';
 
 type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'cleanDataset' | 'view';
 
@@ -43,6 +46,28 @@ function CreateDatasetPageContent() {
   const { showSuccess, showError, showWarning } = useToastContext();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      const storageKey = `hasShownCreateDatasetTour_${user.id}`;
+      const hasShownTour = localStorage.getItem(storageKey);
+
+      if (hasShownTour !== 'true') {
+        const driverObj = driver({
+          showProgress: true,
+          steps: createDatasetSteps,
+          popoverClass: 'driverjs-theme',
+        });
+
+        setTimeout(() => {
+          driverObj.drive();
+          localStorage.setItem(storageKey, 'true');
+        }, 1000);
+      }
+    }
+  }, [isAuthenticated, user]);
 
   // Get form states from FormContext
   const { datasetName, description, resetForm } = useForm();
@@ -86,18 +111,22 @@ function CreateDatasetPageContent() {
   );
 
   const handleCleanDatasetComplete = useCallback(
-    (cleanedData: string | any[][]) => {
+    (cleanedData: any) => {
       try {
+        // Nếu là object kiểu { data: [...] } thì lấy ra .data
+        let matrix = cleanedData;
+        if (cleanedData && typeof cleanedData === 'object' && Array.isArray(cleanedData.data)) {
+          matrix = cleanedData.data;
+        }
         // Nếu là CSV string, xử lý như text
-        if (typeof cleanedData === 'string') {
-          handleTextProcess(cleanedData);
-        } else if (Array.isArray(cleanedData)) {
-          // Nếu là matrix (từ Excel), chuyển đổi thành CSV format
-          const csvContent = cleanedData
-            .map(row =>
+        if (typeof matrix === 'string') {
+          handleTextProcess(matrix);
+        } else if (Array.isArray(matrix)) {
+          // Nếu là matrix (từ Excel hoặc từ BE), chuyển đổi thành CSV format
+          const csvContent = matrix
+            .map((row: any[]) =>
               row
-                .map(cell => {
-                  // Escape quotes và wrap nếu cần
+                .map((cell: any) => {
                   const cellStr = String(cell ?? '');
                   return cellStr.includes(',') || cellStr.includes('"')
                     ? `"${cellStr.replace(/"/g, '""')}"`
@@ -263,7 +292,7 @@ function CreateDatasetPageContent() {
         const created = result.payload as any; // dataset object
         if (created && created.id) {
           // Use React Router navigation instead of window.location.href
-          navigate('/workspace', { state: { tab: 'datasets' } });
+          navigate(Routers.WORKSPACE_DATASETS);
         }
 
         // Reset state after successful upload
@@ -449,6 +478,15 @@ function CreateDatasetPageContent() {
       setNumberFormat,
     ]
   );
+
+  // Khi vào trang, nếu có cleanedData từ location.state thì tự động xử lý
+  useEffect(() => {
+    if (location.state && location.state.cleanedData) {
+      handleCleanDatasetComplete(location.state.cleanedData);
+      setViewMode('view');
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, handleCleanDatasetComplete, navigate, location.pathname]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">

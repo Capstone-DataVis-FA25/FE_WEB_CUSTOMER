@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useTranslation } from 'react-i18next';
-import { Plus, BarChart3 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Plus, BarChart3, RotateCcw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,11 +19,11 @@ import { useCharts } from '@/features/charts/useCharts';
 import { useDataset } from '@/features/dataset/useDataset';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
-import ChartTab from './components/ChartTab';
 import ToastContainer from '@/components/ui/toast-container';
 import useToast from '@/hooks/useToast';
 import { usePagination } from '@/hooks/usePagination';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { ChartType } from '@/features/charts';
 
 // Minimal BaseChart type to avoid dependency on missing '@/features/charts/chartTypes'
 type BaseChart = {
@@ -45,12 +44,19 @@ type Chart = BaseChart & {
   datasetName?: string;
 };
 
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
+import { chartListSteps } from '@/config/driver-steps/index';
+import { useAuth } from '@/features/auth/useAuth';
+import ChartTab from './components/ChartTab';
+
 const ChartListPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
+  const { user, isAuthenticated } = useAuth();
 
   // Charts API integration - using real charts feature
   const {
@@ -69,6 +75,27 @@ const ChartListPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingChartId, setDeletingChartId] = useState<string | null>(null);
   const [selectingDatasetModal, setSelectingDatasetModal] = useState<boolean>(false);
+
+  // Tour logic
+  useEffect(() => {
+    if (isAuthenticated && user?.id && charts.length > 0 && !chartsLoading) {
+      const storageKey = `hasShownChartListTour_${user.id}`;
+      const hasShownTour = localStorage.getItem(storageKey);
+
+      if (hasShownTour !== 'true') {
+        const driverObj = driver({
+          showProgress: true,
+          steps: chartListSteps,
+          popoverClass: 'driverjs-theme driver-theme-charts',
+        });
+
+        setTimeout(() => {
+          driverObj.drive();
+          localStorage.setItem(storageKey, 'true');
+        }, 1000);
+      }
+    }
+  }, [isAuthenticated, user, charts.length, chartsLoading]);
 
   // Get initial values from URL
   const getInitialFromDate = () => {
@@ -333,6 +360,19 @@ const ChartListPage: React.FC = () => {
     }
   };
 
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setChartTypeFilter('all');
+    setDatasetFilter('all');
+    setUpdatedAtFrom(null);
+    setUpdatedAtTo(new Date());
+    setSortOrder('newest');
+    chartPagination.setPage(1);
+
+    // Reset URL to clean state
+    navigate('?page=1', { replace: true });
+  };
+
   // While initial fetch is in-flight and no items yet, show only header + a scoped spinner
   const isInitialLoading = chartsLoading && allFilteredCharts.length === 0;
 
@@ -362,13 +402,14 @@ const ChartListPage: React.FC = () => {
             </div>
           </div>
           <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
-            <Button
+            <button
               onClick={() => handleCreateChart()}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg hover:shadow-xl transition-all duration-200"
+              type="button"
+              className="h-11 px-6 border-2 border-emerald-300 hover:border-emerald-500 rounded-2xl backdrop-blur-sm text-left flex items-center justify-center shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800 font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100"
             >
               <Plus className="h-4 w-4 mr-2" />
               New Chart
-            </Button>
+            </button>
           </div>
         </div>
 
@@ -430,7 +471,7 @@ const ChartListPage: React.FC = () => {
                             updateURL({ sort: v as 'newest' | 'oldest' });
                           }}
                         >
-                          <SelectTrigger className="w-full h-11 px-4 pr-10 text-base font-semibold !border-emerald-300 !border-2 focus:!border-emerald-500 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-emerald-500 hover:bg-emerald-100">
+                          <SelectTrigger className="w-full h-11 px-4 pr-10 text-base font-semibold !border-emerald-300 !border-2 focus:!border-emerald-500 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-emerald-500 hover:bg-emerald-100 focus:outline-none focus:ring-0">
                             <span className="flex items-center gap-2">
                               {sortOrder === 'newest' ? (
                                 <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
@@ -627,6 +668,7 @@ const ChartListPage: React.FC = () => {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
+                              id="chartTypeFilter"
                               type="button"
                               className="w-full h-11 border border-emerald-300 hover:border-emerald-500 rounded-2xl backdrop-blur-sm px-4 text-left flex items-center justify-between shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800"
                             >
@@ -634,9 +676,13 @@ const ChartListPage: React.FC = () => {
                                 {(() => {
                                   const labels: Record<string, string> = {
                                     all: 'All types',
-                                    line: 'Line',
-                                    bar: 'Bar',
-                                    area: 'Area',
+                                    line: ChartType.Line,
+                                    bar: ChartType.Bar,
+                                    area: ChartType.Area,
+                                    scatter: ChartType.Scatter,
+                                    pie: ChartType.Pie,
+                                    donut: ChartType.Donut,
+                                    cycleplot: ChartType.CyclePlot,
                                   };
                                   return labels[chartTypeFilter] || 'Filter by type';
                                 })()}
@@ -698,6 +744,46 @@ const ChartListPage: React.FC = () => {
                             >
                               Area
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                              onClick={() => {
+                                setChartTypeFilter('scatter');
+                                chartPagination.setPage(1);
+                                updateURL({ type: 'scatter', page: 1 });
+                              }}
+                            >
+                              Scatter
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                              onClick={() => {
+                                setChartTypeFilter('pie');
+                                chartPagination.setPage(1);
+                                updateURL({ type: 'pie', page: 1 });
+                              }}
+                            >
+                              Pie
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                              onClick={() => {
+                                setChartTypeFilter('donut');
+                                chartPagination.setPage(1);
+                                updateURL({ type: 'donut', page: 1 });
+                              }}
+                            >
+                              Donut
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                              onClick={() => {
+                                setChartTypeFilter('cycleplot');
+                                chartPagination.setPage(1);
+                                updateURL({ type: 'cycleplot', page: 1 });
+                              }}
+                            >
+                              Cycle Plot
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -710,6 +796,7 @@ const ChartListPage: React.FC = () => {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
+                              id="datasetFilter"
                               type="button"
                               className="w-full h-11 border border-emerald-300 hover:border-emerald-500 rounded-2xl backdrop-blur-sm px-4 text-left flex items-center justify-between shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800"
                             >
@@ -766,6 +853,17 @@ const ChartListPage: React.FC = () => {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
+                    </div>
+                    {/* Reset Button */}
+                    <div className="flex items-end">
+                      <button
+                        onClick={handleResetFilters}
+                        type="button"
+                        className="w-full h-11 border border-emerald-300 hover:border-emerald-500 rounded-2xl backdrop-blur-sm px-4 text-left flex items-center justify-between shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-3" />
+                        Reset
+                      </button>
                     </div>
                   </div>
                 </div>

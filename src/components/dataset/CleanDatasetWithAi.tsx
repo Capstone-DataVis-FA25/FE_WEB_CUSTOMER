@@ -1,6 +1,6 @@
 import type React from 'react';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -8,20 +8,36 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Upload, AlertCircle, Sparkles, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { cleanExcelAsync, cleanCsvAsync, getCleanResult } from '@/features/ai/aiAPI';
+import { io } from 'socket.io-client';
 import { cleanExcelUpload, cleanCsv } from '@/features/ai/aiAPI';
 import type { CleanCsvRequest } from '@/features/ai/aiTypes';
+import { useTranslation } from 'react-i18next';
+import { useToastContext } from '@/components/providers/ToastProvider';
 
 interface CleanDatasetWithAIProps {
   onCleanComplete?: (data: any, type: 'csv' | 'excel') => void;
   isProcessing?: boolean;
   onProcessingChange?: (processing: boolean) => void;
+  userId?: string; // Thêm userId để gửi lên BE và lắng nghe socket
 }
 
 function CleanDatasetWithAI({
   onCleanComplete,
   isProcessing = false,
   onProcessingChange,
+  userId,
 }: CleanDatasetWithAIProps) {
+  // Lấy userId từ localStorage nếu prop userId không có
+  const localUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+  const effectiveUserId = userId || localUser.id;
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [csvText, setCsvText] = useState('');
@@ -29,6 +45,8 @@ function CleanDatasetWithAI({
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('excel');
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [pendingJobId, setPendingJobId] = useState<string | null>(null);
+  const [jobType, setJobType] = useState<'csv' | 'excel' | null>(null);
 
   const [cleaningOptions, setCleaningOptions] = useState({
     thousandsSeparator: ',',
@@ -37,6 +55,9 @@ function CleanDatasetWithAI({
     notes: 'AI data cleaning',
   });
 
+  const { t } = useTranslation();
+  const { showSuccess } = useToastContext();
+
   const handleOptionChange = (key: keyof typeof cleaningOptions, value: string) => {
     setCleaningOptions(prev => ({
       ...prev,
@@ -44,53 +65,77 @@ function CleanDatasetWithAI({
     }));
   };
 
-  // Handle Excel file upload
+  // Lắng nghe socket notification khi có jobId xong
+  useEffect(() => {
+    if (!effectiveUserId || !pendingJobId) return;
+    const socket = io(process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000', {
+      query: { userId: effectiveUserId },
+      path: '/user-notification/socket.io',
+    });
+    socket.on('connect', () => {
+      console.log('[Socket] Connected:', socket.id);
+    });
+    socket.on('notification:created', noti => {
+      if (noti.type === 'clean-dataset-done' && noti.jobId === pendingJobId) {
+        getCleanResult(noti.jobId).then(result => {
+          onCleanComplete?.(result.data, jobType!);
+          showSuccess(
+            t('ai_clean_success_title', 'Dữ liệu đã được làm sạch'),
+            t('ai_clean_success_desc', 'Bạn sẽ được chuyển sang bước tiếp theo để tạo dataset.')
+          );
+          setPendingJobId(null);
+        });
+      }
+    });
+    socket.on('disconnect', () => {
+      console.log('[Socket] Disconnected');
+    });
+    return () => {
+      socket.disconnect();
+    };
+  }, [pendingJobId, effectiveUserId, jobType, onCleanComplete, t, showSuccess]);
+
+  // Handle Excel file upload (ASYNC)
   const handleExcelFileSelect = async (file: File) => {
     if (!file.name.match(/\.(xlsx?|xls)$/i)) {
       setError('Please select a valid Excel file (.xlsx, .xls)');
       return;
     }
-
     setError(null);
     setIsLoading(true);
     onProcessingChange?.(true);
-
     try {
-      const resp = await cleanExcelUpload(file, cleaningOptions);
-
-      if (resp.code === 200 && Array.isArray(resp.data)) {
-        // resp.data is a 2D matrix: [['col1','col2'], ['r1c1','r1c2'], ...]
-        console.log('[v0] Cleaned Excel data (matrix):', resp.data);
-
-        // Pass the raw matrix back to the caller (CreateDatasetPage expects a matrix)
-        // CreateDatasetPage will convert the matrix to CSV/parsed data.
-        onCleanComplete?.(resp.data, 'excel');
-        setError(null);
+      if (!effectiveUserId) throw new Error('Missing userId');
+      const resp = await cleanExcelAsync(file, { ...cleaningOptions, userId: effectiveUserId });
+      if (resp.jobId) {
+        setPendingJobId(resp.jobId);
+        setJobType('excel');
+        showSuccess(
+          t('ai_clean_upload_success_title', 'Đã gửi file Excel để làm sạch'),
+          t('ai_clean_upload_success_desc', 'Bạn sẽ nhận được thông báo khi hoàn tất.')
+        );
       } else {
-        setError(resp.message || 'Failed to clean Excel file');
+        setError(t('ai_clean_no_jobid', 'Không nhận được jobId từ server'));
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      setError(`Error cleaning Excel file: ${errorMessage}`);
-      console.error('[v0] Excel cleaning error:', err);
+      setError(t('ai_clean_send_failed', 'Gửi job thất bại'));
     } finally {
       setIsLoading(false);
       onProcessingChange?.(false);
     }
   };
 
-  // Handle CSV text cleaning
+  // Handle CSV text cleaning (ASYNC)
   const handleCleanCsv = async () => {
     if (!csvText.trim()) {
       setError('Please enter CSV data');
       return;
     }
-
     setError(null);
     setIsLoading(true);
     onProcessingChange?.(true);
-
     try {
+      if (!effectiveUserId) throw new Error('Missing userId');
       const payload: CleanCsvRequest = {
         csv: csvText,
         thousandsSeparator: cleaningOptions.thousandsSeparator,
@@ -98,22 +143,77 @@ function CleanDatasetWithAI({
         dateFormat: cleaningOptions.dateFormat,
         schemaExample: '',
         notes: cleaningOptions.notes,
+        userId: effectiveUserId,
       };
-
-      const resp = await cleanCsv(payload);
-
-      if (resp.code === 200 && resp.data?.cleanedCsv) {
-        console.log('[v0] Cleaned CSV:', resp.data.cleanedCsv);
-        onCleanComplete?.(resp.data.cleanedCsv, 'csv');
-        setCsvText('');
-        setError(null);
+      console.log('Submitting cleanCsvAsync payload:', payload);
+      const resp = await cleanCsvAsync(payload);
+      console.log('cleanCsvAsync response:', resp);
+      if (resp.jobId) {
+        setPendingJobId(resp.jobId);
+        setJobType('csv');
       } else {
-        setError(resp.message || 'Failed to clean CSV data');
+        setError('Không nhận được jobId từ server');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      setError(`Error cleaning CSV: ${errorMessage}`);
-      console.error('[v0] CSV cleaning error:', err);
+      console.error('Gửi job thất bại:', err);
+      setError('Gửi job thất bại');
+    } finally {
+      setIsLoading(false);
+      onProcessingChange?.(false);
+    }
+  };
+
+  // Handle Excel or CSV file upload (ASYNC)
+  const handleFileSelect = async (file: File) => {
+    const isExcel = file.name.match(/\.(xlsx?|xls)$/i);
+    const isCsv = file.name.match(/\.csv$/i);
+    if (!isExcel && !isCsv) {
+      setError('Please select a valid Excel or CSV file (.xlsx, .xls, .csv)');
+      return;
+    }
+    setError(null);
+    setIsLoading(true);
+    onProcessingChange?.(true);
+    try {
+      if (!effectiveUserId) throw new Error('Missing userId');
+      if (isExcel) {
+        const resp = await cleanExcelAsync(file, { ...cleaningOptions, userId: effectiveUserId });
+        if (resp.jobId) {
+          setPendingJobId(resp.jobId);
+          setJobType('excel');
+          showSuccess(
+            t('ai_clean_upload_success_title', 'Đã gửi file Excel để làm sạch'),
+            t('ai_clean_upload_success_desc', 'Bạn sẽ nhận được thông báo khi hoàn tất.')
+          );
+        } else {
+          setError(t('ai_clean_no_jobid', 'Không nhận được jobId từ server'));
+        }
+      } else if (isCsv) {
+        // Read file as text
+        const text = await file.text();
+        const payload: CleanCsvRequest = {
+          csv: text,
+          thousandsSeparator: cleaningOptions.thousandsSeparator,
+          decimalSeparator: cleaningOptions.decimalSeparator,
+          dateFormat: cleaningOptions.dateFormat,
+          schemaExample: '',
+          notes: cleaningOptions.notes,
+          userId: effectiveUserId,
+        };
+        const resp = await cleanCsvAsync(payload);
+        if (resp.jobId) {
+          setPendingJobId(resp.jobId);
+          setJobType('csv');
+          showSuccess(
+            t('ai_clean_upload_success_title', 'Đã gửi file CSV để làm sạch'),
+            t('ai_clean_upload_success_desc', 'Bạn sẽ nhận được thông báo khi hoàn tất.')
+          );
+        } else {
+          setError(t('ai_clean_no_jobid', 'Không nhận được jobId từ server'));
+        }
+      }
+    } catch (err) {
+      setError(t('ai_clean_send_failed', 'Gửi job thất bại'));
     } finally {
       setIsLoading(false);
       onProcessingChange?.(false);
@@ -124,7 +224,7 @@ function CleanDatasetWithAI({
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      handleExcelFileSelect(file);
+      handleFileSelect(file);
     }
   };
 
@@ -141,10 +241,9 @@ function CleanDatasetWithAI({
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragOver(false);
-
     const file = event.dataTransfer.files[0];
     if (file) {
-      handleExcelFileSelect(file);
+      handleFileSelect(file);
     }
   };
 
@@ -288,15 +387,15 @@ function CleanDatasetWithAI({
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="excel" className="flex items-center gap-2">
                 <Upload className="w-4 h-4" />
-                Clean Excel File
+                {t('ai_clean_tab_file', 'Clean File (Excel/CSV)')}
               </TabsTrigger>
               <TabsTrigger value="csv" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
-                Clean CSV Text
+                {t('ai_clean_tab_csv', 'Clean CSV Text')}
               </TabsTrigger>
             </TabsList>
 
-            {/* Excel Tab */}
+            {/* File Tab (Excel/CSV) */}
             <TabsContent value="excel" className="space-y-4">
               <div
                 className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 cursor-pointer
@@ -313,7 +412,7 @@ function CleanDatasetWithAI({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".xlsx,.xls"
+                  accept=".xlsx,.xls,.csv"
                   onChange={handleFileInputChange}
                   className="hidden"
                   disabled={isLoading || isProcessing}
@@ -327,11 +426,14 @@ function CleanDatasetWithAI({
                   <div>
                     <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                       {isDragOver
-                        ? 'Drop your Excel file here'
-                        : 'Click to upload or drag Excel file'}
+                        ? t('ai_clean_drop_file', 'Thả file Excel hoặc CSV vào đây')
+                        : t(
+                            'ai_clean_click_upload',
+                            'Click để tải lên hoặc kéo thả file Excel/CSV'
+                          )}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Supported formats: .xlsx, .xls
+                      {t('ai_clean_supported_formats', 'Hỗ trợ: .xlsx, .xls, .csv')}
                     </p>
                   </div>
                 </div>

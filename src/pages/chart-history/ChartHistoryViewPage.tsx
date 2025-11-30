@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Calendar, Clock, Eye, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Eye, RotateCcw, Database, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import dayjs from 'dayjs';
@@ -33,6 +33,7 @@ import { useChartHistory } from '@/features/chartHistory/useChartHistory';
 import Routers from '@/router/routers';
 import RestoreConfirmDialog from '@/components/charts/RestoreConfirmDialog';
 import Utils from '@/utils/Utils';
+import { ChartType } from '@/features/charts';
 
 const normalizeDateFormat = (fmt?: string) => {
   if (!fmt) return fmt;
@@ -433,6 +434,61 @@ const ChartHistoryViewPage: React.FC = () => {
     return processedData.headers.map(col => ({ ...col }));
   }, [processedData.headers]);
 
+  // Get chart info based on chart type (MUST be before early return)
+  const chartInfo = useMemo(() => {
+    const chartType = selectedHistory?.type;
+    switch (chartType) {
+      case ChartType.Line:
+        return {
+          name: t('chart_type_line', 'Line Chart'),
+          icon: '📈',
+          color: 'bg-blue-500',
+        };
+      case ChartType.Bar:
+        return {
+          name: t('chart_type_bar', 'Bar Chart'),
+          icon: '📊',
+          color: 'bg-green-500',
+        };
+      case ChartType.Area:
+        return {
+          name: t('chart_type_area', 'Area Chart'),
+          icon: '📉',
+          color: 'bg-purple-500',
+        };
+      case ChartType.Scatter:
+        return {
+          name: t('chart_type_scatter', 'Scatter Chart'),
+          icon: '⚪️',
+          color: 'bg-indigo-500',
+        };
+      case ChartType.Pie:
+        return {
+          name: t('chart_type_pie', 'Pie Chart'),
+          icon: '🥧',
+          color: 'bg-pink-500',
+        };
+      case ChartType.Donut:
+        return {
+          name: t('chart_type_donut', 'Donut Chart'),
+          icon: '🍩',
+          color: 'bg-yellow-500',
+        };
+      case ChartType.CyclePlot:
+        return {
+          name: t('chart_type_cycle_plot', 'Cycle Plot'),
+          icon: '🔄',
+          color: 'bg-teal-500',
+        };
+      default:
+        return {
+          name: t('chart_type_default', 'Chart'),
+          icon: '📊',
+          color: 'bg-gray-500',
+        };
+    }
+  }, [selectedHistory?.type, t]);
+
   // ============================================================
   // LOADING STATE
   // ============================================================
@@ -448,12 +504,13 @@ const ChartHistoryViewPage: React.FC = () => {
   }
 
   console.log('Processed Data:', processedData);
+
   // ============================================================
   // RENDER
   // ============================================================
   return (
     <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex flex-col">
-      {/* Header */}
+      {/* Header - Similar to ChartEditorHeader */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -462,92 +519,165 @@ const ChartHistoryViewPage: React.FC = () => {
       >
         <div className="w-full px-6 py-3">
           <div className="flex items-center justify-between">
-            {/* Left Section */}
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBack}
-                className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+            <div className="flex items-center gap-3">
+              {/* Chart Icon */}
+              <div
+                className={`w-10 h-10 ${chartInfo.color} rounded-lg flex items-center justify-center text-white text-lg shadow-lg`}
               >
-                <ArrowLeft className="w-4 h-4" />
-                {t('back', 'Back')}
-              </Button>
-
-              <div className="border-l border-gray-300 dark:border-gray-600 h-8"></div>
-
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-gray-500" />
-                  <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {selectedHistory.name || t('chartHistory.viewTitle', 'Chart History View')}
-                  </h1>
-                  <Badge variant="secondary" className="text-xs">
-                    {t('viewOnly', 'View Only')}
-                  </Badge>
-                </div>
-                {selectedHistory.description && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {selectedHistory.description}
-                  </p>
-                )}
+                {chartInfo.icon}
               </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                      {selectedHistory.name || t('chartHistory.viewTitle', 'Chart History View')}
+                    </h1>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                      <BarChart3 className="w-3 h-3" />
+                      {chartInfo.name}
+                    </Badge>
+                    {currentDataset?.name && (
+                      <Badge
+                        variant="outline"
+                        className="flex items-center gap-1 text-xs border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-700 dark:text-blue-200 dark:bg-blue-900/30"
+                        title={currentDataset.name}
+                      >
+                        <Database className="w-3 h-3" />
+                        <span className="max-w-[250px] truncate">{currentDataset.name}</span>
+                      </Badge>
+                    )}
+                    <Badge
+                      variant="outline"
+                      className="flex items-center gap-1 text-xs border-orange-300 text-orange-600 bg-orange-50 dark:border-orange-600 dark:text-orange-400 dark:bg-orange-900/20"
+                    >
+                      <Eye className="w-3 h-3" />
+                      {t('viewOnly', 'View Only')}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 mt-1">
+                  {selectedHistory.description && (
+                    <div className="flex items-center gap-1">
+                      <Database className="w-3 h-3" />
+                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                        {t('description', 'Description')}:
+                      </span>
+                      <span
+                        className="text-xs text-gray-700 dark:text-gray-300"
+                        style={{ fontWeight: '500', fontSize: '14px' }}
+                      >
+                        {selectedHistory.description}
+                      </span>
+                    </div>
+                  )}
 
-              <div className="border-l border-gray-300 dark:border-gray-600 h-8"></div>
+                  <div className="flex items-center gap-4">
+                    {selectedHistory.createdAt && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                        <Calendar className="w-3 h-3 text-gray-700 dark:text-gray-300" />
+                        <span className="font-medium">{t('chart_created', 'Created')}:</span>
+                        <span className="text-gray-700 dark:text-gray-300">
+                          {Utils.getDate(selectedHistory.createdAt, 18)}
+                        </span>
+                      </div>
+                    )}
 
-              {/* Tabs */}
-              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                <button
-                  onClick={() => setActiveTab('chart')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                    activeTab === 'chart'
-                      ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  {t('chart', 'Chart')}
-                </button>
-                <button
-                  onClick={() => setActiveTab('data')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                    activeTab === 'data'
-                      ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  {t('data', 'Data')}
-                </button>
+                    {selectedHistory.updatedBy && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                        <Clock className="w-3 h-3 text-gray-700 dark:text-gray-300" />
+                        <span className="font-medium">{t('updatedBy', 'By')}:</span>
+                        <span className="text-gray-700 dark:text-gray-300">
+                          {selectedHistory.updatedBy}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Right Section - Restore Button */}
-            <div className="flex items-center gap-4">
-              {/* Metadata */}
-              <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
-                {selectedHistory.createdAt && (
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    <span className="font-medium">{t('created', 'Created')}:</span>
-                    <span>{Utils.getDate(selectedHistory.createdAt, 18)}</span>
-                  </div>
-                )}
-                {selectedHistory.updatedBy && (
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    <span className="font-medium">{t('updatedBy', 'By')}:</span>
-                    <span>{selectedHistory.updatedBy}</span>
-                  </div>
-                )}
-              </div>
-
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBack}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                {t('common_back', 'Back')}
+              </Button>
               <Button
                 size="sm"
                 onClick={handleRestoreClick}
+                disabled={restoring}
                 className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <RotateCcw className="w-4 h-4" />
-                {restoring ? t('restoring', 'Restoring...') : t('restore', 'Restore')}
+                {restoring ? (
+                  <>
+                    <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    {t('restoring', 'Restoring...')}
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" />
+                    {t('restore', 'Restore')}
+                  </>
+                )}
               </Button>
+            </div>
+          </div>
+        </div>
+        {/* Tabs Section */}
+        <div className="w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+          <div className="px-6">
+            <div className="flex justify-center">
+              <div className="relative inline-flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('chart')}
+                  className={`relative w-28 h-[42px] px-3 text-sm font-medium cursor-pointer transition-colors ${
+                    activeTab === 'chart'
+                      ? 'text-gray-900 dark:text-white'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                  }`}
+                  aria-selected={activeTab === 'chart'}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    {t('tab_chart', 'Chart')}
+                  </span>
+                  {activeTab === 'chart' && (
+                    <motion.div
+                      layoutId="tab-underline-history"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900 dark:bg-white"
+                    />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('data')}
+                  className={`relative w-28 h-[42px] px-3 text-sm font-medium cursor-pointer transition-colors ${
+                    activeTab === 'data'
+                      ? 'text-gray-900 dark:text-white'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                  }`}
+                  aria-selected={activeTab === 'data'}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Database className="w-4 h-4" />
+                    {t('tab_data', 'Data')}
+                  </span>
+                  {activeTab === 'data' && (
+                    <motion.div
+                      layoutId="tab-underline-history"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900 dark:bg-white"
+                    />
+                  )}
+                </button>
+                <div className="absolute bottom-0 left-0 right-0 h-px bg-gray-200 dark:bg-gray-700" />
+              </div>
             </div>
           </div>
         </div>
@@ -569,6 +699,7 @@ const ChartHistoryViewPage: React.FC = () => {
               processedHeaders={processedHeaders}
               setDataId={() => {}} // No-op in view mode
               datasetId={selectedHistory.datasetId}
+              showLeftSidebar={false}
             />
           </div>
 
