@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell,
   Menu,
@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { User } from '@/features/auth/authType';
 import Routers from '@/router/routers';
+import { useAiJobNotification } from '@/features/ai/useAiJobNotification';
 
 interface HeaderProps {
   isAuthenticated?: boolean;
@@ -41,12 +42,16 @@ const Header: React.FC<HeaderProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isResourcesDropdownOpen, setIsResourcesDropdownOpen] = useState(false);
+  const [showAiDropdown, setShowAiDropdown] = useState(false);
   const resourcesCloseTimerRef = useRef<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const resourcesDropdownRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const { goToAuth } = useNavigation();
+  const userId = user?.id;
+  const { pendingJobs, loadingJobId, handleJobClick } = useAiJobNotification(userId);
 
   const navItems = [
     { name: t('navigation_home'), href: '/' },
@@ -207,14 +212,66 @@ const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center space-x-3">
               {isAuthenticated ? (
                 <FadeIn delay={0.3} className="flex items-center space-x-3">
-                  <AnimatedButton className="relative p-2.5 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 ring-1 ring-gray-200/50 dark:ring-gray-700/50 bg-white/50 dark:bg-gray-800/50 shadow-sm">
-                    <Bell className="w-5 h-5" />
-                    {notificationCount > 0 && (
-                      <ScaleIn className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full flex items-center justify-center shadow-md ring-2 ring-white dark:ring-gray-900">
-                        {notificationCount > 9 ? '9+' : notificationCount}
-                      </ScaleIn>
+                  {/* AI Cleaning Notification Bell */}
+                  <div className="relative">
+                    <AnimatedButton
+                      className="relative p-2.5 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 ring-1 ring-gray-200/50 dark:ring-gray-700/50 bg-white/50 dark:bg-gray-800/50 shadow-sm"
+                      onClick={() => setShowAiDropdown(v => !v)}
+                      aria-label="AI Job Notifications"
+                    >
+                      <Bell className="w-5 h-5" />
+                      {pendingJobs.length > 0 && (
+                        <ScaleIn className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full flex items-center justify-center shadow-md ring-2 ring-white dark:ring-gray-900">
+                          {pendingJobs.length > 9 ? '9+' : pendingJobs.length}
+                        </ScaleIn>
+                      )}
+                    </AnimatedButton>
+                    {showAiDropdown && (
+                      <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 shadow-lg rounded-xl z-50 border border-gray-200 dark:border-gray-700">
+                        {pendingJobs.length === 0 ? (
+                          <div className="p-4 text-center text-gray-400 text-sm">
+                            {t('notification_empty', 'Không có thông báo nào')}
+                          </div>
+                        ) : (
+                          <>
+                            {pendingJobs.length > 0 && (
+                              <>
+                                <div className="px-4 pt-3 pb-1 text-xs font-semibold text-blue-500">
+                                  {t('notification_new', 'Thông báo mới')}
+                                </div>
+                                <ul>
+                                  {pendingJobs.map(job => (
+                                    <li
+                                      key={job.jobId}
+                                      className="p-3 border-b last:border-b-0 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm flex items-center"
+                                      onClick={async () => {
+                                        await handleJobClick(job.jobId, data => {
+                                          navigate('/datasets/create', {
+                                            state: { cleanedData: data, jobId: job.jobId },
+                                          });
+                                          setShowAiDropdown(false);
+                                        });
+                                      }}
+                                    >
+                                      {loadingJobId === job.jobId ? (
+                                        <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2" />
+                                      ) : (
+                                        <Bell className="w-4 h-4 text-blue-500 mr-2" />
+                                      )}
+                                      <span>
+                                        {t('notification_clean_ready', 'Dữ liệu đã clean sẵn sàng')}{' '}
+                                        {job.time ? `(${job.time.slice(11, 19)})` : ''}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </>
+                            )}
+                          </>
+                        )}
+                      </div>
                     )}
-                  </AnimatedButton>
+                  </div>
 
                   <div className="relative" ref={dropdownRef}>
                     <AnimatedButton

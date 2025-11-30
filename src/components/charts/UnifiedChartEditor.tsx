@@ -19,89 +19,97 @@ export interface UnifiedChartEditorProps {
   processedHeaders?: DataHeader[];
   setDataId: (dataId: string) => void;
   datasetId?: string;
+  showLeftSidebar?: boolean;
 }
 
 const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
   processedHeaders,
   setDataId,
   datasetId,
+  showLeftSidebar = true,
 }) => {
   const { currentChartType: chartType } = useChartEditorRead();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
       <div className="w-full px-2">
-        <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
-          {/* Left Sidebar - Chart Settings */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="space-y-4">
-              {/* Chart Type Selector */}
-              <div id="chart-type-selector">
-                <ChartTypeSelector />
-              </div>
+        {showLeftSidebar ? (
+          <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
+            {/* Left Sidebar - Chart Settings */}
 
-              {/* Basic Settings Section */}
-              <div id="basic-settings-section">
-                <BasicSettingsSection />
-              </div>
+            <div className="lg:col-span-2 space-y-6">
+              <div className="space-y-4">
+                {/* Chart Type Selector */}
+                <div id="chart-type-selector">
+                  <ChartTypeSelector />
+                </div>
 
-              {/* Dataset Operation Section */}
-              <DatasetOperationSection processedHeaders={processedHeaders} />
+                {/* Basic Settings Section */}
+                <div id="basic-settings-section">
+                  <BasicSettingsSection />
+                </div>
 
-              {(chartType == ChartType.Line ||
-                chartType == ChartType.Bar ||
-                chartType == ChartType.Area ||
-                chartType == ChartType.Scatter) && (
-                <>
-                  {/* Basic Chart Settings Section */}
-                  <div id="chart-settings-section">
+                {/* Dataset Operation Section */}
+                <DatasetOperationSection processedHeaders={processedHeaders} />
+
+                {(chartType == ChartType.Line ||
+                  chartType == ChartType.Bar ||
+                  chartType == ChartType.Area ||
+                  chartType == ChartType.Scatter) && (
+                  <>
+                    {/* Basic Chart Settings Section */}
+                    <div id="chart-settings-section">
+                      <BasicChartSettingsSection />
+                    </div>
+
+                    {/* Axis Configuration Section */}
+                    <div id="axis-configuration-section">
+                      <AxisConfigurationSection processedHeaders={processedHeaders} />
+                    </div>
+
+                    {/* Series Management Section */}
+                    <div id="series-management-section">
+                      <SeriesManagementSection processedHeaders={processedHeaders} />
+                    </div>
+                  </>
+                )}
+
+                {(chartType == ChartType.Pie || chartType == ChartType.Donut) && (
+                  <>
+                    {/* Basic Chart Settings Section */}
+                    <ChartSettingsPieSection processedHeaders={processedHeaders} />
+
+                    {/* Display Options Section */}
+                    <DisplayOptionsPieSection />
+                  </>
+                )}
+
+                {chartType == ChartType.CyclePlot && (
+                  <>
+                    {/* Basic Chart Settings Section */}
                     <BasicChartSettingsSection />
-                  </div>
 
-                  {/* Axis Configuration Section */}
-                  <div id="axis-configuration-section">
-                    <AxisConfigurationSection processedHeaders={processedHeaders} />
-                  </div>
-
-                  {/* Series Management Section */}
-                  <div id="series-management-section">
-                    <SeriesManagementSection processedHeaders={processedHeaders} />
-                  </div>
-                </>
-              )}
-
-              {(chartType == ChartType.Pie || chartType == ChartType.Donut) && (
-                <>
-                  {/* Basic Chart Settings Section */}
-                  <ChartSettingsPieSection processedHeaders={processedHeaders} />
-
-                  {/* Display Options Section */}
-                  <DisplayOptionsPieSection />
-                </>
-              )}
-
-              {chartType == ChartType.CyclePlot && (
-                <>
-                  {/* Basic Chart Settings Section */}
-                  <BasicChartSettingsSection />
-
-                  {/* Cycle Plot Specific Settings */}
-                  <CyclePlotSettingsSection />
-                </>
-              )}
-              <div id="chart-formatter-section">
-                <ChartFormatterSettings />
-              </div>
-              <div id="import-export-section">
-                <ImportExportSection setDataId={setDataId} datasetId={datasetId} />
+                    {/* Cycle Plot Specific Settings */}
+                    <CyclePlotSettingsSection />
+                  </>
+                )}
+                <div id="chart-formatter-section">
+                  <ChartFormatterSettings />
+                </div>
+                <div id="import-export-section">
+                  <ImportExportSection setDataId={setDataId} datasetId={datasetId} />
+                </div>
               </div>
             </div>
-          </div>
-          {/* Right Side - Chart Display */}
-          <div id="chart-display-section">
+            {/* Right Side - Chart Display */}
             <ChartDisplaySection processedHeaders={processedHeaders} />
           </div>
-        </div>
+        ) : (
+          <div className="w-full">
+            {/* Right Side - Chart Display */}
+            <ChartDisplaySection processedHeaders={processedHeaders} />
+          </div>
+        )}
       </div>
     </div>
   );

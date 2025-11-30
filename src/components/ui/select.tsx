@@ -25,6 +25,7 @@ export interface SelectItemProps {
 
 export interface SelectValueProps {
   placeholder?: string;
+  options?: Array<{ value: string; label: string }>;
 }
 
 const SelectContext = React.createContext<{
@@ -294,12 +295,13 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
   );
 };
 
-const SelectValue: React.FC<SelectValueProps> = ({ placeholder }) => {
+const SelectValue: React.FC<SelectValueProps> = ({ placeholder, options }) => {
   const { value, itemsMap } = React.useContext(SelectContext);
 
   if (!value) return <span className="block truncate text-gray-500">{placeholder}</span>;
 
-  const label = itemsMap?.current.get(value) || value;
+  const label =
+    itemsMap?.current.get(value) || options?.find(opt => opt.value === value)?.label || value;
   return <span className="block truncate">{label}</span>;
 };
 

@@ -45,6 +45,7 @@ import { useChartNotes } from '@/features/chartNotes/useChartNotes';
 import { useChartHistory } from '@/features/chartHistory/useChartHistory';
 import { captureAndUploadChartSnapshot } from '@/services/uploadService';
 import DatasetSelectionDialog from '../chart/components/DatasetSelectionDialog';
+import Routers from '@/router/routers';
 
 const normalizeDateFormat = (fmt?: string) => {
   if (!fmt) return fmt;
@@ -343,7 +344,6 @@ const ChartEditorPage: React.FC = () => {
     //   currentChartId: currentChart.id,
     //   chartIdFromUrl,
     // });
-
     // Only populate if this is the chart we're supposed to be editing
     if (currentChart.id === chartIdFromUrl) {
       setEditableName(currentChart.name || '');
@@ -371,11 +371,6 @@ const ChartEditorPage: React.FC = () => {
   useEffect(() => {
     if (mode !== 'create') return;
 
-    console.log('[ChartEditorPage] Initializing create mode', {
-      chartTypeFromState,
-      currentChartType,
-    });
-
     // Set chart type from location state if available
     if (chartTypeFromState && chartTypeFromState !== currentChartType) {
       setCurrentChartType(chartTypeFromState);
@@ -393,7 +388,6 @@ const ChartEditorPage: React.FC = () => {
     // Set datasetId from URL or location state
     const initialDatasetId = datasetIdFromUrl || locationState?.datasetId;
     if (initialDatasetId && initialDatasetId !== datasetId) {
-      console.log('[ChartEditorPage] Setting initial datasetId in create mode', initialDatasetId);
       setDatasetId(initialDatasetId);
 
       // Update URL to persist datasetId
@@ -507,27 +501,16 @@ const ChartEditorPage: React.FC = () => {
 
   // Serialize filters to ensure useMemo detects changes (React does shallow comparison)
   // Depend on datasetConfig itself to catch any nested changes
-  const filtersKey = useMemo(() => {
-    const key = JSON.stringify(datasetConfig?.filters || []);
-    console.log('[ChartEditorPage] filtersKey updated:', key);
-    return key;
-  }, [datasetConfig]);
-  const aggregationKey = useMemo(() => {
-    const key = JSON.stringify(datasetConfig?.aggregation || {});
-    console.log('[ChartEditorPage] aggregationKey updated:', key);
-    return key;
-  }, [datasetConfig]);
+  const filtersKey = useMemo(() => JSON.stringify(datasetConfig?.filters || []), [datasetConfig]);
+  const aggregationKey = useMemo(
+    () => JSON.stringify(datasetConfig?.aggregation || {}),
+    [datasetConfig]
+  );
 
   // ============================================================
   // COMPUTE: Processed data (filter → sort → aggregation)
   // ============================================================
   const processedData = useMemo(() => {
-    console.log('[ChartEditorPage] processedData memo recalculating...', {
-      filtersKey,
-      aggregationKey,
-      filtersCount: (datasetConfig as any)?.filters?.length || 0,
-    });
-
     // Always use original dataset for operations (filter/sort/aggregation)
     // working.data/headers might be aggregated, so use originalDataset
     const dataToProcess = originalDataset.data || working?.data;
@@ -541,12 +524,6 @@ const ChartEditorPage: React.FC = () => {
     const currentFilters = (datasetConfig as any)?.filters;
     const currentAggregation = datasetConfig?.aggregation;
 
-    console.log('[ChartEditorPage] Processing with:', {
-      dataRows: dataToProcess.length,
-      filters: currentFilters?.length || 0,
-      hasAggregation: !!currentAggregation,
-    });
-
     try {
       // Build column index map from ORIGINAL headers (not aggregated)
       const colIndexMap = buildColumnIndexMap(headersToUse as unknown as DataHeader[]);
@@ -554,11 +531,6 @@ const ChartEditorPage: React.FC = () => {
       // Filter using original data and original headers
       const filtered =
         applyDatasetFilters(dataToProcess, currentFilters, colIndexMap) || dataToProcess;
-
-      console.log('[ChartEditorPage] After filter:', {
-        originalRows: dataToProcess.length,
-        filteredRows: filtered.length,
-      });
 
       // Sort using filtered data
       const multiSorted = applyMultiLevelSort(filtered, sortLevels, colIndexMap) || filtered;
@@ -571,12 +543,6 @@ const ChartEditorPage: React.FC = () => {
         currentAggregation,
         colIndexMap
       );
-
-      console.log('[ChartEditorPage] After aggregation:', {
-        sortedRows: multiSorted.length,
-        aggregatedRows: aggregationResult?.data?.length || 0,
-        hasResult: !!aggregationResult,
-      });
 
       // Use aggregated data/headers if aggregation is active, otherwise use sorted data
       const finalHeaders = aggregationResult
@@ -673,7 +639,7 @@ const ChartEditorPage: React.FC = () => {
         event.preventDefault();
         window.history.pushState(null, '', window.location.href);
         setPendingNavigation(() => () => {
-          navigate('/workspace', { state: { tab: 'charts' } });
+          navigate(Routers.WORKSPACE_CHARTS);
         });
         setShowUnsavedModal(true);
       }
@@ -754,7 +720,6 @@ const ChartEditorPage: React.FC = () => {
           const url = await captureAndUploadChartSnapshot('.chart-container');
           if (url) {
             imageUrl = url;
-            console.log('Chart snapshot captured and uploaded:', imageUrl);
           }
         } catch (error) {
           console.warn('Failed to capture chart snapshot:', error);
@@ -769,12 +734,6 @@ const ChartEditorPage: React.FC = () => {
           config: chartConfig as unknown as ChartRequest['config'],
           imageUrl, // Include chart snapshot
         };
-
-        console.log('[handleCreateChart] Creating chart with data:', {
-          name: createData.name,
-          datasetId: createData.datasetId,
-          type: createData.type,
-        });
 
         const result = await createChart(createData).unwrap();
         showSuccess(t('chart_create_success', 'Chart created successfully'));
@@ -803,7 +762,6 @@ const ChartEditorPage: React.FC = () => {
           const url = await captureAndUploadChartSnapshot('.chart-container');
           if (url) {
             newImageUrl = url;
-            console.log('New chart snapshot captured and uploaded:', newImageUrl);
           }
         } catch (error) {
           console.warn('Failed to capture chart snapshot:', error);
@@ -857,29 +815,6 @@ const ChartEditorPage: React.FC = () => {
 
     try {
       if (chartConfig) {
-        // Debug: print bindings before/after reset
-        const extractBindings = (cfg: MainChartConfig | null, type: any) => {
-          if (!cfg) return {} as any;
-          if (type === 'line' || type === 'bar' || type === 'area' || type === 'scatter') {
-            const axis = (cfg as any)?.axisConfigs;
-            const series = (axis?.seriesConfigs || []).map((s: any) => s?.dataKey);
-            return {
-              chartType: type,
-              xAxisKey: axis?.xAxisKey,
-              seriesDataKeys: series,
-            };
-          }
-          if (type === 'pie' || type === 'donut') {
-            const anyCfg = cfg as any;
-            return {
-              chartType: type,
-              labelKey: anyCfg?.config?.labelKey,
-              valueKey: anyCfg?.config?.valueKey,
-            };
-          }
-          return { chartType: type } as any;
-        };
-
         // Ensure reset uses an actual chart type (state -> config -> default)
         const typeForReset =
           (currentChartType as any) || (chartConfig as any)?.chartType || ChartType.Line;
@@ -887,22 +822,12 @@ const ChartEditorPage: React.FC = () => {
           ...(chartConfig as MainChartConfig),
           chartType: typeForReset,
         } as MainChartConfig;
-        const before = extractBindings(cfgWithType, typeForReset);
         const nextCfg = resetBindings(cfgWithType);
-        const after = extractBindings(nextCfg, typeForReset);
 
-        console.groupCollapsed('[Dataset Change] Reset bindings');
-        console.log('Dataset:', {
-          previousDatasetId: originalDatasetIdRef.current,
-          selectedDatasetId,
-        });
-        console.log('Before:', before);
-        console.log('Type used for reset:', typeForReset);
-        console.log('After :', after);
-        console.groupEnd();
-
+        // When changing dataset, also reset dataset-level operations (filters/sort/aggregation)
         setChartConfig({
           ...nextCfg,
+          datasetConfig: undefined,
         } as MainChartConfig);
       }
       // Track dirty state relative to original dataset id
@@ -927,15 +852,39 @@ const ChartEditorPage: React.FC = () => {
       setCurrentModalAction('reset');
       modalConfirm.openConfirm(async () => {
         try {
-          resetToOriginal();
+          // Determine which datasetId to reload
+          let targetDatasetId: string | undefined;
           if (datasetDirty) {
             // restore datasetId to original snapshot
             const orig = originalDatasetIdRef.current;
             if (typeof orig === 'string') {
               setDatasetId(orig);
+              targetDatasetId = orig;
             }
             setDatasetDirty(false);
+          } else {
+            // Use current datasetId
+            targetDatasetId = datasetId || currentChart?.datasetId;
           }
+
+          // STEP 1: Fetch the dataset FIRST to reset currentDataset in store
+          // This ensures excelInitial → originalDataset → processedData have correct headers
+          if (targetDatasetId) {
+            setIsFetchingDatasetById(true);
+            try {
+              await getDatasetById(targetDatasetId);
+              console.log('Dataset reloaded, now resetting config...');
+            } catch (error) {
+              console.error('Failed to fetch original dataset:', error);
+            } finally {
+              setIsFetchingDatasetById(false);
+            }
+          }
+
+          // STEP 2: Reset config AFTER dataset is loaded
+          // Now resetToOriginal will use the fresh dataset headers
+          resetToOriginal();
+
           showSuccess(t('chart_reset', 'Chart reset to original values'));
         } catch (error) {
           console.error('Error resetting chart:', error);
@@ -948,12 +897,12 @@ const ChartEditorPage: React.FC = () => {
   const handleBack = () => {
     if (hasChanges && mode === 'edit') {
       setPendingNavigation(() => () => {
-        navigate('/workspace', { state: { tab: 'charts' } });
+        navigate(Routers.WORKSPACE_CHARTS);
       });
       setShowUnsavedModal(true);
     } else {
       if (mode === 'edit') {
-        navigate('/workspace', { state: { tab: 'charts' } });
+        navigate(Routers.WORKSPACE_CHARTS);
       } else if (mode === 'create' && datasetId) {
         navigate('/chart-gallery', { state: { datasetId } });
       } else {
