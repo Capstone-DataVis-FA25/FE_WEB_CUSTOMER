@@ -1,7 +1,7 @@
 import React, { useRef, useCallback } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
-import { Plus, ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SortSummaryButton } from '@/pages/chart-creator/operations/sort/SortSummaryButton';
 import InlineSortCard from './InlineSortCard';
@@ -118,72 +118,61 @@ const SortTab: React.FC<SortTabProps> = ({ availableColumns, sortLevels, onSortC
         />
       </div>
 
-      {!hasSortLevels ? (
+      <div className="flex flex-col">
+        {/* Label with icon */}
+        <div className="flex items-center gap-2 mb-2 px-1">
+          <ArrowUpDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sort</span>
+        </div>
+
+        {/* Content area */}
         <div
           ref={assignDropZoneRef}
           className={cn(
-            'relative rounded-xl border-2 border-dashed transition-all duration-300 w-full h-[200px] flex items-center justify-center mb-4 overflow-hidden',
-            isOver
-              ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-lg shadow-emerald-500/20'
-              : 'border-emerald-500/40 dark:border-emerald-500/40 bg-gray-50/50 dark:bg-gray-800/50'
+            'min-h-[120px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded',
+            'transition-all duration-200',
+            isOver && 'border-blue-500 bg-blue-50/30 dark:bg-blue-900/10 ring-2 ring-blue-400/20'
           )}
         >
-          {isOver ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center"
-            >
-              <div className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-2 justify-center text-lg">
-                <Plus className="w-6 h-6" />
-                Drop column here to add sort level
+          {!hasSortLevels ? (
+            <div className="h-[120px] flex items-center justify-center p-4">
+              <div className="text-center text-gray-400 dark:text-gray-500 text-xs">
+                {isOver ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-blue-600 dark:text-blue-400 font-medium"
+                  >
+                    Drop field here
+                  </motion.div>
+                ) : (
+                  <span>Drop field here</span>
+                )}
               </div>
-            </motion.div>
+            </div>
           ) : (
-            <div className="text-center text-gray-400 dark:text-gray-500">
-              <ArrowUpDown className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm font-medium">Drop column here to add sort level</p>
-              <p className="text-xs mt-1 opacity-75">Drag a column from above into this area</p>
+            <div className="p-2 space-y-2">
+              {sortLevels.map((level, index) => (
+                <InlineSortCard
+                  key={level.columnId || `sort-${index}`}
+                  level={level}
+                  index={index}
+                  sortLevels={sortLevels}
+                  availableColumns={availableColumns}
+                  onUpdate={next => handleSortUpdate(index, next)}
+                  onRemove={() => handleSortRemove(index)}
+                  onMoveUp={() => handleReorder(index, 'up')}
+                  onMoveDown={() => handleReorder(index, 'down')}
+                  disableMoveUp={index === 0}
+                  disableMoveDown={index === sortLevels.length - 1}
+                  onDragStart={handleCardDragStart}
+                  onDragEnd={handleCardDragEnd}
+                />
+              ))}
             </div>
           )}
         </div>
-      ) : (
-        <div
-          ref={assignDropZoneRef}
-          className={cn(
-            'relative rounded-xl border border-emerald-500/40 dark:border-emerald-500/40 bg-gray-50/70 dark:bg-gray-900/40 p-3 -mx-2 shadow-inner shadow-black/5 transition-colors',
-            isOver ? 'ring-2 ring-emerald-400/60' : ''
-          )}
-        >
-          <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2 px-1">
-            <span className="text-gray-700 dark:text-gray-200 normal-case font-semibold">
-              {sortLevels.length} sort {sortLevels.length === 1 ? 'level' : 'levels'}
-            </span>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500">
-              Drop columns to add
-            </span>
-          </div>
-          <div className="space-y-3 max-h-[360px] overflow-y-auto pr-2 preview-scrollbar pb-1">
-            {sortLevels.map((level, index) => (
-              <InlineSortCard
-                key={level.columnId || `sort-${index}`}
-                level={level}
-                index={index}
-                sortLevels={sortLevels}
-                availableColumns={availableColumns}
-                onUpdate={next => handleSortUpdate(index, next)}
-                onRemove={() => handleSortRemove(index)}
-                onMoveUp={() => handleReorder(index, 'up')}
-                onMoveDown={() => handleReorder(index, 'down')}
-                disableMoveUp={index === 0}
-                disableMoveDown={index === sortLevels.length - 1}
-                onDragStart={handleCardDragStart}
-                onDragEnd={handleCardDragEnd}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      </div>
     </motion.div>
   );
 };

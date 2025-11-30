@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FilterIcon, X } from 'lucide-react';
 import { FilterModal } from './FilterModal';
+import { ModalConfirm } from '@/components/ui/modal-confirm';
 import type { NumberFormat } from '@/contexts/DatasetContext';
 import type { DatasetFilterColumn, DatasetColumnType } from '@/types/chart';
 
@@ -23,6 +24,7 @@ export const FilterSummaryButton: React.FC<FilterSummaryButtonProps> = ({
   uniqueValuesByColumn,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [filters, setFilters] = useState<DatasetFilterColumn[]>(initialColumns);
 
   // Keep local state in sync with external config changes
@@ -38,6 +40,7 @@ export const FilterSummaryButton: React.FC<FilterSummaryButtonProps> = ({
   const handleClearFilters = () => {
     setFilters([]);
     onFilterChange?.([]);
+    setShowClearConfirm(false);
   };
 
   const filterCount = filters.length;
@@ -57,15 +60,26 @@ export const FilterSummaryButton: React.FC<FilterSummaryButtonProps> = ({
 
         {hasFilters && (
           <Button
-            onClick={handleClearFilters}
+            onClick={() => setShowClearConfirm(true)}
             variant="ghost"
             size="sm"
-            className="h-10 w-10 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500"
+            className="h-10 w-10 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </Button>
         )}
       </div>
+
+      <ModalConfirm
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={handleClearFilters}
+        title="Clear Filters"
+        message="Are you sure you want to clear all filter settings? This action cannot be undone."
+        confirmText="Clear"
+        cancelText="Cancel"
+        type="warning"
+      />
 
       <FilterModal
         isOpen={isOpen}

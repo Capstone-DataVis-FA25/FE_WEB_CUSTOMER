@@ -107,8 +107,9 @@ export const applyAggregation = (
   const groupByColumns = aggregation.groupBy || [];
   const metrics = aggregation.metrics || [];
 
-  if (metrics.length === 0) {
-    return null; // Need at least one metric
+  // Allow groupBy without metrics (just show unique values, like Excel)
+  if (groupByColumns.length === 0 && metrics.length === 0) {
+    return null; // Need at least groupBy or metrics
   }
 
   // Group data by groupBy columns
@@ -199,8 +200,7 @@ export const applyAggregation = (
     }
   }
 
-  // Add metric columns to headers
-
+  // Add metric columns to headers (only if metrics exist)
   for (const metric of metrics) {
     const baseMetricName =
       metric.alias ||
@@ -248,7 +248,7 @@ export const applyAggregation = (
       }
     }
 
-    // Calculate metrics
+    // Calculate metrics (only if metrics exist)
     // NOTE: We return raw numeric strings here. Formatting will be applied by preformatDataToFormats in DataTab
     for (const metric of metrics) {
       if (metric.type === 'count') {

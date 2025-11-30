@@ -19,6 +19,7 @@ import { chartEditorSteps } from '@/config/driver-steps';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import Utils from '@/utils/Utils';
 import { useChartEditor } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
@@ -430,7 +431,17 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                   variant="outline"
                   onClick={onReset}
                   disabled={!combinedHasChanges}
-                  className="flex items-center gap-2"
+                  className={cn(
+                    'flex items-center gap-2 transition-all duration-200',
+                    'border-orange-300 dark:border-orange-700',
+                    'text-orange-600 dark:text-orange-400',
+                    'hover:bg-orange-50 dark:hover:bg-orange-900/20',
+                    'hover:border-orange-400 dark:hover:border-orange-600',
+                    'hover:text-orange-700 dark:hover:text-orange-300',
+                    'active:scale-95',
+                    'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-orange-300',
+                    combinedHasChanges && 'shadow-sm hover:shadow-md'
+                  )}
                 >
                   <RotateCcw className="w-4 h-4" />
                   {t('common_reset', 'Reset')}
