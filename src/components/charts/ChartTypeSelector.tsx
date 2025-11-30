@@ -9,6 +9,7 @@ import {
   ChartPie,
   Donut,
   RefreshCcw,
+  Grid3x3,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
@@ -74,6 +75,11 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
         value: ChartType.CyclePlot,
         label: t('chart_type_cycle_plot', 'Cycle Plot'),
         icon: RefreshCcw,
+      },
+      {
+        value: ChartType.Heatmap,
+        label: t('chart_type_heatmap', 'Heatmap'),
+        icon: Grid3x3,
       },
     ],
     [t]
