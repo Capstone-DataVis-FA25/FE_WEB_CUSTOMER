@@ -158,9 +158,18 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
   const addMetric = () => {
     if (metrics.length >= MAX_METRICS) return; // Limit to MAX_METRICS
     const candidate = aggregableColumns.find(col => !metrics.some(m => m.columnId === col.id));
+
+    // If candidate exists, find first available operation type for that column
+    let selectedType: AggregationMetric['type'] = 'count';
+    if (candidate) {
+      const usedTypes = new Set(metrics.filter(m => m.columnId === candidate.id).map(m => m.type));
+      const allTypes: AggregationMetric['type'][] = ['sum', 'average', 'min', 'max', 'count'];
+      selectedType = allTypes.find(type => !usedTypes.has(type)) || 'count';
+    }
+
     const metric: AggregationMetric = {
       id: Math.random().toString(36),
-      type: candidate ? 'sum' : 'count',
+      type: selectedType,
       columnId: candidate ? candidate.id : undefined,
       alias: '', // Start with empty, will use default only if user doesn't input
     };
@@ -484,6 +493,22 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
                       const metricColumn = metric.columnId
                         ? availableColumns.find(c => c.id === metric.columnId)
                         : null;
+
+                      // Get available operation types for this column (exclude already used ones)
+                      const usedTypes = new Set(
+                        metrics
+                          .filter(m => m.columnId === metric.columnId && m.id !== metric.id)
+                          .map(m => m.type)
+                      );
+                      const allTypes: { value: AggregationMetric['type']; label: string }[] = [
+                        { value: 'sum', label: 'Sum' },
+                        { value: 'average', label: 'Average' },
+                        { value: 'min', label: 'Min' },
+                        { value: 'max', label: 'Max' },
+                        { value: 'count', label: 'Count' },
+                      ];
+                      const availableTypes = allTypes.filter(type => !usedTypes.has(type.value));
+
                       return (
                         <div
                           key={metric.id}
@@ -492,29 +517,39 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
                           <div className="flex-1 min-w-0">
                             <Select
                               value={metric.type}
-                              onValueChange={value =>
+                              onValueChange={value => {
+                                // Prevent duplicate: same column with same operation type
+                                const newType = value as AggregationMetric['type'];
+                                const isDuplicate = metrics.some(
+                                  m =>
+                                    m.id !== metric.id &&
+                                    m.columnId === metric.columnId &&
+                                    m.type === newType
+                                );
+                                if (isDuplicate) return; // Don't update if duplicate
+
                                 setMetrics(
                                   metrics.map(m =>
                                     m.id === metric.id
                                       ? {
                                           ...m,
-                                          type: value as any,
-                                          columnId: value === 'count' ? undefined : m.columnId,
+                                          type: newType,
+                                          columnId: newType === 'count' ? undefined : m.columnId,
                                         }
                                       : m
                                   )
-                                )
-                              }
+                                );
+                              }}
                             >
                               <SelectTrigger className="w-full h-9 text-sm">
                                 <span className="block truncate capitalize">{metric.type}</span>
                               </SelectTrigger>
                               <SelectContent className="z-[1000]">
-                                <SelectItem value="sum">Sum</SelectItem>
-                                <SelectItem value="average">Average</SelectItem>
-                                <SelectItem value="min">Min</SelectItem>
-                                <SelectItem value="max">Max</SelectItem>
-                                <SelectItem value="count">Count</SelectItem>
+                                {availableTypes.map(option => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -522,13 +557,38 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
                             <div className="flex-1 min-w-0">
                               <Select
                                 value={metric.columnId || ''}
-                                onValueChange={value =>
+                                onValueChange={value => {
+                                  // When changing column, check if we need to change operation type
+                                  const newColumnId = value;
+                                  const usedTypesForNewColumn = new Set(
+                                    metrics
+                                      .filter(m => m.columnId === newColumnId && m.id !== metric.id)
+                                      .map(m => m.type)
+                                  );
+
+                                  // If current operation type is already used for new column, find first available
+                                  let newType = metric.type;
+                                  if (usedTypesForNewColumn.has(metric.type)) {
+                                    const allTypes: AggregationMetric['type'][] = [
+                                      'sum',
+                                      'average',
+                                      'min',
+                                      'max',
+                                      'count',
+                                    ];
+                                    newType =
+                                      allTypes.find(type => !usedTypesForNewColumn.has(type)) ||
+                                      metric.type;
+                                  }
+
                                   setMetrics(
                                     metrics.map(m =>
-                                      m.id === metric.id ? { ...m, columnId: value } : m
+                                      m.id === metric.id
+                                        ? { ...m, columnId: newColumnId, type: newType }
+                                        : m
                                     )
-                                  )
-                                }
+                                  );
+                                }}
                               >
                                 <SelectTrigger className="w-full h-9 text-sm">
                                   <div className="flex items-center justify-between w-full min-w-0">
@@ -547,26 +607,60 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
                                   </div>
                                 </SelectTrigger>
                                 <SelectContent className="z-[1000]">
-                                  {aggregableColumns.map(col => (
-                                    <SelectItem key={col.id} value={col.id}>
-                                      <div className="flex items-center justify-between w-full">
-                                        <span>{col.name}</span>
-                                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                          (
-                                          {col.type === 'date' && col.dateFormat
-                                            ? `${col.type} - ${col.dateFormat}`
-                                            : col.type}
-                                          )
-                                        </span>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
+                                  {aggregableColumns.map(col => {
+                                    // Check if this column has all operations used
+                                    const usedTypesForCol = new Set(
+                                      metrics
+                                        .filter(m => m.columnId === col.id && m.id !== metric.id)
+                                        .map(m => m.type)
+                                    );
+                                    const allTypes: AggregationMetric['type'][] = [
+                                      'sum',
+                                      'average',
+                                      'min',
+                                      'max',
+                                      'count',
+                                    ];
+                                    const hasAllUsed = allTypes.every(type =>
+                                      usedTypesForCol.has(type)
+                                    );
+
+                                    return (
+                                      <SelectItem
+                                        key={col.id}
+                                        value={col.id}
+                                        disabled={hasAllUsed && col.id !== metric.columnId}
+                                      >
+                                        <div className="flex items-center justify-between w-full">
+                                          <span>{col.name}</span>
+                                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                            (
+                                            {col.type === 'date' && col.dateFormat
+                                              ? `${col.type} - ${col.dateFormat}`
+                                              : col.type}
+                                            )
+                                          </span>
+                                        </div>
+                                      </SelectItem>
+                                    );
+                                  })}
                                 </SelectContent>
                               </Select>
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
                             <div className="relative">
+                              <Input
+                                value={metric.alias || ''}
+                                readOnly
+                                disabled
+                                placeholder={
+                                  defaultPlaceholders.get(metric.id) ||
+                                  'Alias (e.g., Total Revenue)'
+                                }
+                                className="h-9 text-sm bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+                              />
+                              {/* KEPT FOR FUTURE USE: Alias editing logic
                               <Input
                                 value={metric.alias || ''}
                                 onChange={e =>
@@ -598,6 +692,7 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
                                   </div>
                                 </div>
                               )}
+                              */}
                             </div>
                           </div>
                           <button
@@ -714,7 +809,9 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
             </Button>
             <Button
               onClick={handleApply}
-              disabled={metrics.length === 0 || duplicateAliases.size > 0}
+              disabled={
+                (groupByColumns.length === 0 && metrics.length === 0) || duplicateAliases.size > 0
+              }
               className="gap-2"
             >
               Apply

@@ -12,10 +12,14 @@ import type { DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core'
 import { snapCenterToCursor } from '@dnd-kit/modifiers';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, ChevronDown } from 'lucide-react';
+import { Settings, ChevronDown, AlertCircle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader } from '../ui/card';
+import { ModalConfirm } from '../ui/modal-confirm';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/useToast';
+import ToastContainer from '@/components/ui/toast-container';
 import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import type {
   DatasetFilterColumn,
@@ -23,6 +27,8 @@ import type {
   SortLevel,
   GroupByColumn,
   AggregationMetric,
+  PivotDimension,
+  PivotValue,
 } from '@/types/chart';
 import type { DataHeader } from '@/utils/dataProcessors';
 import { useAppSelector } from '@/store/hooks';
@@ -31,7 +37,7 @@ import ColumnPalette, { ColumnChipOverlay } from './drag-drop/ColumnPalette';
 import OperationTabs, { type OperationTab } from './drag-drop/OperationTabs';
 import FilterTab from './drag-drop/FilterTab';
 import SortTab from './drag-drop/SortTab';
-import AggregationTab from './drag-drop/AggregationTab';
+// import AggregationTab from './drag-drop/AggregationTab'; // Hidden - pivot handles everything
 import PivotTab from './drag-drop/PivotTab';
 import OperationsPreview from './drag-drop/OperationsPreview';
 
@@ -57,11 +63,16 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
   processedHeaders,
 }) => {
   const { t } = useTranslation();
+  const { showError, toasts, removeToast } = useToast();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState<OperationTab>('filter');
   const [activeColumn, setActiveColumn] = useState<DraggedColumn | null>(null);
   const [overlayContainer, setOverlayContainer] = useState<HTMLElement | null>(null);
   const [activeDropZone, setActiveDropZone] = useState<string | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [showClearPivotConfirm, setShowClearPivotConfirm] = useState(false);
+  const [showClearAggregationConfirm, setShowClearAggregationConfirm] = useState(false);
+  const [pendingTab, setPendingTab] = useState<OperationTab | null>(null);
   useEffect(() => {
     if (typeof document !== 'undefined') {
       setOverlayContainer(document.body);
@@ -73,6 +84,80 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
   const working = useAppSelector(selectWorkingDataset);
 
   const datasetConfig = (chartConfig as any)?.datasetConfig;
+
+  // Check if aggregation or pivot is active
+  const hasAggregation = Boolean(
+    datasetConfig?.aggregation &&
+      ((datasetConfig.aggregation.groupBy?.length ?? 0) > 0 ||
+        (datasetConfig.aggregation.metrics?.length ?? 0) > 0)
+  );
+  const hasPivot = Boolean(
+    datasetConfig?.pivot &&
+      ((datasetConfig.pivot.rows?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.columns?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.values?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.filters?.length ?? 0) > 0)
+  );
+
+  // Determine disabled tabs
+  const disabledTabs = useMemo<OperationTab[]>(() => {
+    const disabled: OperationTab[] = [];
+    // Aggregation tab is hidden, so no need to disable it
+    // if (hasAggregation) {
+    //   disabled.push('pivot');
+    // }
+    // if (hasPivot) {
+    //   disabled.push('aggregation');
+    // }
+    return disabled;
+  }, [hasAggregation, hasPivot]);
+
+  // Handle tab change with mutual exclusivity
+  const handleTabChange = useCallback(
+    (tab: OperationTab) => {
+      // Aggregation tab is hidden, so no need to handle switching
+      // if (tab === 'aggregation' && hasPivot) {
+      //   setPendingTab(tab);
+      //   setShowClearPivotConfirm(true);
+      //   return;
+      // }
+      // if (tab === 'pivot' && hasAggregation) {
+      //   setPendingTab(tab);
+      //   setShowClearAggregationConfirm(true);
+      //   return;
+      // }
+      setActiveTab(tab);
+    },
+    [hasAggregation, hasPivot]
+  );
+
+  const handleConfirmClearPivot = useCallback(() => {
+    handleConfigChange({
+      datasetConfig: {
+        ...(datasetConfig || {}),
+        pivot: undefined,
+      },
+    } as any);
+    setShowClearPivotConfirm(false);
+    if (pendingTab) {
+      setActiveTab(pendingTab);
+      setPendingTab(null);
+    }
+  }, [datasetConfig, handleConfigChange, pendingTab]);
+
+  const handleConfirmClearAggregation = useCallback(() => {
+    handleConfigChange({
+      datasetConfig: {
+        ...(datasetConfig || {}),
+        aggregation: undefined,
+      },
+    } as any);
+    setShowClearAggregationConfirm(false);
+    if (pendingTab) {
+      setActiveTab(pendingTab);
+      setPendingTab(null);
+    }
+  }, [datasetConfig, handleConfigChange, pendingTab]);
 
   // Get available columns
   const datasetDateFormat =
@@ -176,6 +261,21 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
 
       const column = activeData.column;
 
+      // Check if aggregation or pivot is active (recalculate inside callback)
+      const currentConfig = (chartConfig as any)?.datasetConfig;
+      const hasAgg = Boolean(
+        currentConfig?.aggregation &&
+          ((currentConfig.aggregation.groupBy?.length ?? 0) > 0 ||
+            (currentConfig.aggregation.metrics?.length ?? 0) > 0)
+      );
+      const hasPiv = Boolean(
+        currentConfig?.pivot &&
+          ((currentConfig.pivot.rows?.length ?? 0) > 0 ||
+            (currentConfig.pivot.columns?.length ?? 0) > 0 ||
+            (currentConfig.pivot.values?.length ?? 0) > 0 ||
+            (currentConfig.pivot.filters?.length ?? 0) > 0)
+      );
+
       switch (zone) {
         case 'filter': {
           const currentFilters = (datasetConfig?.filters as DatasetFilterColumn[]) || [];
@@ -230,6 +330,12 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
         }
 
         case 'aggregation-groupby': {
+          // Prevent if pivot is active
+          if (hasPiv) {
+            setActiveColumn(null);
+            setActiveDropZone(null);
+            break;
+          }
           const currentGroupBy = (datasetConfig?.aggregation?.groupBy as GroupByColumn[]) || [];
           if (!currentGroupBy.find(g => g.id === column.id)) {
             const newGroupBy: GroupByColumn = {
@@ -253,44 +359,207 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
         }
 
         case 'aggregation-metrics': {
+          // Prevent if pivot is active
+          if (hasPiv) {
+            setActiveColumn(null);
+            setActiveDropZone(null);
+            break;
+          }
           if (column.type === 'number') {
             const currentMetrics =
               (datasetConfig?.aggregation?.metrics as AggregationMetric[]) || [];
-            if (!currentMetrics.find(m => m.columnId === column.id && m.type === 'sum')) {
-              const newMetric: AggregationMetric = {
-                id: `metric_${Date.now()}`,
-                type: 'sum',
-                columnId: column.id,
-                alias: `sum(${column.name})`,
-              };
-              handleConfigChange({
-                datasetConfig: {
-                  ...(datasetConfig || {}),
-                  aggregation: {
-                    ...(datasetConfig?.aggregation || {}),
-                    metrics: [...currentMetrics, newMetric],
-                  },
-                },
-              } as any);
+
+            // Find used operation types for this column
+            const usedTypes = new Set(
+              currentMetrics.filter(m => m.columnId === column.id).map(m => m.type)
+            );
+
+            // Find first available operation type
+            const allTypes: AggregationMetric['type'][] = ['sum', 'average', 'min', 'max', 'count'];
+            const availableType = allTypes.find(type => !usedTypes.has(type));
+
+            // If all operations are used, don't allow adding
+            if (!availableType) {
+              setActiveColumn(null);
+              setActiveDropZone(null);
+              break;
             }
+
+            const newMetric: AggregationMetric = {
+              id: `metric_${Date.now()}`,
+              type: availableType,
+              columnId: column.id,
+              alias: '', // Start with empty, like modal version
+            };
+            handleConfigChange({
+              datasetConfig: {
+                ...(datasetConfig || {}),
+                aggregation: {
+                  ...(datasetConfig?.aggregation || {}),
+                  metrics: [...currentMetrics, newMetric],
+                },
+              },
+            } as any);
           }
           setActiveColumn(null);
           setActiveDropZone(null);
           break;
         }
 
-        case 'pivot-rows':
-        case 'pivot-columns':
-        case 'pivot-values':
+        case 'pivot-rows': {
+          // Prevent if aggregation is active
+          if (hasAgg) {
+            setActiveColumn(null);
+            setActiveDropZone(null);
+            break;
+          }
+          const currentRows = (datasetConfig?.pivot?.rows as PivotDimension[]) || [];
+          if (!currentRows.find(d => d.columnId === column.id)) {
+            const newDimension: PivotDimension = {
+              id: `pivot-row_${Date.now()}`,
+              columnId: column.id,
+              name: column.name,
+              columnType: column.type,
+              timeUnit: column.type === 'date' ? 'day' : undefined,
+            };
+            handleConfigChange({
+              datasetConfig: {
+                ...(datasetConfig || {}),
+                pivot: {
+                  ...(datasetConfig?.pivot || {}),
+                  rows: [...currentRows, newDimension],
+                },
+              },
+            } as any);
+          }
           setActiveColumn(null);
           setActiveDropZone(null);
           break;
+        }
+
+        case 'pivot-columns': {
+          // Prevent if aggregation is active
+          if (hasAgg) {
+            setActiveColumn(null);
+            setActiveDropZone(null);
+            break;
+          }
+          const currentColumns = (datasetConfig?.pivot?.columns as PivotDimension[]) || [];
+          if (!currentColumns.find(d => d.columnId === column.id)) {
+            const newDimension: PivotDimension = {
+              id: `pivot-col_${Date.now()}`,
+              columnId: column.id,
+              name: column.name,
+              columnType: column.type,
+              timeUnit: column.type === 'date' ? 'day' : undefined,
+            };
+            handleConfigChange({
+              datasetConfig: {
+                ...(datasetConfig || {}),
+                pivot: {
+                  ...(datasetConfig?.pivot || {}),
+                  columns: [...currentColumns, newDimension],
+                },
+              },
+            } as any);
+          }
+          setActiveColumn(null);
+          setActiveDropZone(null);
+          break;
+        }
+
+        case 'pivot-values': {
+          // Prevent if aggregation is active
+          if (hasAgg) {
+            setActiveColumn(null);
+            setActiveDropZone(null);
+            break;
+          }
+          // All column types can be used in values (Count works for all, numeric operations for numbers)
+          const currentValues = (datasetConfig?.pivot?.values as PivotValue[]) || [];
+
+          // Determine available operations based on column type
+          const allOperations: PivotValue['aggregationType'][] = [
+            'sum',
+            'average',
+            'min',
+            'max',
+            'count',
+          ];
+          const availableOperations = column.type === 'number' ? allOperations : ['count']; // Only count for text/date columns
+
+          // Find used operation types for this column
+          const usedTypes = new Set(
+            currentValues.filter(v => v.columnId === column.id).map(v => v.aggregationType)
+          );
+
+          // Find first available operation type
+          const availableType = availableOperations.find(type => !usedTypes.has(type));
+
+          // If all available operations are used, don't allow adding
+          if (!availableType) {
+            setActiveColumn(null);
+            setActiveDropZone(null);
+            break;
+          }
+
+          const newValue: PivotValue = {
+            id: `pivot-val_${Date.now()}`,
+            columnId: column.id,
+            name: column.name,
+            aggregationType: availableType,
+          };
+          handleConfigChange({
+            datasetConfig: {
+              ...(datasetConfig || {}),
+              pivot: {
+                ...(datasetConfig?.pivot || {}),
+                values: [...currentValues, newValue],
+              },
+            },
+          } as any);
+
+          setActiveColumn(null);
+          setActiveDropZone(null);
+          break;
+        }
+
+        case 'pivot-filters': {
+          // Prevent if aggregation is active
+          if (hasAgg) {
+            setActiveColumn(null);
+            setActiveDropZone(null);
+            break;
+          }
+          const currentFilters = (datasetConfig?.pivot?.filters as PivotDimension[]) || [];
+          if (!currentFilters.find(d => d.columnId === column.id)) {
+            const newDimension: PivotDimension = {
+              id: `pivot-filter_${Date.now()}`,
+              columnId: column.id,
+              name: column.name,
+              columnType: column.type,
+              timeUnit: column.type === 'date' ? 'day' : undefined,
+            };
+            handleConfigChange({
+              datasetConfig: {
+                ...(datasetConfig || {}),
+                pivot: {
+                  ...(datasetConfig?.pivot || {}),
+                  filters: [...currentFilters, newDimension],
+                },
+              },
+            } as any);
+          }
+          setActiveColumn(null);
+          setActiveDropZone(null);
+          break;
+        }
         default:
           setActiveColumn(null);
           break;
       }
     },
-    [datasetConfig, handleConfigChange]
+    [chartConfig, datasetConfig, handleConfigChange]
   );
 
   const handleDragCancel = useCallback(() => {
@@ -393,7 +662,79 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
 
                       {/* Operation Tabs */}
                       <div className="space-y-3 flex flex-col h-full">
-                        <OperationTabs activeTab={activeTab} onTabChange={setActiveTab} />
+                        <OperationTabs
+                          activeTab={activeTab}
+                          onTabChange={handleTabChange}
+                          disabledTabs={disabledTabs}
+                        />
+
+                        {/* Mutual Exclusivity Banner */}
+                        {/* Hidden - aggregation tab is removed */}
+                        {false &&
+                          (hasAggregation || hasPivot) &&
+                          !bannerDismissed &&
+                          (activeTab === 'aggregation' || activeTab === 'pivot') && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              className={cn(
+                                'rounded-lg border-2 p-3 flex items-start gap-3 relative',
+                                hasAggregation
+                                  ? 'border-purple-500/50 bg-purple-50 dark:bg-purple-900/20'
+                                  : 'border-amber-500/50 bg-amber-50 dark:bg-amber-900/20'
+                              )}
+                            >
+                              <AlertCircle
+                                className={cn(
+                                  'w-5 h-5 flex-shrink-0 mt-0.5',
+                                  hasAggregation
+                                    ? 'text-purple-600 dark:text-purple-400'
+                                    : 'text-amber-600 dark:text-amber-400'
+                                )}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p
+                                  className={cn(
+                                    'text-sm font-semibold mb-1',
+                                    hasAggregation
+                                      ? 'text-purple-900 dark:text-purple-100'
+                                      : 'text-amber-900 dark:text-amber-100'
+                                  )}
+                                >
+                                  {hasAggregation
+                                    ? 'Aggregation Mode Active'
+                                    : 'Pivot Table Mode Active'}
+                                </p>
+                                <p
+                                  className={cn(
+                                    'text-xs leading-relaxed',
+                                    hasAggregation
+                                      ? 'text-purple-700 dark:text-purple-300'
+                                      : 'text-amber-700 dark:text-amber-300'
+                                  )}
+                                >
+                                  {hasAggregation
+                                    ? 'You can only use either Aggregation or Pivot Table at a time. Pivot Table is a more advanced version of aggregation. Switch to Pivot Table tab to use it instead.'
+                                    : 'You can only use either Aggregation or Pivot Table at a time. Pivot Table provides more flexibility with rows, columns, values, and filters.'}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => setBannerDismissed(true)}
+                                className={cn(
+                                  'flex-shrink-0 p-1.5 rounded-md transition-all cursor-pointer',
+                                  'hover:bg-black/5 dark:hover:bg-white/10',
+                                  'active:scale-95',
+                                  hasAggregation
+                                    ? 'text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300'
+                                    : 'text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300'
+                                )}
+                                title="Close banner"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </motion.div>
+                          )}
 
                         {/* Operation Content */}
                         <div className="flex-1 min-h-0 flex flex-col">
@@ -434,35 +775,70 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
                                 />
                               )}
 
-                              {activeTab === 'aggregation' && (
-                                <AggregationTab
+                              {/* Aggregation tab hidden - pivot handles everything */}
+                              {false &&
+                                activeTab === 'aggregation' &&
+                                // <AggregationTab
+                                //   availableColumns={availableColumns}
+                                //   groupBy={
+                                //     (datasetConfig?.aggregation?.groupBy as GroupByColumn[]) || []
+                                //   }
+                                //   metrics={
+                                //     (datasetConfig?.aggregation?.metrics as AggregationMetric[]) ||
+                                //     []
+                                //   }
+                                //   onAggregationChange={(groupBy, metrics) =>
+                                //     handleConfigChange({
+                                //       datasetConfig: {
+                                //         ...(datasetConfig || {}),
+                                //         aggregation:
+                                //           groupBy.length > 0 || metrics.length > 0
+                                //             ? {
+                                //                 ...(datasetConfig?.aggregation || {}),
+                                //                 groupBy,
+                                //                 metrics,
+                                //               }
+                                //             : undefined,
+                                //       },
+                                //     } as any)
+                                //   }
+                                // />
+                                null}
+
+                              {activeTab === 'pivot' && (
+                                <PivotTab
                                   availableColumns={availableColumns}
-                                  groupBy={
-                                    (datasetConfig?.aggregation?.groupBy as GroupByColumn[]) || []
+                                  rows={(datasetConfig?.pivot?.rows as PivotDimension[]) || []}
+                                  columns={
+                                    (datasetConfig?.pivot?.columns as PivotDimension[]) || []
                                   }
-                                  metrics={
-                                    (datasetConfig?.aggregation?.metrics as AggregationMetric[]) ||
-                                    []
+                                  values={(datasetConfig?.pivot?.values as PivotValue[]) || []}
+                                  filters={
+                                    (datasetConfig?.pivot?.filters as PivotDimension[]) || []
                                   }
-                                  onAggregationChange={(groupBy, metrics) =>
+                                  onPivotChange={(rows, columns, values, filters) =>
                                     handleConfigChange({
                                       datasetConfig: {
                                         ...(datasetConfig || {}),
-                                        aggregation:
-                                          groupBy.length > 0 || metrics.length > 0
+                                        pivot:
+                                          rows.length > 0 ||
+                                          columns.length > 0 ||
+                                          values.length > 0 ||
+                                          filters.length > 0
                                             ? {
-                                                ...(datasetConfig?.aggregation || {}),
-                                                groupBy,
-                                                metrics,
+                                                ...(datasetConfig?.pivot || {}),
+                                                rows,
+                                                columns,
+                                                values,
+                                                filters,
                                               }
                                             : undefined,
                                       },
                                     } as any)
                                   }
+                                  onError={showError}
                                 />
                               )}
-
-                              {activeTab === 'pivot' && <PivotTab />}
                             </AnimatePresence>
                           </div>
 
@@ -513,6 +889,14 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
                                 metrics={
                                   (datasetConfig?.aggregation?.metrics as AggregationMetric[]) || []
                                 }
+                                pivotRows={(datasetConfig?.pivot?.rows as PivotDimension[]) || []}
+                                pivotColumns={
+                                  (datasetConfig?.pivot?.columns as PivotDimension[]) || []
+                                }
+                                pivotValues={(datasetConfig?.pivot?.values as PivotValue[]) || []}
+                                pivotFilters={
+                                  (datasetConfig?.pivot?.filters as PivotDimension[]) || []
+                                }
                                 numberFormat={numberFormat}
                               />
                             </div>
@@ -545,9 +929,17 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
                                         ? 'groupby'
                                         : activeDropZone === 'aggregation-metrics'
                                           ? 'metric'
-                                          : activeDropZone?.startsWith('aggregation')
-                                            ? 'aggregation'
-                                            : null
+                                          : activeDropZone === 'pivot-rows'
+                                            ? 'groupby'
+                                            : activeDropZone === 'pivot-columns'
+                                              ? 'groupby'
+                                              : activeDropZone === 'pivot-values'
+                                                ? 'metric'
+                                                : activeDropZone === 'pivot-filters'
+                                                  ? 'filter'
+                                                  : activeDropZone?.startsWith('aggregation')
+                                                    ? 'aggregation'
+                                                    : null
                                 }
                               />
                             </motion.div>
@@ -562,6 +954,40 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
           )}
         </AnimatePresence>
       </Card>
+
+      {/* Confirmation Dialogs - Aggregation tab is hidden, so these are not needed */}
+      {false && (
+        <>
+          <ModalConfirm
+            isOpen={showClearPivotConfirm}
+            onClose={() => {
+              setShowClearPivotConfirm(false);
+              setPendingTab(null);
+            }}
+            onConfirm={handleConfirmClearPivot}
+            title="Clear Pivot Table"
+            message="Switching to Aggregation will clear all pivot table settings. Are you sure you want to continue?"
+            confirmText="Clear & Switch"
+            cancelText="Cancel"
+            type="warning"
+          />
+
+          <ModalConfirm
+            isOpen={showClearAggregationConfirm}
+            onClose={() => {
+              setShowClearAggregationConfirm(false);
+              setPendingTab(null);
+            }}
+            onConfirm={handleConfirmClearAggregation}
+            title="Clear Aggregation"
+            message="Switching to Pivot Table will clear all aggregation settings. Are you sure you want to continue?"
+            confirmText="Clear & Switch"
+            cancelText="Cancel"
+            type="warning"
+          />
+        </>
+      )}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
     </motion.div>
   );
 };

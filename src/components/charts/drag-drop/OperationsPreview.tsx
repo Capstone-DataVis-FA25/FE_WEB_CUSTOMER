@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
-import { Filter, ArrowUpDown, Layers } from 'lucide-react';
+import { Filter, ArrowUpDown, Layers, Table2 } from 'lucide-react';
 import type {
   DatasetFilterColumn,
   SortLevel,
   GroupByColumn,
   AggregationMetric,
   DatasetColumnType,
+  PivotDimension,
+  PivotValue,
 } from '@/types/chart';
 import {
   getGranularityFromFormat,
@@ -22,6 +24,10 @@ interface OperationsPreviewProps {
   sortLevels: SortLevel[];
   groupBy: GroupByColumn[];
   metrics: AggregationMetric[];
+  pivotRows?: PivotDimension[];
+  pivotColumns?: PivotDimension[];
+  pivotValues?: PivotValue[];
+  pivotFilters?: PivotDimension[];
   numberFormat?: NumberFormat;
 }
 
@@ -31,6 +37,10 @@ const OperationsPreview: React.FC<OperationsPreviewProps> = ({
   sortLevels,
   groupBy,
   metrics,
+  pivotRows,
+  pivotColumns,
+  pivotValues,
+  pivotFilters,
   numberFormat,
 }) => {
   const { t } = useTranslation();
@@ -66,13 +76,17 @@ const OperationsPreview: React.FC<OperationsPreviewProps> = ({
       (filters?.length ?? 0) > 0 ||
       (sortLevels?.length ?? 0) > 0 ||
       (groupBy?.length ?? 0) > 0 ||
-      (metrics?.length ?? 0) > 0
+      (metrics?.length ?? 0) > 0 ||
+      (pivotRows?.length ?? 0) > 0 ||
+      (pivotColumns?.length ?? 0) > 0 ||
+      (pivotValues?.length ?? 0) > 0 ||
+      (pivotFilters?.length ?? 0) > 0
     );
-  }, [filters, sortLevels, groupBy, metrics]);
+  }, [filters, sortLevels, groupBy, metrics, pivotRows, pivotColumns, pivotValues, pivotFilters]);
 
   if (!hasAnyOperation) {
     return (
-      <div className="text-xs text-gray-500 dark:text-gray-400 text-center py-4">
+      <div className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
         No operations applied yet
       </div>
     );
@@ -83,8 +97,8 @@ const OperationsPreview: React.FC<OperationsPreviewProps> = ({
       {/* Filters Preview */}
       {(filters?.length ?? 0) > 0 && (
         <div className="space-y-1.5">
-          <div className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-            <Filter className="w-3.5 h-3.5 text-blue-500" />
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <Filter className="w-4 h-4 text-blue-500" />
             <span>Filters ({filters.length})</span>
           </div>
           <div className="space-y-1 pl-5">
@@ -94,23 +108,23 @@ const OperationsPreview: React.FC<OperationsPreviewProps> = ({
                 availableColumns.find(c => c.id === col.columnId)?.name ||
                 col.columnId;
               return (
-                <div key={`${col.id}-${idx}`} className="text-xs text-gray-600 dark:text-gray-400">
+                <div key={`${col.id}-${idx}`} className="text-sm text-gray-600 dark:text-gray-400">
                   <span className="font-medium">{colLabel}:</span>{' '}
                   {(col.conditions || []).map((cond, cidx) => (
                     <span key={cond.id || cidx} className="inline-flex items-center gap-1">
-                      <span className="px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[10px]">
+                      <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs">
                         {getOperatorLabelLower(col.columnType, cond.operator)}
                       </span>
                       {cond.operator === 'between' || cond.operator === 'between_exclusive' ? (
-                        <span className="text-[10px]">
+                        <span className="text-xs">
                           {renderSingleValue(col, cond.value as any)} -{' '}
                           {renderSingleValue(col, cond.valueEnd as any)}
                         </span>
                       ) : (
-                        <span className="text-[10px]">{renderValueSummary(col, cond)}</span>
+                        <span className="text-xs">{renderValueSummary(col, cond)}</span>
                       )}
                       {cidx < (col.conditions?.length || 0) - 1 && (
-                        <span className="text-[10px] text-gray-500">AND</span>
+                        <span className="text-xs text-gray-500">AND</span>
                       )}
                     </span>
                   ))}
@@ -124,8 +138,8 @@ const OperationsPreview: React.FC<OperationsPreviewProps> = ({
       {/* Sort Preview */}
       {(sortLevels?.length ?? 0) > 0 && (
         <div className="space-y-1.5">
-          <div className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-            <ArrowUpDown className="w-3.5 h-3.5 text-green-500" />
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <ArrowUpDown className="w-4 h-4 text-green-500" />
             <span>Sort ({sortLevels.length} levels)</span>
           </div>
           <div className="flex flex-wrap gap-1 pl-5">
@@ -135,7 +149,7 @@ const OperationsPreview: React.FC<OperationsPreviewProps> = ({
               return (
                 <span
                   key={index}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30"
                 >
                   <span>{index + 1}.</span>
                   <span>{columnName}</span>
@@ -150,15 +164,15 @@ const OperationsPreview: React.FC<OperationsPreviewProps> = ({
       {/* Aggregation Preview */}
       {((groupBy?.length ?? 0) > 0 || (metrics?.length ?? 0) > 0) && (
         <div className="space-y-1.5">
-          <div className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-            <Layers className="w-3.5 h-3.5 text-purple-500" />
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <Layers className="w-4 h-4 text-purple-500" />
             <span>Aggregation</span>
           </div>
           <div className="space-y-1 pl-5">
             {(groupBy?.length ?? 0) > 0 && (
-              <div className="text-xs text-gray-600 dark:text-gray-400">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
                 <span className="font-medium">Group By:</span>{' '}
-                <span className="text-[10px]">
+                <span className="text-xs">
                   {groupBy
                     .map(
                       gb =>
@@ -171,11 +185,90 @@ const OperationsPreview: React.FC<OperationsPreviewProps> = ({
               </div>
             )}
             {(metrics?.length ?? 0) > 0 && (
-              <div className="text-xs text-gray-600 dark:text-gray-400">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
                 <span className="font-medium">Metrics:</span>{' '}
-                <span className="text-[10px]">
+                <span className="text-xs">
                   {metrics
                     .map(m => `${m.alias || `${m.type}(${m.columnId || 'count'})`} (${m.type})`)
+                    .join(', ')}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Pivot Table Preview */}
+      {((pivotRows?.length ?? 0) > 0 ||
+        (pivotColumns?.length ?? 0) > 0 ||
+        (pivotValues?.length ?? 0) > 0 ||
+        (pivotFilters?.length ?? 0) > 0) && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <Table2 className="w-4 h-4 text-amber-500" />
+            <span>Pivot Table</span>
+          </div>
+          <div className="space-y-1 pl-5">
+            {(pivotRows?.length ?? 0) > 0 && (
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="font-medium">Rows:</span>{' '}
+                <span className="text-xs">
+                  {pivotRows
+                    .map(
+                      row =>
+                        `${availableColumns.find(c => c.id === row.columnId)?.name || row.name}${
+                          row.timeUnit ? ` (${row.timeUnit})` : ''
+                        }`
+                    )
+                    .join(', ')}
+                </span>
+              </div>
+            )}
+            {(pivotColumns?.length ?? 0) > 0 && (
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="font-medium">Columns:</span>{' '}
+                <span className="text-xs">
+                  {pivotColumns
+                    .map(
+                      col =>
+                        `${availableColumns.find(c => c.id === col.columnId)?.name || col.name}${
+                          col.timeUnit ? ` (${col.timeUnit})` : ''
+                        }`
+                    )
+                    .join(', ')}
+                </span>
+              </div>
+            )}
+            {(pivotValues?.length ?? 0) > 0 && (
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="font-medium">Values:</span>{' '}
+                <span className="text-xs">
+                  {pivotValues
+                    .map(value => {
+                      const columnName =
+                        availableColumns.find(c => c.id === value.columnId)?.name || value.name;
+                      const operationLabel =
+                        value.aggregationType === 'count'
+                          ? 'Count'
+                          : value.aggregationType.charAt(0).toUpperCase() +
+                            value.aggregationType.slice(1);
+                      return `${operationLabel} of ${columnName}`;
+                    })
+                    .join(', ')}
+                </span>
+              </div>
+            )}
+            {(pivotFilters?.length ?? 0) > 0 && (
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="font-medium">Filters:</span>{' '}
+                <span className="text-xs">
+                  {pivotFilters
+                    .map(
+                      filter =>
+                        `${availableColumns.find(c => c.id === filter.columnId)?.name || filter.name}${
+                          filter.timeUnit ? ` (${filter.timeUnit})` : ''
+                        }`
+                    )
                     .join(', ')}
                 </span>
               </div>

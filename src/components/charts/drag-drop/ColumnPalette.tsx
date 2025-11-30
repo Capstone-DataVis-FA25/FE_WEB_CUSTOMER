@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, FileText, FileDigit, Calendar, Sparkles } from 'lucide-react';
+import { GripVertical, FileText, FileDigit, Calendar, Sparkles, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DatasetColumnType } from '@/types/chart';
 
@@ -98,12 +98,41 @@ export const ColumnChipOverlay: React.FC<{
 };
 
 const ColumnPalette: React.FC<ColumnPaletteProps> = ({ columns }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredColumns = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return columns;
+    }
+    const query = searchQuery.toLowerCase().trim();
+    return columns.filter(column => column.name.toLowerCase().includes(query));
+  }, [columns, searchQuery]);
+
   return (
     <div className="space-y-2">
       <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-2">
         <Sparkles className="w-3 h-3" />
         Available Columns - Drag to operations below
       </h4>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+        <input
+          type="text"
+          placeholder="Search columns..."
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            aria-label="Clear search"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
       <div className="flex flex-wrap gap-2 max-h-[230px] overflow-y-auto preview-scrollbar relative pt-1 pl-1 pr-1">
         <style>{`
           .preview-scrollbar::-webkit-scrollbar {
@@ -136,12 +165,12 @@ const ColumnPalette: React.FC<ColumnPaletteProps> = ({ columns }) => {
             scrollbar-color: rgba(75, 85, 99, 0.7) transparent;
           }
         `}</style>
-        {columns.map(column => (
+        {filteredColumns.map(column => (
           <ColumnChip key={column.id} column={column} />
         ))}
-        {columns.length === 0 && (
+        {filteredColumns.length === 0 && (
           <div className="text-xs text-gray-400 dark:text-gray-500 text-center py-4 w-full">
-            No columns available
+            {searchQuery ? `No columns found matching "${searchQuery}"` : 'No columns available'}
           </div>
         )}
       </div>

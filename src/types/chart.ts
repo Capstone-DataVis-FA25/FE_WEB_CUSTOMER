@@ -25,6 +25,22 @@ export interface AggregationMetric {
   alias?: string;
 }
 
+export interface PivotDimension {
+  id: string;
+  columnId: string;
+  name: string;
+  columnType: DatasetColumnType;
+  timeUnit?: 'second' | 'minute' | 'hour' | 'day' | 'month' | 'quarter' | 'year';
+}
+
+export interface PivotValue {
+  id: string;
+  columnId: string;
+  name: string;
+  aggregationType: 'sum' | 'average' | 'min' | 'max' | 'count';
+  alias?: string;
+}
+
 export interface DatasetConfig {
   // Multi-level sort: applied in array order (stable sort semantics)
   sort?: SortLevel[];
@@ -34,6 +50,13 @@ export interface DatasetConfig {
   aggregation?: {
     groupBy?: GroupByColumn[];
     metrics?: AggregationMetric[];
+  };
+  // Optional pivot table configuration
+  pivot?: {
+    rows?: PivotDimension[];
+    columns?: PivotDimension[];
+    values?: PivotValue[];
+    filters?: PivotDimension[];
   };
 }
 
