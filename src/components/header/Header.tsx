@@ -298,9 +298,16 @@ const Header: React.FC<HeaderProps> = ({
                         <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-700/50 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-900/20 dark:to-purple-900/20 mx-2 rounded-xl mb-2">
                           <div className="flex items-center space-x-3">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                                {user?.firstName} {user?.lastName}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                  {user?.firstName} {user?.lastName}
+                                </p>
+                                {user?.subscriptionPlan && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-sm whitespace-nowrap">
+                                    {user.subscriptionPlan.name}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                 {user?.email}
                               </p>
