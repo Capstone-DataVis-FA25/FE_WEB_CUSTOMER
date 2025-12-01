@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { defaultColorsChart } from '@/utils/Utils';
+import { renderD3Tooltip, createHeader, createStatLine } from './ChartTooltip';
 
 function convertArrayToChartData(arrayData: (string | number)[][]): ChartDataPoint[] {
   if (!arrayData || arrayData.length === 0) {
@@ -155,7 +156,10 @@ export interface D3LineChartProps {
   // Preview variant: render without frame/background card
   variant?: 'default' | 'preview';
   // Show all X-axis ticks without sampling (useful for date data with compact formatting)
+  // Show all X-axis ticks without sampling (useful for date data with compact formatting)
   showAllXAxisTicks?: boolean;
+  lineStyle?: 'solid' | 'dashed' | 'dotted';
+  pointValueDecimals?: number;
 }
 
 const D3LineChart: React.FC<D3LineChartProps> = ({
@@ -215,6 +219,8 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   showPointValues = false, // Default to not showing values on points
   variant = 'default',
   showAllXAxisTicks = false, // Default to sampling ticks
+  lineStyle = 'solid',
+  pointValueDecimals = 0,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -856,7 +862,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       const seriesLineWidth = seriesConfig.lineWidth ?? lineWidth;
       const seriesPointRadius = seriesConfig.pointRadius ?? pointRadius;
       const seriesOpacity = seriesConfig.opacity ?? 1;
-      const seriesLineStyle = seriesConfig.lineStyle ?? 'solid';
+      const seriesLineStyle = seriesConfig.lineStyle ?? lineStyle;
       const seriesPointStyle = seriesConfig.pointStyle ?? 'circle';
 
       // Custom line generator for this specific key with validation
@@ -1058,72 +1064,28 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
               return;
             }
 
-            const tooltip = g
-              .append('g')
-              .attr('class', 'tooltip')
-              .attr('transform', `translate(${pointX}, ${pointY - 25})`);
+            const tooltip = g.append('g').attr('class', 'tooltip');
 
             // Set as current tooltip
             currentTooltipRef.current = tooltip;
 
-            // Tooltip background with shadow - make it larger for more content
-            tooltip
-              .append('rect')
-              .attr('x', -50)
-              .attr('y', -35)
-              .attr('width', 100)
-              .attr('height', 45)
-              .attr('fill', isDarkMode ? '#1f2937' : '#ffffff')
-              .attr('stroke', currentColors[key])
-              .attr('stroke-width', 2)
-              .attr('rx', 6)
-              .style('filter', 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))')
-              .style('opacity', 0)
-              .transition()
-              .duration(200)
-              .style('opacity', 0.95);
+            // Prepare tooltip lines
+            const tooltipLines = [
+              createHeader(seriesName, { color: currentColors[key] }),
+              createStatLine(xAxisLabel || 'X', xDisplayName),
+              createStatLine(yAxisLabel || 'Value', yValue, { fontWeight: '600' }),
+            ];
 
-            // Series name
-            tooltip
-              .append('text')
-              .attr('text-anchor', 'middle')
-              .attr('y', -25)
-              .attr('fill', textColor)
-              .style('font-size', `${Math.max(responsiveFontSize.axis - 1, 10)}px`)
-              .style('font-weight', '600')
-              .style('opacity', 0)
-              .text(seriesName)
-              .transition()
-              .duration(200)
-              .style('opacity', 1);
-
-            // X value (use display name from xAxisNames)
-            tooltip
-              .append('text')
-              .attr('text-anchor', 'middle')
-              .attr('y', -12)
-              .attr('fill', textColor)
-              .style('font-size', `${Math.max(responsiveFontSize.axis - 1, 10)}px`)
-              .style('font-weight', '500')
-              .style('opacity', 0)
-              .text(`${xAxisLabel || 'X'}: ${xDisplayName}`)
-              .transition()
-              .duration(200)
-              .style('opacity', 0.8);
-
-            // Y value
-            tooltip
-              .append('text')
-              .attr('text-anchor', 'middle')
-              .attr('y', 2)
-              .attr('fill', textColor)
-              .style('font-size', `${responsiveFontSize.axis}px`)
-              .style('font-weight', '600')
-              .style('opacity', 0)
-              .text(`${yValue}`)
-              .transition()
-              .duration(200)
-              .style('opacity', 1);
+            // Render tooltip using shared component
+            renderD3Tooltip(tooltip, {
+              lines: tooltipLines,
+              position: { x: pointX, y: pointY },
+              isDarkMode: isDarkMode,
+              containerWidth: innerWidth,
+              containerHeight: innerHeight,
+              preferPosition: 'auto',
+              avoidPointer: true,
+            });
 
             // Tooltip will stay visible while hovering, no auto-hide timeout
           })
@@ -1175,10 +1137,14 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
             )
             .text(d => {
               const yValue = d[key] as number;
+              // If we have a specific decimal setting, use it
+              if (typeof yValue === 'number' && pointValueDecimals !== undefined) {
+                return yValue.toFixed(pointValueDecimals);
+              }
               if (yAxisFormatter) {
                 return yAxisFormatter(yValue);
               }
-              return String(yValue); // ép kiểu về string type
+              return String(yValue);
             })
             .transition()
             .delay(animationDuration + index * 100 + 300) // Show after points are drawn

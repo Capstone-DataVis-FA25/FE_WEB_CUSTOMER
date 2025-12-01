@@ -447,7 +447,7 @@ const ChartListPage: React.FC = () => {
                   {/* UpdatedAt filter & Sort */}
                   <div className="flex flex-col md:flex-row md:items-end md:space-x-3">
                     <div>
-                      <Label htmlFor="sortOrder" className="mb-1 block">
+                      <Label htmlFor="sortOrder" className="mb-1 block ">
                         Sort by
                       </Label>
                       <div className="w-40">

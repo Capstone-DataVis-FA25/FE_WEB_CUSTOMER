@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { allRoutes, type RouteConfig } from '@/config/routes';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -101,6 +101,24 @@ const LayoutWrapper: React.FC<{
   }
 };
 
+// Delayed fallback component to prevent flashing on fast loads
+const DelayedFallback = () => {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShow(true), 200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <div className="flex items-center justify-center min-h-screen dark:bg-gray-900">
+      <LoadingSpinner />
+    </div>
+  );
+};
+
 // Route renderer component
 const RouteRenderer: React.FC<{ route: RouteConfig }> = ({ route }) => {
   const Component = componentMap[route.component as keyof typeof componentMap];
@@ -113,13 +131,7 @@ const RouteRenderer: React.FC<{ route: RouteConfig }> = ({ route }) => {
   return (
     <ProtectedRoute route={route}>
       <LayoutWrapper route={route}>
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center min-h-screen">
-              <LoadingSpinner />
-            </div>
-          }
-        >
+        <Suspense fallback={<DelayedFallback />}>
           <Component />
         </Suspense>
       </LayoutWrapper>

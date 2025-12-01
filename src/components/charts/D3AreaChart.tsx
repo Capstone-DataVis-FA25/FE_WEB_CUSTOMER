@@ -338,17 +338,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         .attr('rx', 8);
     }
 
-    // Add subtle Y-axis background area (skip in preview variant)
-    if (variant !== 'preview') {
-      svg
-        .append('rect')
-        .attr('x', 0)
-        .attr('y', 0)
-        .attr('width', responsiveMargin.left)
-        .attr('height', currentHeight)
-        .attr('fill', isDarkMode ? '#111827' : '#f8fafc')
-        .attr('opacity', 0.3);
-    }
+    // Removed Y-axis background overlay - it created unwanted visual effect
 
     // Create main group and center the plotting area horizontally by computing
     // the left translate such that the inner plotting area is centered inside
@@ -647,8 +637,12 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
               // Render enhanced tooltip (this updates content)
               renderD3Tooltip(tooltipGroup, tooltipConfig);
 
-              // Smooth fade in
-              tooltipGroup.transition().duration(200).style('opacity', 1);
+              // Only fade in if tooltip was just created (opacity is 0)
+              // Don't fade in on every mouseover to avoid flickering
+              const currentOpacity = parseFloat(tooltipGroup.style('opacity') || '0');
+              if (currentOpacity === 0) {
+                tooltipGroup.transition().duration(200).style('opacity', 1);
+              }
             })
             .on('mousemove', function (event) {
               if (!showTooltip) return;
@@ -748,11 +742,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             const value = d[key] as number;
             if (value == null || isNaN(value)) return; // Skip invalid data points
 
-            // Highlight the area
-            d3.selectAll(`path[fill="${currentColors[key]}"]`)
-              .transition()
-              .duration(200)
-              .attr('fill-opacity', Math.min(opacity + 0.2, 1));
+            // Removed opacity change on hover to respect user's transparency setting
+            // Area maintains the configured opacity value
 
             // Calculate statistics for detailed tooltip (filter null values)
             const allValues = data
@@ -825,8 +816,12 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             // Render enhanced tooltip (this updates content)
             renderD3Tooltip(tooltipGroup, tooltipConfig);
 
-            // Smooth fade in
-            tooltipGroup.transition().duration(200).style('opacity', 1);
+            // Only fade in if tooltip was just created (opacity is 0)
+            // Don't fade in on every mouseover to avoid flickering
+            const currentOpacity = parseFloat(tooltipGroup.style('opacity') || '0');
+            if (currentOpacity === 0) {
+              tooltipGroup.transition().duration(200).style('opacity', 1);
+            }
           })
           .on('mousemove', function (event) {
             // Update tooltip position on mouse move
@@ -849,27 +844,22 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             }
           })
           .on('mouseout', function () {
-            // Reset area opacity
-            d3.selectAll(`path[fill="${currentColors[key]}"]`)
-              .transition()
-              .duration(200)
-              .attr('fill-opacity', opacity);
+            // No need to reset opacity since we don't change it on hover anymore
 
-            // Smooth fade out instead of immediate remove
+            // Smooth fade out tooltip
             g.select('.tooltip').transition().duration(150).style('opacity', 0);
           });
       });
     }
 
-    // X Axis
     const xAxis = d3
       .axisBottom(xScale)
       .tickFormat((d: any) => {
-        // d can be a number (for linear) or a string/category (for point scale)
+        // Apply formatter if provided
         if (xAxisFormatter) {
-          if (xAreNumbers) return xAxisFormatter(Number(d));
-          return String(d);
+          return xAxisFormatter(d); // Apply formatter to all types (number, string, date)
         }
+        // Fallback formatting when no formatter is set
         if (xAreNumbers) return d3.format('d')(Number(d));
         return String(d);
       })

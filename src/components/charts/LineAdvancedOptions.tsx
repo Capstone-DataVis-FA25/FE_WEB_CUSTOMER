@@ -117,7 +117,7 @@ const LineAdvancedOptions: React.FC = () => {
       </div>
 
       {/* Helpful Tips */}
-      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+      {/* <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
         <h4 className="text-xs font-semibold text-blue-900 dark:text-blue-200 mb-1.5 flex items-center gap-1.5">
           <Info className="h-3.5 w-3.5" />
           {t('tips_for_better_reading', '💡 Tips for Better Chart Reading')}
@@ -160,10 +160,10 @@ const LineAdvancedOptions: React.FC = () => {
             </span>
           </li>
         </ul>
-      </div>
+      </div> */}
 
       {/* Best Practices for Large Datasets */}
-      <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+      {/* <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
         <h4 className="text-xs font-semibold text-green-900 dark:text-green-200 mb-1.5">
           {t('best_practices_large_data', '✨ Best Practices for Many Data Points')}
         </h4>
@@ -187,7 +187,7 @@ const LineAdvancedOptions: React.FC = () => {
             )}
           </li>
         </ul>
-      </div>
+      </div> */}
     </div>
   );
 };

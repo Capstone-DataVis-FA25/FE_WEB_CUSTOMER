@@ -160,15 +160,6 @@ const FormatterSection: React.FC<FormatterSectionProps> = ({
     return { valid: true };
   }, [formatterType, customFormat]);
 
-  // Handle formatter type change
-  const handleTypeChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const newType = e.target.value as FormatterType;
-      onFormatterTypeChange(newType);
-    },
-    [onFormatterTypeChange]
-  );
-
   // Toggle collapse
   const toggleCollapse = useCallback(() => {
     if (collapsible) {
@@ -224,17 +215,17 @@ const FormatterSection: React.FC<FormatterSectionProps> = ({
                   <span className="font-semibold uppercase">{detectedDataType}</span> type.
                   {detectedDataType === 'number' && formatterType === 'none' && (
                     <span className="block mt-1 text-amber-700 dark:text-amber-300">
-                      💡 Suggestion: Use <strong>Number</strong> formatter for better readability
+                      Suggestion: Use <strong>Number</strong> formatter for better readability
                     </span>
                   )}
                   {detectedDataType === 'date' && formatterType === 'none' && (
                     <span className="block mt-1 text-amber-700 dark:text-amber-300">
-                      💡 Suggestion: Use <strong>Date</strong> formatter to display dates properly
+                      Suggestion: Use <strong>Date</strong> formatter to display dates properly
                     </span>
                   )}
                   {detectedDataType === 'text' && formatterType !== 'none' && (
                     <span className="block mt-1 text-amber-700 dark:text-amber-300">
-                      ℹ️ Note: Text columns typically don't need formatting
+                      Note: Text columns typically don't need formatting
                     </span>
                   )}
                 </div>
@@ -242,25 +233,35 @@ const FormatterSection: React.FC<FormatterSectionProps> = ({
             </div>
           )}
 
-          {/* Formatter Type Select */}
-          <div className="space-y-1.5">
+          {/* Formatter Type Selection */}
+          <div className="space-y-2">
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
               Format Type
             </label>
-            <select
-              value={formatterType}
-              onChange={handleTypeChange}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            >
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {FORMATTER_TYPES.map(type => (
-                <option key={type} value={type}>
-                  {getFormatterSymbol(type)} {getFormatterLabel(type)}
-                </option>
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => onFormatterTypeChange(type)}
+                  className={`
+                    flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all
+                    ${
+                      formatterType === type
+                        ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-500 text-blue-700 dark:text-blue-300 ring-1 ring-blue-500'
+                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }
+                  `}
+                  title={getFormatterDescription(type)}
+                >
+                  <span className="opacity-70">{getFormatterSymbol(type)}</span>
+                  <span>{getFormatterLabel(type)}</span>
+                </button>
               ))}
-            </select>
+            </div>
 
             {/* Description */}
-            <div className="flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1.5 rounded-md">
+            <div className="flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1.5 rounded-md mt-2">
               <Info size={12} className="mt-0.5 flex-shrink-0" />
               <span>{getFormatterDescription(formatterType)}</span>
             </div>
@@ -351,10 +352,10 @@ const FormatterSection: React.FC<FormatterSectionProps> = ({
                   }
                   className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 >
-                  <optgroup label="💡 Recommended for Large Datasets (200+ records)">
-                    <option value="numeric">🔥 Numeric - Ultra Compact (1/15)</option>
-                    <option value="year-only">📅 Year Only (2025)</option>
-                    <option value="month-year">📆 Month-Year (Jan '25)</option>
+                  <optgroup label="Recommended for Large Datasets (200+ records)">
+                    <option value="numeric">Numeric - Ultra Compact (1/15)</option>
+                    <option value="year-only">Year Only (2025)</option>
+                    <option value="month-year">Month-Year (Jan '25)</option>
                   </optgroup>
                   <optgroup label="Standard Formats">
                     <option value="short">Short (Jan 15)</option>
@@ -373,10 +374,9 @@ const FormatterSection: React.FC<FormatterSectionProps> = ({
               {(dateFormat === 'long' || dateFormat === 'full' || dateFormat === 'medium') && (
                 <div className="text-xs bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md px-2.5 py-2">
                   <p className="text-amber-800 dark:text-amber-200">
-                    ⚠️ <strong>Tip for large datasets:</strong> Consider using{' '}
-                    <strong>Numeric</strong>, <strong>Year Only</strong>, or{' '}
-                    <strong>Month-Year</strong> format for better readability when you have 200+
-                    data points.
+                    <strong>Tip for large datasets:</strong> Consider using <strong>Numeric</strong>
+                    , <strong>Year Only</strong>, or <strong>Month-Year</strong> format for better
+                    readability when you have 200+ data points.
                   </p>
                 </div>
               )}
@@ -544,7 +544,7 @@ const FormatterSection: React.FC<FormatterSectionProps> = ({
 
           {/* Quick Tips */}
           <div className="text-xs text-gray-600 dark:text-gray-400 bg-yellow-50 dark:bg-yellow-900/20 px-2.5 py-2 rounded-md border border-yellow-200 dark:border-yellow-800">
-            <p className="font-medium mb-1">💡 Tips:</p>
+            <p className="font-medium mb-1">Tips:</p>
             <ul className="list-disc list-inside space-y-0.5 ml-1">
               <li>Large numbers automatically use K/M/B abbreviations</li>
               <li>Preview updates in real-time as you change settings</li>

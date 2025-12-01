@@ -298,6 +298,8 @@ export interface SubLineChartConfig extends BaseChartConfig {
   curve?: keyof typeof curveOptions;
   lineWidth?: number;
   pointRadius?: number;
+  lineStyle?: 'solid' | 'dashed' | 'dotted';
+  pointValueDecimals?: number;
 }
 
 // Area chart specific configuration

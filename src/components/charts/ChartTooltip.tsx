@@ -114,7 +114,8 @@ export function renderD3Tooltip(
   const textEl = tooltipGroup
     .append('text')
     .attr('fill', textColor)
-    .style('font-family', 'system-ui, -apple-system, sans-serif');
+    .style('font-family', 'system-ui, -apple-system, sans-serif')
+    .style('pointer-events', 'none');
 
   let currentY = padding.y + 12; // Start position with padding
 
@@ -165,7 +166,8 @@ export function renderD3Tooltip(
     .attr('rx', borderRadius)
     .attr('ry', borderRadius)
     .attr('opacity', opacity)
-    .style('filter', 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))');
+    .style('filter', 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))')
+    .style('pointer-events', 'none');
 
   // Calculate final position with smart positioning to avoid covering pointer
   let finalX = position.x;
