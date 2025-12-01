@@ -327,7 +327,7 @@ function CleanDatasetWithAI({
                       onChange={e => handleOptionChange('thousandsSeparator', e.target.value)}
                       placeholder="Default: , (comma)"
                       maxLength={1}
-                      className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
+                      className="bg-background"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       e.g., comma (,) or space ( )
@@ -348,7 +348,7 @@ function CleanDatasetWithAI({
                       onChange={e => handleOptionChange('decimalSeparator', e.target.value)}
                       placeholder="Default: . (dot)"
                       maxLength={1}
-                      className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
+                      className="bg-background"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       e.g., period (.) or comma (,)
