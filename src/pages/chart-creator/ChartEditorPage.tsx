@@ -829,6 +829,11 @@ const ChartEditorPage: React.FC = () => {
           originalDatasetIdRef.current = datasetId ?? null;
           setDatasetDirty(false);
           showSuccess(t('chart_update_success', 'Chart updated successfully'));
+          // Reload history and count after update
+          if (chartIdFromUrl) {
+            await getChartHistory(chartIdFromUrl);
+            await getHistoryCount(chartIdFromUrl);
+          }
         } else {
           showError(t('chart_update_error', 'Failed to update chart'));
         }
