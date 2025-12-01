@@ -1,0 +1,126 @@
+Hướng dẫn sử dụng website DataVis (FE)
+
+1) Tổng quan
+- DataVis là ứng dụng quản lý dữ liệu và trực quan hóa biểu đồ.
+- Người dùng có thể: đăng nhập, tạo dataset từ nhiều nguồn (tập tin, dán văn bản, dữ liệu mẫu, làm sạch bằng AI), xem/chỉnh sửa thông tin dataset, xuất CSV, và tạo/biên tập biểu đồ.
+- Một số trang/nhóm trang chính:
+  • Trang chủ (/) và các trang công khai: Chart demo, About, FAQ, Terms/Privacy
+  • Khu vực người dùng (bắt buộc đăng nhập): Workspace, Create Dataset, Dataset Detail, Chart Gallery, Chart Creator/Editor, Profile
+
+2) Điều hướng & quyền truy cập
+- Ứng dụng dùng Router (AppRouter) với cấu hình từ config/routes.ts
+- Các đường dẫn quan trọng:
+  • Công khai: /, /chart-gallery, /about-us, /resources/frequent-questions, /terms-of-service, /privacy-policy
+  • Xác thực: /auth, /auth/forgot-password, /auth/reset-password
+  • Workspace (cần đăng nhập): /workspace, /workspace/datasets, /workspace/charts
+  • Dataset: /datasets/create (+ các biến thể), /datasets/detail (đi qua state: { datasetId })
+  • Biểu đồ demo/editor: /chart/*, /demo/*
+- Quyền truy cập:
+  • Khách (GUEST): xem trang công khai
+  • Người dùng (USER): truy cập khu vực cá nhân (Workspace, Create Dataset, Dataset Detail, Chart Gallery, Chart Editor, Profile)
+  • Admin (ADMIN): có quyền mở rộng theo cấu hình
+
+3) Đăng nhập / Đăng ký
+- Truy cập /auth để đăng nhập/đăng ký.
+- Có trang hỗ trợ quên mật khẩu (/auth/forgot-password) và đặt lại mật khẩu (/auth/reset-password).
+
+4) Workspace
+- Đường dẫn: /workspace (cần đăng nhập)
+- Chứa 2 tab chính:
+  • Datasets: quản lý các dataset đã tạo
+  • Charts: quản lý biểu đồ
+- Từ Workspace bạn có thể vào chi tiết dataset hoặc mở Create Dataset để thêm dữ liệu mới.
+
+5) Tạo Dataset (Create Dataset)
+- Đường dẫn: /datasets/create (cần đăng nhập)
+- Có 4 chế độ nhập liệu, chọn ở thanh điều hướng bên trái:
+  • Upload (tải tệp)
+  • Text Upload (dán văn bản)
+  • Sample Data (dữ liệu mẫu)
+  • Clean Dataset with AI (làm sạch bằng AI)
+- Sau khi xử lý xong dữ liệu, hệ thống chuyển sang chế độ View để xem trước; khi sẵn sàng, bạn xác nhận tạo dataset.
+
+5.1) Upload (tải tệp)
+- Hỗ trợ định dạng: .xls, .xlsx, .csv, .txt, .json, .tsv
+- Kích thước tối đa mặc định: 50MB
+- Tệp Excel sẽ được chuyển thành CSV để phân tích; các loại tệp văn bản sẽ được đọc trực tiếp.
+- Ứng dụng tự phát hiện delimiter (dấu phân cách), đồng thời áp dụng nhận diện kiểu cột cơ bản (text/number/date).
+
+5.2) Text Upload (dán văn bản)
+- Dán dữ liệu dạng CSV/TSV vào khung nhập.
+- Ứng dụng sẽ phát hiện delimiter và phân tích tương tự như Upload.
+
+5.3) Sample Data (dữ liệu mẫu)
+- Chọn bộ dữ liệu mẫu có sẵn để thử nhanh luồng làm việc.
+
+5.4) Clean Dataset with AI (làm sạch bằng AI)
+- Có 2 tab con:
+  • Clean Excel File: tải lên .xlsx/.xls → gửi tới API AI làm sạch → nhận về ma trận 2D (matrix) → ứng dụng tự chuyển thành CSV để xử lý tiếp.
+  • Clean CSV Text: dán CSV → gửi tới API AI làm sạch → nhận về chuỗi CSV đã làm sạch → ứng dụng xử lý tiếp.
+- Tùy chọn làm sạch (Cleaning Options):
+  • Thousands Separator: ký tự phân tách hàng nghìn (vd: ",")
+  • Decimal Separator: ký tự thập phân (vd: ".")
+  • Date Format: định dạng ngày (vd: DD/MM/YYYY)
+  • Notes: ghi chú gửi kèm cho AI
+- Khi đang gửi/nhận dữ liệu AI, toàn trang sẽ hiển thị Loading Spinner.
+
+6) Xem trước & Tạo dataset (View Mode)
+- Sau khi dữ liệu được đọc/phân tích thành công, trang chuyển sang View Mode để xem trước dữ liệu dạng bảng.
+- Bạn có thể nhấn nút Upload/Create để mở modal xác nhận tạo dataset.
+- Dữ liệu gửi lên Backend ở định dạng:
+  • headers: danh sách cột (name, type, index) kèm mảng data theo cột
+  • số liệu format (thousandsSeparator, decimalSeparator) và định dạng ngày (dateFormat)
+
+7) Chi tiết Dataset (Dataset Detail)
+- Đường dẫn: /datasets/detail, đi kèm state { datasetId } hoặc query datasetId
+- Thông tin chính:
+  • Sidebar: tên/miêu tả dataset (click để sửa inline), ngày tạo/cập nhật, các nút Hành động (Save, Reset, Back, Delete)
+  • Khu vực chính: Data Preview với bảng dữ liệu
+    - Bảng hỗ trợ cuộn, dán nhãn cột, định dạng số/ngày theo cấu hình dataset
+    - Nút Export CSV để xuất dữ liệu đang xem (đã được format) ra CSV
+- Lưu ý: Khi sửa tên/miêu tả, cần Save để lưu; có cảnh báo nếu thoát khi chưa lưu.
+
+8) Chart Gallery & Chart Creator/Editor
+- Chart Gallery (/chart-gallery): chọn mẫu biểu đồ.
+- Chart Creator (/chart-creator) & các trang Editor demo (/chart/*, /demo/*): tuỳ chỉnh biểu đồ theo dữ liệu, cấu hình màu sắc, trục, v.v.
+
+9) Trang Hồ sơ (Profile)
+- Hồ sơ (/profile) và các trang cài đặt liên quan (đổi mật khẩu, thông báo, cài đặt chung) yêu cầu đăng nhập.
+
+10) Trang tài nguyên & pháp lý
+- FAQ: /resources/frequent-questions
+- About: /about-us
+- Terms of Service: /terms-of-service
+- Privacy Policy: /privacy-policy
+
+11) Định dạng & giới hạn dữ liệu
+- Hỗ trợ: .xls, .xlsx, .csv, .txt, .json, .tsv
+- Dung lượng tối đa: 50MB (MAX_FILE_SIZE)
+- Phát hiện delimiter tự động; nhận diện cơ bản kiểu cột (text/number/date) để hiển thị hợp lý.
+
+12) Xử lý sự cố thường gặp
+- File quá lớn (>50MB): hãy giảm kích thước hoặc lấy mẫu dữ liệu nhỏ hơn.
+- Định dạng không hỗ trợ: đổi sang CSV/XLSX/XLS/TXT/JSON/TSV.
+- Không thể phân tích: kiểm tra lại delimiter/dòng tiêu đề hoặc thử Text Upload rồi chỉnh delimiter.
+- Làm sạch AI lỗi: kiểm tra định dạng đầu vào (Excel đúng phần mở rộng; CSV có dòng tiêu đề), và xem lại tùy chọn (thousands/decimal/date).
+
+13) Gợi ý sử dụng hiệu quả
+- Với Excel nhiều sheet, ứng dụng đọc sheet đầu tiên.
+- Nên thống nhất Thousands/Decimal/Date từ đầu để dữ liệu hiển thị nhất quán.
+- Dùng Clean Dataset with AI khi dữ liệu lộn xộn: thiếu dấu tách, sai định dạng số/ngày, trùng lặp, v.v.
+- Dùng Export CSV tại Dataset Detail để lấy bản dữ liệu đã được format nhanh chóng.
+
+14) Ngôn ngữ & giao diện
+- Ứng dụng hỗ trợ i18n; có bộ chuyển ngôn ngữ ở header.
+- Giao diện Dark/Light, hiệu ứng mượt, bảng dữ liệu tối ưu cuộn cho tập dữ liệu lớn.
+
+15) Mô tả luồng tiêu biểu (end-to-end)
+1. Đăng nhập (/auth)
+2. Mở Create Dataset (/datasets/create)
+3. Chọn 1 trong 4 cách nhập dữ liệu (Upload/Text/Sample/AI Clean)
+4. Kiểm tra View Mode, xem trước dữ liệu
+5. Xác nhận tạo dataset → về Workspace để quản lý
+6. Vào Dataset Detail để đổi tên/miêu tả, xuất CSV, hoặc xoá dataset
+7. Từ Chart Gallery/Creator tạo biểu đồ từ dataset đã có
+
+— Kết thúc —
