@@ -51,18 +51,15 @@ export async function cleanExcelUpload(
   }
 ): Promise<CleanExcelApiResponse> {
   const form = new FormData();
-  // when passing a File, include filename; Blob alone will work but we add a default name
   if (file instanceof File) form.append('file', file, file.name);
-  else form.append('file', file, 'upload');
+  else form.append('file', file as any, 'upload');
 
   if (options) {
-    if (options.thousandsSeparator !== undefined)
-      form.append('thousandsSeparator', options.thousandsSeparator);
-    if (options.decimalSeparator !== undefined)
-      form.append('decimalSeparator', options.decimalSeparator);
-    if (options.dateFormat !== undefined) form.append('dateFormat', options.dateFormat);
-    if (options.schemaExample !== undefined) form.append('schemaExample', options.schemaExample);
-    if (options.notes !== undefined) form.append('notes', options.notes);
+    Object.entries(options).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        form.append(key, String(value));
+      }
+    });
   }
 
   const res = await axiosPrivate.post<CleanExcelApiResponse>('/ai/clean-excel', form, {
@@ -99,7 +96,7 @@ export async function cleanExcelAsync(
 ): Promise<{ jobId: string }> {
   const form = new FormData();
   if (file instanceof File) form.append('file', file, file.name);
-  else form.append('file', file, 'upload');
+  else form.append('file', file as any, 'upload');
 
   if (options) {
     if (options.thousandsSeparator !== undefined)

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ChartTypeSelector from './ChartTypeSelector';
 import BasicSettingsSection from './BasicSettingsSection';
 import BasicChartSettingsSection from './BasicChartSettingsSection';
@@ -10,6 +10,8 @@ import { ChartType } from '@/features/charts';
 import ChartSettingsPieSection from './ChartSettingsPieSection';
 import DisplayOptionsPieSection from './DisplayOptionsPieSection';
 import CyclePlotSettingsSection from './CyclePlotSettingsSection';
+import HeatmapAxisConfigSection from './HeatmapAxisConfigSection';
+import HeatmapAdvancedOptions from './HeatmapAdvancedOptions';
 import ChartFormatterSettings from './ChartFormatterSettingSection';
 import DatasetOperationSection from './DatasetOperationSection';
 import ImportExportSection from './ImportExportSection';
@@ -30,8 +32,22 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
 }) => {
   const { currentChartType: chartType } = useChartEditorRead();
 
+  // Prevent Ctrl+A (Select All)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 py-8 select-none">
       <div className="w-full px-2">
         {showLeftSidebar ? (
           <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
@@ -93,6 +109,17 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                     <CyclePlotSettingsSection />
                   </>
                 )}
+
+                {chartType == ChartType.Heatmap && (
+                  <>
+                    {/* Heatmap Axis Configuration */}
+                    <HeatmapAxisConfigSection />
+
+                    {/* Heatmap Advanced Options */}
+                    <HeatmapAdvancedOptions />
+                  </>
+                )}
+
                 <div id="chart-formatter-section">
                   <ChartFormatterSettings />
                 </div>
@@ -102,7 +129,9 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
               </div>
             </div>
             {/* Right Side - Chart Display */}
-            <ChartDisplaySection processedHeaders={processedHeaders} />
+            <div id="chart-display-section" className="lg:col-span-6">
+              <ChartDisplaySection processedHeaders={processedHeaders} />
+            </div>
           </div>
         ) : (
           <div className="w-full">

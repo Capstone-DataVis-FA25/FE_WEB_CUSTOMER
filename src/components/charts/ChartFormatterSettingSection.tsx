@@ -300,84 +300,11 @@ const ChartFormatterSettings: React.FC = () => {
               transition={{ duration: 0.2, ease: 'easeInOut' }}
             >
               <CardContent className="space-y-6 mt-4">
-                {/* Data Type Detection Info */}
-                {(xAxisDataType || yAxisDataTypes.length > 0) && (
-                  <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
-                    <div className="flex gap-3">
-                      <Info className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                      <div className="text-sm text-green-800 dark:text-green-200">
-                        <strong className="font-semibold">
-                          {t('chart_editor_detected_data_types', 'Detected Data Types:')}
-                        </strong>
-                        <ul className="mt-2 space-y-1">
-                          {xAxisColumnName && xAxisDataType && (
-                            <li>
-                              <strong>X-Axis ({xAxisColumnName}):</strong>{' '}
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100">
-                                {xAxisDataType.toUpperCase()}
-                              </span>
-                            </li>
-                          )}
-                          {yAxisColumnNames.length > 0 && (
-                            <li>
-                              <strong>Y-Axis:</strong>{' '}
-                              {yAxisColumnNames.map((name, idx) => (
-                                <span
-                                  key={idx}
-                                  className="inline-flex items-center px-2 py-0.5 ml-1 rounded text-xs font-medium bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100"
-                                >
-                                  {name} ({yAxisDataTypes[idx]?.toUpperCase() || 'UNKNOWN'})
-                                </span>
-                              ))}
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Info Banner */}
-                <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
-                  <div className="flex gap-3">
-                    <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-blue-800 dark:text-blue-200">
-                      <strong className="font-semibold">
-                        {t('chart_editor_how_formatters_work', 'How Formatters Work:')}
-                      </strong>
-                      <ul className="mt-2 space-y-1 list-disc list-inside">
-                        <li>
-                          <strong>Y-Axis:</strong> Applies to all numeric values on the vertical
-                          axis and tooltips
-                        </li>
-                        <li>
-                          <strong>X-Axis:</strong> Applies to labels on the horizontal axis (useful
-                          for dates, numeric categories)
-                        </li>
-                        <li>
-                          <strong>{t('chart_editor_live_preview', 'Live Preview:')}</strong>{' '}
-                          {t(
-                            'chart_editor_preview_hint',
-                            'See how your data will look before applying'
-                          )}
-                        </li>
-                        <li>
-                          <strong>{t('chart_editor_custom_format', 'Custom Format:')}</strong>{' '}
-                          {t(
-                            'chart_editor_custom_format_hint',
-                            'Use placeholders like {value}, {round}, {fixed2} for advanced formatting'
-                          )}
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Y-Axis Formatter */}
                 <div className="space-y-4">
                   <FormatterSection
                     axis="y"
-                    label={t('chart_editor_y_axis_formatter', 'Y-Axis (Values) Formatter')}
+                    label={t('chart_editor_y_axis_formatter', 'Y-Axis (Values)')}
                     formatterType={formatters.yFormatterType || 'none'}
                     onFormatterTypeChange={handleYFormatterTypeChange}
                     customFormat={formatters.customYFormatter || '{value}'}
@@ -387,10 +314,8 @@ const ChartFormatterSettings: React.FC = () => {
                     decimalPlaces={formatters.yDecimalPlaces || 2}
                     onDecimalPlacesChange={handleYDecimalPlacesChange}
                     sampleValue={12345.67}
-                    // Data type detection
                     detectedDataType={(yAxisDataTypes[0] as 'text' | 'number' | 'date') || null}
                     columnName={yAxisColumnNames[0] || null}
-                    // Sub-options
                     currencyStyle={formatters.yCurrencyStyle || 'symbol'}
                     onCurrencyStyleChange={handleYCurrencyStyleChange}
                     numberNotation={formatters.yNumberNotation || 'standard'}
@@ -406,7 +331,7 @@ const ChartFormatterSettings: React.FC = () => {
                 <div className="space-y-4">
                   <FormatterSection
                     axis="x"
-                    label={t('chart_editor_x_axis_formatter', 'X-Axis (Categories/Time) Formatter')}
+                    label={t('chart_editor_x_axis_formatter', 'X-Axis (Categories/Time)')}
                     formatterType={formatters.xFormatterType || 'none'}
                     onFormatterTypeChange={handleXFormatterTypeChange}
                     customFormat={formatters.customXFormatter || '{value}'}
@@ -416,10 +341,8 @@ const ChartFormatterSettings: React.FC = () => {
                     decimalPlaces={formatters.xDecimalPlaces || 2}
                     onDecimalPlacesChange={handleXDecimalPlacesChange}
                     sampleValue={2024}
-                    // Data type detection
                     detectedDataType={(xAxisDataType as 'text' | 'number' | 'date') || null}
                     columnName={xAxisColumnName || null}
-                    // Sub-options
                     currencyStyle={formatters.xCurrencyStyle || 'symbol'}
                     onCurrencyStyleChange={handleXCurrencyStyleChange}
                     numberNotation={formatters.xNumberNotation || 'standard'}

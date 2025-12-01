@@ -23,6 +23,17 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   subscriptionPlanId?: string | null;
+  subscriptionPlan?: {
+    id: string;
+    name: string;
+    description?: string;
+    price?: number;
+    currency?: string;
+    interval?: string;
+    isActive?: boolean;
+    features?: any;
+    limits?: any;
+  };
 }
 
 // ## REQUEST

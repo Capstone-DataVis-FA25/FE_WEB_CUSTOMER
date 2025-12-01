@@ -20,6 +20,9 @@ import type {
   CyclePlotConfig,
   SubCyclePlotChartConfig,
   CyclePlotAxisConfig,
+  HeatmapChartConfig,
+  SubHeatmapChartConfig,
+  HeatmapAxisConfig,
 } from '@/types/chart';
 
 // Default Sub configs
@@ -254,6 +257,41 @@ export const defaultCyclePlotConfig: CyclePlotConfig = {
   chartType: 'cycleplot',
 };
 
+// Default Heatmap Config
+const defaultSubHeatmapConfig: SubHeatmapChartConfig = {
+  ...defaultBaseChartConfig,
+  width: 1024,
+  height: 768,
+  margin: { top: 80, right: 150, bottom: 100, left: 100 },
+  colorScheme: 'viridis',
+  showValues: false,
+  cellBorderWidth: 1,
+  cellBorderColor: '#ffffff',
+  valuePosition: 'center',
+  minValue: 'auto',
+  maxValue: 'auto',
+  nullColor: '#cccccc',
+  legendSteps: 5,
+};
+
+const defaultHeatmapAxisConfigs: HeatmapAxisConfig = {
+  xAxisKey: undefined,
+  yAxisKey: undefined,
+  valueKey: undefined,
+  xAxisLabel: '',
+  yAxisLabel: '',
+  xAxisRotation: -45,
+  yAxisRotation: 0,
+  showAxisLabels: true,
+};
+
+export const defaultHeatmapConfig: HeatmapChartConfig = {
+  config: defaultSubHeatmapConfig,
+  formatters: defaultFormatterConfig,
+  axisConfigs: defaultHeatmapAxisConfigs,
+  chartType: 'heatmap',
+};
+
 // Returns a consistent default StructuredChartConfig for given chart type and optional dataset name
 export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => {
   const log = (cfg: MainChartConfig) => {
@@ -274,5 +312,7 @@ export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => 
       return log(defaultDonutChartConfig);
     case ChartType.CyclePlot:
       return log(defaultCyclePlotConfig);
+    case ChartType.Heatmap:
+      return log(defaultHeatmapConfig);
   }
 };

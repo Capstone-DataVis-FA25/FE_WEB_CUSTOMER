@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useTranslation } from 'react-i18next';
-import { Plus, Database } from 'lucide-react';
+import { Plus, Database, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -259,6 +259,17 @@ const DatasetListPage: React.FC = () => {
         setDeletingId(null);
       }
     });
+  };
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setCreatedAtFrom(null);
+    setCreatedAtTo(new Date());
+    setSortOrder('newest');
+    datasetPagination.setPage(1);
+
+    // Reset URL to clean state
+    navigate('?page=1', { replace: true });
   };
 
   const handleCreateDataset = () => {
@@ -552,6 +563,17 @@ const DatasetListPage: React.FC = () => {
                           }
                         />
                       </div>
+                    </div>
+                    {/* Reset Button */}
+                    <div className="flex items-end">
+                      <button
+                        onClick={handleResetFilters}
+                        type="button"
+                        className="h-11 px-4 border-2 border-blue-300 hover:border-blue-500 rounded-2xl backdrop-blur-sm flex items-center gap-2 shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-100"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Reset
+                      </button>
                     </div>
                   </div>
                 </div>

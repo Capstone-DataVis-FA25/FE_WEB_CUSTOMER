@@ -3,7 +3,9 @@ import { Label } from '../ui/label';
 import { useTranslation } from 'react-i18next';
 import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
+import { useAppSelector } from '@/store/hooks';
 import AreaAdvancedOptions from './AreaAdvancedOptions';
+import DataPairSuggestionPanel from './DataPairSuggestionPanel';
 
 /**
  * AreaTypeSettings Component
@@ -17,6 +19,7 @@ const AreaTypeSettings: React.FC = () => {
   const { t } = useTranslation();
   const { chartConfig, currentChartType } = useChartEditorRead();
   const { handleConfigChange } = useChartEditorActions();
+  const currentDataset = useAppSelector(state => state.dataset.currentDataset);
 
   if (!chartConfig) return null;
   if (currentChartType !== ChartType.Area) return null;
@@ -32,8 +35,81 @@ const AreaTypeSettings: React.FC = () => {
     setLocalOpacity(cfg.opacity ?? 0.7);
   }, [cfg?.stackedMode, cfg?.opacity]);
 
+  // Get headers from dataset
+  const dataHeaders = currentDataset?.headers || [];
+  const hasDataset = currentDataset && currentDataset.id;
+
+  // Get current axis selections
+  const currentXAxisId = (chartConfig as any).axisConfigs?.xAxisKey;
+  const currentYAxisIds =
+    (chartConfig as any).axisConfigs?.seriesConfigs?.map((s: any) => s.dataColumn) || [];
+
+  // Handle applying a recommendation
+  const handleApplyRecommendation = (xColumnId: string, yColumnId: string, isRemoving = false) => {
+    if (isRemoving) {
+      // Remove only the specific Y-series, keep X-axis intact
+      const existingSeries = (chartConfig as any).axisConfigs?.seriesConfigs || [];
+      const filteredSeries = existingSeries.filter((s: any) => s.dataColumn !== yColumnId);
+
+      const updates: any = {
+        axisConfigs: {
+          ...((chartConfig as any).axisConfigs || {}),
+          seriesConfigs: filteredSeries,
+        },
+      };
+
+      handleConfigChange(updates);
+    } else {
+      // Apply the recommendation
+      const updates: any = {
+        axisConfigs: {
+          ...((chartConfig as any).axisConfigs || {}),
+          xAxisKey: xColumnId,
+        },
+      };
+
+      // Find the column to get its color
+      const yHeader = dataHeaders.find(h => h.id === yColumnId);
+
+      // Update series configs to include the recommended Y column
+      const existingSeries = (chartConfig as any).axisConfigs?.seriesConfigs || [];
+      const seriesExists = existingSeries.some((s: any) => s.dataColumn === yColumnId);
+
+      if (!seriesExists && yHeader) {
+        // Add new series for the Y column
+        const newSeries = {
+          id: `series-${Date.now()}`,
+          name: yHeader.name,
+          dataColumn: yColumnId,
+          color: '#3b82f6', // Default color
+          visible: true,
+        };
+
+        updates.axisConfigs.seriesConfigs = [...existingSeries, newSeries];
+      }
+
+      handleConfigChange(updates);
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {/* Smart Data Pair Suggestions - Only show if dataset exists */}
+      {hasDataset && dataHeaders.length >= 2 && (
+        <>
+          <DataPairSuggestionPanel
+            headers={dataHeaders as any}
+            chartType="area"
+            currentXAxisId={currentXAxisId}
+            currentYAxisIds={currentYAxisIds}
+            onApplyRecommendation={handleApplyRecommendation}
+          />
+
+          {/* Divider after suggestions */}
+          <div className="border-t border-gray-200 dark:border-gray-700 my-3"></div>
+        </>
+      )}
+
       {/* Area Mode Selection */}
       <div>
         <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -95,56 +171,6 @@ const AreaTypeSettings: React.FC = () => {
             'Lower transparency makes areas more see-through, useful when comparing overlapping areas'
           )}
         </p>
-      </div>
-
-      {/* Visual Guide for Beginners */}
-      <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-        <h4 className="text-xs font-semibold text-amber-900 dark:text-amber-200 mb-1.5 flex items-center gap-1.5">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-            />
-          </svg>
-          {t('quick_guide', 'Quick Guide')}
-        </h4>
-        <ul className="text-xs text-amber-800 dark:text-amber-300 space-y-1 list-none">
-          <li className="flex items-start gap-2">
-            <span className="text-amber-600 dark:text-amber-400 font-bold">•</span>
-            <span>
-              {t(
-                'guide_overlapping',
-                'Use Overlapping when you want to see how different categories trend independently'
-              )}
-            </span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-amber-600 dark:text-amber-400 font-bold">•</span>
-            <span>
-              {t(
-                'guide_stacked',
-                'Use Stacked when you want to see the total combined value and how each part contributes'
-              )}
-            </span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-amber-600 dark:text-amber-400 font-bold">•</span>
-            <span>
-              {t(
-                'guide_transparency',
-                'Adjust transparency to 40-60% for overlapping areas so you can see through them'
-              )}
-            </span>
-          </li>
-        </ul>
       </div>
 
       {/* Divider */}
