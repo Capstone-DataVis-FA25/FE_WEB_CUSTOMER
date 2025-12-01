@@ -128,9 +128,14 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                 </div>
               </div>
             </div>
+            {/* Right Side - Chart Display */}
+            <div id="chart-display-section" className="lg:col-span-6">
+              <ChartDisplaySection processedHeaders={processedHeaders} />
+            </div>
           </div>
         ) : (
-          <div id="chart-display-section" className="lg:col-span-6">
+          <div className="w-full">
+            {/* Right Side - Chart Display */}
             <ChartDisplaySection processedHeaders={processedHeaders} />
           </div>
         )}
