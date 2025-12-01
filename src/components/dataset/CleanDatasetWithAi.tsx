@@ -29,13 +29,7 @@ function CleanDatasetWithAI({
   userId,
 }: CleanDatasetWithAIProps) {
   // Lấy userId từ localStorage nếu prop userId không có
-  const localUser = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('user') || '{}');
-    } catch {
-      return {};
-    }
-  })();
+  const localUser = JSON.parse(localStorage.getItem('user') || '{}');
   const effectiveUserId = userId || localUser.id;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,15 +38,14 @@ function CleanDatasetWithAI({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('excel');
-  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(true);
   const [pendingJobId, setPendingJobId] = useState<string | null>(null);
   const [jobType, setJobType] = useState<'csv' | 'excel' | null>(null);
 
   const [cleaningOptions, setCleaningOptions] = useState({
-    thousandsSeparator: ',',
-    decimalSeparator: '.',
-    dateFormat: 'DD/MM/YYYY',
-    notes: 'AI data cleaning',
+    thousandsSeparator: '',
+    decimalSeparator: '',
+    notes: '',
   });
 
   const { t } = useTranslation();
@@ -106,7 +99,16 @@ function CleanDatasetWithAI({
     onProcessingChange?.(true);
     try {
       if (!effectiveUserId) throw new Error('Missing userId');
-      const resp = await cleanExcelAsync(file, { ...cleaningOptions, userId: effectiveUserId });
+      const resp = await cleanExcelAsync(file, {
+        ...(cleaningOptions.thousandsSeparator && {
+          thousandsSeparator: cleaningOptions.thousandsSeparator,
+        }),
+        ...(cleaningOptions.decimalSeparator && {
+          decimalSeparator: cleaningOptions.decimalSeparator,
+        }),
+        ...(cleaningOptions.notes && { notes: cleaningOptions.notes }),
+        userId: effectiveUserId,
+      });
       if (resp.jobId) {
         setPendingJobId(resp.jobId);
         setJobType('excel');
@@ -134,15 +136,23 @@ function CleanDatasetWithAI({
     setError(null);
     setIsLoading(true);
     onProcessingChange?.(true);
+    showSuccess(
+      t('ai_clean_sending_title', 'Đang gửi dữ liệu để làm sạch'),
+      t('ai_clean_sending_desc', 'Vui lòng đợi, chúng tôi đang xử lý dữ liệu của bạn...')
+    );
     try {
       if (!effectiveUserId) throw new Error('Missing userId');
       const payload: CleanCsvRequest = {
         csv: csvText,
-        thousandsSeparator: cleaningOptions.thousandsSeparator,
-        decimalSeparator: cleaningOptions.decimalSeparator,
-        dateFormat: cleaningOptions.dateFormat,
+        // chỉ gửi nếu người dùng nhập, nếu rỗng để BE dùng default
+        ...(cleaningOptions.thousandsSeparator && {
+          thousandsSeparator: cleaningOptions.thousandsSeparator,
+        }),
+        ...(cleaningOptions.decimalSeparator && {
+          decimalSeparator: cleaningOptions.decimalSeparator,
+        }),
         schemaExample: '',
-        notes: cleaningOptions.notes,
+        ...(cleaningOptions.notes && { notes: cleaningOptions.notes }),
         userId: effectiveUserId,
       };
       console.log('Submitting cleanCsvAsync payload:', payload);
@@ -174,10 +184,23 @@ function CleanDatasetWithAI({
     setError(null);
     setIsLoading(true);
     onProcessingChange?.(true);
+    showSuccess(
+      t('ai_clean_sending_title', 'Đang gửi dữ liệu để làm sạch'),
+      t('ai_clean_sending_desc', 'Vui lòng đợi, chúng tôi đang xử lý dữ liệu của bạn...')
+    );
     try {
       if (!effectiveUserId) throw new Error('Missing userId');
       if (isExcel) {
-        const resp = await cleanExcelAsync(file, { ...cleaningOptions, userId: effectiveUserId });
+        const resp = await cleanExcelAsync(file, {
+          ...(cleaningOptions.thousandsSeparator && {
+            thousandsSeparator: cleaningOptions.thousandsSeparator,
+          }),
+          ...(cleaningOptions.decimalSeparator && {
+            decimalSeparator: cleaningOptions.decimalSeparator,
+          }),
+          ...(cleaningOptions.notes && { notes: cleaningOptions.notes }),
+          userId: effectiveUserId,
+        });
         if (resp.jobId) {
           setPendingJobId(resp.jobId);
           setJobType('excel');
@@ -189,15 +212,17 @@ function CleanDatasetWithAI({
           setError(t('ai_clean_no_jobid', 'Không nhận được jobId từ server'));
         }
       } else if (isCsv) {
-        // Read file as text
         const text = await file.text();
         const payload: CleanCsvRequest = {
           csv: text,
-          thousandsSeparator: cleaningOptions.thousandsSeparator,
-          decimalSeparator: cleaningOptions.decimalSeparator,
-          dateFormat: cleaningOptions.dateFormat,
+          ...(cleaningOptions.thousandsSeparator && {
+            thousandsSeparator: cleaningOptions.thousandsSeparator,
+          }),
+          ...(cleaningOptions.decimalSeparator && {
+            decimalSeparator: cleaningOptions.decimalSeparator,
+          }),
           schemaExample: '',
-          notes: cleaningOptions.notes,
+          ...(cleaningOptions.notes && { notes: cleaningOptions.notes }),
           userId: effectiveUserId,
         };
         const resp = await cleanCsvAsync(payload);
@@ -300,7 +325,7 @@ function CleanDatasetWithAI({
                       type="text"
                       value={cleaningOptions.thousandsSeparator}
                       onChange={e => handleOptionChange('thousandsSeparator', e.target.value)}
-                      placeholder=","
+                      placeholder="Default: , (comma)"
                       maxLength={1}
                       className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
                     />
@@ -321,7 +346,7 @@ function CleanDatasetWithAI({
                       type="text"
                       value={cleaningOptions.decimalSeparator}
                       onChange={e => handleOptionChange('decimalSeparator', e.target.value)}
-                      placeholder="."
+                      placeholder="Default: . (dot)"
                       maxLength={1}
                       className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
                     />
@@ -330,43 +355,22 @@ function CleanDatasetWithAI({
                     </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="dateFormat"
-                      className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
-                      Date Format
-                    </Label>
-                    <Input
-                      id="dateFormat"
-                      type="text"
-                      value={cleaningOptions.dateFormat}
-                      onChange={e => handleOptionChange('dateFormat', e.target.value)}
-                      placeholder="DD/MM/YYYY"
-                      className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      e.g., DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
+                  <div className="space-y-2 md:col-span-2">
                     <Label
                       htmlFor="notes"
                       className="text-sm font-medium text-gray-700 dark:text-gray-300"
                     >
                       Notes
                     </Label>
-                    <Input
+                    <textarea
                       id="notes"
-                      type="text"
                       value={cleaningOptions.notes}
                       onChange={e => handleOptionChange('notes', e.target.value)}
-                      placeholder="AI data cleaning"
-                      className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
+                      placeholder="Optional notes for AI. Leave empty to use default behaviour."
+                      className="w-full min-h-[80px] p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Optional notes about the cleaning process
+                      Optional notes about the cleaning process (multiple lines supported)
                     </p>
                   </div>
                 </div>
@@ -374,9 +378,8 @@ function CleanDatasetWithAI({
                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
                   <p className="text-xs text-blue-800 dark:text-blue-200">
                     <strong>Preview:</strong> Numbers will use{' '}
-                    <strong>{cleaningOptions.thousandsSeparator}</strong> for thousands and{' '}
-                    <strong>{cleaningOptions.decimalSeparator}</strong> for decimals. Dates will be
-                    formatted as <strong>{cleaningOptions.dateFormat}</strong>.
+                    <strong>{cleaningOptions.thousandsSeparator || ','}</strong> for thousands and{' '}
+                    <strong>{cleaningOptions.decimalSeparator || '.'}</strong> for decimals.
                   </p>
                 </div>
               </div>
@@ -452,7 +455,6 @@ function CleanDatasetWithAI({
                         {cleaningOptions.thousandsSeparator})
                       </li>
                       <li>• Normalize decimal separators ({cleaningOptions.decimalSeparator})</li>
-                      <li>• Format dates consistently ({cleaningOptions.dateFormat})</li>
                       <li>• Remove duplicates and inconsistencies</li>
                     </ul>
                   </div>
@@ -504,7 +506,6 @@ function CleanDatasetWithAI({
                         {cleaningOptions.thousandsSeparator})
                       </li>
                       <li>• Normalize decimal separators ({cleaningOptions.decimalSeparator})</li>
-                      <li>• Format dates consistently ({cleaningOptions.dateFormat})</li>
                       <li>• Clean and standardize text fields</li>
                     </ul>
                   </div>
