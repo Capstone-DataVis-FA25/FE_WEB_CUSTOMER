@@ -542,7 +542,9 @@ const D3PieChart: React.FC<D3PieChartProps> = ({
       .append('g')
       .attr('class', 'slice');
 
-    // Add paths
+    // Track animation state removed
+
+    // Add paths without hover events
     slices
       .append('path')
       .attr('d', arc)
@@ -552,98 +554,6 @@ const D3PieChart: React.FC<D3PieChartProps> = ({
       .attr('opacity', sliceOpacity)
       .style('cursor', 'pointer')
       .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))')
-      .on('mouseover', function (_event, d) {
-        if (!showTooltip) return;
-
-        // Scale up on hover
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr('transform', `scale(${hoverScale})`)
-          .style('filter', 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))');
-
-        // Show tooltip
-        const label = String(d.data[labelKey]);
-        const value = d.data[valueKey] as number;
-        const percentage = ((value / total) * 100).toFixed(1);
-        const formattedValue = valueFormatter ? valueFormatter(value) : value.toLocaleString();
-
-        const tooltip = pieGroup
-          .append('g')
-          .attr('class', 'tooltip')
-          .attr('pointer-events', 'none');
-
-        // Responsive tooltip sizing
-        const tooltipFontSize = isMobile ? 10 : responsiveLabelFontSize;
-        const tooltipPadding = isMobile ? 8 : 12;
-
-        // Calculate tooltip text and dimensions
-        const line1 = label;
-        const line2 = `${formattedValue} (${percentage}%)`;
-        const maxLineLength = Math.max(line1.length, line2.length);
-        const tooltipWidth = Math.max(
-          maxLineLength * (tooltipFontSize * 0.6) + tooltipPadding * 2,
-          isMobile ? 100 : 120
-        );
-        const tooltipHeight = isMobile ? 45 : 55;
-        const tooltipY = isMobile ? -50 : -65;
-
-        // Tooltip background
-        tooltip
-          .append('rect')
-          .attr('x', -tooltipWidth / 2)
-          .attr('y', tooltipY)
-          .attr('width', tooltipWidth)
-          .attr('height', tooltipHeight)
-          .attr('fill', isDarkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)')
-          .attr('stroke', currentColors[d.index])
-          .attr('stroke-width', 2)
-          .attr('rx', isMobile ? 6 : 8)
-          .style('filter', 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))')
-          .style('opacity', 0)
-          .transition()
-          .duration(200)
-          .style('opacity', 1);
-
-        // Tooltip text - Line 1 (Label)
-        tooltip
-          .append('text')
-          .attr('text-anchor', 'middle')
-          .attr('y', tooltipY + (isMobile ? 16 : 20))
-          .attr('fill', textColor)
-          .style('font-size', `${tooltipFontSize}px`)
-          .style('font-weight', '700')
-          .style('opacity', 0)
-          .text(line1)
-          .transition()
-          .duration(200)
-          .style('opacity', 1);
-
-        // Tooltip text - Line 2 (Value and percentage)
-        tooltip
-          .append('text')
-          .attr('text-anchor', 'middle')
-          .attr('y', tooltipY + (isMobile ? 32 : 38))
-          .attr('fill', textColor)
-          .style('font-size', `${tooltipFontSize * 0.9}px`)
-          .style('font-weight', '600')
-          .style('opacity', 0)
-          .text(line2)
-          .transition()
-          .duration(200)
-          .style('opacity', 1);
-
-        currentTooltipRef.current = tooltip;
-      })
-      .on('mouseout', function () {
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr('transform', 'scale(1)')
-          .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))');
-
-        hideCurrentTooltip();
-      })
       .transition()
       .duration(animationDuration)
       .ease(d3.easeBackOut)
@@ -652,6 +562,104 @@ const D3PieChart: React.FC<D3PieChartProps> = ({
         return function (t) {
           return arc(interpolate(t)) || '';
         };
+      })
+      .on('end', function (_d, i) {
+        // Enable hover only after all slices finish animating
+        if (i === processedData.length - 1) {
+          // Now bind hover events
+          pieGroup.selectAll('path').on('mouseover', function (_event, d) {
+            if (!showTooltip) return;
+            const datum = d as d3.PieArcDatum<ChartDataPoint>;
+            // Scale up on hover
+            d3.select(this)
+              .transition()
+              .duration(200)
+              .attr('transform', `scale(${hoverScale})`)
+              .style('filter', 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))');
+
+            // Show tooltip
+            const label = String(datum.data[labelKey]);
+            const value = datum.data[valueKey] as number;
+            const percentage = ((value / total) * 100).toFixed(1);
+            const formattedValue = valueFormatter ? valueFormatter(value) : value.toLocaleString();
+
+            const tooltip = pieGroup
+              .append('g')
+              .attr('class', 'tooltip')
+              .attr('pointer-events', 'none');
+
+            // Responsive tooltip sizing
+            const tooltipFontSize = isMobile ? 10 : responsiveLabelFontSize;
+            const tooltipPadding = isMobile ? 8 : 12;
+
+            // Calculate tooltip text and dimensions
+            const line1 = label;
+            const line2 = `${formattedValue} (${percentage}%)`;
+            const maxLineLength = Math.max(line1.length, line2.length);
+            const tooltipWidth = Math.max(
+              maxLineLength * (tooltipFontSize * 0.6) + tooltipPadding * 2,
+              isMobile ? 100 : 120
+            );
+            const tooltipHeight = isMobile ? 45 : 55;
+            const tooltipY = isMobile ? -50 : -65;
+
+            // Tooltip background
+            tooltip
+              .append('rect')
+              .attr('x', -tooltipWidth / 2)
+              .attr('y', tooltipY)
+              .attr('width', tooltipWidth)
+              .attr('height', tooltipHeight)
+              .attr('fill', isDarkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)')
+              .attr('stroke', currentColors[datum.index])
+              .attr('stroke-width', 2)
+              .attr('rx', isMobile ? 6 : 8)
+              .style('filter', 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))')
+              .style('opacity', 0)
+              .transition()
+              .duration(200)
+              .style('opacity', 1);
+
+            // Tooltip text - Line 1 (Label)
+            tooltip
+              .append('text')
+              .attr('text-anchor', 'middle')
+              .attr('y', tooltipY + (isMobile ? 16 : 20))
+              .attr('fill', textColor)
+              .style('font-size', `${tooltipFontSize}px`)
+              .style('font-weight', '700')
+              .style('opacity', 0)
+              .text(line1)
+              .transition()
+              .duration(200)
+              .style('opacity', 1);
+
+            // Tooltip text - Line 2 (Value and percentage)
+            tooltip
+              .append('text')
+              .attr('text-anchor', 'middle')
+              .attr('y', tooltipY + (isMobile ? 32 : 38))
+              .attr('fill', textColor)
+              .style('font-size', `${tooltipFontSize * 0.9}px`)
+              .style('font-weight', '600')
+              .style('opacity', 0)
+              .text(line2)
+              .transition()
+              .duration(200)
+              .style('opacity', 1);
+
+            currentTooltipRef.current = tooltip;
+          });
+          pieGroup.selectAll('path').on('mouseout', function () {
+            d3.select(this)
+              .transition()
+              .duration(200)
+              .attr('transform', 'scale(1)')
+              .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))');
+
+            hideCurrentTooltip();
+          });
+        }
       });
 
     // Add labels / percentages / values — render if any of the toggles is enabled

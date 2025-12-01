@@ -406,7 +406,7 @@ const DatasetDetailPage: React.FC = () => {
       setShowUnsavedModal(true);
     } else {
       // Navigate to workspace datasets to prevent invalid state
-      navigate('/workspace', { replace: true, state: { tab: 'datasets' } });
+      navigate(Routers.WORKSPACE_DATASETS, { replace: true });
     }
   }, [hasChanges, navigate]);
 
@@ -561,9 +561,7 @@ const DatasetDetailPage: React.FC = () => {
               </p>
               <div className="space-y-3">
                 <Button
-                  onClick={() =>
-                    navigate('/workspace', { replace: true, state: { tab: 'datasets' } })
-                  }
+                  onClick={() => navigate(Routers.WORKSPACE_DATASETS, { replace: true })}
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
@@ -620,9 +618,7 @@ const DatasetDetailPage: React.FC = () => {
                 )}
               </p>
               <Button
-                onClick={() =>
-                  navigate('/workspace', { replace: true, state: { tab: 'datasets' } })
-                }
+                onClick={() => navigate(Routers.WORKSPACE_DATASETS, { replace: true })}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />

@@ -1,3 +1,6 @@
+import { formatDateUsingDayjs } from '@/utils/dateFormat';
+import { formatNumberString } from '@/utils/dataProcessors';
+
 export type SimpleColumnType = 'text' | 'number' | 'date';
 export type DateGranularity = 'year' | 'year_month' | 'date' | 'datetime';
 export type NumberFormat = { thousandsSeparator: string; decimalSeparator: string };
@@ -28,8 +31,6 @@ export const getOperatorsForType = (type: SimpleColumnType): { value: string; la
         { value: 'less_or_equal', label: 'less or equal' },
         { value: 'equals', label: 'equals' },
         { value: 'not_equals', label: 'not equals' },
-        { value: 'between', label: 'between (inclusive)' },
-        { value: 'between_exclusive', label: 'between (exclusive)' },
         { value: 'is_empty', label: 'is empty' },
         { value: 'is_not_empty', label: 'is not empty' },
       ];
@@ -41,8 +42,6 @@ export const getOperatorsForType = (type: SimpleColumnType): { value: string; la
         { value: 'less_or_equal', label: 'on or before' },
         { value: 'equals', label: 'equals' },
         { value: 'not_equals', label: 'not equals' },
-        { value: 'between', label: 'between (inclusive)' },
-        { value: 'between_exclusive', label: 'between (exclusive)' },
         { value: 'is_empty', label: 'is empty' },
         { value: 'is_not_empty', label: 'is not empty' },
       ];
@@ -126,14 +125,7 @@ export const formatNumberDisplay = (
 ): string => {
   if (value == null || value === '') return '';
   if (!nf) return String(value);
-  try {
-    // Defer to existing formatter in dataProcessors
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { formatNumberString } = require('@/utils/dataProcessors');
-    return formatNumberString(String(value), nf);
-  } catch {
-    return String(value);
-  }
+  return formatNumberString(String(value), nf);
 };
 
 // Validate a single date condition. Returns an error message string or null if valid.
@@ -254,13 +246,17 @@ export const formatDateDisplay = (
     // Map non-dayjs token to a valid one
     const toPattern = (f: string) => (f === 'DD Month YYYY' ? 'DD MMMM YYYY' : f);
     try {
-      // Use our shared helper to format
-      // Lazy import to avoid heavier deps at top-level bundle
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { formatDateUsingDayjs } = require('@/utils/dateFormat');
+      console.log('[formatDateDisplay] formatting via dayjs', {
+        value: s,
+        fmt: toPattern(fmt),
+      });
       return formatDateUsingDayjs(s, toPattern(fmt));
-    } catch {
-      // Fallback to plain string if helper not available in this context
+    } catch (err) {
+      console.warn('[formatDateDisplay] failed to format with dayjs', {
+        value: s,
+        fmt,
+        error: err,
+      });
       return s.replace('T', ' ');
     }
   }

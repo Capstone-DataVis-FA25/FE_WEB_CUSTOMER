@@ -74,3 +74,59 @@ export async function cleanExcelUpload(
   });
   return res.data;
 }
+
+// --- Clean CSV async (JSON) ---
+export async function cleanCsvAsync(
+  payload: CleanCsvRequest & { userId?: string }
+): Promise<{ jobId: string }> {
+  const res = await axiosPrivate.post<{ jobId: string }>('/ai/clean-async', payload, {
+    headers: { 'Content-Type': 'application/json', Accept: '*/*' },
+  });
+  return res.data;
+}
+
+// --- Clean Excel async (file upload) ---
+export async function cleanExcelAsync(
+  file: File | Blob,
+  options?: {
+    thousandsSeparator?: string;
+    decimalSeparator?: string;
+    dateFormat?: string;
+    schemaExample?: string;
+    notes?: string;
+    userId?: string;
+  }
+): Promise<{ jobId: string }> {
+  const form = new FormData();
+  if (file instanceof File) form.append('file', file, file.name);
+  else form.append('file', file, 'upload');
+
+  if (options) {
+    if (options.thousandsSeparator !== undefined)
+      form.append('thousandsSeparator', options.thousandsSeparator);
+    if (options.decimalSeparator !== undefined)
+      form.append('decimalSeparator', options.decimalSeparator);
+    if (options.dateFormat !== undefined) form.append('dateFormat', options.dateFormat);
+    if (options.schemaExample !== undefined) form.append('schemaExample', options.schemaExample);
+    if (options.notes !== undefined) form.append('notes', options.notes);
+    if (options.userId !== undefined) form.append('userId', options.userId);
+  }
+
+  const res = await axiosPrivate.post<{ jobId: string }>('/ai/clean-excel-async', form, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      Accept: 'application/json',
+    },
+  });
+  return res.data;
+}
+
+// --- Get clean result by jobId ---
+export async function getCleanResult(
+  jobId: string
+): Promise<{ data: any[][]; rowCount: number; columnCount: number }> {
+  const res = await axiosPrivate.get<{ data: any[][]; rowCount: number; columnCount: number }>(
+    `/ai/clean-result?jobId=${encodeURIComponent(jobId)}`
+  );
+  return res.data;
+}

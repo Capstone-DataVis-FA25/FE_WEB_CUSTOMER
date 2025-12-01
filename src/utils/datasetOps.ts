@@ -49,13 +49,13 @@ export const applyDatasetFilters = (
       const passThisColumn = (col.conditions || []).every(cond => {
         const op = cond.operator;
         if (op === 'between' || op === 'between_exclusive') {
-          // numeric or date range; try number first then date
+          // Legacy operator: treat invalid inputs as "ignore this condition"
           const { va } = cmpNumbers(value, undefined);
           const inclusive = op === 'between';
           if (va != null) {
             const a = Number.parseFloat(String(cond.value ?? ''));
             const b = Number.parseFloat(String(cond.valueEnd ?? ''));
-            if (Number.isNaN(a) || Number.isNaN(b)) return false;
+            if (Number.isNaN(a) || Number.isNaN(b)) return true;
             const lo = Math.min(a, b);
             const hi = Math.max(a, b);
             return inclusive ? va >= lo && va <= hi : va > lo && va < hi;
@@ -63,7 +63,7 @@ export const applyDatasetFilters = (
           const tv = parseDate(value);
           const ta = parseDate(String(cond.value ?? ''));
           const tb = parseDate(String(cond.valueEnd ?? ''));
-          if (Number.isNaN(tv) || Number.isNaN(ta) || Number.isNaN(tb)) return false;
+          if (Number.isNaN(tv) || Number.isNaN(ta) || Number.isNaN(tb)) return true;
           const lo = Math.min(ta, tb);
           const hi = Math.max(ta, tb);
           return inclusive ? tv >= lo && tv <= hi : tv > lo && tv < hi;
@@ -119,7 +119,8 @@ export const applyDatasetFilters = (
             if (!Number.isNaN(tv) && !Number.isNaN(ta)) {
               return op === 'greater_than' ? tv > ta : tv >= ta;
             }
-            return false;
+            // Invalid compare value → ignore this condition
+            return true;
           }
           case 'less_than':
           case 'less_or_equal': {
@@ -133,17 +134,24 @@ export const applyDatasetFilters = (
             if (!Number.isNaN(tv) && !Number.isNaN(ta)) {
               return op === 'less_than' ? tv < ta : tv <= ta;
             }
-            return false;
+            // Invalid compare value → ignore this condition
+            return true;
           }
           case 'after': {
             const tv = parseDate(value);
             const ta = parseDate(String(cond.value ?? ''));
-            return !Number.isNaN(tv) && !Number.isNaN(ta) && tv > ta;
+            if (!Number.isNaN(tv) && !Number.isNaN(ta)) {
+              return tv > ta;
+            }
+            return true;
           }
           case 'before': {
             const tv = parseDate(value);
             const ta = parseDate(String(cond.value ?? ''));
-            return !Number.isNaN(tv) && !Number.isNaN(ta) && tv < ta;
+            if (!Number.isNaN(tv) && !Number.isNaN(ta)) {
+              return tv < ta;
+            }
+            return true;
           }
           default:
             return true; // unknown operator -> ignore

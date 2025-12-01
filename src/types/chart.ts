@@ -25,6 +25,22 @@ export interface AggregationMetric {
   alias?: string;
 }
 
+export interface PivotDimension {
+  id: string;
+  columnId: string;
+  name: string;
+  columnType: DatasetColumnType;
+  timeUnit?: 'second' | 'minute' | 'hour' | 'day' | 'month' | 'quarter' | 'year';
+}
+
+export interface PivotValue {
+  id: string;
+  columnId: string;
+  name: string;
+  aggregationType: 'sum' | 'average' | 'min' | 'max' | 'count';
+  alias?: string;
+}
+
 export interface DatasetConfig {
   // Multi-level sort: applied in array order (stable sort semantics)
   sort?: SortLevel[];
@@ -34,6 +50,13 @@ export interface DatasetConfig {
   aggregation?: {
     groupBy?: GroupByColumn[];
     metrics?: AggregationMetric[];
+  };
+  // Optional pivot table configuration
+  pivot?: {
+    rows?: PivotDimension[];
+    columns?: PivotDimension[];
+    values?: PivotValue[];
+    filters?: PivotDimension[];
   };
 }
 
@@ -65,7 +88,8 @@ export type MainChartConfig =
   | ScatterChartConfig
   | PieChartConfig
   | DonutChartConfig
-  | CyclePlotConfig;
+  | CyclePlotConfig
+  | HeatmapChartConfig;
 // Scatter chart specific configuration
 export interface SubScatterChartConfig extends BaseChartConfig {
   pointRadius?: number;
@@ -77,6 +101,37 @@ export interface SubCyclePlotChartConfig extends BaseChartConfig {
   curve?: keyof typeof curveOptions;
   lineWidth?: number;
   pointRadius?: number;
+}
+
+// Heatmap specific configuration
+export interface SubHeatmapChartConfig extends BaseChartConfig {
+  colorScheme?:
+    | 'blues'
+    | 'reds'
+    | 'greens'
+    | 'purples'
+    | 'oranges'
+    | 'greys'
+    | 'viridis'
+    | 'plasma'
+    | 'inferno'
+    | 'magma'
+    | 'turbo'
+    | 'cividis';
+  showValues?: boolean;
+  cellBorderWidth?: number;
+  cellBorderColor?: string;
+  valuePosition?: 'center' | 'top' | 'bottom';
+  minValue?: number | 'auto';
+  maxValue?: number | 'auto';
+  nullColor?: string;
+  legendSteps?: number;
+}
+
+export interface HeatmapAxisConfig extends AxisConfig {
+  xAxisKey?: string;
+  yAxisKey?: string;
+  valueKey?: string;
 }
 
 export interface ScatterChartConfig {
@@ -145,6 +200,14 @@ export interface CyclePlotConfig {
   chartType: 'cycleplot';
 }
 
+export interface HeatmapChartConfig {
+  config: SubHeatmapChartConfig;
+  formatters: Partial<FormatterConfig>;
+  axisConfigs: HeatmapAxisConfig;
+  datasetConfig?: DatasetConfig;
+  chartType: 'heatmap';
+}
+
 // Curve options
 export const curveOptions = {
   curveLinear: d3.curveLinear,
@@ -211,6 +274,7 @@ export interface AxisConfig {
 
 export type DataBoundField =
   | 'xAxisKey'
+  | 'yAxisKey'
   | 'seriesConfigs'
   | 'labelKey'
   | 'valueKey'
@@ -225,11 +289,13 @@ export const CHART_DATA_BINDING_KEYS: Record<MainChartConfig['chartType'], DataB
   pie: ['labelKey', 'valueKey'],
   donut: ['labelKey', 'valueKey'],
   cycleplot: ['cycleKey', 'periodKey', 'valueKey'],
+  heatmap: ['xAxisKey', 'yAxisKey', 'valueKey'],
 };
 
 // Path-based definition that reflects actual nesting
 export type DataBindingPath =
   | 'axisConfigs.xAxisKey'
+  | 'axisConfigs.yAxisKey'
   | 'axisConfigs.seriesConfigs'
   | 'config.labelKey'
   | 'config.valueKey'
@@ -245,6 +311,7 @@ export const CHART_DATA_BINDING_PATHS: Record<MainChartConfig['chartType'], Data
   pie: ['config.labelKey', 'config.valueKey'],
   donut: ['config.labelKey', 'config.valueKey'],
   cycleplot: ['axisConfigs.cycleKey', 'axisConfigs.periodKey', 'axisConfigs.valueKey'],
+  heatmap: ['axisConfigs.xAxisKey', 'axisConfigs.yAxisKey', 'axisConfigs.valueKey'],
 };
 
 // Series configuration interface for Data Series management

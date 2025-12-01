@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { BarChart3, X } from 'lucide-react';
 import { GroupByAggregationModal } from './GroupByAggregationModal';
+import { ModalConfirm } from '@/components/ui/modal-confirm';
 import type { DatasetColumnType, GroupByColumn, AggregationMetric } from '@/types/chart';
 
 interface AggregationSummaryButtonProps {
@@ -20,6 +21,7 @@ export const AggregationSummaryButton: React.FC<AggregationSummaryButtonProps> =
   initialMetrics = [],
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupByColumn[]>(initialGroupBy);
   const [metrics, setMetrics] = useState<AggregationMetric[]>(initialMetrics);
 
@@ -39,6 +41,7 @@ export const AggregationSummaryButton: React.FC<AggregationSummaryButtonProps> =
     setGroupBy([]);
     setMetrics([]);
     onAggregationChange?.([], []);
+    setShowClearConfirm(false);
   };
 
   const hasAggregation = groupBy.length > 0 || metrics.length > 0;
@@ -60,15 +63,26 @@ export const AggregationSummaryButton: React.FC<AggregationSummaryButtonProps> =
 
         {hasAggregation && (
           <Button
-            onClick={handleClearAggregation}
+            onClick={() => setShowClearConfirm(true)}
             variant="ghost"
             size="sm"
-            className="h-10 w-10 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500"
+            className="h-10 w-10 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </Button>
         )}
       </div>
+
+      <ModalConfirm
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={handleClearAggregation}
+        title="Clear Aggregation"
+        message="Are you sure you want to clear all aggregation settings? This action cannot be undone."
+        confirmText="Clear"
+        cancelText="Cancel"
+        type="warning"
+      />
 
       <GroupByAggregationModal
         open={isOpen}

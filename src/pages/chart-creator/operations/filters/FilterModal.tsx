@@ -57,9 +57,25 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     [availableColumns, uniqueValuesByColumn]
   );
 
+  const logColumnMeta = useCallback(
+    (label: string, col: DatasetFilterColumn) => {
+      const meta = availableColumns.find(c => c.id === col.columnId);
+      console.log('[FilterModal]', label, {
+        columnId: col.columnId,
+        columnName: col.columnName,
+        columnType: col.columnType,
+        detectedFormat: meta?.dateFormat || '(none)',
+      });
+    },
+    [availableColumns]
+  );
+
   const formatSingleValue = useCallback(
     (col: DatasetFilterColumn, raw: string | number | null | undefined) => {
       const meta = availableColumns.find(c => c.id === col.columnId);
+      if (col.columnType === 'date') {
+        logColumnMeta('formatSingleValue', col);
+      }
       if (raw == null || raw === '') return '(blank)';
       if (col.columnType === 'date') {
         return formatDateDisplay(

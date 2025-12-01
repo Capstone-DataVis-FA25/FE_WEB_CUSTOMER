@@ -19,6 +19,7 @@ import { chartEditorSteps } from '@/config/driver-steps';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import Utils from '@/utils/Utils';
 import { useChartEditor } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
@@ -97,32 +98,52 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
   const chartInfo: ChartInfo = useMemo(() => {
     switch (currentChartType) {
       case ChartType.Line:
-      case 'line':
         return {
           name: t('chart_type_line', 'Line Chart'),
           icon: '📈',
           color: 'bg-blue-500',
         };
       case ChartType.Bar:
-      case 'bar':
         return {
           name: t('chart_type_bar', 'Bar Chart'),
           icon: '📊',
           color: 'bg-green-500',
         };
       case ChartType.Area:
-      case 'area':
         return {
           name: t('chart_type_area', 'Area Chart'),
           icon: '📉',
           color: 'bg-purple-500',
         };
       case ChartType.Scatter:
-      case 'scatter':
         return {
           name: t('chart_type_scatter', 'Scatter Chart'),
           icon: '⚪️',
           color: 'bg-indigo-500',
+        };
+      case ChartType.Pie:
+        return {
+          name: t('chart_type_pie', 'Pie Chart'),
+          icon: '🥧',
+          color: 'bg-pink-500',
+        };
+      case ChartType.Donut:
+        return {
+          name: t('chart_type_donut', 'Donut Chart'),
+          icon: '🍩',
+          color: 'bg-yellow-500',
+        };
+      case ChartType.CyclePlot:
+        return {
+          name: t('chart_type_cycle_plot', 'Cycle Plot'),
+          icon: '🔄',
+          color: 'bg-teal-500',
+        };
+      case ChartType.Heatmap:
+        return {
+          name: t('chart_type_heatmap', 'Heatmap'),
+          icon: '🌡️',
+          color: 'bg-red-500',
         };
       default:
         return {
@@ -418,7 +439,17 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                   variant="outline"
                   onClick={onReset}
                   disabled={!combinedHasChanges}
-                  className="flex items-center gap-2"
+                  className={cn(
+                    'flex items-center gap-2 transition-all duration-200',
+                    'border-orange-300 dark:border-orange-700',
+                    'text-orange-600 dark:text-orange-400',
+                    'hover:bg-orange-50 dark:hover:bg-orange-900/20',
+                    'hover:border-orange-400 dark:hover:border-orange-600',
+                    'hover:text-orange-700 dark:hover:text-orange-300',
+                    'active:scale-95',
+                    'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-orange-300',
+                    combinedHasChanges && 'shadow-sm hover:shadow-md'
+                  )}
                 >
                   <RotateCcw className="w-4 h-4" />
                   {t('common_reset', 'Reset')}

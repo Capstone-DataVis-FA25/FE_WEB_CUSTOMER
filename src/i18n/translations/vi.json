@@ -1382,5 +1382,10 @@
       "base": "Lỗi: Dữ liệu không đúng định dạng tại hàng {{row}}, cột \"{{column}}\". Định dạng mong đợi: {{expectedFormat}}.",
       "withRemaining": "Lỗi: Dữ liệu không đúng định dạng tại hàng {{row}}, cột \"{{column}}\". Định dạng mong đợi: {{expectedFormat}}. Còn {{remaining}} hàng khác gặp vấn đề."
     }
-  }
+  },
+  "notification_empty": "Không có thông báo nào",
+  "notification_new": "Thông báo mới",
+  "notification_seen": "Thông báo đã xem",
+  "notification_clean_ready": "Dữ liệu đã clean sẵn sàng",
+  "notification_clean": "Dữ liệu đã clean"
 }
