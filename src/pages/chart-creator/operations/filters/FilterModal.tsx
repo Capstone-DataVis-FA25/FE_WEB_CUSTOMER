@@ -186,7 +186,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             </Button>
           </div>
 
-          <div className="flex-1 p-6 flex flex-col gap-4 min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="flex-1 p-6 flex flex-col gap-6 min-h-0 overflow-y-auto custom-scrollbar">
             {columns.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="text-gray-400 dark:text-gray-600 mb-3">
@@ -206,7 +206,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               </div>
             ) : (
               <>
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4">
                   {columns.map((column, index) => (
                     <ColumnFilterSection
                       key={column.id}
@@ -225,7 +225,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                   onClick={handleAddColumn}
                   variant="outline"
                   size="sm"
-                  className="gap-2 bg-transparent w-fit"
+                  className="gap-2 bg-transparent w-fit mt-1"
                   disabled={availableColumns.every(c => columns.some(col => col.columnId === c.id))}
                 >
                   <Plus className="w-4 h-4" />

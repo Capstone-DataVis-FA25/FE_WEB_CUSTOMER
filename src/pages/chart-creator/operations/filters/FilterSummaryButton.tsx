@@ -50,7 +50,9 @@ export const FilterSummaryButton: React.FC<FilterSummaryButtonProps> = ({
     <>
       <div className="flex gap-2">
         <Button
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            // Modal disabled: keep button visual but do nothing on click
+          }}
           variant="outline"
           className={`gap-2 flex-1 ${hasFilters ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-200' : 'bg-transparent'}`}
         >

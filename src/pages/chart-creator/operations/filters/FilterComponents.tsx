@@ -203,7 +203,7 @@ const UniqueValuePicker: React.FC<{
           </Button>
         )}
       </div>
-      <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-300">
+      <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-300 mt-1.5">
         <button
           type="button"
           onClick={handleSelectAllVisible}
@@ -215,8 +215,8 @@ const UniqueValuePicker: React.FC<{
           Clear
         </button>
       </div>
-      <ScrollArea className="h-40 border border-gray-200 dark:border-gray-700 rounded-md">
-        <div className="p-1.5 space-y-1">
+      <ScrollArea className="h-48 border border-gray-200 dark:border-gray-700 rounded-md">
+        <div className="pt-0 px-1.5 pb-1.5 space-y-1">
           {limitedValues.length === 0 ? (
             <p className="text-[11px] text-gray-500 dark:text-gray-400">No matches</p>
           ) : (
@@ -1265,7 +1265,7 @@ export const ColumnFilterSection: React.FC<{
             </div>
           )}
 
-          <div className="flex flex-col gap-2 space-y-2">
+          <div className="flex flex-col gap-2 space-y-2 mt-3">
             {column.conditions.map((condition, index) => (
               <ConditionRow
                 key={condition.id}
@@ -1288,7 +1288,7 @@ export const ColumnFilterSection: React.FC<{
             onClick={handleAddCondition}
             variant="outline"
             size="sm"
-            className="text-xs h-8 gap-1 bg-transparent w-full"
+            className="text-xs h-8 gap-1 bg-transparent w-full mt-3"
           >
             <Plus className="w-3 h-3" />
             Add Condition
