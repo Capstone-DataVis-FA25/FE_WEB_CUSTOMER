@@ -89,6 +89,8 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
       nextBtnText: t('driver_next', 'Next'),
       prevBtnText: t('driver_prev', 'Previous'),
       doneBtnText: t('driver_done', 'Done'),
+      popoverClass: 'driverjs-theme',
+      overlayOpacity: 0.4,
     });
     driverObj.drive();
   };

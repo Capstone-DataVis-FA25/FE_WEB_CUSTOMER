@@ -496,6 +496,8 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
               showPointValues: areaConfig.showPointValues,
               showStroke: areaConfig.showStroke,
               curve: curveOptions[areaConfig.curve as keyof typeof curveOptions],
+              opacity: areaConfig.opacity, // Area transparency setting
+              stackedMode: areaConfig.stackedMode, // Stacked vs overlapping mode
               enableZoom: areaConfig.enableZoom,
               enablePan: areaConfig.enablePan,
               zoomExtent: areaConfig.zoomExtent,
@@ -861,7 +863,7 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
   ]);
 
   return (
-    <div className="lg:col-span-6 space-y-6">
+    <div className="h-full space-y-6">
       {/* Chart Display Area */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

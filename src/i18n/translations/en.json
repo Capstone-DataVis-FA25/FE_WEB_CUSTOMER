@@ -1368,7 +1368,7 @@
   "chart_editor_label_size": "Label Size",
   "chart_editor_legend_size": "Legend Size",
   "chart_editor_animation_duration": "Animation Duration (ms)",
-  "chart_editor_axis_configuration": "Axis Configuration & Formatters",
+  "chart_editor_axis_configuration": "Axis Configuration",
   "chart_editor_light_color": "Light Color",
   "chart_editor_dark_color": "Dark Color",
   "chart_editor_color_presets": "Color Presets",

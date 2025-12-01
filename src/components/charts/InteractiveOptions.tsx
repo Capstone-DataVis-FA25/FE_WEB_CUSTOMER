@@ -18,6 +18,9 @@ const InteractiveOptions: React.FC = () => {
 
   // Calculate if chart will auto-expand based on data points
   const isChartAutoExpanded = useMemo(() => {
+    // Only calculate if X-axis is selected
+    if (!axisConfigs?.xAxisKey) return false;
+
     if (!chartData || !Array.isArray(chartData)) return false;
 
     const dataLength = chartData.length;
@@ -85,7 +88,7 @@ const InteractiveOptions: React.FC = () => {
         </div>
 
         {config.enablePan !== undefined && (
-          <div className="space-y-2">
+          <div className="space-y-2 mb-2">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="enablePan"
@@ -99,52 +102,15 @@ const InteractiveOptions: React.FC = () => {
               />
               <Label
                 htmlFor="enablePan"
-                className={`text-sm font-medium ${isChartAutoExpanded ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100'}`}
+                className={`text-sm font-medium  ${isChartAutoExpanded ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100'}`}
               >
                 {t('chart_editor_enable_pan')}
                 {isChartAutoExpanded && (
-                  <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
+                  <span className="mt-1 text-xs text-blue-600 dark:text-blue-400">
                     ({t('auto_enabled', 'Auto-enabled')})
                   </span>
                 )}
               </Label>
-            </div>
-
-            {isChartAutoExpanded && (
-              <div className="ml-6 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-                <div className="flex items-start gap-2">
-                  <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-blue-800 dark:text-blue-300">
-                    {t(
-                      'pan_auto_enabled_hint',
-                      'Pan/drag is automatically enabled because your data has many records. The chart expands to show all data points - use mouse to drag and navigate.'
-                    )}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {config.zoomExtent !== undefined && (
-          <div className="ml-4 space-y-2">
-            <div>
-              <Label className="text-xs text-gray-600 dark:text-gray-400">
-                {t('chart_editor_zoom_extent')}
-              </Label>
-              <Input
-                type="number"
-                min="1"
-                max="20"
-                step="0.5"
-                value={localZoomExtent}
-                onChange={e => {
-                  const v = parseFloat(e.target.value) || 8;
-                  setLocalZoomExtent(v);
-                  debouncedUpdateZoomExtent(v);
-                }}
-                className="mt-1"
-              />
             </div>
           </div>
         )}

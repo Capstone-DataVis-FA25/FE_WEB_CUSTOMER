@@ -198,6 +198,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [dimensions, setDimensions] = React.useState({ width, height });
+  const zoomBehaviorRef = useRef<d3.ZoomBehavior<Element, unknown> | null>(null);
 
   // Tooltip management refs (matching LineChart implementation)
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -424,13 +425,9 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     };
   }, [clearTooltipTimeout]);
 
-  // Note: Suppress unused variable warning for xAxisStart (maintained for LineChart interface consistency)
-  void xAxisStart;
-
   useEffect(() => {
     if (!svgRef.current || !processedData.length) return;
 
-    // Calculate dynamic width based on number of data points
     // Minimum width per data point (adjust based on rotation)
     const minWidthPerPoint = xAxisRotation === 0 ? 60 : 30; // More space for horizontal labels
     const calculatedMinWidth = Math.max(dimensions.width, processedData.length * minWidthPerPoint);
@@ -533,9 +530,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       );
 
     // Scales
-    // Note: xAxisStart doesn't apply to categorical X-axis (scaleBand) - it's maintained for interface consistency with LineChart
-    // IMPORTANT: Preserve original data order - do not sort domain
-    const xDomain = processedData.map(d => String(d[xAxisKey]));
+    const xDomain = processedData.map((_, i) => String(i));
 
     const xScale = d3
       .scaleBand()
@@ -613,8 +608,13 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     }
 
     // X-Axis - show all labels (chart width already adjusted to fit all)
-    const xAxis = d3.axisBottom(xScale).tickFormat(d => {
-      const rawValue = String(d);
+    const xAxis = d3.axisBottom(xScale).tickFormat((d, _) => {
+      // d is the index string, map back to actual value
+      const index = Number(d);
+      const item = processedData[index];
+      if (!item) return '';
+
+      const rawValue = String(item[xAxisKey]);
 
       // Try to format as date if xAxisFormatter exists
       if (xAxisFormatter) {
@@ -667,7 +667,6 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         needsRotation = true;
       }
     } catch (_) {
-      // Fallback: use rotation prop if measurement fails
       needsRotation = xAxisRotation !== 0;
     }
 
@@ -745,8 +744,8 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .enter()
           .append('rect')
           .attr('class', `bar-${keyIndex}`)
-          .attr('x', d => {
-            const base = (xScale(String(d[xAxisKey])) || 0) + (xSubScale(key) || 0);
+          .attr('x', (d, i) => {
+            const base = (xScale(String(i)) || 0) + (xSubScale(key) || 0);
             const subBW = xSubScale.bandwidth();
             // Use series-specific barWidth if available
             let bw = subBW;
@@ -775,7 +774,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
             if (!showTooltip) return;
             // Ensure no pending hide and remove previous tooltip immediately
             clearTooltipTimeout();
-            hideCurrentTooltip();
+            // hideCurrentTooltip(); // Removed to prevent flickering
 
             d3.select(this)
               .transition()
@@ -904,7 +903,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
             }
 
             const pointerX =
-              (xScale(String(d[xAxisKey])) || 0) +
+              (xScale(String(processedData.indexOf(d))) || 0) +
               (xSubScale(key) || 0) +
               xSubScale.bandwidth() / 2;
             const pointerY = yScale(d[key] as number);
@@ -919,9 +918,23 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
             });
 
             // Smooth fade in
-            tooltip.transition().duration(200).style('opacity', 1);
+            tooltip.style('opacity', 1);
+
+            // Follow mouse
+            d3.select(this).on('mousemove', function (moveEvent) {
+              const [mx, my] = d3.pointer(moveEvent, g.node());
+              renderD3Tooltip(tooltip, {
+                lines: tooltipLinesNew,
+                isDarkMode,
+                position: { x: mx, y: my },
+                containerWidth: innerWidth,
+                containerHeight: innerHeight,
+                preferPosition: 'above',
+              });
+            });
           })
           .on('mouseout', function () {
+            d3.select(this).on('mousemove', null);
             d3.select(this)
               .transition()
               .duration(200)
@@ -960,7 +973,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         .enter()
         .append('text')
         .attr('class', 'grouped-bar-total')
-        .attr('x', d => (xScale(String(d.xValue)) || 0) + xScale.bandwidth() / 2)
+        .attr('x', (d, i) => (xScale(String(i)) || 0) + xScale.bandwidth() / 2)
         .attr('y', d => {
           // Find the highest bar in this category group
           const maxValue = Math.max(
@@ -975,13 +988,13 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         })
         .attr('text-anchor', 'middle')
         .attr('fill', textColor)
-        .style('font-size', `${Math.max(responsiveFontSize.axis - 2, 9)}px`)
+        .style('font-size', `${Math.max(responsiveFontSize.axis - 2, 10)}px`)
         .style('font-weight', '600')
         .style('opacity', 0)
-        .style(
-          'text-shadow',
-          isDarkMode ? '1px 1px 2px rgba(0,0,0,0.8)' : '1px 1px 2px rgba(255,255,255,0.8)'
-        )
+        .style('stroke', isDarkMode ? '#111827' : '#ffffff')
+        .style('stroke-width', '3px')
+        .style('paint-order', 'stroke')
+        .style('fill', textColor)
         .text(d => {
           return yAxisFormatter ? yAxisFormatter(d.total) : String(d.total);
         })
@@ -1004,7 +1017,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .enter()
           .append('rect')
           .attr('class', `bar-stack-${seriesIndex}`)
-          .attr('x', d => xScale(String(d.data[xAxisKey])) || 0)
+          .attr('x', (d, i) => xScale(String(i)) || 0)
           .attr('y', innerHeight)
           .attr('width', xScale.bandwidth())
           .attr('height', 0)
@@ -1015,7 +1028,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .on('mouseover', function (_event, d) {
             if (!showTooltip) return;
             clearTooltipTimeout();
-            hideCurrentTooltip();
+            // hideCurrentTooltip(); // Removed to prevent flickering
 
             d3.select(this)
               .transition()
@@ -1089,7 +1102,8 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
               currentTooltipRef.current = tooltip;
             }
 
-            const pointerX = (xScale(String(d.data[xAxisKey])) || 0) + xScale.bandwidth() / 2;
+            const pointerX =
+              (xScale(String(processedData.indexOf(d.data))) || 0) + xScale.bandwidth() / 2;
             const pointerY = yScale(d[1]);
 
             renderD3Tooltip(tooltip, {
@@ -1102,9 +1116,23 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
             });
 
             // Smooth fade in
-            tooltip.transition().duration(200).style('opacity', 1);
+            tooltip.style('opacity', 1);
+
+            // Follow mouse
+            d3.select(this).on('mousemove', function (moveEvent) {
+              const [mx, my] = d3.pointer(moveEvent, g.node());
+              renderD3Tooltip(tooltip, {
+                lines: stackedTooltipLines,
+                isDarkMode,
+                position: { x: mx, y: my },
+                containerWidth: innerWidth,
+                containerHeight: innerHeight,
+                preferPosition: 'above',
+              });
+            });
           })
           .on('mouseout', function () {
+            d3.select(this).on('mousemove', null);
             d3.select(this)
               .transition()
               .duration(200)
@@ -1140,13 +1168,13 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .attr('y', d => yScale(d.total) - 5)
           .attr('text-anchor', 'middle')
           .attr('fill', textColor)
-          .style('font-size', `${Math.max(responsiveFontSize.axis - 3, 8)}px`)
+          .style('font-size', `${Math.max(responsiveFontSize.axis - 3, 9)}px`)
           .style('font-weight', '500')
           .style('opacity', 0)
-          .style(
-            'text-shadow',
-            isDarkMode ? '1px 1px 2px rgba(0,0,0,0.8)' : '1px 1px 2px rgba(255,255,255,0.8)'
-          )
+          .style('stroke', isDarkMode ? '#111827' : '#ffffff')
+          .style('stroke-width', '3px')
+          .style('paint-order', 'stroke')
+          .style('fill', textColor)
           .text(d => {
             return yAxisFormatter ? yAxisFormatter(d.total) : String(d.total);
           })
@@ -1511,143 +1539,55 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       }
     }
 
-    // Enhanced zoom and pan with mouse interactions
-    // Use shouldEnablePan to auto-enable when chart is expanded
+    // Zoom behavior using d3.zoom
+    const zoom = d3
+      .zoom<Element, unknown>()
+      .scaleExtent(shouldEnableZoom ? [0.5, zoomExtent] : [1, 1])
+      .on('zoom', event => {
+        const { x, y, k } = event.transform;
+        g.attr(
+          'transform',
+          `translate(${x + responsiveMargin.left}, ${y + responsiveMargin.top}) scale(${k})`
+        );
+      });
+
+    zoomBehaviorRef.current = zoom;
+
     if (shouldEnableZoom || shouldEnablePan) {
-      let zoomLevel = 1;
-      let translateX = 0;
-      let translateY = 0;
-      let isDragging = false;
-      let dragStartX = 0;
-      let dragStartY = 0;
-      let dragStartTranslateX = 0;
-      let dragStartTranslateY = 0;
+      svg.call(zoom as any);
 
-      // Mouse wheel zoom
-      if (shouldEnableZoom) {
-        svg.on('wheel', function (event) {
-          event.preventDefault();
-
-          // Get mouse position relative to the chart
-          const rect = svg.node()?.getBoundingClientRect();
-          if (!rect) return;
-
-          const mouseX = event.clientX - rect.left - responsiveMargin.left;
-          const mouseY = event.clientY - rect.top - responsiveMargin.top;
-
-          const delta = event.deltaY;
-          const scaleFactor = delta > 0 ? 0.9 : 1.1;
-          const newZoomLevel = zoomLevel * scaleFactor;
-
-          // Limit zoom
-          const clampedZoomLevel = Math.max(0.5, Math.min(zoomExtent, newZoomLevel));
-          const actualScaleFactor = clampedZoomLevel / zoomLevel;
-
-          // Calculate new translation to zoom at mouse position
-          const newTranslateX = translateX + (mouseX - translateX) * (1 - actualScaleFactor);
-          const newTranslateY = translateY + (mouseY - translateY) * (1 - actualScaleFactor);
-
-          // Update zoom state
-          zoomLevel = clampedZoomLevel;
-          translateX = newTranslateX;
-          translateY = newTranslateY;
-
-          // Apply zoom and pan transform
-          const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
-          g.attr('transform', transform);
-        });
+      // Disable zoom on wheel if not enabled
+      if (!shouldEnableZoom) {
+        svg.on('wheel.zoom', null);
+      }
+      // Disable pan on mousedown if not enabled
+      if (!shouldEnablePan) {
+        svg.on('mousedown.zoom', null);
+        svg.on('touchstart.zoom', null);
       }
 
-      // Mouse drag to pan
-      if (shouldEnablePan) {
-        svg.on('mousedown', function (event) {
-          if (event.button !== 0) return; // Only left mouse button
-
-          isDragging = true;
-          dragStartX = event.clientX;
-          dragStartY = event.clientY;
-          dragStartTranslateX = translateX;
-          dragStartTranslateY = translateY;
-
-          // Change cursor to grabbing
-          svg.style('cursor', 'grabbing');
-
-          // Prevent text selection during drag
-          event.preventDefault();
-        });
-
-        svg.on('mousemove', function (event) {
-          if (!isDragging) {
-            // Show grab cursor when pan is enabled or zoomed in
-            if (shouldEnablePan || zoomLevel > 1) {
-              svg.style('cursor', 'grab');
-            } else {
-              svg.style('cursor', 'default');
-            }
-            return;
-          }
-
-          const deltaX = event.clientX - dragStartX;
-          const deltaY = event.clientY - dragStartY;
-
-          // Update translation based on drag distance
-          translateX = dragStartTranslateX + deltaX;
-          translateY = dragStartTranslateY + deltaY;
-
-          // Apply pan transform
-          const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
-          g.attr('transform', transform);
-        });
-
-        svg.on('mouseup', function () {
-          if (isDragging) {
-            isDragging = false;
-
-            // Reset cursor
-            if (shouldEnablePan || zoomLevel > 1) {
-              svg.style('cursor', 'grab');
-            } else {
-              svg.style('cursor', 'default');
-            }
-          }
-        });
-
-        // Handle mouse leave to stop dragging and hide tooltips
-        svg.on('mouseleave', function () {
-          if (isDragging) {
-            isDragging = false;
-            svg.style('cursor', 'default');
-          }
-          // Also hide any tooltips when leaving the chart area
-          clearTooltipTimeout();
-          hideCurrentTooltip();
-        });
-
-        // Double-click to reset zoom
-        svg.on('dblclick', function () {
-          zoomLevel = 1;
-          translateX = 0;
-          translateY = 0;
-
-          svg.style('cursor', 'default');
-
-          g.transition()
-            .duration(300)
-            .ease(d3.easeQuadOut)
-            .attr(
-              'transform',
-              `translate(${responsiveMargin.left},${responsiveMargin.top}) scale(1)`
-            );
-        });
-      }
-    }
-
-    // Global mouseleave handler for tooltip management (even when zoom/pan disabled)
-    if (!shouldEnableZoom && !shouldEnablePan && showTooltip) {
-      svg.on('mouseleave', function () {
+      // Handle mouse leave to hide tooltips
+      svg.on('mouseleave.tooltip', () => {
         clearTooltipTimeout();
         hideCurrentTooltip();
       });
+
+      // Double click to reset
+      svg.on('dblclick.zoom', () => {
+        svg
+          .transition()
+          .duration(300)
+          .call(zoom.transform as any, d3.zoomIdentity);
+      });
+    } else {
+      svg.on('.zoom', null);
+      // Global mouseleave if zoom disabled
+      if (showTooltip) {
+        svg.on('mouseleave.tooltip', () => {
+          clearTooltipTimeout();
+          hideCurrentTooltip();
+        });
+      }
     }
   }, [
     processedData,
