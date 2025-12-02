@@ -88,6 +88,11 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
         label: t('chart_type_heatmap', 'Heatmap'),
         icon: Grid3x3,
       },
+      {
+        value: ChartType.Histogram,
+        label: t('chart_type_histogram', 'Histogram'),
+        icon: BarChart3,
+      },
     ],
     [t]
   );

@@ -91,6 +91,14 @@ const chartTemplatesData: ChartCategory[] = [
         configuration: { type: 'heatmap' },
       },
       {
+        id: 'histogram-advanced',
+        name: 'Histogram',
+        description: 'Statistical distribution chart with automatic binning',
+        type: 'histogram',
+        category: 'advanced',
+        configuration: { type: 'histogram' },
+      },
+      {
         id: 'radar-advanced',
         name: 'Radar Chart',
         description: 'Advanced radar chart',

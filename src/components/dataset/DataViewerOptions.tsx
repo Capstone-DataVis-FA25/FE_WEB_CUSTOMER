@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { NumberFormatSelector } from './NumberFormatSelector';
 import './scrollbar.css';
 import DelimiterSelector from './DelimiterSelector';
+import { isJsonFormat } from '@/utils/dataProcessors';
 
 interface DataViewerOptionsProps {
   onUpload?: () => void;

@@ -23,9 +23,36 @@ import type {
   HeatmapChartConfig,
   SubHeatmapChartConfig,
   HeatmapAxisConfig,
+  HistogramChartConfig,
+  SubHistogramChartConfig,
 } from '@/types/chart';
 
 // Default Sub configs
+export const defaultSubHistogramConfig: SubHistogramChartConfig = {
+  width: 1000,
+  height: 700,
+  margin: { top: 40, right: 40, bottom: 60, left: 80 },
+  title: '',
+  showGrid: true,
+  gridOpacity: 0.5,
+  animationDuration: 1000,
+  theme: 'auto',
+  backgroundColor: 'transparent',
+  titleFontSize: 20,
+  labelFontSize: 14,
+  legendFontSize: 12,
+  legendPosition: 'bottom',
+  binCount: 10,
+  binMethod: 'sturges',
+  showDensity: false,
+  showCumulativeFrequency: false,
+  showMean: false,
+  showMedian: false,
+  showPointValues: false,
+  normalize: false,
+  barColor: '#3b82f6',
+  showTooltip: true,
+};
 const defaultBaseChartConfig: BaseChartConfig = {
   width: 800,
   height: 400,
@@ -292,6 +319,13 @@ export const defaultHeatmapConfig: HeatmapChartConfig = {
   chartType: 'heatmap',
 };
 
+export const defaultHistogramConfig: HistogramChartConfig = {
+  config: defaultSubHistogramConfig,
+  formatters: defaultFormatterConfig,
+  axisConfigs: defaultAxisConfigs,
+  chartType: 'histogram',
+};
+
 // Returns a consistent default StructuredChartConfig for given chart type and optional dataset name
 export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => {
   const log = (cfg: MainChartConfig) => {
@@ -314,5 +348,7 @@ export const getDefaultChartConfig = (chartType: ChartType): MainChartConfig => 
       return log(defaultCyclePlotConfig);
     case ChartType.Heatmap:
       return log(defaultHeatmapConfig);
+    case ChartType.Histogram:
+      return log(defaultHistogramConfig);
   }
 };
