@@ -289,7 +289,7 @@ const defaultSubHeatmapConfig: SubHeatmapChartConfig = {
   ...defaultBaseChartConfig,
   width: 1024,
   height: 768,
-  margin: { top: 80, right: 150, bottom: 100, left: 100 },
+  margin: { top: 40, right: 140, bottom: 140, left: 140 },
   colorScheme: 'viridis',
   showValues: false,
   cellBorderWidth: 1,

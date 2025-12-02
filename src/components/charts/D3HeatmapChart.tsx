@@ -117,7 +117,7 @@ const D3HeatmapChart: React.FC<D3HeatmapChartProps> = ({
   arrayData = [],
   width = 800,
   height = 600,
-  margin = { top: 80, right: 150, bottom: 100, left: 100 },
+  margin = { top: 80, right: 50, bottom: 150, left: 100 },
   xAxisKey,
   yAxisKey,
   valueKey,
@@ -344,20 +344,21 @@ const D3HeatmapChart: React.FC<D3HeatmapChartProps> = ({
           .text(yAxisLabel);
       }
     }
-    // Legend (card style)
+    // Legend (horizontal card style below chart)
     if (showLegend) {
-      const legendWidth = 28;
-      const legendHeight = chartHeight;
-      const legendX = chartWidth + 40;
-      const legendScale = d3.scaleLinear().domain([minVal, maxVal]).range([legendHeight, 0]);
-      const legendAxis = d3.axisRight(legendScale).ticks(legendSteps);
+      const legendWidth = Math.min(chartWidth * 0.6, 400);
+      const legendHeight = 20;
+      const legendY = chartHeight + 65;
+      const legendX = (chartWidth - legendWidth) / 2;
+      const legendScale = d3.scaleLinear().domain([minVal, maxVal]).range([0, legendWidth]);
+      const legendAxis = d3.axisBottom(legendScale).ticks(legendSteps);
       const defs = svg.append('defs');
       const linearGradient = defs
         .append('linearGradient')
         .attr('id', 'heatmap-gradient')
         .attr('x1', '0%')
-        .attr('y1', '100%')
-        .attr('x2', '0%')
+        .attr('y1', '0%')
+        .attr('x2', '100%')
         .attr('y2', '0%');
       const steps = 10;
       for (let i = 0; i <= steps; i++) {
@@ -368,13 +369,13 @@ const D3HeatmapChart: React.FC<D3HeatmapChartProps> = ({
           .attr('offset', `${offset}%`)
           .attr('stop-color', colorScale(value));
       }
-      const legendGroup = g.append('g').attr('transform', `translate(${legendX}, 0)`);
+      const legendGroup = g.append('g').attr('transform', `translate(${legendX}, ${legendY})`);
       // Card background for legend
       legendGroup
         .append('rect')
-        .attr('width', legendWidth + 32)
-        .attr('height', legendHeight + 24)
-        .attr('x', -16)
+        .attr('width', legendWidth + 24)
+        .attr('height', legendHeight + 48)
+        .attr('x', -12)
         .attr('y', -12)
         .attr('fill', isDark ? 'rgba(55,65,81,0.85)' : 'rgba(248,250,252,0.95)')
         .attr('stroke', borderColor)
@@ -387,10 +388,11 @@ const D3HeatmapChart: React.FC<D3HeatmapChartProps> = ({
         .attr('height', legendHeight)
         .attr('fill', 'url(#heatmap-gradient)')
         .attr('stroke', gridColor)
-        .attr('stroke-width', 1);
+        .attr('stroke-width', 1)
+        .attr('rx', 3);
       legendGroup
         .append('g')
-        .attr('transform', `translate(${legendWidth}, 0)`)
+        .attr('transform', `translate(0, ${legendHeight})`)
         .call(legendAxis)
         .selectAll('text')
         .attr('fill', textColor)
@@ -410,7 +412,7 @@ const D3HeatmapChart: React.FC<D3HeatmapChartProps> = ({
           const value = Number(dataPoint[valueKey]);
           const displayValue = isNaN(value) ? 'N/A' : valueFormatter(value);
           tooltip.style('opacity', 1).html(`
-              <div style="background: ${isDark ? '#1f2937' : '#ffffff'}; border: 1px solid ${gridColor}; padding: 8px 12px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+              <div style="background: ${isDark ? '#1f2937' : '#ffffff'}; border: 1px solid ${gridColor}; padding: 8px 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
                 <div style="color: ${textColor}; font-size: 12px; font-weight: 600; margin-bottom: 4px;">
                   ${xAxisLabel || xAxisKey}: <span style="font-weight: 700;">${dataPoint[xAxisKey]}</span>
                 </div>
