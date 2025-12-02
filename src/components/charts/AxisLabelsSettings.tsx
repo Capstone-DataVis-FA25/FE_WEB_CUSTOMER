@@ -1,30 +1,50 @@
-import React, { useCallback, useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
 import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
+import { useDebouncedUpdater } from '@/hooks/useDebounce';
 
 const AxisLabelsSettings: React.FC = () => {
   const { t } = useTranslation();
   const { chartConfig } = useChartEditorRead();
   const { handleConfigChange } = useChartEditorActions();
-  if (!chartConfig) return null;
 
-  const { xAxisLabel, yAxisLabel } = chartConfig.axisConfigs;
-  const [localXAxisLabel, setLocalXAxisLabel] = useState(xAxisLabel);
-  const [localYAxisLabel, setLocalYAxisLabel] = useState(yAxisLabel);
+  if (!chartConfig || !('axisConfigs' in chartConfig)) return null;
+
+  const { xAxisLabel, yAxisLabel } = (chartConfig as any).axisConfigs;
+  const [localXAxisLabel, setLocalXAxisLabel] = useState(xAxisLabel || '');
+  const [localYAxisLabel, setLocalYAxisLabel] = useState(yAxisLabel || '');
 
   // Sync local state with chartConfig when it changes (for edit mode)
   useEffect(() => {
-    setLocalXAxisLabel(xAxisLabel);
-    setLocalYAxisLabel(yAxisLabel);
+    setLocalXAxisLabel(xAxisLabel || '');
+    setLocalYAxisLabel(yAxisLabel || '');
   }, [xAxisLabel, yAxisLabel]);
 
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const debouncedApply = useCallback((apply: () => void) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(apply, 500);
-  }, []);
+  const debouncedUpdateXLabel = useDebouncedUpdater<string>(value => {
+    if ('axisConfigs' in chartConfig) {
+      const currentConfigs = (chartConfig as any).axisConfigs;
+      handleConfigChange({
+        axisConfigs: {
+          ...currentConfigs,
+          xAxisLabel: value,
+        },
+      });
+    }
+  });
+
+  const debouncedUpdateYLabel = useDebouncedUpdater<string>(value => {
+    if ('axisConfigs' in chartConfig) {
+      const currentConfigs = (chartConfig as any).axisConfigs;
+      handleConfigChange({
+        axisConfigs: {
+          ...currentConfigs,
+          yAxisLabel: value,
+        },
+      });
+    }
+  });
 
   return (
     <div className="grid grid-cols-2 gap-3">
@@ -37,14 +57,7 @@ const AxisLabelsSettings: React.FC = () => {
           onChange={e => {
             const v = e.target.value;
             setLocalXAxisLabel(v);
-            debouncedApply(() =>
-              handleConfigChange({
-                axisConfigs: {
-                  ...chartConfig.axisConfigs,
-                  xAxisLabel: v,
-                },
-              })
-            );
+            debouncedUpdateXLabel(v);
           }}
           placeholder={t('x_axis_label_placeholder', 'X-axis label (optional)')}
           className="mt-1"
@@ -59,14 +72,7 @@ const AxisLabelsSettings: React.FC = () => {
           onChange={e => {
             const v = e.target.value;
             setLocalYAxisLabel(v);
-            debouncedApply(() =>
-              handleConfigChange({
-                axisConfigs: {
-                  ...chartConfig.axisConfigs,
-                  yAxisLabel: v,
-                },
-              })
-            );
+            debouncedUpdateYLabel(v);
           }}
           placeholder={t('y_axis_label_placeholder', 'Y-axis label (optional)')}
           className="mt-1"

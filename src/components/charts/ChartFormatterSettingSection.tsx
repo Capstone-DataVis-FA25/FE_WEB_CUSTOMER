@@ -1,29 +1,27 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardHeader, CardContent } from '../ui/card';
-import { ChevronDown, Settings, Info } from 'lucide-react';
+import { ChevronDown, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import { useAppSelector } from '@/store/hooks';
 import FormatterSection from './FormatterSection';
 import type { FormatterType } from '@/utils/formatValue';
 import type { FormatterConfig } from '@/types/chart';
+import { ChartType } from '@/features/charts/chartTypes';
 
-// Type guard to check if chart config has formatters (not Pie/Donut)
-function hasFormatters(config: any): config is { formatters: Partial<FormatterConfig> } {
-  return (
-    config &&
-    typeof config === 'object' &&
-    'formatters' in config &&
-    config.formatters &&
-    'yFormatterType' in config.formatters
-  );
-}
+const SUPPORTED_CHART_TYPES = [
+  ChartType.Line,
+  ChartType.Bar,
+  ChartType.Area,
+  ChartType.Scatter,
+  ChartType.CyclePlot,
+];
 
 const ChartFormatterSettings: React.FC = () => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const { chartConfig } = useChartEditorRead();
+  const { chartConfig, currentChartType } = useChartEditorRead();
   const { handleConfigChange } = useChartEditorActions();
   // Only subscribe to currentDataset to avoid re-renders when datasets list is refreshed
   const currentDataset = useAppSelector(state => state.dataset.currentDataset);
@@ -72,17 +70,21 @@ const ChartFormatterSettings: React.FC = () => {
     };
   }, [axisConfigs, currentDataset?.headers]);
 
-  // Only show for charts that support X/Y axis formatters (not Pie/Donut)
+  // Only show for charts that support X/Y axis formatters
   // IMPORTANT: This early return MUST be AFTER all hooks
-  if (!chartConfig || !hasFormatters(chartConfig)) {
+  if (
+    !chartConfig ||
+    !currentChartType ||
+    !SUPPORTED_CHART_TYPES.includes(currentChartType as ChartType)
+  ) {
     return null;
   }
 
-  const formatters = chartConfig.formatters || {
+  const formatters = (chartConfig.formatters as FormatterConfig) || {
     useYFormatter: false,
     useXFormatter: false,
-    yFormatterType: 'none' as const,
-    xFormatterType: 'none' as const,
+    yFormatterType: 'none',
+    xFormatterType: 'none',
   };
 
   // Y-Axis Formatter Handlers

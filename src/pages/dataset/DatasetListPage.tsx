@@ -127,6 +127,7 @@ const DatasetListPage: React.FC = () => {
           showProgress: true,
           steps: datasetListSteps,
           popoverClass: 'driverjs-theme driver-theme-datasets',
+          overlayOpacity: 0.2,
         });
 
         setTimeout(() => {

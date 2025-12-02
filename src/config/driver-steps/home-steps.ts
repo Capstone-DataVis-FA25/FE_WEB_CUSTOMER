@@ -1,22 +1,20 @@
 import type { DriveStep } from 'driver.js';
+import { Icons } from './icons';
 
 export const homeSteps: DriveStep[] = [
   {
     popover: {
-      title:
-        "<span style='background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 700; font-size: 1.75rem;'>Welcome to DataVis! 🎨</span>",
+      title: `${Icons.Rocket} Welcome to DataVis`,
       description:
-        "<p style='font-size: 1.2rem; line-height: 1.7; color: #64748b;'>Create beautiful, responsive charts with no coding required. Let me show you what makes DataVis special!</p>",
-      side: 'over',
+        "Create beautiful, responsive charts with no coding required. Let's explore what makes DataVis special.",
+      align: 'center',
     },
   },
   {
     element: '#hero-cta-build-chart',
     popover: {
-      title:
-        "<span style='background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 600; font-size: 1.3rem;'>🚀 Build Your First Chart</span>",
-      description:
-        "<p style='color: #475569; line-height: 1.6; font-size: 1.05rem;'>Start your visualization journey here! Click this button to create custom charts from your data. No technical skills needed – our intuitive editor guides you every step of the way.</p>",
+      title: `${Icons.BarChart3} Build Your First Chart`,
+      description: 'Start here! Create custom charts from your data with our intuitive editor.',
       side: 'bottom',
       align: 'start',
     },
@@ -24,10 +22,9 @@ export const homeSteps: DriveStep[] = [
   {
     element: '#chart-types-section',
     popover: {
-      title:
-        "<span style='background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 600; font-size: 1.3rem;'>📊 Explore Chart Types</span>",
+      title: `${Icons.LayoutDashboard} Explore Templates`,
       description:
-        "<p style='color: #475569; line-height: 1.6; font-size: 1.05rem;'>Discover our collection of professional chart templates! From line and bar charts to maps and tables – click any icon to see a live preview and learn what each chart type is best for.</p>",
+        'Discover our collection of professional chart templates. Click to preview and learn more.',
       side: 'top',
       align: 'center',
     },
@@ -35,21 +32,11 @@ export const homeSteps: DriveStep[] = [
   {
     element: '#features-section',
     popover: {
-      title:
-        "<span style='background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 600; font-size: 1.3rem;'>✨ Powerful Features</span>",
+      title: `${Icons.Sparkles} Powerful Features`,
       description:
-        "<p style='color: #475569; line-height: 1.6; font-size: 1.05rem;'>Everything you need for data visualization: unlimited customization, beautiful design system, team collaboration, mobile responsiveness, and powerful export options. All in one platform!</p>",
+        'Everything you need: customization, collaboration, and export options in one platform.',
       side: 'top',
       align: 'center',
-    },
-  },
-  {
-    popover: {
-      title:
-        "<span style='background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 700; font-size: 1.75rem;'>Ready to Create! 🎉</span>",
-      description:
-        "<p style='font-size: 1.2rem; line-height: 1.7; color: #64748b;'>You're all set! Start by uploading your data or try our sample datasets. Happy visualizing!</p>",
-      side: 'over',
     },
   },
 ];

@@ -65,33 +65,6 @@ const BarAdvancedOptions: React.FC = () => {
           </p>
         </div>
       </div>
-
-      {/* Helpful Tips */}
-      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <h4 className="text-xs font-semibold text-blue-900 dark:text-blue-200 mb-1.5">
-          {t('tips_for_better_understanding', 'Tips for Better Understanding')}
-        </h4>
-        <ul className="text-xs text-blue-800 dark:text-blue-300 space-y-1 list-disc list-inside">
-          <li>
-            {t(
-              'tip_hover_bars',
-              'Hover over any bar to see detailed statistics including value, percentage, and comparison with average'
-            )}
-          </li>
-          <li>
-            {t(
-              'tip_ranking',
-              'The tooltip shows ranking to help you identify highest and lowest values quickly'
-            )}
-          </li>
-          <li>
-            {t(
-              'tip_percentage',
-              'Percentage values help you understand relative contribution and distribution'
-            )}
-          </li>
-        </ul>
-      </div>
     </div>
   );
 };

@@ -1010,7 +1010,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           .attr('stroke-width', 2)
           .attr('opacity', seriesOpacity)
           .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
-          .on('mouseenter', function (_event, d) {
+          .on('mouseenter', function (event, d) {
             if (!showTooltip) return;
 
             // Find the index of this data point in the original processedData
@@ -1088,6 +1088,48 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
             });
 
             // Tooltip will stay visible while hovering, no auto-hide timeout
+          })
+          .on('mousemove', function (event, d) {
+            if (!showTooltip || !currentTooltipRef.current) return;
+
+            // Get mouse position relative to the chart group
+            const [mouseX, mouseY] = d3.pointer(event, g.node());
+
+            // Re-create tooltip lines (cheap operation) to ensure we have the correct content
+            // Note: We could store this on the element, but recalculating is fast enough
+            const rawXValue = d[xAxisKey];
+            const xValue =
+              typeof rawXValue === 'number'
+                ? xAxisFormatter
+                  ? xAxisFormatter(rawXValue)
+                  : String(rawXValue)
+                : rawXValue;
+            const xDisplayName = xAxisNames[String(rawXValue)] || xValue;
+            const yValue =
+              typeof d[key] === 'number'
+                ? yAxisFormatter
+                  ? yAxisFormatter(d[key])
+                  : String(d[key])
+                : d[key];
+            const seriesName = seriesNames[key] || key;
+
+            const tooltipLines = [
+              createHeader(seriesName, { color: currentColors[key] }),
+              createStatLine(xAxisLabel || 'X', xDisplayName),
+              createStatLine(yAxisLabel || 'Value', yValue, { fontWeight: '600' }),
+            ];
+
+            // Update tooltip position with 0 duration for immediate follow
+            renderD3Tooltip(currentTooltipRef.current, {
+              lines: tooltipLines,
+              position: { x: mouseX, y: mouseY },
+              isDarkMode: isDarkMode,
+              containerWidth: innerWidth,
+              containerHeight: innerHeight,
+              preferPosition: 'auto',
+              avoidPointer: true,
+              animationDuration: 0, // Instant update for smooth following
+            });
           })
           .on('mouseleave', function () {
             d3.select(this)

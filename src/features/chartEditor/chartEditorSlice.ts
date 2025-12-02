@@ -53,6 +53,9 @@ export interface ChartEditorState {
 
   // Validation state
   validationErrors: ValidationErrors;
+
+  // Cache for preserving configs when switching types
+  cachedConfigs: Partial<Record<ChartType, MainChartConfig>>;
 }
 
 const initialState: ChartEditorState = {
@@ -77,6 +80,7 @@ const initialState: ChartEditorState = {
     yAxisLabel: false,
     seriesNames: {},
   },
+  cachedConfigs: {},
 };
 
 const chartEditorSlice = createSlice({
@@ -275,6 +279,16 @@ const chartEditorSlice = createSlice({
       state.validationErrors = initialState.validationErrors;
     },
 
+    // Cache current config for the current chart type
+    cacheCurrentConfig: state => {
+      if (state.currentChartType && state.chartConfig) {
+        if (!state.cachedConfigs) {
+          state.cachedConfigs = {};
+        }
+        state.cachedConfigs[state.currentChartType] = state.chartConfig;
+      }
+    },
+
     // Clear chart editor state (on unmount)
     clearChartEditor: state => {
       return initialState;
@@ -302,6 +316,7 @@ export const {
   setSeriesValidationError,
   clearValidationError,
   resetValidation,
+  cacheCurrentConfig,
   clearChartEditor,
 } = chartEditorSlice.actions;
 

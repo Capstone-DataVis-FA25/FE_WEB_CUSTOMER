@@ -186,7 +186,11 @@ const AxisConfigurationSection: React.FC<AxisConfigurationSectionProps> = ({
                       {t('x_axis_start', 'X-Axis Start')}
                     </Label>
                     <select
-                      value={currentXAxisId || 'placeholder'}
+                      value={
+                        currentHeader && !currentHeaderValidation.isValid
+                          ? 'placeholder'
+                          : currentXAxisId || 'placeholder'
+                      }
                       onChange={e => {
                         if (e.target.value !== 'placeholder' && hasAxisConfigs(chartConfig)) {
                           // Find the selected header to get its data type
@@ -239,13 +243,6 @@ const AxisConfigurationSection: React.FC<AxisConfigurationSectionProps> = ({
                           ? t('no_valid_columns', 'No valid columns available')
                           : t('select_column', 'Select a column')}
                       </option>
-
-                      {/* If current header exists but is invalid for this chart type, show it as disabled so user sees current selection but cannot pick it */}
-                      {currentHeader && !currentHeaderValidation.isValid && (
-                        <option value={currentHeader.id} disabled>
-                          {`${currentHeader.name} (${currentHeader.type}) — ${currentHeaderValidation.message || 'Not allowed'}`}
-                        </option>
-                      )}
 
                       {/* List only valid headers as selectable options */}
                       {validXAxisHeaders.map((header: any) => (

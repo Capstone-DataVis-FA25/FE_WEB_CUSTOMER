@@ -105,69 +105,81 @@ export function renderD3Tooltip(
   } = config;
 
   // Check if this is a content update (tooltip already exists with content)
+  const prevLines = tooltipGroup.datum() as TooltipLine[] | undefined;
+  const contentChanged = !prevLines || JSON.stringify(prevLines) !== JSON.stringify(lines);
   const isUpdate = !tooltipGroup.selectAll('*').empty();
 
-  // Clear previous tooltip content
-  tooltipGroup.selectAll('*').remove();
+  if (contentChanged) {
+    // Update datum
+    tooltipGroup.datum(lines);
 
-  // Create text element with lines
-  const textEl = tooltipGroup
-    .append('text')
-    .attr('fill', textColor)
-    .style('font-family', 'system-ui, -apple-system, sans-serif')
-    .style('pointer-events', 'none');
+    // Clear previous tooltip content
+    tooltipGroup.selectAll('*').remove();
 
-  let currentY = padding.y + 12; // Start position with padding
+    // Create text element with lines
+    const textEl = tooltipGroup
+      .append('text')
+      .attr('fill', textColor)
+      .style('font-family', 'system-ui, -apple-system, sans-serif')
+      .style('pointer-events', 'none');
 
-  lines.forEach(line => {
-    if (line.isSeparator) {
-      // Empty line separator - reduce spacing
-      currentY += lineHeight * 0.5;
-      return;
-    }
+    let currentY = padding.y + 12; // Start position with padding
 
-    const tspan = textEl.append('tspan').attr('x', padding.x).attr('y', currentY).text(line.text);
+    lines.forEach(line => {
+      if (line.isSeparator) {
+        // Empty line separator - reduce spacing
+        currentY += lineHeight * 0.5;
+        return;
+      }
 
-    // Apply custom styles
-    if (line.fontSize) {
-      tspan.style('font-size', `${line.fontSize}px`);
-    } else {
-      tspan.style('font-size', '12px');
-    }
+      const tspan = textEl.append('tspan').attr('x', padding.x).attr('y', currentY).text(line.text);
 
-    if (line.fontWeight) {
-      tspan.style('font-weight', line.fontWeight);
-    }
+      // Apply custom styles
+      if (line.fontSize) {
+        tspan.style('font-size', `${line.fontSize}px`);
+      } else {
+        tspan.style('font-size', '12px');
+      }
 
-    if (line.color) {
-      tspan.attr('fill', line.color);
-    }
+      if (line.fontWeight) {
+        tspan.style('font-weight', line.fontWeight);
+      }
 
-    if (line.isHeader) {
-      tspan.style('font-weight', '700').style('font-size', '13px');
-    }
+      if (line.color) {
+        tspan.attr('fill', line.color);
+      }
 
-    currentY += lineHeight;
-  });
+      if (line.isHeader) {
+        tspan.style('font-weight', '700').style('font-size', '13px');
+      }
 
-  // Get bounding box of text for background sizing
-  const bbox = (textEl.node() as SVGTextElement).getBBox();
-  const tooltipWidth = bbox.width + padding.x * 2;
-  const tooltipHeight = bbox.height + padding.y * 2;
+      currentY += lineHeight;
+    });
 
-  // Insert background rectangle behind text
-  tooltipGroup
-    .insert('rect', 'text')
-    .attr('width', tooltipWidth)
-    .attr('height', tooltipHeight)
-    .attr('fill', backgroundColor)
-    .attr('stroke', strokeColor)
-    .attr('stroke-width', 1)
-    .attr('rx', borderRadius)
-    .attr('ry', borderRadius)
-    .attr('opacity', opacity)
-    .style('filter', 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))')
-    .style('pointer-events', 'none');
+    // Get bounding box of text for background sizing
+    const bbox = (textEl.node() as SVGTextElement).getBBox();
+    const tooltipWidth = bbox.width + padding.x * 2;
+    const tooltipHeight = bbox.height + padding.y * 2;
+
+    // Insert background rectangle behind text
+    tooltipGroup
+      .insert('rect', 'text')
+      .attr('width', tooltipWidth)
+      .attr('height', tooltipHeight)
+      .attr('fill', backgroundColor)
+      .attr('stroke', strokeColor)
+      .attr('stroke-width', 1)
+      .attr('rx', borderRadius)
+      .attr('ry', borderRadius)
+      .attr('opacity', opacity)
+      .style('filter', 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))')
+      .style('pointer-events', 'none');
+  }
+
+  // Get dimensions from existing rect if content didn't change
+  const bgRect = tooltipGroup.select('rect');
+  const tooltipWidth = Number(bgRect.attr('width'));
+  const tooltipHeight = Number(bgRect.attr('height'));
 
   // Calculate final position with smart positioning to avoid covering pointer
   let finalX = position.x;

@@ -66,6 +66,8 @@ export interface D3AreaChartProps {
   yAxisRotation?: number;
   showAxisLabels?: boolean;
   showAxisTicks?: boolean;
+  xAxisStart?: 'auto' | 'zero';
+  yAxisStart?: 'auto' | 'zero';
 
   // New interaction props
   enableZoom?: boolean;
@@ -86,7 +88,7 @@ export interface D3AreaChartProps {
 }
 
 const D3AreaChart: React.FC<D3AreaChartProps> = ({
-  data,
+  data: rawData,
   width = 800,
   height = 600,
   margin = { top: 20, right: 40, bottom: 60, left: 80 }, // Same as line chart
@@ -120,6 +122,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
   yAxisRotation = 0,
   showAxisLabels = true,
   showAxisTicks = true,
+  xAxisStart = 'auto',
+  yAxisStart = 'auto',
 
   // New interaction props with defaults
   enableZoom = false,
@@ -147,6 +151,57 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
     width,
     height,
   });
+
+  const clipId = React.useMemo(() => `clip-${Math.random().toString(36).substr(2, 9)}`, []);
+
+  // Process data: filter invalid X values and aggregate duplicates
+  const processedData = React.useMemo(() => {
+    if (!rawData || rawData.length === 0) return [];
+
+    // Filter out invalid X values
+    const validData = rawData.filter(d => {
+      const xVal = d[xAxisKey];
+      return xVal !== null && xVal !== undefined && String(xVal).trim() !== '';
+    });
+
+    if (validData.length === 0) return [];
+
+    // Check for duplicates
+    const seenKeys = new Set();
+    let hasDuplicates = false;
+    for (const item of validData) {
+      const key = String(item[xAxisKey]);
+      if (seenKeys.has(key)) {
+        hasDuplicates = true;
+        break;
+      }
+      seenKeys.add(key);
+    }
+
+    if (!hasDuplicates) return validData;
+
+    // Aggregate
+    const aggregatedMap = new Map<string, ChartDataPoint>();
+    for (const item of validData) {
+      const key = String(item[xAxisKey]);
+      if (!aggregatedMap.has(key)) {
+        const newItem = { ...item };
+        yAxisKeys.forEach(yKey => {
+          newItem[yKey] = Number(item[yKey]) || 0;
+        });
+        aggregatedMap.set(key, newItem);
+      } else {
+        const existing = aggregatedMap.get(key)!;
+        yAxisKeys.forEach(yKey => {
+          const val = Number(item[yKey]) || 0;
+          existing[yKey] = (Number(existing[yKey]) || 0) + val;
+        });
+      }
+    }
+    return Array.from(aggregatedMap.values());
+  }, [rawData, xAxisKey, yAxisKeys]);
+
+  const data = processedData;
 
   // Monitor container size for responsiveness
   useEffect(() => {
@@ -348,6 +403,15 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       .append('g')
       .attr('transform', `translate(${centeredLeft},${responsiveMargin.top})`);
 
+    // Define clip path
+    svg
+      .append('defs')
+      .append('clipPath')
+      .attr('id', clipId)
+      .append('rect')
+      .attr('width', innerWidth)
+      .attr('height', innerHeight);
+
     // Scales
     // Detect whether X values are numeric or categorical. If categorical (e.g. "Platform"),
     // use a point scale so positions are generated for each category instead of numeric values.
@@ -358,9 +422,11 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
 
     let xScale: any;
     if (xAreNumbers) {
+      const xExtent = d3.extent(data, d => Number(d[xAxisKey])) as [number, number];
+      const xDomain = [xAxisStart === 'zero' ? 0 : xExtent[0], xExtent[1]];
       xScale = d3
         .scaleLinear()
-        .domain(d3.extent(data, d => Number(d[xAxisKey])) as [number, number])
+        .domain(xDomain as [number, number])
         .range([0, innerWidth]);
     } else {
       const categories = Array.from(new Set(rawXValues.map(v => String(v))));
@@ -381,7 +447,13 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       const stackedData = stack(data);
       const maxStackedValue = d3.max(stackedData, layer => d3.max(layer, d => d[1])) || 0;
 
-      yScale = d3.scaleLinear().domain([0, maxStackedValue]).nice().range([innerHeight, 0]);
+      // Stacked charts usually start from 0 naturally, but respect yAxisStart if needed
+      const yDomain = [
+        yAxisStart === 'zero' ? 0 : 0, // Stacked usually starts at 0
+        maxStackedValue,
+      ];
+
+      yScale = d3.scaleLinear().domain(yDomain).nice().range([innerHeight, 0]);
 
       // Create stacked areas
       stackedData.forEach((layer, index) => {
@@ -403,6 +475,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
           .attr('stroke', 'none')
           .attr('fill-opacity', 0)
           .attr('d', area)
+          .attr('clip-path', `url(#${clipId})`)
           .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))');
 
         // Add stroke if enabled
@@ -422,8 +495,10 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             .attr('stroke-width', 2)
             .attr('stroke-linecap', 'round')
             .attr('stroke-linejoin', 'round')
+            .attr('stroke-linejoin', 'round')
             .attr('opacity', 0)
             .attr('d', line)
+            .attr('clip-path', `url(#${clipId})`)
             .transition()
             .delay(animationDuration + index * 200)
             .duration(500)
@@ -452,13 +527,33 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       const minValue = d3.min(allYValues) || 0;
 
       // Always include 0 in domain for area charts to have proper baseline
-      const domainMin = Math.min(0, minValue);
-      const domainMax = Math.max(0, maxValue);
+      // But respect yAxisStart if explicitly set to 'auto' (though area charts usually need 0)
+      // If yAxisStart is 'zero', we enforce 0. If 'auto', we still default to 0 for area charts usually,
+      // but let's allow it to float if the data is far from 0 and user wants 'auto' (though standard area chart behavior is to 0).
+      // However, for consistency with other charts, 'auto' usually means "fit to data".
+      // But area charts MUST go to a baseline. Usually 0.
+      // Let's stick to standard behavior: Area charts usually start at 0.
+      // If user selects 'auto', maybe we can let it float if min > 0?
+      // Actually, area charts filling to 0 is standard. Filling to min value is weird unless it's a streamgraph.
+      // Let's assume 'zero' forces 0, and 'auto' fits to data (which might be min value).
 
-      yScale = d3.scaleLinear().domain([domainMin, domainMax]).nice().range([innerHeight, 0]);
+      // If auto and min > 0, we might want to start at min to show detail?
+      // But filling area to 0 is safer. Let's keep the logic simple:
+      // If 'zero', start at 0. If 'auto', start at min (but area fill might look weird if not 0).
+      // Actually, standard D3 area fills to y0. We set y0 to baselineY.
+
+      // Let's use the logic:
+      // If 'zero' -> [0, max]
+      // If 'auto' -> [min, max] (and we fill to min)
+
+      const effectiveMin = yAxisStart === 'zero' ? Math.min(0, minValue) : minValue;
+      const effectiveMax = Math.max(0, maxValue); // Ensure max is at least 0
+
+      yScale = d3.scaleLinear().domain([effectiveMin, effectiveMax]).nice().range([innerHeight, 0]);
 
       // Get the actual baseline Y position (might not be exactly yScale(0) after .nice())
-      const baselineY = yScale(Math.max(domainMin, Math.min(0, domainMax)));
+      // If we start at min, baseline is yScale(min).
+      const baselineY = yScale(effectiveMin);
 
       // Create overlapping areas for enabled areas only
       enabledAreas.forEach((key, index) => {
@@ -491,6 +586,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
           .attr('stroke', 'none')
           .attr('fill-opacity', 0)
           .attr('d', area)
+          .attr('clip-path', `url(#${clipId})`)
           .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))');
 
         // Add stroke line if enabled
@@ -514,6 +610,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             .attr('stroke-linecap', 'round')
             .attr('stroke-linejoin', 'round')
             .attr('d', line)
+            .attr('clip-path', `url(#${clipId})`)
             .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
             .style('opacity', 0);
 
@@ -555,6 +652,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             .attr('fill', currentColors[key])
             .attr('stroke', chartBackgroundColor)
             .attr('stroke-width', 2)
+            .attr('clip-path', `url(#${clipId})`)
             .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
             .on('mouseover', function (event, d) {
               if (!showTooltip) return;
@@ -721,12 +819,14 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
       // Create invisible overlay rectangles for each data point area
       enabledAreas.forEach(key => {
         const pointWidth = innerWidth / data.length;
+        // Sanitize key for class name to avoid invalid selector errors (e.g. "sum(Count)")
+        const safeKey = key.replace(/[^a-zA-Z0-9-_]/g, '-');
 
-        g.selectAll(`.hover-area-${key}`)
+        g.selectAll(`.hover-area-${safeKey}`)
           .data(data)
           .enter()
           .append('rect')
-          .attr('class', `hover-area-${key}`)
+          .attr('class', `hover-area-${safeKey}`)
           .attr('x', d => {
             const xPos = xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey]));
             return xPos - pointWidth / 2;

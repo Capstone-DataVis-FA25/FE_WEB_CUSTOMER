@@ -87,6 +87,7 @@ const ChartListPage: React.FC = () => {
           showProgress: true,
           steps: chartListSteps,
           popoverClass: 'driverjs-theme driver-theme-charts',
+          overlayOpacity: 0.2,
         });
 
         setTimeout(() => {

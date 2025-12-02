@@ -37,7 +37,14 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
   className = '',
 }) => {
   const { t } = useTranslation();
-  const { currentChartType, setCurrentChartType, chartConfig, setChartConfig } = useChartEditor();
+  const {
+    currentChartType,
+    setCurrentChartType,
+    chartConfig,
+    setChartConfig,
+    cachedConfigs,
+    cacheCurrentConfig,
+  } = useChartEditor();
 
   const chartTypeOptions: ChartTypeOption[] = useMemo(
     () => [
@@ -157,6 +164,24 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
   const handleChartTypeChange = (value: string) => {
     const newChartType = value as ChartType;
 
+    // 1. Cache the current config before switching
+    if (currentChartType && chartConfig) {
+      cacheCurrentConfig();
+    }
+
+    // 2. Check if we have a cached config for the target type
+    if (cachedConfigs && cachedConfigs[newChartType]) {
+      const cached = cachedConfigs[newChartType];
+      // Merge cached with default to ensure all fields are present (in case of schema updates)
+      // We use deepMergeConfigs here to ensure we respect the structure of the new type
+      const mergedCached = deepMergeConfigs(cached, getDefaultChartConfig(newChartType));
+
+      setChartConfig({ ...mergedCached, chartType: newChartType } as MainChartConfig);
+      setCurrentChartType(newChartType);
+      return;
+    }
+
+    // 3. If no cache, use existing logic (merge current with new defaults)
     // If we have an existing config, merge it with the new chart type defaults
     if (chartConfig) {
       const mergedConfig = mergeConfigs(chartConfig, newChartType);
