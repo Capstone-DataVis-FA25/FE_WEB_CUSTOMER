@@ -172,16 +172,43 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
   // Helper: get DataHeader name by ID
   const getHeaderName = (id: string) => dataHeaders.find(h => h.id === id)?.name || id;
 
+  // State for tracking validation errors
+  const [seriesNameErrors, setSeriesNameErrors] = useState<Record<string, string>>({});
+
   // Handlers
   const onUpdateSeries = (seriesId: string, updates: Partial<SeriesItem>) => {
-    // Always send dataColumn as ID, but show name in UI
+    // If updating name, validate it's not empty
+    if ('name' in updates) {
+      const trimmedName = updates.name?.trim() || '';
+      if (!trimmedName) {
+        setSeriesNameErrors(prev => ({
+          ...prev,
+          [seriesId]: t('chart_editor_series_name_required', 'Series name is required'),
+        }));
+        return; // Don't update if validation fails
+      } else {
+        // Clear error if name is valid
+        setSeriesNameErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[seriesId];
+          return newErrors;
+        });
+      }
+    }
+
+    // Always send dataColumn as ID, auto-update name only if dataColumn changed
     const newSeries = series.map((s: SeriesItem) =>
       s.id === seriesId
         ? {
             ...s,
             ...updates,
             dataColumn: updates.dataColumn || s.dataColumn,
-            name: getHeaderName(updates.dataColumn || s.dataColumn),
+            // Auto-update name only if dataColumn changed
+            name: updates.dataColumn
+              ? getHeaderName(updates.dataColumn)
+              : updates.name !== undefined
+                ? updates.name
+                : s.name,
           }
         : s
     );
@@ -504,18 +531,29 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
                               <div className="space-y-2">
                                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                                   {t('chart_editor_series_name', 'Series Name')}
+                                  <span className="text-red-500 ml-1">*</span>
                                 </Label>
                                 <div className="flex flex-col gap-1">
                                   <Input
                                     value={seriesItem.name}
-                                    readOnly
-                                    disabled
-                                    className="text-sm h-9 border-0 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed"
+                                    onChange={e =>
+                                      onUpdateSeries(seriesItem.id, { name: e.target.value })
+                                    }
+                                    className={`text-sm h-9 border ${
+                                      seriesNameErrors[seriesItem.id]
+                                        ? 'border-red-500 focus:ring-red-500'
+                                        : 'border-border/50'
+                                    } bg-background/60 backdrop-blur-sm focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all duration-200`}
                                     placeholder={t(
-                                      'chart_editor_series_name_auto',
-                                      'Auto generated from data column'
+                                      'chart_editor_series_name_placeholder',
+                                      'Enter series name'
                                     )}
                                   />
+                                  {seriesNameErrors[seriesItem.id] && (
+                                    <p className="text-xs text-red-500">
+                                      {seriesNameErrors[seriesItem.id]}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                               <div className="space-y-2">
