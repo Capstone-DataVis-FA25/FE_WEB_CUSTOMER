@@ -39,6 +39,7 @@ const PricingPage: React.FC = () => {
           prevBtnText: '← Previous',
           doneBtnText: 'Done ✓',
           popoverClass: 'driverjs-theme',
+          overlayOpacity: 0.2,
         });
 
         setTimeout(() => {
@@ -99,6 +100,8 @@ const PricingPage: React.FC = () => {
       nextBtnText: 'Next →',
       prevBtnText: '← Previous',
       doneBtnText: 'Done ✓',
+      popoverClass: 'driverjs-theme',
+      overlayOpacity: 0.2,
     });
     driverObj.drive();
   };

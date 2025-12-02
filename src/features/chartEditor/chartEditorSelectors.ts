@@ -9,6 +9,7 @@ export const selectChartData = (state: RootState) => state.chartEditor.chartData
 export const selectChartConfig = (state: RootState) => state.chartEditor.chartConfig;
 export const selectCurrentChartType = (state: RootState) => state.chartEditor.currentChartType;
 export const selectWorkingDataset = (state: RootState) => state.chartEditor.workingDataset;
+export const selectCachedConfigs = (state: RootState) => state.chartEditor.cachedConfigs;
 
 // Edit states
 export const selectEditableName = (state: RootState) => state.chartEditor.editableName;

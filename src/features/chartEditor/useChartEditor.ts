@@ -17,6 +17,7 @@ import {
   clearValidationError as clearValidationErrorAction,
   resetValidation,
   clearChartEditor,
+  cacheCurrentConfig,
 } from './chartEditorSlice';
 import type { MainChartConfig } from '@/types/chart';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
@@ -190,6 +191,7 @@ export const useChartEditor = () => {
     validationErrors,
     hasChanges,
     isFormValid,
+    cachedConfigs: useAppSelector(selectors.selectCachedConfigs),
 
     // Actions
     setChartData: handleSetChartData,
@@ -210,6 +212,7 @@ export const useChartEditor = () => {
     resetValidation: handleResetValidation,
     validateAndSave,
     clearChartEditor: handleClearChartEditor,
+    cacheCurrentConfig: useCallback(() => dispatch(cacheCurrentConfig()), [dispatch]),
   };
 };
 

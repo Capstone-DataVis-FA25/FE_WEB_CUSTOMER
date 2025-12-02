@@ -252,6 +252,7 @@ export default function ChooseTemplateTab() {
           showProgress: true,
           steps: chartGallerySteps,
           popoverClass: 'driverjs-theme',
+          overlayOpacity: 0.2,
         });
 
         setTimeout(() => {

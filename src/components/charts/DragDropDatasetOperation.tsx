@@ -32,7 +32,7 @@ import type {
 } from '@/types/chart';
 import type { DataHeader } from '@/utils/dataProcessors';
 import { useAppSelector } from '@/store/hooks';
-import { selectWorkingDataset } from '@/features/chartEditor/chartEditorSelectors';
+// import { selectWorkingDataset } from '@/features/chartEditor/chartEditorSelectors';
 import ColumnPalette, { ColumnChipOverlay } from './drag-drop/ColumnPalette';
 import OperationTabs, { type OperationTab } from './drag-drop/OperationTabs';
 import FilterTab from './drag-drop/FilterTab';
@@ -81,7 +81,7 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
   const { chartConfig } = useChartEditorRead();
   const { handleConfigChange } = useChartEditorActions();
   const currentDataset = useAppSelector(state => state.dataset.currentDataset);
-  const working = useAppSelector(selectWorkingDataset);
+  // const working = useAppSelector(selectWorkingDataset);
 
   const datasetConfig = (chartConfig as any)?.datasetConfig;
 
@@ -486,7 +486,10 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
             'max',
             'count',
           ];
-          const availableOperations = column.type === 'number' ? allOperations : ['count']; // Only count for text/date columns
+          const availableOperations =
+            column.type === 'number'
+              ? allOperations
+              : (['count'] as PivotValue['aggregationType'][]);
 
           // Find used operation types for this column
           const usedTypes = new Set(

@@ -59,6 +59,7 @@ function CreateDatasetPageContent() {
           showProgress: true,
           steps: createDatasetSteps,
           popoverClass: 'driverjs-theme',
+          overlayOpacity: 0.2,
         });
 
         setTimeout(() => {

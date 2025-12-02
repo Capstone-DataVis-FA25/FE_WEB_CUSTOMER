@@ -152,7 +152,6 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   xAxisLabel,
   showLegend = true,
   showGrid = true,
-  xAxisStart = 'auto', // X-axis start option (match LineChart)
   yAxisStart = 'zero', // Y-axis start option (match LineChart)
   animationDuration = 1000,
   yAxisFormatter, // Custom Y-axis formatter (match LineChart)

@@ -70,7 +70,7 @@ const HomePage: React.FC = () => {
           showProgress: true,
           steps: homeSteps,
           popoverClass: 'driverjs-theme',
-          overlayOpacity: 0.4,
+          overlayOpacity: 0.2,
         });
 
         setTimeout(() => {
