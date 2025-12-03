@@ -1189,6 +1189,7 @@ const ChartEditorPage: React.FC = () => {
           chartId={chartIdFromUrl}
           isOpen={true}
           onToggle={handleToggleHistorySidebar}
+          setDatasetId={setDatasetId}
           onRestoreSuccess={async () => {
             if (chartIdFromUrl) {
               try {

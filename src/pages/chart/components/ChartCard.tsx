@@ -86,6 +86,8 @@ const getChartTypeLabel = (type: string) => {
       return 'Donut Chart';
     case ChartType.CyclePlot:
       return 'Cycle Plot';
+    case ChartType.Heatmap:
+      return 'Heatmap';
     default:
       return 'Unknown Chart';
   }
@@ -108,6 +110,8 @@ const getChartColor = (type: string) => {
       return 'from-yellow-500 to-amber-500';
     case ChartType.CyclePlot:
       return 'from-green-500 to-lime-500';
+    case ChartType.Heatmap:
+      return 'from-red-500 to-yellow-500';
     default:
       return 'from-gray-500 to-gray-600';
   }

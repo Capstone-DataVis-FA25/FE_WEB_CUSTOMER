@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Info, BarChart3, Settings, Sliders } from 'lucide-react';
+import { ChevronDown, Settings, Palette } from 'lucide-react';
 import { useChartEditorRead } from '@/features/chartEditor';
 import { ChartType } from '@/features/charts';
 import { Card, CardContent, CardHeader } from '../ui/card';
@@ -18,7 +18,7 @@ const HistogramChartEditor: React.FC<HistogramChartEditorProps> = ({ processedHe
   const { t } = useTranslation();
   const { currentChartType } = useChartEditorRead();
   const [isDataColumnCollapsed, setIsDataColumnCollapsed] = useState(false);
-  const [isBinConfigCollapsed, setIsBinConfigCollapsed] = useState(false);
+  const [isBinConfigCollapsed, setIsBinConfigCollapsed] = useState(true);
   const [isAdvancedCollapsed, setIsAdvancedCollapsed] = useState(true);
 
   if (currentChartType !== ChartType.Histogram) return null;
@@ -32,7 +32,7 @@ const HistogramChartEditor: React.FC<HistogramChartEditorProps> = ({ processedHe
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
+        transition={{ duration: 0.6, delay: 0.15 }}
       >
         <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-hidden rounded-lg">
           <AnimatePresence mode="wait">
@@ -55,7 +55,7 @@ const HistogramChartEditor: React.FC<HistogramChartEditorProps> = ({ processedHe
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6, delay: 0.25 }}
+        transition={{ duration: 0.6, delay: 0.15 }}
       >
         <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-hidden rounded-lg">
           <CardHeader
@@ -64,7 +64,7 @@ const HistogramChartEditor: React.FC<HistogramChartEditorProps> = ({ processedHe
           >
             <div className="flex items-center justify-between w-full">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <Settings className="h-5 w-5" />
+                <Settings className="h-5 w-5 text-blue-500" />
                 {t('histogram_bin_configuration', 'Bin Configuration')}
               </h3>
               <motion.div
@@ -97,7 +97,7 @@ const HistogramChartEditor: React.FC<HistogramChartEditorProps> = ({ processedHe
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6, delay: 0.3 }}
+        transition={{ duration: 0.6, delay: 0.15 }}
       >
         <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-hidden rounded-lg">
           <CardHeader
@@ -106,7 +106,7 @@ const HistogramChartEditor: React.FC<HistogramChartEditorProps> = ({ processedHe
           >
             <div className="flex items-center justify-between w-full">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <Sliders className="h-5 w-5" />
+                <Palette className="h-5 w-5 text-blue-500" />
                 {t('histogram_advanced_options', 'Advanced Display Options')}
               </h3>
               <motion.div

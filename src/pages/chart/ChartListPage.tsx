@@ -806,6 +806,16 @@ const ChartListPage: React.FC = () => {
                             >
                               Cycle Plot
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                              onClick={() => {
+                                setChartTypeFilter('heatmap');
+                                chartPagination.setPage(1);
+                                updateURL({ type: 'heatmap', page: 1 });
+                              }}
+                            >
+                              Heatmap
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

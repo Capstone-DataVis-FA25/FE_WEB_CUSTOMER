@@ -15,6 +15,7 @@ import { useDataset } from '@/features/dataset/useDataset';
 interface ChartHistoryPanelProps {
   chartId: string | null;
   isOpen: boolean;
+  setDatasetId?: (datasetId: string) => void;
   onToggle: () => void;
   onRestoreSuccess?: () => void;
 }
@@ -22,6 +23,7 @@ interface ChartHistoryPanelProps {
 const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
   chartId,
   isOpen,
+  setDatasetId,
   onToggle,
   onRestoreSuccess,
 }) => {
@@ -138,11 +140,26 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
         changeNote,
       }).unwrap();
 
+      // STEP 1: Update datasetId first (if setDatasetId is provided)
+      if (setDatasetId && result.chart.datasetId) {
+        setDatasetId(result.chart.datasetId);
+      }
+
+      // STEP 2: Fetch the dataset FIRST to ensure headers are loaded
+      // This is critical for pivot/filter/sort to work correctly
+      if (result.chart.datasetId) {
+        await getDatasetById(result.chart.datasetId);
+        console.log('[ChartHistoryPanel] Dataset reloaded, now updating chart config...');
+      }
+
+      // STEP 3: Update chart state AFTER dataset is loaded
+      // Config includes datasetConfig with pivot, filters, sort, aggregation
       setChartConfig(result.chart.config);
       setCurrentChartType(result.chart.type);
       setEditableName(result.chart.name);
       setEditableDescription(result.chart.description);
-      getDatasetById(result.chart.datasetId);
+
+      // Mark state as saved (no unsaved changes)
       updateOriginals();
 
       setRestoreDialogOpen(false);
@@ -151,7 +168,7 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
       // Refresh history list
       await getChartHistory(chartId);
 
-      // Notify parent to reload chart data (name, description, type, config)
+      // Notify parent to reload chart data and trigger re-render
       onRestoreSuccess?.();
     } catch (error) {
       console.error('[ChartHistoryPanel] Failed to restore:', error);
@@ -297,7 +314,7 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
                         {t('chartHistory.compare', 'Compare')}
                       </Button>
 
-                      {/* <Button
+                      <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleRestoreClick(history.id)}
@@ -306,7 +323,7 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                         {t('chartHistory.restore', 'Restore')}
-                      </Button> */}
+                      </Button>
                     </div>
                   </motion.div>
                 ))}

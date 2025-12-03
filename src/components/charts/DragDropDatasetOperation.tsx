@@ -12,7 +12,7 @@ import type { DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core'
 import { snapCenterToCursor } from '@dnd-kit/modifiers';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, ChevronDown, AlertCircle, X } from 'lucide-react';
+import { Database, ChevronDown, AlertCircle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader } from '../ui/card';
@@ -621,7 +621,7 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
         >
           <div className="flex items-center justify-between w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+              <Database className="h-5 w-5 text-blue-500" />
               {t('chart_editor_dataset_operation', 'Dataset Operation')}
             </h3>
             <motion.div

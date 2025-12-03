@@ -96,7 +96,7 @@ const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({ className =
         >
           <div className="flex items-center justify-between w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+              <Settings className="h-5 w-5 text-blue-500" />
               {t('lineChart_editor_basicSettings', 'Basic Settings')}
             </h3>
             <motion.div

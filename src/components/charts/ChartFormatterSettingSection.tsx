@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardHeader, CardContent } from '../ui/card';
-import { ChevronDown, Settings } from 'lucide-react';
+import { ChevronDown, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import { useAppSelector } from '@/store/hooks';
@@ -278,7 +278,7 @@ const ChartFormatterSettings: React.FC = () => {
         >
           <div className="flex items-center justify-between w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+              <Eye className="h-5 w-5 text-blue-500" />
               Axis Formatter
             </h3>
             <div className="flex items-center gap-2">

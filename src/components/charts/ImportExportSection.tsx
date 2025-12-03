@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from '@/theme/animation';
 import { Card, CardContent, CardHeader } from '../ui/card';
-import { Camera, ChevronDown, ChevronUp, Download, Settings, Upload } from 'lucide-react';
+import { Camera, ChevronDown, ChevronUp, Download, FileJson, Upload } from 'lucide-react';
 import { Label } from '../ui/label';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
@@ -368,7 +368,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId, da
         >
           <div className="flex items-center justify-between w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+              <FileJson className="h-5 w-5 text-blue-500" />
               {t('chart_editor_chart_actions', 'Import / Export & More')}
             </h3>
             {isCollapsed ? (
@@ -428,7 +428,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId, da
                 {/* Config Management Section */}
                 <div>
                   <Label className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
+                    <FileJson className="h-4 w-4" />
                     {t('chart_editor_config_management', 'Config Management')}
                   </Label>
                   <div className="grid grid-cols-1 gap-2">
