@@ -14,14 +14,16 @@ import 'driver.js/dist/driver.css';
 import { pricingSteps } from '@/config/driver-steps';
 import { HelpCircle } from 'lucide-react';
 import { useAuth } from '@/features/auth/useAuth';
+import { ModalConfirm } from '@/components/ui/modal-confirm';
 
 const PricingPage: React.FC = () => {
   const user = useSelector(selectUser);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, refreshUser } = useAuth();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const { showError, showSuccess } = useToast();
 
   // Auto-show tour on first visit
@@ -71,7 +73,12 @@ const PricingPage: React.FC = () => {
   };
 
   const onSubscribe = async (plan: SubscriptionPlan) => {
-    const planId = plan.id;
+    setSelectedPlan(plan);
+  };
+
+  const confirmSubscribe = async () => {
+    if (!selectedPlan) return;
+    const planId = selectedPlan.id;
     setCheckoutLoading(planId);
     try {
       const baseSuccess = `${window.location.origin}/subscription/success`;
@@ -81,6 +88,9 @@ const PricingPage: React.FC = () => {
       if (url) {
         window.open(url, '_blank');
         showSuccess('Redirecting to payment gateway', 'Please complete the payment.');
+        // Refresh user data after opening payment gateway
+        await refreshUser();
+        setSelectedPlan(null);
       } else {
         showError('Error', 'checkoutUrl not returned by server.');
       }
@@ -199,12 +209,48 @@ const PricingPage: React.FC = () => {
                 </ul>
               )}
 
+              {/* Limits - render details if present */}
+              {plan.limits && Object.keys(plan.limits).length > 0 && (
+                <div className="pricing-plan-limits mb-4 text-sm text-muted-foreground">
+                  <strong className="block mb-2 text-sm text-gray-700 dark:text-gray-200">
+                    Limits
+                  </strong>
+                  <ul className="space-y-1">
+                    {Object.entries(plan.limits as Record<string, any>).map(([k, v]) => {
+                      const niceKey = k
+                        .replace(/([A-Z])/g, ' $1')
+                        .replace(/^./, s => s.toUpperCase());
+                      let display = String(v);
+                      const lower = k.toLowerCase();
+                      if (typeof v === 'number') {
+                        if (
+                          lower.includes('size') ||
+                          lower.includes('file') ||
+                          lower.includes('mb')
+                        ) {
+                          display = `${v}MB`;
+                        }
+                      }
+                      return (
+                        <li
+                          key={k}
+                          className="text-sm text-muted-foreground flex items-center gap-2"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-blue-600/30 dark:bg-blue-500/40" />
+                          <span>{`${niceKey}: ${display}`}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
               {/* Subscribe Button */}
               <div className="mt-6 flex items-center justify-between">
                 <Button
                   className={`pricing-subscribe-button rounded-full px-6 py-2.5 font-semibold shadow-lg transition-all duration-300 bg-gradient-to-r ${isSubscribed(plan) ? 'from-gray-600 to-gray-700 disabled' : 'from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'}  hover:shadow-xl`}
                   onClick={() => onSubscribe(plan)}
-                  disabled={!!checkoutLoading}
+                  disabled={isSubscribed(plan) || !!checkoutLoading}
                 >
                   {checkoutLoading === plan.id ? (
                     <span className="flex items-center gap-2">Processing...</span>
@@ -214,13 +260,38 @@ const PricingPage: React.FC = () => {
                     'Subscribe'
                   )}
                 </Button>
-                <div className="text-xs text-muted-foreground underline hover:text-blue-600 cursor-pointer">
-                  {plan.limits ? 'See limits' : ''}
+                <div className="text-xs text-muted-foreground cursor-default">
+                  {/* Small helper text - limits are shown above when available */}
+                  {plan.limits ? '' : ''}
                 </div>
               </div>
             </Card>
           ))}
         </div>
+        {/* Confirmation modal for subscribing */}
+        <ModalConfirm
+          isOpen={!!selectedPlan}
+          onClose={() => !checkoutLoading && setSelectedPlan(null)}
+          onConfirm={confirmSubscribe}
+          loading={!!checkoutLoading}
+          type="info"
+          title={
+            selectedPlan ? `Confirm subscription: ${selectedPlan.name}` : 'Confirm subscription'
+          }
+          message={
+            selectedPlan
+              ? `You are about to subscribe to ${selectedPlan.name} - ${formatPrice(selectedPlan.price, selectedPlan.currency)}${selectedPlan.interval ? `/${selectedPlan.interval}` : ''}.\n\n` +
+                (selectedPlan.limits
+                  ? 'Limits:\n' +
+                    Object.entries(selectedPlan.limits as Record<string, any>)
+                      .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1')}: ${v}`)
+                      .join('\n')
+                  : '')
+              : ''
+          }
+          confirmText="Confirm"
+          cancelText="Cancel"
+        />
       </div>
     </div>
   );
