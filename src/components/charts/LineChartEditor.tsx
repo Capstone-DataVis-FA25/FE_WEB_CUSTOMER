@@ -59,8 +59,8 @@ interface ChartConfig {
   width: number;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
-  xAxisKey: string | string[];
-  yAxisKeys: string[] | string;
+  xAxisKey: string;
+  yAxisKeys: string[];
   disabledLines: string[];
   title: string;
   xAxisLabel: string;
@@ -573,11 +573,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       // Use dataset headers instead of just data keys
       const availableHeaders = dataset.headers;
 
-      // Handle the case where config keys might be arrays
-      const currentXAxisKey = Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey;
-      const currentYAxisKeys = Array.isArray(config.yAxisKeys)
-        ? config.yAxisKeys
-        : [config.yAxisKeys];
+      // Get current keys
+      const currentXAxisKey = config.xAxisKey;
+      const currentYAxisKeys = config.yAxisKeys;
 
       // Use header names for keys (assuming headers have 'name' property)
       const newXAxisKey = availableHeaders.length > 0 ? availableHeaders[0].name : 'x';
@@ -839,10 +837,10 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   };
 
   // Modal functions
-  const openDataModal = () => {
-    setTempData([...data]);
-    setShowDataModal(true);
-  };
+  // const openDataModal = () => {
+  //   setTempData([...data]);
+  //   setShowDataModal(true);
+  // };
 
   const closeDataModal = () => {
     setShowDataModal(false);
@@ -891,12 +889,12 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   };
 
   // Apply size preset
-  const applySizePreset = (presetKey: keyof typeof sizePresets) => {
-    const preset = sizePresets[presetKey];
+  const applySizePreset = (presetKey: keyof typeof sizePresets | 'responsive') => {
     if (presetKey === 'responsive') {
       const responsive = getResponsiveDefaults();
       updateConfig({ width: responsive.width, height: responsive.height });
     } else {
+      const preset = sizePresets[presetKey];
       updateConfig({ width: preset.width, height: preset.height });
     }
   };
@@ -1615,21 +1613,16 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       data.length > 0
                         ? [
                             [
-                              // Ensure xAxisKey is a string, not an array
-                              Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey,
-                              // Ensure yAxisKeys are strings, not arrays
-                              ...(Array.isArray(config.yAxisKeys)
-                                ? config.yAxisKeys
-                                : [config.yAxisKeys]
-                              ).filter(key => typeof key === 'string' && key.length > 0),
+                              // xAxisKey and yAxisKeys are now strictly typed
+                              config.xAxisKey,
+                              // Filter valid yAxisKeys
+                              ...config.yAxisKeys.filter(
+                                key => typeof key === 'string' && key.length > 0
+                              ),
                             ],
                             ...data.map(point => {
-                              const xKey = Array.isArray(config.xAxisKey)
-                                ? config.xAxisKey[0]
-                                : config.xAxisKey;
-                              const yKeys = Array.isArray(config.yAxisKeys)
-                                ? config.yAxisKeys
-                                : [config.yAxisKeys];
+                              const xKey = config.xAxisKey;
+                              const yKeys = config.yAxisKeys;
 
                               return [
                                 point[xKey],
@@ -1644,12 +1637,8 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     width={config.width}
                     height={config.height}
                     margin={config.margin}
-                    xAxisKey={Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey}
-                    yAxisKeys={
-                      Array.isArray(config.yAxisKeys)
-                        ? config.yAxisKeys.filter(key => typeof key === 'string')
-                        : [config.yAxisKeys].filter(key => typeof key === 'string')
-                    }
+                    xAxisKey={config.xAxisKey}
+                    yAxisKeys={config.yAxisKeys.filter(key => typeof key === 'string')}
                     disabledLines={config.disabledLines}
                     colors={colors}
                     seriesNames={Object.fromEntries(
@@ -1705,10 +1694,20 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     legendFontSize={config.legendFontSize}
                     // Formatter type props for axis labels
                     yFormatterType={
-                      formatters.useYFormatter ? formatters.yFormatterType : undefined
+                      formatters.useYFormatter &&
+                      formatters.yFormatterType !== 'none' &&
+                      formatters.yFormatterType !== 'compact' &&
+                      formatters.yFormatterType !== 'ordinal'
+                        ? formatters.yFormatterType
+                        : undefined
                     }
                     xFormatterType={
-                      formatters.useXFormatter ? formatters.xFormatterType : undefined
+                      formatters.useXFormatter &&
+                      formatters.xFormatterType !== 'none' &&
+                      formatters.xFormatterType !== 'compact' &&
+                      formatters.xFormatterType !== 'ordinal'
+                        ? formatters.xFormatterType
+                        : undefined
                     }
                   />
                 </CardContent>

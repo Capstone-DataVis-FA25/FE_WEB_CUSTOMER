@@ -157,10 +157,12 @@ const SortTab: React.FC<SortTabProps> = ({ availableColumns, sortLevels, onSortC
                   key={level.columnId || `sort-${index}`}
                   level={level}
                   index={index}
-                  sortLevels={sortLevels}
+                  // sortLevels prop not supported in InlineSortCardProps
+                  // sortLevels={sortLevels}
                   availableColumns={availableColumns}
                   onUpdate={next => handleSortUpdate(index, next)}
-                  onRemove={() => handleSortRemove(index)}
+                  // onRemove prop not supported in InlineSortCardProps
+                  // onRemove={() => handleSortRemove(index)}
                   onMoveUp={() => handleReorder(index, 'up')}
                   onMoveDown={() => handleReorder(index, 'down')}
                   disableMoveUp={index === 0}

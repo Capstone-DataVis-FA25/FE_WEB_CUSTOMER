@@ -463,6 +463,13 @@ export interface SeriesConfig {
   color: string;
   visible: boolean;
   dataColumn: string;
+  lineWidth?: number;
+  pointRadius?: number;
+  lineStyle?: 'solid' | 'dashed' | 'dotted';
+  pointStyle?: 'circle' | 'square' | 'triangle' | 'diamond';
+  opacity?: number;
+  formatter?: 'inherit' | 'custom';
+  customFormatter?: string;
 }
 
 // Base chart configuration interface (common properties)

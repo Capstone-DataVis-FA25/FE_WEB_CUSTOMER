@@ -14,7 +14,9 @@ const LineChartStyling: React.FC = () => {
   if (!chartConfig || currentChartType !== ChartType.Line) return null;
 
   const config = chartConfig.config;
-  const showPoints = 'showPoints' in config ? config.showPoints : false;
+  if (!config) return null;
+
+  // const showPoints = 'showPoints' in config ? config.showPoints : false;
   const lineWidth = 'lineWidth' in config ? config.lineWidth : 2;
   const pointRadius = 'pointRadius' in config ? config.pointRadius : 4;
 

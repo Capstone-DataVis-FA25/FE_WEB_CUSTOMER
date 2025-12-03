@@ -31,11 +31,21 @@ export function useAiJobNotification(userId?: string | number) {
     });
     socket.on('notification:created', noti => {
       console.log('[Socket][Bell] notification:created', noti);
-      if (noti.userId === String(userId)) {
+
+      // Only handle DONE notification - show toast
+      if (noti.type === 'clean-dataset-done' && noti.userId === String(userId)) {
+        console.log('[Socket][Bell] ✅ Job completed, adding to pending jobs:', noti.jobId);
         setPendingJobs(jobs => [
           ...jobs,
           { jobId: noti.jobId, time: noti.time || new Date().toISOString() },
         ]);
+      }
+
+      // Ignore progress notifications here - handled by useAiCleaningProgress
+      if (noti.type === 'clean-dataset-progress') {
+        console.log(
+          '[Socket][Bell] ⏩ Ignoring progress notification (handled by useAiCleaningProgress)'
+        );
       }
     });
     socket.on('disconnect', () => {

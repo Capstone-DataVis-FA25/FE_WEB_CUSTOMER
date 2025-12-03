@@ -37,6 +37,8 @@ import 'driver.js/dist/driver.css';
 import { createDatasetSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
 import Routers from '@/router/routers';
+import { useAiCleaningProgress } from '@/features/ai/useAiCleaningProgress';
+import { AiCleaningProgressBar } from '@/components/dataset/AiCleaningProgressBar';
 
 type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'cleanDataset' | 'view';
 
@@ -48,6 +50,9 @@ function CreateDatasetPageContent() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
+
+  // AI Cleaning Progress tracking
+  const { activeJobs, addJob, removeJob, handleJobClick } = useAiCleaningProgress(user?.id);
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
@@ -537,6 +542,10 @@ function CreateDatasetPageContent() {
                     onCleanComplete={handleCleanDatasetComplete}
                     isProcessing={isProcessing}
                     onProcessingChange={setIsProcessing}
+                    userId={user?.id}
+                    onJobSubmit={(jobId, fileName, type) => {
+                      addJob({ jobId, fileName, type });
+                    }}
                   />
                 </SlideInUp>
               )}
@@ -561,6 +570,20 @@ function CreateDatasetPageContent() {
         cancelText={t('cancel') || 'Cancel'}
         type="info"
         loading={isCreatingDataset}
+      />
+
+      {/* AI Cleaning Progress Bar - Fixed at bottom right */}
+      <AiCleaningProgressBar
+        jobs={activeJobs}
+        onJobClick={jobId => {
+          handleJobClick(jobId, handleCleanDatasetComplete, err => {
+            showError(
+              t('ai_clean_error_title', 'Lỗi lấy kết quả'),
+              err?.message || t('ai_clean_error_message', 'Không thể lấy kết quả làm sạch')
+            );
+          });
+        }}
+        onRemove={removeJob}
       />
     </div>
   );

@@ -1,26 +1,25 @@
 import React from 'react';
-import type { DatasetConfig, DatasetColumnType } from '@/types/chart';
+import type { DatasetColumnType } from '@/types/chart';
 import OperationsBanner from './OperationsBanner';
-import type { NumberFormat } from '@/contexts/DatasetContext';
 
 interface DataOperationsPanelProps {
   datasetName?: string;
-  onOpenDatasetModal?: () => void;
+  // onOpenDatasetModal?: () => void;
   availableColumns?: { id: string; name: string; type: DatasetColumnType; dateFormat?: string }[];
-  datasetConfig?: DatasetConfig;
-  onDatasetConfigChange: (next?: DatasetConfig) => void;
-  numberFormat?: NumberFormat;
-  uniqueValuesByColumn?: Record<string, string[]>;
+  // datasetConfig?: DatasetConfig;
+  // onDatasetConfigChange: (next?: DatasetConfig) => void;
+  // numberFormat?: NumberFormat;
+  // uniqueValuesByColumn?: Record<string, string[]>;
 }
 
 const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
   datasetName,
-  onOpenDatasetModal,
+  // onOpenDatasetModal,
   availableColumns = [],
-  datasetConfig,
-  onDatasetConfigChange,
-  numberFormat,
-  uniqueValuesByColumn,
+  // datasetConfig,
+  // onDatasetConfigChange,
+  // numberFormat,
+  // uniqueValuesByColumn,
 }) => {
   return (
     <div className="h-full min-h-0 w-[480px] min-w-[480px] max-w-[480px] border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 overflow-y-auto hide-scrollbar select-none">

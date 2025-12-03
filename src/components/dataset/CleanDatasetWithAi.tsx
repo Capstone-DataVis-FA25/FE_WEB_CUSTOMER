@@ -1,14 +1,13 @@
 import type React from 'react';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Upload, AlertCircle, Sparkles, FileText, ChevronDown, ChevronUp } from 'lucide-react';
-import { cleanExcelAsync, cleanCsvAsync, getCleanResult } from '@/features/ai/aiAPI';
-import { io } from 'socket.io-client';
+import { cleanExcelAsync, cleanCsvAsync } from '@/features/ai/aiAPI';
 import type { CleanCsvRequest } from '@/features/ai/aiTypes';
 import { useTranslation } from 'react-i18next';
 import { useToastContext } from '@/components/providers/ToastProvider';
@@ -17,14 +16,15 @@ interface CleanDatasetWithAIProps {
   onCleanComplete?: (data: any, type: 'csv' | 'excel') => void;
   isProcessing?: boolean;
   onProcessingChange?: (processing: boolean) => void;
-  userId?: string; // Thêm userId để gửi lên BE và lắng nghe socket
+  userId?: string; // Thêm userId để gửi lên BE
+  onJobSubmit?: (jobId: string, fileName: string, type: 'csv' | 'excel') => void; // Callback khi submit job
 }
 
 function CleanDatasetWithAI({
-  onCleanComplete,
   isProcessing = false,
   onProcessingChange,
   userId,
+  onJobSubmit,
 }: CleanDatasetWithAIProps) {
   // Lấy userId từ localStorage nếu prop userId không có
   const localUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -37,8 +37,7 @@ function CleanDatasetWithAI({
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('excel');
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(true);
-  const [pendingJobId, setPendingJobId] = useState<string | null>(null);
-  const [jobType, setJobType] = useState<'csv' | 'excel' | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [cleaningOptions, setCleaningOptions] = useState({
     thousandsSeparator: '',
@@ -55,38 +54,6 @@ function CleanDatasetWithAI({
       [key]: value,
     }));
   };
-
-  // Lắng nghe socket notification khi có jobId xong
-  useEffect(() => {
-    if (!effectiveUserId || !pendingJobId) return;
-    const socket = io(process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000', {
-      query: { userId: effectiveUserId },
-      path: '/user-notification/socket.io',
-    });
-    socket.on('connect', () => {
-      console.log('[Socket] Connected:', socket.id);
-    });
-    socket.on('notification:created', noti => {
-      if (noti.type === 'clean-dataset-done' && noti.jobId === pendingJobId) {
-        getCleanResult(noti.jobId).then(result => {
-          onCleanComplete?.(result.data, jobType!);
-          showSuccess(
-            t('ai_clean_success_title', 'Dữ liệu đã được làm sạch'),
-            t('ai_clean_success_desc', 'Bạn sẽ được chuyển sang bước tiếp theo để tạo dataset.')
-          );
-          setPendingJobId(null);
-        });
-      }
-    });
-    socket.on('disconnect', () => {
-      console.log('[Socket] Disconnected');
-    });
-    return () => {
-      socket.disconnect();
-    };
-  }, [pendingJobId, effectiveUserId, jobType, onCleanComplete, t, showSuccess]);
-
-  // (Removed unused dedicated Excel handler; unified handler below is used)
 
   // Handle CSV text cleaning (ASYNC)
   const handleCleanCsv = async () => {
@@ -120,8 +87,7 @@ function CleanDatasetWithAI({
       const resp = await cleanCsvAsync(payload);
       console.log('cleanCsvAsync response:', resp);
       if (resp.jobId) {
-        setPendingJobId(resp.jobId);
-        setJobType('csv');
+        onJobSubmit?.(resp.jobId, 'CSV Data', 'csv');
       } else {
         setError('Không nhận được jobId từ server');
       }
@@ -134,12 +100,22 @@ function CleanDatasetWithAI({
     }
   };
 
-  // Handle Excel or CSV file upload (ASYNC)
-  const handleFileSelect = async (file: File) => {
+  // Handle file selection (just store the file, don't process yet)
+  const handleFileSelect = (file: File) => {
     const isExcel = file.name.match(/\.(xlsx?|xls)$/i);
     const isCsv = file.name.match(/\.csv$/i);
     if (!isExcel && !isCsv) {
       setError('Please select a valid Excel or CSV file (.xlsx, .xls, .csv)');
+      return;
+    }
+    setError(null);
+    setSelectedFile(file);
+  };
+
+  // Handle Excel or CSV file cleaning (ASYNC) - triggered by button click
+  const handleCleanFile = async () => {
+    if (!selectedFile) {
+      setError('Please select a file first');
       return;
     }
     setError(null);
@@ -151,8 +127,11 @@ function CleanDatasetWithAI({
     );
     try {
       if (!effectiveUserId) throw new Error('Missing userId');
+      const isExcel = selectedFile.name.match(/\.(xlsx?|xls)$/i);
+      const isCsv = selectedFile.name.match(/\.csv$/i);
+
       if (isExcel) {
-        const resp = await cleanExcelAsync(file, {
+        const resp = await cleanExcelAsync(selectedFile, {
           ...(cleaningOptions.thousandsSeparator && {
             thousandsSeparator: cleaningOptions.thousandsSeparator,
           }),
@@ -163,8 +142,7 @@ function CleanDatasetWithAI({
           userId: effectiveUserId,
         });
         if (resp.jobId) {
-          setPendingJobId(resp.jobId);
-          setJobType('excel');
+          onJobSubmit?.(resp.jobId, selectedFile.name, 'excel');
           showSuccess(
             t('ai_clean_upload_success_title', 'Đã gửi file Excel để làm sạch'),
             t('ai_clean_upload_success_desc', 'Bạn sẽ nhận được thông báo khi hoàn tất.')
@@ -173,7 +151,7 @@ function CleanDatasetWithAI({
           setError(t('ai_clean_no_jobid', 'Không nhận được jobId từ server'));
         }
       } else if (isCsv) {
-        const text = await file.text();
+        const text = await selectedFile.text();
         const payload: CleanCsvRequest = {
           csv: text,
           ...(cleaningOptions.thousandsSeparator && {
@@ -188,8 +166,7 @@ function CleanDatasetWithAI({
         };
         const resp = await cleanCsvAsync(payload);
         if (resp.jobId) {
-          setPendingJobId(resp.jobId);
-          setJobType('csv');
+          onJobSubmit?.(resp.jobId, selectedFile.name, 'csv');
           showSuccess(
             t('ai_clean_upload_success_title', 'Đã gửi file CSV để làm sạch'),
             t('ai_clean_upload_success_desc', 'Bạn sẽ nhận được thông báo khi hoàn tất.')
@@ -361,47 +338,82 @@ function CleanDatasetWithAI({
 
             {/* File Tab (Excel/CSV) */}
             <TabsContent value="excel" className="space-y-4">
-              <div
-                className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 cursor-pointer
-                ${
-                  isDragOver
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={handleFileInputChange}
-                  className="hidden"
-                  disabled={isLoading || isProcessing}
-                />
+              {!selectedFile ? (
+                <div
+                  className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 cursor-pointer
+                  ${
+                    isDragOver
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                    disabled={isLoading || isProcessing}
+                  />
 
-                <div className="space-y-4">
-                  <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                    <Upload className="w-8 h-8 text-white" />
-                  </div>
+                  <div className="space-y-4">
+                    <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <Upload className="w-8 h-8 text-white" />
+                    </div>
 
-                  <div>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                      {isDragOver
-                        ? t('ai_clean_drop_file', 'Thả file Excel hoặc CSV vào đây')
-                        : t(
-                            'ai_clean_click_upload',
-                            'Click để tải lên hoặc kéo thả file Excel/CSV'
-                          )}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t('ai_clean_supported_formats', 'Hỗ trợ: .xlsx, .xls, .csv')}
-                    </p>
+                    <div>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                        {isDragOver
+                          ? t('ai_clean_drop_file', 'Thả file Excel hoặc CSV vào đây')
+                          : t(
+                              'ai_clean_click_upload',
+                              'Click để tải lên hoặc kéo thả file Excel/CSV'
+                            )}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {t('ai_clean_supported_formats', 'Hỗ trợ: .xlsx, .xls, .csv')}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-700">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-100 dark:bg-green-800 rounded-lg flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-green-900 dark:text-green-100">
+                          {selectedFile.name}
+                        </p>
+                        <p className="text-xs text-green-600 dark:text-green-400">
+                          {(selectedFile.size / 1024).toFixed(2)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedFile(null)}
+                      className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <Button
+                onClick={handleCleanFile}
+                disabled={!selectedFile || isLoading || isProcessing}
+                className="w-full px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                {isLoading ? 'Cleaning with AI...' : 'Clean File with AI'}
+              </Button>
 
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
                 <div className="flex items-start gap-3">

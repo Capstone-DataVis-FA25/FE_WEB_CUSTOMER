@@ -44,6 +44,9 @@ const DataViewerOptions = memo(function DataViewerOptions({
     numberFormat,
     setNumberFormat,
     hasValidationErrors: hasDatasetValidationErrors,
+    isJsonFormat,
+    selectedDelimiter,
+    setSelectedDelimiter,
   } = useDataset();
 
   // Initialize dataset name error on mount and when name changes (centralized)
@@ -53,36 +56,12 @@ const DataViewerOptions = memo(function DataViewerOptions({
   }, [datasetName, setFormValidationError]);
 
   // Handle delimiter change - reparse the original content with new delimiter
-  // Note: This function is commented out in the UI, keeping for future use
-  // const handleDelimiterChange = useCallback(
-  //   (delimiter: string) => {
-  //     // No-op if user reselects the same delimiter
-  //     if (delimiter === selectedDelimiter) return;
-  //     if (!originalTextContent) return;
-
-  //     setSelectedDelimiter(delimiter);
-  //     // Reset transformation when delimiter changes
-  //     setTransformationColumn(null);
-  //     try {
-  //       const result = parseTabularContent(originalTextContent, { delimiter });
-  //       // Update Layer 2: Original parsed data
-  //       setOriginalParsedData(result);
-  //       // Update Layer 3: Current working data (starts as copy of original)
-  //       setCurrentParsedData({ ...result });
-  //     } catch (error) {
-  //       showError('Parse Error', 'Failed to parse with the selected delimiter');
-  //     }
-  //   },
-  //   [
-  //     originalTextContent,
-  //     showError,
-  //     setOriginalParsedData,
-  //     setCurrentParsedData,
-  //     setSelectedDelimiter,
-  //     setTransformationColumn,
-  //     selectedDelimiter,
-  //   ]
-  // );
+  const handleDelimiterChange = (delimiter: string) => {
+    // Update the delimiter in the dataset context
+    setSelectedDelimiter(delimiter);
+    // The actual reparsing logic would be handled by the parent component or context
+    // For now, just update the selected delimiter state
+  };
 
   const handleNumberFormatChange = (format: NumberFormat) => {
     // Replace old state with the new format

@@ -52,7 +52,7 @@ interface CustomExcelProps {
   mode?: 'edit' | 'view';
   allowHeaderEdit?: boolean;
   allowColumnEdit?: boolean;
-  onSorting?: (s: { column: number; direction: 'asc' | 'desc' } | null) => void;
+  // onSorting?: (s: { column: number; direction: 'asc' | 'desc' } | null) => void;
   highlightHeaderIds?: string[];
   disableSelection?: boolean;
 }
@@ -69,7 +69,7 @@ const DEFAULT_COLS: DataHeader[] = [
 ];
 const createEmptyGrid = (rows: number, cols: number): string[][] =>
   Array.from({ length: rows }, () => Array(cols).fill(''));
-const DEFAULT_ROWS: string[][] = createEmptyGrid(8, DEFAULT_COLS.length);
+// const DEFAULT_ROWS: string[][] = createEmptyGrid(8, DEFAULT_COLS.length);
 
 const CustomExcel: React.FC<CustomExcelProps> = ({
   initialData,
@@ -79,7 +79,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   mode = 'edit',
   allowHeaderEdit = true,
   allowColumnEdit = true,
-  onSorting,
+  // onSorting,
   highlightHeaderIds,
   disableSelection = false,
 }) => {
@@ -546,7 +546,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
 
   // Handle cell focus to select column
   const handleCellFocus = useCallback(
-    (rowIndex: number, columnIndex: number) => {
+    (_rowIndex: number, columnIndex: number) => {
       if (disableSelection) return;
       // Select the column when a cell is focused
       dispatch(setSelectedColumn(columnIndex));
@@ -1216,7 +1216,7 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
                   onCellChange={handleCellChange}
                   onCellFocus={handleCellFocus}
                   highlightedColumns={highlightedColumns}
-                  highlightVersion={highlightVersion}
+                  _highlightVersion={highlightVersion}
                   disableSelection={disableSelection}
                 />
               ))}

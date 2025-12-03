@@ -26,7 +26,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId, da
     setChartConfig,
     setEditableName,
     setEditableDescription,
-    updateOriginals,
+    // updateOriginals,
   } = useChartEditor();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
