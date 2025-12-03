@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useTranslation } from 'react-i18next';
-import { Plus, Database, RotateCcw } from 'lucide-react';
+import { Plus, Database, RotateCcw, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -277,6 +277,17 @@ const DatasetListPage: React.FC = () => {
     navigate(Routers.CREATE_DATASET);
   };
 
+  // Function to manually start tour
+  const startTour = () => {
+    const driverObj = driver({
+      showProgress: true,
+      steps: datasetListSteps,
+      popoverClass: 'driverjs-theme driver-theme-datasets',
+      overlayOpacity: 0,
+    });
+    driverObj.drive();
+  };
+
   // While initial fetch is in-flight and no items yet, show only header + a scoped spinner
   const isInitialLoading = loading && allFilteredDatasets.length === 0;
 
@@ -306,6 +317,14 @@ const DatasetListPage: React.FC = () => {
             </div>
           </div>
           <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
+            <Button
+              onClick={startTour}
+              variant="outline"
+              className="border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            >
+              <HelpCircle className="h-4 w-4 mr-2" />
+              <span>Start Tour</span>
+            </Button>
             <Button
               id="btn-new-dataset"
               onClick={handleCreateDataset}

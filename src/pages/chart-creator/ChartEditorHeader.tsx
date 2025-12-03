@@ -90,7 +90,7 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
       prevBtnText: t('driver_prev', 'Previous'),
       doneBtnText: t('driver_done', 'Done'),
       popoverClass: 'driverjs-theme',
-      overlayOpacity: 0.2,
+      overlayOpacity: 0,
     });
     driverObj.drive();
   };
@@ -469,6 +469,7 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                 </Button>
               )}
               <Button
+                id="btn-save-chart"
                 size="sm"
                 onClick={onSave}
                 disabled={mode === 'create' ? creating || !isFormValid : !combinedHasChanges}

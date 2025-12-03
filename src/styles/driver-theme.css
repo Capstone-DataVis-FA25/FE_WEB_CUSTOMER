@@ -68,6 +68,7 @@
   border-top: 1px solid rgba(0, 0, 0, 0.03) !important;
   background: transparent !important;
   margin: 0 !important;
+  margin-right: auto !important;
 }
 
 .dark .driver-popover-progress-text {
@@ -79,7 +80,7 @@
 .driver-popover-footer {
   display: flex !important;
   align-items: center !important;
-  justify-content: space-between !important;
+  justify-content: flex-end !important;
   padding: 1rem 2rem 1.5rem 2rem !important;
   border-top: none !important;
   background: transparent !important;
@@ -134,23 +135,32 @@
 }
 
 /* Previous Button */
+/* Previous Button */
 .driver-popover-prev-btn {
   background: transparent !important;
   color: #64748b !important;
-  padding-left: 0 !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.75rem !important;
+  padding: 0.6rem 1.25rem !important;
+  font-size: 0.875rem !important;
+  text-decoration: none !important;
 }
 
 .driver-popover-prev-btn:hover {
   color: #0f172a !important;
-  background: transparent !important;
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
 }
 
 .dark .driver-popover-prev-btn {
   color: #94a3b8 !important;
+  border-color: #334155 !important;
 }
 
 .dark .driver-popover-prev-btn:hover {
   color: #f8fafc !important;
+  background: #1e293b !important;
+  border-color: #475569 !important;
 }
 
 /* Next Button */
