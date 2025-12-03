@@ -13,9 +13,19 @@ export const chartEditorSteps: DriveStep[] = [
   {
     element: '#chart-type-selector',
     popover: {
-      title: `${Icons.BarChart3} Choose Your Chart`,
+      title: `${Icons.BarChart3} Choose Chart Type`,
       description:
-        'Start by selecting the perfect chart type for your data. From simple lines to complex heatmaps, we have it all.',
+        'Start by selecting the perfect chart type for your data. We offer a wide range of options from simple bars to complex heatmaps.',
+      side: 'right',
+      align: 'start',
+    },
+  },
+  {
+    element: '#basic-settings-section',
+    popover: {
+      title: `${Icons.Settings} Basic Configuration`,
+      description:
+        'Configure the fundamental aspects of your chart, such as orientation and basic layout options.',
       side: 'right',
       align: 'start',
     },
@@ -25,7 +35,7 @@ export const chartEditorSteps: DriveStep[] = [
     popover: {
       title: `${Icons.Database} Manage Data Series`,
       description:
-        'Add, remove, and customize your data series here. Control exactly what data appears on your chart.',
+        'Control your data here. Add or remove series, and map your dataset columns to chart axes.',
       side: 'right',
       align: 'start',
     },
@@ -35,17 +45,27 @@ export const chartEditorSteps: DriveStep[] = [
     popover: {
       title: `${Icons.Settings} Customize Appearance`,
       description:
-        'Fine-tune every detail. Adjust colors, axes, legends, and animations to match your style perfectly.',
+        'Fine-tune the look and feel. Adjust colors, labels, legends, and other visual properties to match your style.',
       side: 'right',
       align: 'start',
     },
   },
   {
-    element: '#save-chart-button',
+    element: '#chart-preview-container',
     popover: {
-      title: `${Icons.Save} Save & Share`,
+      title: `${Icons.Eye} Live Preview`,
       description:
-        'Ready to go? Save your masterpiece to your workspace or export it to share with your team.',
+        'See your changes in real-time. This interactive preview shows exactly how your chart will look.',
+      side: 'left',
+      align: 'center',
+    },
+  },
+  {
+    element: '#btn-save-chart',
+    popover: {
+      title: `${Icons.Save} Save Your Work`,
+      description:
+        'Once you are happy with your chart, click here to save it to your workspace. You can then share it or use it in dashboards.',
       side: 'bottom',
       align: 'end',
     },

@@ -165,13 +165,13 @@ const DataViewerOptions = memo(function DataViewerOptions({
           </div>
 
           {/* Delimiter Selector - Only show for non-JSON formats */}
-          {!isJsonFormat && (
+          {/* {!isJsonFormat && (
             <DelimiterSelector
               selectedDelimiter={selectedDelimiter}
               onDelimiterChange={handleDelimiterChange}
               disabled={isUploading}
             />
-          )}
+          )} */}
 
           {/* Number Format Settings */}
           <NumberFormatSelector

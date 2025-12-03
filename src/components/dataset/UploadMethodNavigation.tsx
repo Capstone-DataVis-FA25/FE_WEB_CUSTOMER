@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileSpreadsheet, FileUp, FileText, Database, Sparkles } from 'lucide-react';
+import { FileSpreadsheet, FileUp, FileText, Database, Sparkles, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view' | 'cleanDataset';
@@ -7,11 +7,13 @@ type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view' | 'cleanDataset'
 interface UploadMethodNavigationProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
+  onStartTour?: () => void;
 }
 
 const UploadMethodNavigation: React.FC<UploadMethodNavigationProps> = ({
   viewMode,
   onViewModeChange,
+  onStartTour,
 }) => {
   const navigationItems = [
     {
@@ -65,6 +67,19 @@ const UploadMethodNavigation: React.FC<UploadMethodNavigationProps> = ({
             </Button>
           ))}
         </div>
+
+        {onStartTour && (
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <Button
+              onClick={onStartTour}
+              variant="outline"
+              className="w-full justify-start gap-3 h-12 text-left border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+            >
+              <HelpCircle className="h-5 w-5" />
+              <span>Start Tour</span>
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -40,6 +40,7 @@ type Chart = BaseChart & {
 };
 
 interface ChartCardProps {
+  id?: string;
   chart: Chart;
   onEdit: (chartId: string) => void;
   onDelete: (chart: Chart) => void;
@@ -115,6 +116,7 @@ const getChartColor = (type: string) => {
 // Removed unused formatDate helper
 
 const ChartCard: React.FC<ChartCardProps> = ({
+  id,
   chart,
   onEdit,
   onDelete,
@@ -149,6 +151,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
 
   return (
     <Card
+      id={id}
       className="group relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 overflow-hidden cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
