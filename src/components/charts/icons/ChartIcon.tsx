@@ -871,6 +871,80 @@ const ChartIcon: React.FC<ChartIconProps> = ({ type, className = '', size = 120 
           </svg>
         );
 
+      case 'histogram':
+        return (
+          <svg viewBox="0 0 120 80" className={`w-full h-full ${className}`}>
+            {/* Grid lines */}
+            <defs>
+              <pattern id="histogramGrid" width="20" height="16" patternUnits="userSpaceOnUse">
+                <path
+                  d="M 20 0 L 0 0 0 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="0.5"
+                  opacity="0.2"
+                />
+              </pattern>
+            </defs>
+            <rect width="120" height="80" fill="url(#histogramGrid)" />
+
+            {/* Axes */}
+            <line
+              x1="15"
+              y1="65"
+              x2="105"
+              y2="65"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              opacity="0.6"
+            />
+            <line
+              x1="15"
+              y1="65"
+              x2="15"
+              y2="15"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              opacity="0.6"
+            />
+
+            {/* Histogram bars - bell curve distribution */}
+            {[
+              { x: 20, height: 15, color: '#60a5fa' },
+              { x: 28, height: 25, color: '#60a5fa' },
+              { x: 36, height: 35, color: '#3b82f6' },
+              { x: 44, height: 45, color: '#3b82f6' },
+              { x: 52, height: 50, color: '#2563eb' },
+              { x: 60, height: 45, color: '#3b82f6' },
+              { x: 68, height: 35, color: '#3b82f6' },
+              { x: 76, height: 25, color: '#60a5fa' },
+              { x: 84, height: 15, color: '#60a5fa' },
+            ].map((bar, index) => (
+              <rect
+                key={index}
+                x={bar.x}
+                y={65 - bar.height}
+                width="6"
+                height={bar.height}
+                fill={bar.color}
+                rx="0.5"
+              />
+            ))}
+
+            {/* Mean line */}
+            <line
+              x1="56"
+              y1="15"
+              x2="56"
+              y2="65"
+              stroke="#f59e0b"
+              strokeWidth="1.5"
+              strokeDasharray="3,3"
+              opacity="0.8"
+            />
+          </svg>
+        );
+
       case 'map':
         return (
           <svg viewBox="0 0 120 80" className={`w-full h-full ${className}`}>
