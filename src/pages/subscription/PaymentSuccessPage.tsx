@@ -8,6 +8,7 @@ import useToast from '@/hooks/useToast';
 import paymentsService from '@/services/payments.service';
 import { PaymentStatus } from '@/types/payments';
 import Routers from '@/router/routers';
+import { useAuth } from '@/features/auth/useAuth';
 
 interface LocalStatus {
   status: PaymentStatus;
@@ -17,6 +18,7 @@ interface LocalStatus {
 const PaymentSuccessPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { showError, showSuccess } = useToast();
+  const { refreshUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [webhookDone, setWebhookDone] = useState(false);
   const [localStatus, setLocalStatus] = useState<LocalStatus | null>(null);
@@ -67,6 +69,8 @@ const PaymentSuccessPage: React.FC = () => {
         setLocalStatus({ status: transactionStatus, message: 'Payment completed successfully!' });
         if (transactionStatus === PaymentStatus.COMPLETED) {
           showSuccess('Payment', 'Plan has been activated (simulated).');
+          // Refresh user data to get updated subscription
+          await refreshUser();
         } else {
           showError('Status', `Status: ${transactionStatus}`);
         }

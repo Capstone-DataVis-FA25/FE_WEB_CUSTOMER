@@ -297,7 +297,7 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
                         {t('chartHistory.compare', 'Compare')}
                       </Button>
 
-                      <Button
+                      {/* <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleRestoreClick(history.id)}
@@ -306,7 +306,7 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                         {t('chartHistory.restore', 'Restore')}
-                      </Button>
+                      </Button> */}
                     </div>
                   </motion.div>
                 ))}
