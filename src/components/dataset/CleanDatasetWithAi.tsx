@@ -7,10 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Upload, AlertCircle, Sparkles, FileText, ChevronDown, ChevronUp } from 'lucide-react';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { cleanExcelAsync, cleanCsvAsync, getCleanResult } from '@/features/ai/aiAPI';
 import { io } from 'socket.io-client';
-import { cleanExcelUpload, cleanCsv } from '@/features/ai/aiAPI';
 import type { CleanCsvRequest } from '@/features/ai/aiTypes';
 import { useTranslation } from 'react-i18next';
 import { useToastContext } from '@/components/providers/ToastProvider';
@@ -88,44 +86,7 @@ function CleanDatasetWithAI({
     };
   }, [pendingJobId, effectiveUserId, jobType, onCleanComplete, t, showSuccess]);
 
-  // Handle Excel file upload (ASYNC)
-  const handleExcelFileSelect = async (file: File) => {
-    if (!file.name.match(/\.(xlsx?|xls)$/i)) {
-      setError('Please select a valid Excel file (.xlsx, .xls)');
-      return;
-    }
-    setError(null);
-    setIsLoading(true);
-    onProcessingChange?.(true);
-    try {
-      if (!effectiveUserId) throw new Error('Missing userId');
-      const resp = await cleanExcelAsync(file, {
-        ...(cleaningOptions.thousandsSeparator && {
-          thousandsSeparator: cleaningOptions.thousandsSeparator,
-        }),
-        ...(cleaningOptions.decimalSeparator && {
-          decimalSeparator: cleaningOptions.decimalSeparator,
-        }),
-        ...(cleaningOptions.notes && { notes: cleaningOptions.notes }),
-        userId: effectiveUserId,
-      });
-      if (resp.jobId) {
-        setPendingJobId(resp.jobId);
-        setJobType('excel');
-        showSuccess(
-          t('ai_clean_upload_success_title', 'Đã gửi file Excel để làm sạch'),
-          t('ai_clean_upload_success_desc', 'Bạn sẽ nhận được thông báo khi hoàn tất.')
-        );
-      } else {
-        setError(t('ai_clean_no_jobid', 'Không nhận được jobId từ server'));
-      }
-    } catch (err) {
-      setError(t('ai_clean_send_failed', 'Gửi job thất bại'));
-    } finally {
-      setIsLoading(false);
-      onProcessingChange?.(false);
-    }
-  };
+  // (Removed unused dedicated Excel handler; unified handler below is used)
 
   // Handle CSV text cleaning (ASYNC)
   const handleCleanCsv = async () => {

@@ -30,7 +30,6 @@ import {
   curveOptions,
   sizePresets,
   getResponsiveDefaults,
-  type LineChartConfig as ChartConfig,
   type ColorConfig,
   type SeriesConfig,
   type FormatterConfig,
@@ -55,6 +54,44 @@ interface Dataset {
 }
 
 // Props for LineChart Editor
+// Flat editor config used by LineChartEditor only
+interface ChartConfig {
+  width: number;
+  height: number;
+  margin: { top: number; right: number; bottom: number; left: number };
+  xAxisKey: string | string[];
+  yAxisKeys: string[] | string;
+  disabledLines: string[];
+  title: string;
+  xAxisLabel: string;
+  yAxisLabel: string;
+  showLegend: boolean;
+  showGrid: boolean;
+  showPoints: boolean;
+  showPointValues: boolean;
+  animationDuration: number;
+  curve: keyof typeof curveOptions;
+  xAxisStart: 'auto' | 'zero';
+  yAxisStart: 'auto' | 'zero';
+  lineWidth: number;
+  pointRadius: number;
+  gridOpacity: number;
+  legendPosition: 'top' | 'bottom' | 'left' | 'right';
+  xAxisRotation: number;
+  yAxisRotation: number;
+  showAxisLabels: boolean;
+  showAxisTicks: boolean;
+  enableZoom: boolean;
+  enablePan: boolean;
+  zoomExtent: number;
+  showTooltip: boolean;
+  theme: 'light' | 'dark' | 'auto';
+  backgroundColor: string;
+  titleFontSize: number;
+  labelFontSize: number;
+  legendFontSize: number;
+}
+
 export interface LineChartEditorProps {
   initialArrayData?: (string | number)[][]; // Array data input
   initialConfig?: Partial<ChartConfig>;
