@@ -853,7 +853,7 @@ interface ChartSettingsProps {
   pointRadius?: number;
 
   // Bar chart specific
-  barType?: 'grouped' | 'stacked';
+  barType?: 'grouped' | 'stacked' | 'diverging';
   barWidth?: number;
   barSpacing?: number;
 

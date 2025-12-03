@@ -1,0 +1,136 @@
+{"messages":[
+  {"role":"user","content":"Nút tạo chart mới nằm ở đâu?"},
+  {"role":"assistant","content":"Nút 'Create New Chart' nằm trong trang Charts, với selector #btn-new-chart. Nó được dùng để tạo một chart mới từ dataset."}
+]}
+{"messages":[
+  {"role":"user","content":"Trang Home có gì đặc biệt?"},
+  {"role":"assistant","content":"Trang Home có hướng dẫn bao gồm các phần: CTA Build Chart (#hero-cta-build-chart), Chart Types (#chart-types-section), và Features Section (#features-section)."}
+]}
+{"messages":[
+  {"role":"user","content":"Nút 'Build Your Own Chart' ở đâu?"},
+  {"role":"assistant","content":"Nút 'Build Your Own Chart' nằm ở trang Home, selector #hero-cta-build-chart. Đây là CTA để bắt đầu tạo chart."}
+]}
+{"messages":[
+  {"role":"user","content":"Phần Chart Types nằm ở đâu?"},
+  {"role":"assistant","content":"Phần Chart Types nằm ở trang Home với selector #chart-types-section. Dùng để khám phá các template biểu đồ."}
+]}
+{"messages":[
+  {"role":"user","content":"Phần Features trên Home gồm gì?"},
+  {"role":"assistant","content":"Features Section (selector #features-section) hiển thị các tính năng chính: tùy biến, cộng tác, xuất file."}
+]}
+{"messages":[
+  {"role":"user","content":"Làm sao tạo Dataset mới?"},
+  {"role":"assistant","content":"Vào trang Datasets, nhấn nút 'New Dataset' với selector #btn-new-dataset để bắt đầu tạo dataset mới."}
+]}
+{"messages":[
+  {"role":"user","content":"Tìm kiếm dataset ở đâu?"},
+  {"role":"assistant","content":"Sử dụng ô tìm kiếm có selector #search-dataset trên trang Datasets. Placeholder: 'Search datasets by name or description...'"}
+]}
+{"messages":[
+  {"role":"user","content":"Khu vực chọn phương thức upload dữ liệu ở đâu?"},
+  {"role":"assistant","content":"Trong trang tạo Dataset, panel 'Upload Method' có selector #upload-method-nav. Các nút: 'Upload your data' (#nav-btn-upload), 'Paste your data' (#nav-btn-textUpload), 'Try sample data' (#nav-btn-sampleData), 'Clean with AI' (#nav-btn-cleanDataset)."}
+]}
+{"messages":[
+  {"role":"user","content":"Tìm kiếm chart ở đâu?"},
+  {"role":"assistant","content":"Trên trang Charts, ô tìm kiếm có selector #search-chart. Placeholder: 'Search charts by name or description...'"}
+]}
+{"messages":[
+  {"role":"user","content":"Gallery chọn template hoạt động thế nào?"},
+  {"role":"assistant","content":"Trong Chart Gallery: chọn Dataset ở #dataset-section, lọc theo Category ở #category-filter, và xem danh sách template ở #templates-grid (nút 'Continue' để bắt đầu)."}
+]}
+{"messages":[
+  {"role":"user","content":"Trong Chart Editor, chọn loại chart ở đâu?"},
+  {"role":"assistant","content":"Chọn loại chart tại khu vực #chart-type-selector trong Chart Editor."}
+]}
+{"messages":[
+  {"role":"user","content":"Quản lý series dữ liệu ở đâu?"},
+  {"role":"assistant","content":"Trong Chart Editor, quản lý series tại khu vực #series-management-section để thêm/xóa/tùy chỉnh series."}
+]}
+{"messages":[
+  {"role":"user","content":"Tùy chỉnh hiển thị chart như màu, trục, legend ở đâu?"},
+  {"role":"assistant","content":"Trong Chart Editor, dùng phần #chart-settings-section để tùy chỉnh màu sắc, trục, legend và animations."}
+]}
+{"messages":[
+  {"role":"user","content":"Xem và so sánh các gói Pricing ở đâu?"},
+  {"role":"assistant","content":"Trên trang Pricing, lưới kế hoạch có selector #pricing-plans-grid; mỗi plan hiển thị tên, mô tả, giá và 'pricing-plan-features'."}
+]}
+{"messages":[
+  {"role":"user","content":"Nút Subscribe ở trang Pricing?"},
+  {"role":"assistant","content":"Nút subscribe/upgrade nằm trong mỗi thẻ plan (class .pricing-subscribe-button)."}
+]}
+{"messages":[
+  {"role":"user","content":"Trang Home có gì?"},
+  {"role":"assistant","content":"Trang Home có Hero CTA, Chart Types và Features Section."}
+]}
+{"messages":[
+  {"role":"user","content":"Làm sao tạo dataset mới?"},
+  {"role":"assistant","content":"Nhấn vào nút Create New Dataset (#btn-new-dataset)."}
+]}
+{"messages":[
+  {"role":"user","content":"Hướng dẫn phần chart editor."},
+  {"role":"assistant","content":"Trong Chart Editor bạn chọn chart type, quản lý series và chỉnh appearance."}
+]}
+{"messages":[
+  {"role":"user","content":"Biểu đồ kinh tế lạm phát là gì?"},
+  {"role":"assistant","content":"Lạm phát là sự tăng giá chung trong nền kinh tế theo thời gian, làm giảm sức mua của tiền."}
+]}
+{"messages":[
+  {"role":"user","content":"CPI là gì?"},
+  {"role":"assistant","content":"CPI (Consumer Price Index) là chỉ số giá tiêu dùng đo mức thay đổi giá của rổ hàng hóa và dịch vụ."}
+]}
+{"messages":[
+  {"role":"user","content":"PPI khác CPI thế nào?"},
+  {"role":"assistant","content":"PPI đo giá ở cấp nhà sản xuất, CPI đo giá ở cấp người tiêu dùng; PPI thường dẫn CPI."}
+]}
+{"messages":[
+  {"role":"user","content":"GDP danh nghĩa vs GDP thực là gì?"},
+  {"role":"assistant","content":"GDP danh nghĩa tính theo giá hiện hành; GDP thực đã loại bỏ ảnh hưởng lạm phát."}
+]}
+{"messages":[
+  {"role":"user","content":"Tốc độ tăng trưởng GDP tính ra sao?"},
+  {"role":"assistant","content":"Tăng trưởng = (GDP kỳ này − GDP kỳ trước) / GDP kỳ trước × 100%."}
+]}
+{"messages":[
+  {"role":"user","content":"Thất nghiệp (unemployment rate) là gì?"},
+  {"role":"assistant","content":"Tỷ lệ thất nghiệp là phần trăm lực lượng lao động không có việc làm nhưng đang tìm việc."}
+]}
+{"messages":[
+  {"role":"user","content":"Lực lượng lao động gồm ai?"},
+  {"role":"assistant","content":"Gồm người có việc làm và người thất nghiệp đang tích cực tìm việc; không gồm người ngoài lực lượng lao động."}
+]}
+{"messages":[
+  {"role":"user","content":"Cán cân thương mại là gì?"},
+  {"role":"assistant","content":"Cán cân thương mại là chênh lệch giữa giá trị xuất khẩu và nhập khẩu hàng hóa dịch vụ."}
+]}
+{"messages":[
+  {"role":"user","content":"Thâm hụt ngân sách là gì?"},
+  {"role":"assistant","content":"Chi tiêu chính phủ vượt thu ngân sách trong một kỳ gọi là thâm hụt ngân sách."}
+]}
+{"messages":[
+  {"role":"user","content":"Lãi suất chính sách ảnh hưởng gì?"},
+  {"role":"assistant","content":"Lãi suất chính sách ảnh hưởng chi phí vay, đầu tư, tiêu dùng và qua đó tác động lạm phát và tăng trưởng."}
+]}
+{"messages":[
+  {"role":"user","content":"Cung tiền M2 là gì?"},
+  {"role":"assistant","content":"M2 gồm tiền mặt, tiền gửi không kỳ hạn và tiền gửi tiết kiệm/kỳ hạn; phản ánh thanh khoản trong nền kinh tế."}
+]}
+{"messages":[
+  {"role":"user","content":"Tỷ giá hối đoái tăng có nghĩa gì?"},
+  {"role":"assistant","content":"Đồng nội tệ mất giá so với ngoại tệ; xuất khẩu có thể cạnh tranh hơn, nhập khẩu đắt hơn."}
+]}
+{"messages":[
+  {"role":"user","content":"Chỉ số chứng khoán phản ánh gì?"},
+  {"role":"assistant","content":"Phản ánh hiệu suất tổng hợp của nhóm cổ phiếu; là chỉ báo kỳ vọng về kinh tế và lợi nhuận doanh nghiệp."}
+]}
+{"messages":[
+  {"role":"user","content":"PMI là gì?"},
+  {"role":"assistant","content":"PMI (Purchasing Managers' Index) đo hoạt động sản xuất/dịch vụ; >50 mở rộng, <50 thu hẹp."}
+]}
+{"messages":[
+  {"role":"user","content":"Thâm hụt tài khoản vãng lai là gì?"},
+  {"role":"assistant","content":"Khi chi trả ra nước ngoài vượt thu từ nước ngoài trong giao dịch hàng hóa, dịch vụ, thu nhập và chuyển giao."}
+]}
+{"messages":[
+  {"role":"user","content":"Hiệu ứng lạm phát đến tiền lương thực tế?"},
+  {"role":"assistant","content":"Nếu lương danh nghĩa không tăng kịp lạm phát, lương thực tế giảm và sức mua giảm."}
+]}

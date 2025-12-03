@@ -101,7 +101,7 @@ export interface D3BarChartProps {
     | 'custom';
 
   // Bar-specific props
-  barType?: 'grouped' | 'stacked';
+  barType?: 'grouped' | 'stacked' | 'diverging';
   barWidth?: number;
   barSpacing?: number;
 
