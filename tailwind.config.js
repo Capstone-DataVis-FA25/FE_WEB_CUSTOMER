@@ -15,7 +15,14 @@ export default {
         // Default sans-serif sử dụng Roboto
         sans: ['Roboto', 'Inter', 'system-ui', 'sans-serif'],
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: 'none',
+          },
+        },
+      },
     },
   },
-  plugins: [],
+  plugins: [require('@tailwindcss/typography')],
 };

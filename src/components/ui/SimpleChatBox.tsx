@@ -5,6 +5,7 @@ import chatbotLottie from '@/assets/lottie/chatbot_model.json';
 import { useAiChat } from '@/features/ai/useAiChat';
 import Lottie from 'lottie-react';
 import { useLocation } from 'react-router-dom';
+import { MarkdownMessage } from '@/components/ai/MarkdownMessage';
 
 const ChatBot: React.FC = () => {
   const { pathname } = useLocation();
@@ -72,15 +73,15 @@ const ChatBot: React.FC = () => {
                     key={idx}
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div
-                      className={`max-w-xs px-4 py-3 rounded-lg text-sm leading-relaxed break-words ${
-                        msg.role === 'user'
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-br-none shadow-md'
-                          : 'bg-slate-800 text-slate-100 rounded-bl-none border border-slate-700'
-                      }`}
-                    >
-                      {msg.content}
-                    </div>
+                    {msg.role === 'user' ? (
+                      <div className="max-w-xs px-4 py-3 rounded-lg text-sm leading-relaxed break-words bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-br-none shadow-md">
+                        {msg.content}
+                      </div>
+                    ) : (
+                      <div className="max-w-[85%] px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 rounded-bl-none">
+                        <MarkdownMessage content={msg.content} />
+                      </div>
+                    )}
                   </div>
                 ))}
                 {isLoading && (
