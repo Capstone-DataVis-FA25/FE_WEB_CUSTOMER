@@ -16,7 +16,23 @@ export interface CleaningJob {
 }
 
 export function useAiCleaningProgress(userId?: string | number) {
-  const [activeJobs, setActiveJobs] = useState<CleaningJob[]>([]);
+  const [activeJobs, setActiveJobs] = useState<CleaningJob[]>(() => {
+    const saved = localStorage.getItem('ai-cleaning-jobs');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (err) {
+        console.error('[useAiCleaningProgress] Failed to parse saved jobs:', err);
+        return [];
+      }
+    }
+    return [];
+  });
+
+  // Save jobs to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('ai-cleaning-jobs', JSON.stringify(activeJobs));
+  }, [activeJobs]);
 
   // Connect to socket when userId is available
   useEffect(() => {

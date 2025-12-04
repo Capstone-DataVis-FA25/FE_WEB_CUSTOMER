@@ -1,5 +1,14 @@
-import React from 'react';
-import { X, CheckCircle, AlertCircle, Loader2, FileSpreadsheet, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  X,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  FileSpreadsheet,
+  FileText,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CleaningJob } from '@/features/ai/useAiCleaningProgress';
 import { useTranslation } from 'react-i18next';
@@ -16,11 +25,76 @@ export const AiCleaningProgressBar: React.FC<AiCleaningProgressBarProps> = ({
   onRemove,
 }) => {
   const { t } = useTranslation();
+  const [isMinimized, setIsMinimized] = useState(() => {
+    const saved = localStorage.getItem('ai-progress-minimized');
+    return saved === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ai-progress-minimized', String(isMinimized));
+  }, [isMinimized]);
 
   if (jobs.length === 0) return null;
 
+  // Minimized view
+  if (isMinimized) {
+    const processingCount = jobs.filter(j => j.status === 'processing').length;
+    const doneCount = jobs.filter(j => j.status === 'done').length;
+    const errorCount = jobs.filter(j => j.status === 'error').length;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="fixed bottom-6 right-40 z-50"
+      >
+        <button
+          onClick={() => setIsMinimized(false)}
+          className="bg-white dark:bg-gray-800 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3 hover:shadow-xl transition-all group"
+        >
+          <div className="flex items-center gap-2">
+            {processingCount > 0 && (
+              <div className="flex items-center gap-1">
+                <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  {processingCount}
+                </span>
+              </div>
+            )}
+            {doneCount > 0 && (
+              <div className="flex items-center gap-1">
+                <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  {doneCount}
+                </span>
+              </div>
+            )}
+            {errorCount > 0 && (
+              <div className="flex items-center gap-1">
+                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  {errorCount}
+                </span>
+              </div>
+            )}
+          </div>
+          <ChevronUp className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200" />
+        </button>
+      </motion.div>
+    );
+  }
+
   return (
     <div className="fixed bottom-6 right-6 z-50 w-96 space-y-2">
+      {/* Minimize button */}
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={() => setIsMinimized(true)}
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 px-3 py-2 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+        </button>
+      </div>
       <AnimatePresence>
         {jobs.map(job => (
           <motion.div
