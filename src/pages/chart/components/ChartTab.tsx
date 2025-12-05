@@ -111,10 +111,11 @@ const ChartTab: React.FC<ChartTabProps> = ({
   return (
     <div className="space-y-6">
       <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filteredCharts.map(chart => (
+        {filteredCharts.map((chart, index) => (
           // Giao diện của 1 chart hiển thị
           <ChartCard
             key={chart.id}
+            id={`chart-card-${index}`}
             chart={chart}
             onEdit={onEditChart}
             onDelete={onDeleteChart}

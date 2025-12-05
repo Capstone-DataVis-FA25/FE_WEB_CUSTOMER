@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { Palette, ChevronDown, ChevronUp } from 'lucide-react';
 import { useChartEditor, useChartEditorActions } from '@/features/chartEditor';
 import type { SubPieDonutChartConfig } from '@/types/chart';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,7 +46,7 @@ const DisplayOptionsPieSection: React.FC = () => {
         >
           <div className="flex items-center justify-between w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Eye className="h-5 w-5" />
+              <Palette className="h-5 w-5 text-blue-500" />
               {'Display Options'}
             </h3>
             {isCollapsed ? (

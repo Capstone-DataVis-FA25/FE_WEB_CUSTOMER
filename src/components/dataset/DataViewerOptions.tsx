@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { NumberFormatSelector } from './NumberFormatSelector';
 import './scrollbar.css';
 import DelimiterSelector from './DelimiterSelector';
+import { isJsonFormat } from '@/utils/dataProcessors';
 
 interface DataViewerOptionsProps {
   onUpload?: () => void;
@@ -143,13 +144,13 @@ const DataViewerOptions = memo(function DataViewerOptions({
           </div>
 
           {/* Delimiter Selector - Only show for non-JSON formats */}
-          {!isJsonFormat && (
+          {/* {!isJsonFormat && (
             <DelimiterSelector
               selectedDelimiter={selectedDelimiter}
               onDelimiterChange={handleDelimiterChange}
               disabled={isUploading}
             />
-          )}
+          )} */}
 
           {/* Number Format Settings */}
           <NumberFormatSelector

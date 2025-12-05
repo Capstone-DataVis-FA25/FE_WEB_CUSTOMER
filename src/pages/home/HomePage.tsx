@@ -32,20 +32,12 @@ import {
   repeatableVariants,
   viewportConfigs,
 } from '@/theme/animation/animation.config';
-import { datasets } from '@/components/charts/data/home-page-chart-data';
 import Lottie from 'lottie-react';
 import ChartAnimationData from '../../assets/lottie/line-chart.json';
 import BannerVideo from '../../assets/videos/video_demo.mp4';
 import CreateDemoVideo from '../../assets/videos/create_demo.mp4';
 import { useTranslation } from 'react-i18next';
-import LineChartPage from '@/components/charts/page.example/LineChartPage';
-import BarChartPage from '@/components/charts/page.example/BarChartPage';
-import AreaChartPage from '@/components/charts/page.example/AreaChartPage';
-import BarPreview from '@/components/charts/home-chart-preview/BarPreview';
-import LinePreview from '@/components/charts/home-chart-preview/LinePreview';
-import AreaPreview from '@/components/charts/home-chart-preview/AreaPreview';
-import PiePreview from '@/components/charts/home-chart-preview/PiePreview';
-import ScatterPreview from '@/components/charts/home-chart-preview/ScatterPreview';
+import ChartPreview from '@/components/charts/gallery-chart-preview/ChartPreview';
 import Routers from '@/router/routers';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
@@ -70,7 +62,7 @@ const HomePage: React.FC = () => {
           showProgress: true,
           steps: homeSteps,
           popoverClass: 'driverjs-theme',
-          overlayOpacity: 0.2,
+          overlayOpacity: 0,
         });
 
         setTimeout(() => {
@@ -89,13 +81,6 @@ const HomePage: React.FC = () => {
       title: t('home_barChart_title'),
       description: t('home_barChart_desc'),
       color: 'bg-blue-500',
-      dataKey: 'sales',
-      component: BarChartPage,
-      chartConfig: {
-        barType: 'grouped' as const,
-        showLegend: true,
-        showGrid: true,
-      },
     },
     {
       id: 'line',
@@ -103,13 +88,6 @@ const HomePage: React.FC = () => {
       title: t('home_lineChart_title'),
       description: t('home_lineChart_desc'),
       color: 'bg-green-500',
-      dataKey: 'quarterly',
-      component: LineChartPage,
-      chartConfig: {
-        showGrid: true,
-        showLegend: true,
-        lineType: 'curved' as const,
-      },
     },
     {
       id: 'area',
@@ -117,13 +95,6 @@ const HomePage: React.FC = () => {
       title: t('home_areaChart_title'),
       description: t('home_areaChart_desc'),
       color: 'bg-teal-500',
-      dataKey: 'area',
-      component: AreaChartPage,
-      chartConfig: {
-        showGrid: true,
-        showLegend: true,
-        isStacked: false,
-      },
     },
     {
       id: 'pie',
@@ -131,12 +102,6 @@ const HomePage: React.FC = () => {
       title: t('home_pieChart_title'),
       description: t('home_pieChart_desc'),
       color: 'bg-purple-500',
-      dataKey: 'pie',
-      component: AreaChartPage,
-      chartConfig: {
-        showLegend: true,
-        showLabels: true,
-      },
     },
     {
       id: 'scatter',
@@ -144,11 +109,6 @@ const HomePage: React.FC = () => {
       title: t('home_scatterChart_title'),
       description: t('home_scatterChart_desc'),
       color: 'bg-orange-500',
-      dataKey: 'scatter',
-      component: AreaChartPage,
-      chartConfig: {
-        showGrid: true,
-      },
     },
     {
       id: 'map',
@@ -156,11 +116,6 @@ const HomePage: React.FC = () => {
       title: t('home_mapChart_title'),
       description: t('home_mapChart_desc'),
       color: 'bg-red-500',
-      dataKey: 'map',
-      component: AreaChartPage,
-      chartConfig: {
-        showLegend: true,
-      },
     },
     {
       id: 'table',
@@ -168,13 +123,6 @@ const HomePage: React.FC = () => {
       title: t('home_tableChart_title'),
       description: t('home_tableChart_desc'),
       color: 'bg-indigo-500',
-      dataKey: 'table',
-      component: AreaChartPage,
-      chartConfig: {
-        searchable: true,
-        sortable: true,
-        pagination: true,
-      },
     },
     {
       id: 'trend',
@@ -182,118 +130,22 @@ const HomePage: React.FC = () => {
       title: t('home_trendChart_title'),
       description: t('home_trendChart_desc'),
       color: 'bg-pink-500',
-      dataKey: 'trend',
-      component: AreaChartPage,
-      chartConfig: {
-        showGrid: true,
-        showTrendLine: true,
-        showDataPoints: true,
-      },
     },
   ];
 
-  // Function to render chart preview (uniform size, no dark/extra background)
+  // Function to render chart preview using SVG icons
   const renderChartPreview = (chartType: ChartDataPoint) => {
-    const dataset = datasets[chartType.dataKey as keyof typeof datasets];
     const PREVIEW_W = 420;
     const PREVIEW_H = 420;
 
-    if (!chartType.component || !dataset) {
-      return (
-        <div
-          className="flex items-center justify-center"
-          style={{ width: PREVIEW_W, height: PREVIEW_H }}
-        >
-          <div className="text-center">
-            <div
-              className={`w-16 h-16 ${chartType.color} rounded-lg flex items-center justify-center mx-auto mb-4`}
-            >
-              <chartType.icon className="w-8 h-8 text-white" />
-            </div>
-            <p className="text-muted-foreground">Preview coming soon</p>
-          </div>
-        </div>
-      );
-    }
-
-    const ChartComponent = chartType.component;
-
-    const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    return (
       <div
         className="flex items-center justify-center rounded-2xl border-2 border-gray-700/40 dark:border-gray-700/50 bg-white/5 dark:bg-gray-900/40 shadow-xl overflow-hidden"
         style={{ width: PREVIEW_W, height: PREVIEW_H }}
       >
-        {children}
+        <ChartPreview type={chartType.id} className="w-full h-full p-8" />
       </div>
     );
-
-    if (chartType.id === 'bar') {
-      return (
-        <Frame>
-          <BarPreview arrayData={dataset} />
-        </Frame>
-      );
-    }
-
-    if (chartType.id === 'line') {
-      return (
-        <Frame>
-          <LinePreview arrayData={dataset} />
-        </Frame>
-      );
-    }
-
-    if (chartType.id === 'pie') {
-      return (
-        <Frame>
-          <PiePreview arrayData={dataset} />
-        </Frame>
-      );
-    }
-
-    if (chartType.id === 'scatter') {
-      return (
-        <Frame>
-          <ScatterPreview arrayData={dataset} />
-        </Frame>
-      );
-    }
-
-    if (chartType.id === 'area') {
-      return (
-        <Frame>
-          <AreaPreview arrayData={dataset} />
-        </Frame>
-      );
-    }
-
-    if (chartType.id === 'trend') {
-      return (
-        <Frame>
-          <div className="w-full h-full flex items-center justify-center">
-            <ChartComponent arrayData={dataset} />
-          </div>
-        </Frame>
-      );
-    }
-
-    if (chartType.id === 'map') {
-      return (
-        <Frame>
-          <ChartComponent arrayData={dataset} />
-        </Frame>
-      );
-    }
-
-    if (chartType.id === 'table') {
-      return (
-        <Frame>
-          <ChartComponent arrayData={dataset} />
-        </Frame>
-      );
-    }
-
-    return null;
   };
 
   // Get selected chart data

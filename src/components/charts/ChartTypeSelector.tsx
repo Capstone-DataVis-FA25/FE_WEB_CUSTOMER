@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Settings,
   LineChart,
   BarChart3,
   AreaChart,
@@ -10,6 +9,7 @@ import {
   Donut,
   RefreshCcw,
   Grid3x3,
+  ChartColumn,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
@@ -87,6 +87,11 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
         value: ChartType.Heatmap,
         label: t('chart_type_heatmap', 'Heatmap'),
         icon: Grid3x3,
+      },
+      {
+        value: ChartType.Histogram,
+        label: t('chart_type_histogram', 'Histogram'),
+        icon: BarChart3,
       },
     ],
     [t]
@@ -226,7 +231,7 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
       <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl rounded-lg">
         <CardHeader className="pb-3">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Settings className="h-5 w-5" />
+            <ChartColumn className="h-5 w-5 text-blue-500" />
             {t('chart_editor_chartType', 'Chart Type')}
           </h3>
         </CardHeader>

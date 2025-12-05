@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useTranslation } from 'react-i18next';
-import { Plus, BarChart3, RotateCcw } from 'lucide-react';
+import { Plus, BarChart3, RotateCcw, HelpCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
@@ -374,6 +374,17 @@ const ChartListPage: React.FC = () => {
     navigate('?page=1', { replace: true });
   };
 
+  // Function to manually start tour
+  const startTour = () => {
+    const driverObj = driver({
+      showProgress: true,
+      steps: chartListSteps,
+      popoverClass: 'driverjs-theme driver-theme-charts',
+      overlayOpacity: 0,
+    });
+    driverObj.drive();
+  };
+
   // While initial fetch is in-flight and no items yet, show only header + a scoped spinner
   const isInitialLoading = chartsLoading && allFilteredCharts.length === 0;
 
@@ -404,6 +415,15 @@ const ChartListPage: React.FC = () => {
           </div>
           <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
             <button
+              onClick={startTour}
+              type="button"
+              className="h-11 px-6 border-2 border-blue-300 hover:border-blue-500 rounded-2xl backdrop-blur-sm text-left flex items-center justify-center shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-900 dark:to-gray-800 font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-100"
+            >
+              <HelpCircle className="h-4 w-4 mr-2" />
+              Start Tour
+            </button>
+            <button
+              id="btn-new-chart"
               onClick={() => handleCreateChart()}
               type="button"
               className="h-11 px-6 border-2 border-emerald-300 hover:border-emerald-500 rounded-2xl backdrop-blur-sm text-left flex items-center justify-center shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800 font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100"
@@ -785,6 +805,16 @@ const ChartListPage: React.FC = () => {
                               }}
                             >
                               Cycle Plot
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                              onClick={() => {
+                                setChartTypeFilter('heatmap');
+                                chartPagination.setPage(1);
+                                updateURL({ type: 'heatmap', page: 1 });
+                              }}
+                            >
+                              Heatmap
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

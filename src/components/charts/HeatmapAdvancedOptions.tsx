@@ -33,7 +33,7 @@ const HeatmapAdvancedOptions: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6, delay: 0.2 }}
+      transition={{ duration: 0.6, delay: 0.15 }}
     >
       <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-hidden rounded-lg">
         <CardHeader
@@ -42,7 +42,7 @@ const HeatmapAdvancedOptions: React.FC = () => {
         >
           <div className="flex items-center justify-between w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Eye className="h-5 w-5" />
+              <Eye className="h-5 w-5 text-blue-500" />
               {t('heatmap_advanced_options', 'Advanced Options')}
             </h3>
             {isCollapsed ? (

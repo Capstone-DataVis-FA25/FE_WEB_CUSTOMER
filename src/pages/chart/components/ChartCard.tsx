@@ -40,6 +40,7 @@ type Chart = BaseChart & {
 };
 
 interface ChartCardProps {
+  id?: string;
   chart: Chart;
   onEdit: (chartId: string) => void;
   onDelete: (chart: Chart) => void;
@@ -85,6 +86,8 @@ const getChartTypeLabel = (type: string) => {
       return 'Donut Chart';
     case ChartType.CyclePlot:
       return 'Cycle Plot';
+    case ChartType.Heatmap:
+      return 'Heatmap';
     default:
       return 'Unknown Chart';
   }
@@ -107,6 +110,8 @@ const getChartColor = (type: string) => {
       return 'from-yellow-500 to-amber-500';
     case ChartType.CyclePlot:
       return 'from-green-500 to-lime-500';
+    case ChartType.Heatmap:
+      return 'from-red-500 to-yellow-500';
     default:
       return 'from-gray-500 to-gray-600';
   }
@@ -115,6 +120,7 @@ const getChartColor = (type: string) => {
 // Removed unused formatDate helper
 
 const ChartCard: React.FC<ChartCardProps> = ({
+  id,
   chart,
   onEdit,
   onDelete,
@@ -149,6 +155,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
 
   return (
     <Card
+      id={id}
       className="group relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 overflow-hidden cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

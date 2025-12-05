@@ -9,6 +9,7 @@ import D3AreaChart from '@/components/charts/D3AreaChart';
 import D3ScatterChart from '@/components/charts/D3ScatterChart';
 import D3CyclePlot from '@/components/charts/D3CyclePlot';
 import D3HeatmapChart from '@/components/charts/D3HeatmapChart';
+import D3HistogramChart from '@/components/charts/D3HistogramChart';
 import { TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { curveOptions } from '@/types/chart';
@@ -836,6 +837,95 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
         };
 
         return <D3HeatmapChart {...heatmapProps} />;
+      }
+      case ChartType.Histogram: {
+        if (!safeChartConfig || !chartConfig) {
+          return (
+            <ErrorPanel
+              title={t('chart_editor_invalid_config', 'Invalid chart configuration')}
+              subtitle={t(
+                'chart_editor_invalid_config_hint',
+                'The chart configuration is invalid or missing.'
+              )}
+              bordered
+            />
+          );
+        }
+
+        // Check if at least one series is selected for histogram data
+        const visibleSeries = (axisConfigs.seriesConfigs || []).filter(
+          (series: any) => series.visible !== false
+        );
+
+        if (!visibleSeries || visibleSeries.length === 0) {
+          return (
+            <ErrorPanel
+              title={t('chart_editor_no_data_column', 'No data column selected')}
+              subtitle={t(
+                'chart_editor_histogram_select_column_hint',
+                'Please select a data column for the histogram in Series Management'
+              )}
+              bordered
+            />
+          );
+        }
+
+        if (!chartData || chartData.length === 0) {
+          return <div className="h-96" />;
+        }
+
+        // Use the first visible series as the data column for histogram
+        const dataColumnId = visibleSeries[0].dataColumn;
+        const dataColumnName = getHeaderName(dataColumnId);
+        const dataColumnKey = getChartDataKey(dataColumnId);
+
+        const histogramProps = {
+          data: chartData,
+          width: safeChartConfig.width || 800,
+          height: safeChartConfig.height || 600,
+          margin: safeChartConfig.margin || { top: 40, right: 40, bottom: 60, left: 80 },
+          dataColumn: dataColumnKey,
+          binCount: safeChartConfig.binCount || 10,
+          binWidth: safeChartConfig.binWidth,
+          binMethod: safeChartConfig.binMethod || 'sturges',
+          customBinEdges: safeChartConfig.customBinEdges,
+          showDensity: safeChartConfig.showDensity || false,
+          showCumulativeFrequency: safeChartConfig.showCumulativeFrequency || false,
+          barColor: safeChartConfig.barColor,
+          showMean: safeChartConfig.showMean || false,
+          showMedian: safeChartConfig.showMedian || false,
+          showPointValues: safeChartConfig.showPointValues || false,
+          normalize: safeChartConfig.normalize || false,
+          title: safeChartConfig.title || '',
+          xAxisLabel: axisConfigs.xAxisLabel || dataColumnName,
+          yAxisLabel:
+            axisConfigs.yAxisLabel || (safeChartConfig.normalize ? 'Density' : 'Frequency'),
+          showLegend: safeChartConfig.showLegend ?? true,
+          showGrid: safeChartConfig.showGrid ?? true,
+          yAxisStart: axisConfigs.yAxisStart || 'zero',
+          animationDuration: safeChartConfig.animationDuration || 1000,
+          yAxisFormatter: formatters?.useYFormatter ? yAxisFormatterFn : undefined,
+          xAxisFormatter: formatters?.useXFormatter ? xAxisFormatterFn : undefined,
+          yFormatterType: formatters?.yFormatterType,
+          xFormatterType: formatters?.xFormatterType,
+          gridOpacity: safeChartConfig.gridOpacity || 0.5,
+          legendPosition: safeChartConfig.legendPosition || 'bottom',
+          xAxisRotation: axisConfigs.xAxisRotation || 0,
+          yAxisRotation: axisConfigs.yAxisRotation || 0,
+          showAxisLabels: axisConfigs.showAxisLabels ?? true,
+          showAxisTicks: axisConfigs.showAxisTicks ?? true,
+          enableZoom: safeChartConfig.enableZoom || false,
+          enablePan: safeChartConfig.enablePan || false,
+          zoomExtent: safeChartConfig.zoomExtent || 8,
+          showTooltip: safeChartConfig.showTooltip ?? true,
+          theme: safeChartConfig.theme || 'auto',
+          backgroundColor: safeChartConfig.backgroundColor || 'transparent',
+          titleFontSize: safeChartConfig.titleFontSize || 16,
+          labelFontSize: safeChartConfig.labelFontSize || 12,
+          legendFontSize: safeChartConfig.legendFontSize || 11,
+        };
+
+        return <D3HistogramChart {...histogramProps} />;
       }
       default:
         return (

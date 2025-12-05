@@ -32,6 +32,22 @@ export const buildResetBindingsPatch = (chart: MainChartConfig): Partial<MainCha
       } as any;
       return { axisConfigs } as Partial<MainChartConfig>;
     }
+    case 'cycleplot': {
+      const axisConfigs = {
+        ...(chart.axisConfigs || {}),
+        cycleKey: undefined,
+        periodKey: undefined,
+        valueKey: undefined,
+      } as any;
+      return { axisConfigs } as Partial<MainChartConfig>;
+    }
+    case 'histogram': {
+      const axisConfigs = {
+        ...(chart.axisConfigs || {}),
+        seriesConfigs: [],
+      } as any;
+      return { axisConfigs } as Partial<MainChartConfig>;
+    }
     default:
       return {};
   }

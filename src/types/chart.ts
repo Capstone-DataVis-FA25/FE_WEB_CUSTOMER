@@ -89,7 +89,8 @@ export type MainChartConfig =
   | PieChartConfig
   | DonutChartConfig
   | CyclePlotConfig
-  | HeatmapChartConfig;
+  | HeatmapChartConfig
+  | HistogramChartConfig;
 // Scatter chart specific configuration
 export interface SubScatterChartConfig extends BaseChartConfig {
   pointRadius?: number;
@@ -101,6 +102,21 @@ export interface SubCyclePlotChartConfig extends BaseChartConfig {
   curve?: keyof typeof curveOptions;
   lineWidth?: number;
   pointRadius?: number;
+}
+
+// Histogram specific configuration
+export interface SubHistogramChartConfig extends BaseChartConfig {
+  binCount?: number; // Number of bins (default: auto-calculate using Sturges' formula)
+  binWidth?: number; // Fixed bin width
+  binMethod?: 'count' | 'width' | 'sturges' | 'scott' | 'freedman-diaconis'; // Binning method
+  customBinEdges?: number[]; // Custom bin edges for advanced users
+  showDensity?: boolean; // Show density curve overlay
+  showCumulativeFrequency?: boolean; // Show cumulative frequency line
+  barColor?: string; // Single color for histogram bars
+  showMean?: boolean; // Show mean line
+  showMedian?: boolean; // Show median line
+  showPointValues?: boolean; // Show frequency values on bars
+  normalize?: boolean; // Normalize to show probability density
 }
 
 // Heatmap specific configuration
@@ -350,6 +366,14 @@ export interface HeatmapChartConfig {
   chartType: 'heatmap';
 }
 
+export interface HistogramChartConfig {
+  config: SubHistogramChartConfig;
+  formatters: Partial<FormatterConfig>;
+  axisConfigs: AxisConfig;
+  datasetConfig?: DatasetConfig;
+  chartType: 'histogram';
+}
+
 // Curve options
 export const curveOptions = {
   curveLinear: d3.curveLinear,
@@ -432,6 +456,7 @@ export const CHART_DATA_BINDING_KEYS: Record<MainChartConfig['chartType'], DataB
   donut: ['labelKey', 'valueKey'],
   cycleplot: ['cycleKey', 'periodKey', 'valueKey'],
   heatmap: ['xAxisKey', 'yAxisKey', 'valueKey'],
+  histogram: ['seriesConfigs'],
 };
 
 // Path-based definition that reflects actual nesting
@@ -454,6 +479,7 @@ export const CHART_DATA_BINDING_PATHS: Record<MainChartConfig['chartType'], Data
   donut: ['config.labelKey', 'config.valueKey'],
   cycleplot: ['axisConfigs.cycleKey', 'axisConfigs.periodKey', 'axisConfigs.valueKey'],
   heatmap: ['axisConfigs.xAxisKey', 'axisConfigs.yAxisKey', 'axisConfigs.valueKey'],
+  histogram: ['axisConfigs.seriesConfigs'],
 };
 
 // Series configuration interface for Data Series management

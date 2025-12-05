@@ -27,6 +27,7 @@ export type ChartType =
   | 'cycleplot'
   | 'map'
   | 'heatmap'
+  | 'histogram'
   | 'bubble'
   | 'radar'
   | 'treemap'

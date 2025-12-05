@@ -27,6 +27,7 @@ import {
   ArrowRight,
   Info,
   Database,
+  HelpCircle,
 } from 'lucide-react';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import Routers from '@/router/routers';
@@ -90,6 +91,17 @@ export default function ChooseTemplateTab() {
   const [showFeatured, setShowFeatured] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showDatasetModal, setShowDatasetModal] = useState(false);
+
+  // Function to manually start tour
+  const startTour = () => {
+    const driverObj = driver({
+      showProgress: true,
+      steps: chartGallerySteps,
+      popoverClass: 'driverjs-theme',
+      overlayOpacity: 0,
+    });
+    driverObj.drive();
+  };
 
   // Handle dataset selection from modal
   const handleSelectDataset = async (selectedDatasetId: string, selectedDatasetName: string) => {
@@ -376,6 +388,18 @@ export default function ChooseTemplateTab() {
               className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
             />
           </div>
+        </div>
+
+        {/* Start Tour Button */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <Button
+            onClick={startTour}
+            variant="outline"
+            className="w-full justify-start gap-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+          >
+            <HelpCircle className="w-4 h-4" />
+            Start Tour
+          </Button>
         </div>
 
         {/* Filters Section */}

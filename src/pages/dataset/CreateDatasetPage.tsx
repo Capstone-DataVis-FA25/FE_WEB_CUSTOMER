@@ -60,20 +60,13 @@ function CreateDatasetPageContent() {
       const hasShownTour = localStorage.getItem(storageKey);
 
       if (hasShownTour !== 'true') {
-        const driverObj = driver({
-          showProgress: true,
-          steps: createDatasetSteps,
-          popoverClass: 'driverjs-theme',
-          overlayOpacity: 0.2,
-        });
-
         setTimeout(() => {
-          driverObj.drive();
+          startTour();
           localStorage.setItem(storageKey, 'true');
         }, 1000);
       }
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, startTour]);
 
   // Get form states from FormContext
   const { datasetName, description, resetForm } = useForm();
@@ -514,7 +507,11 @@ function CreateDatasetPageContent() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex gap-6 items-start">
             {/* Left Navigation Component */}
-            <UploadMethodNavigation viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+            <UploadMethodNavigation
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+              onStartTour={startTour}
+            />
 
             {/* Main Content */}
             <div className="flex-1">

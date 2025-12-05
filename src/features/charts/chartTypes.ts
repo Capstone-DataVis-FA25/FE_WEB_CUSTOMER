@@ -37,6 +37,7 @@ export enum ChartType {
   Donut = 'donut',
   CyclePlot = 'cycleplot',
   Heatmap = 'heatmap',
+  Histogram = 'histogram',
 }
 
 // Chart configuration interfaces

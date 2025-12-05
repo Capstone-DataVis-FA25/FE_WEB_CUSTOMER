@@ -131,7 +131,7 @@ const AxisConfigurationSection: React.FC<AxisConfigurationSectionProps> = ({
         >
           <div className="flex items-center justify-between w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Sliders className="h-5 w-5" />
+              <Sliders className="h-5 w-5 text-blue-500" />
               {t('chart_editor_axis_configuration', 'Axis Configuration')}
             </h3>
             <motion.div
