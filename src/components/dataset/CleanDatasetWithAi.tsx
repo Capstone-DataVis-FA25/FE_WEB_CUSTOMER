@@ -43,12 +43,20 @@ function CleanDatasetWithAI({
     thousandsSeparator: '',
     decimalSeparator: '',
     notes: '',
+    // Cleaning rules checkboxes (default enabled)
+    removeDuplicates: true,
+    fixDataTypes: true,
+    handleMissingValues: true,
+    removeOutliers: false,
+    standardizeFormats: true,
+    validateDomain: false,
+    standardizeUnits: false,
   });
 
   const { t } = useTranslation();
   const { showSuccess } = useToastContext();
 
-  const handleOptionChange = (key: keyof typeof cleaningOptions, value: string) => {
+  const handleOptionChange = (key: keyof typeof cleaningOptions, value: string | boolean) => {
     setCleaningOptions(prev => ({
       ...prev,
       [key]: value,
@@ -250,6 +258,137 @@ function CleanDatasetWithAI({
 
             {showAdvancedOptions && (
               <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-600 space-y-4">
+                {/* Cleaning Rules Checkboxes */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Cleaning Rules
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label className="flex items-start gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={cleaningOptions.removeDuplicates}
+                        onChange={e => handleOptionChange('removeDuplicates', e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          Remove duplicates
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Remove exact duplicate rows
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={cleaningOptions.fixDataTypes}
+                        onChange={e => handleOptionChange('fixDataTypes', e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          Fix data types
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Convert strings to numbers
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={cleaningOptions.handleMissingValues}
+                        onChange={e => handleOptionChange('handleMissingValues', e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          Handle missing values
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Fill or remove empty cells
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={cleaningOptions.removeOutliers}
+                        onChange={e => handleOptionChange('removeOutliers', e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          Remove or cap outliers
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Detect and handle anomalies
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={cleaningOptions.standardizeFormats}
+                        onChange={e => handleOptionChange('standardizeFormats', e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          Standardize formats
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Normalize dates, phones, etc.
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={cleaningOptions.validateDomain}
+                        onChange={e => handleOptionChange('validateDomain', e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          Validate domain constraints
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Check value ranges and formats
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={cleaningOptions.standardizeUnits}
+                        onChange={e => handleOptionChange('standardizeUnits', e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          Standardize units
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Convert to consistent units
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-gray-200 dark:border-gray-600"></div>
+
+                {/* Format Settings */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label
@@ -298,27 +437,19 @@ function CleanDatasetWithAI({
                       htmlFor="notes"
                       className="text-sm font-medium text-gray-700 dark:text-gray-300"
                     >
-                      Notes
+                      Additional Notes
                     </Label>
                     <textarea
                       id="notes"
                       value={cleaningOptions.notes}
                       onChange={e => handleOptionChange('notes', e.target.value)}
-                      placeholder="Optional notes for AI. Leave empty to use default behaviour."
-                      className="w-full min-h-[80px] p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y"
+                      placeholder="Optional: Add custom cleaning instructions..."
+                      className="w-full min-h-[60px] p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Optional notes about the cleaning process (multiple lines supported)
+                      Provide any specific cleaning requirements
                     </p>
                   </div>
-                </div>
-
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
-                  <p className="text-xs text-blue-800 dark:text-blue-200">
-                    <strong>Preview:</strong> Numbers will use{' '}
-                    <strong>{cleaningOptions.thousandsSeparator || ','}</strong> for thousands and{' '}
-                    <strong>{cleaningOptions.decimalSeparator || '.'}</strong> for decimals.
-                  </p>
                 </div>
               </div>
             )}
@@ -420,15 +551,16 @@ function CleanDatasetWithAI({
                   <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                   <div>
                     <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                      What AI will clean:
+                      AI will apply:
                     </h4>
                     <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                      <li>
-                        • Standardize number formats (thousands separator:{' '}
-                        {cleaningOptions.thousandsSeparator})
-                      </li>
-                      <li>• Normalize decimal separators ({cleaningOptions.decimalSeparator})</li>
-                      <li>• Remove duplicates and inconsistencies</li>
+                      {cleaningOptions.removeDuplicates && <li>• Remove duplicate rows</li>}
+                      {cleaningOptions.fixDataTypes && <li>• Fix data types</li>}
+                      {cleaningOptions.handleMissingValues && <li>• Handle missing values</li>}
+                      {cleaningOptions.removeOutliers && <li>• Remove or cap outliers</li>}
+                      {cleaningOptions.standardizeFormats && <li>• Standardize formats</li>}
+                      {cleaningOptions.validateDomain && <li>• Validate domain constraints</li>}
+                      {cleaningOptions.standardizeUnits && <li>• Standardize units</li>}
                     </ul>
                   </div>
                 </div>
@@ -471,15 +603,16 @@ function CleanDatasetWithAI({
                   <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                   <div>
                     <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                      What AI will clean:
+                      AI will apply:
                     </h4>
                     <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                      <li>
-                        • Standardize number formats (thousands separator:{' '}
-                        {cleaningOptions.thousandsSeparator})
-                      </li>
-                      <li>• Normalize decimal separators ({cleaningOptions.decimalSeparator})</li>
-                      <li>• Clean and standardize text fields</li>
+                      {cleaningOptions.removeDuplicates && <li>• Remove duplicate rows</li>}
+                      {cleaningOptions.fixDataTypes && <li>• Fix data types</li>}
+                      {cleaningOptions.handleMissingValues && <li>• Handle missing values</li>}
+                      {cleaningOptions.removeOutliers && <li>• Remove or cap outliers</li>}
+                      {cleaningOptions.standardizeFormats && <li>• Standardize formats</li>}
+                      {cleaningOptions.validateDomain && <li>• Validate domain constraints</li>}
+                      {cleaningOptions.standardizeUnits && <li>• Standardize units</li>}
                     </ul>
                   </div>
                 </div>
