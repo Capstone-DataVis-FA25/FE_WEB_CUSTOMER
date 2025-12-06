@@ -198,13 +198,13 @@ export const applyPivot = (
         rowKeysSet.add(rowKey);
         colKeysSet.add(colKey);
 
-        // Just mark that this combination exists (count = 1)
+        // Just mark that this combination exists (use 0 as default value)
         if (!pivotMap.has(rowKey)) {
           pivotMap.set(rowKey, new Map());
         }
         const rowMap = pivotMap.get(rowKey)!;
         if (!rowMap.has(colKey)) {
-          rowMap.set(colKey, [1]); // Use count = 1 to indicate existence
+          rowMap.set(colKey, [0]); // Use 0 as default value when no values are specified
         }
       } else {
         // No columns and no values: just track unique rows
@@ -247,53 +247,56 @@ export const applyPivot = (
         const value = values.find(v => v.id === valueId);
         if (!value) continue;
 
-        // Build column name - show column dimension values, and append operation name if multiple values exist
+        // Build column name - always use "Operation of columnName (columnDimension)" format
         let colName: string;
-        if (columns.length > 0) {
-          // Has column dimensions: show the values (e.g., "Los Angeles", "Portland")
-          const colDimParts = parts.slice(0, -1);
-          const baseName = colDimParts.join(' | '); // Just join the values, no dimension names
 
-          // If there are 2+ value operations, append the operation name in parentheses
-          if (values.length > 1) {
-            const operationLabel =
-              value.aggregationType === 'count'
-                ? 'Count'
-                : value.aggregationType.charAt(0).toUpperCase() + value.aggregationType.slice(1);
-            colName = `${baseName} (${operationLabel})`;
-          } else {
-            // Single value: just show the column dimension values
-            colName = baseName;
-          }
+        // Get operation label
+        const operationLabel =
+          value.aggregationType === 'count'
+            ? 'Count'
+            : value.aggregationType.charAt(0).toUpperCase() + value.aggregationType.slice(1);
+
+        // Get original column name
+        const columnHeader = headers.find(
+          h => ((h as any).id || (h as any).headerId) === value.columnId
+        );
+        const columnName = columnHeader?.name || value.name;
+
+        if (columns.length > 0) {
+          // Has column dimensions: "Operation of columnName (col1 | col2)"
+          const colDimParts = parts.slice(0, -1);
+          const columnValues = colDimParts.join(' | ');
+          colName = value.alias?.trim() || `${operationLabel} of ${columnName} (${columnValues})`;
         } else {
-          // No column dimensions: show value name in Excel format "Sum of column_name"
-          const columnHeader = headers.find(
-            h => ((h as any).id || (h as any).headerId) === value.columnId
-          );
-          const columnName = columnHeader?.name || value.name;
-          const label =
-            value.aggregationType === 'count'
-              ? 'Count'
-              : value.aggregationType.charAt(0).toUpperCase() + value.aggregationType.slice(1);
-          colName = value.alias?.trim() || `${label} of ${columnName}`;
+          // No column dimensions: "Operation of columnName"
+          colName = value.alias?.trim() || `${operationLabel} of ${columnName}`;
         }
 
+        // Generate simple sequential ID for header (just an identifier)
+        // Store valueId separately for matching series
+        const headerId = `col-${headerIndex}`;
         pivotedHeaders.push({
-          id: colKey,
+          id: headerId,
           name: colName,
           type: 'number',
           index: headerIndex++,
+          // Store valueId for series matching (using type assertion since DataHeader doesn't have this property)
+          ...({ valueId: value.id } as any),
         });
       } else {
         // No values: just show column dimension values
+        // These columns contain numeric default values (0), so they should be type 'number'
         if (columns.length > 0) {
           const parts = colKey.split('|');
           const colName = parts.join(' | '); // Just join the values, no dimension names
 
+          // Generate simple sequential ID for header (just an identifier)
+          // No valueId needed for this case (no values, just column dimensions)
+          const headerId = `col-${headerIndex}`;
           pivotedHeaders.push({
-            id: colKey,
+            id: headerId,
             name: colName,
-            type: 'text',
+            type: 'number', // Changed from 'text' to 'number' since default value is 0
             index: headerIndex++,
           });
         }
@@ -341,9 +344,9 @@ export const applyPivot = (
             pivotedRow.push('0');
           }
         } else {
-          // No values: just mark if combination exists (show "1" or empty)
+          // No values: just mark if combination exists (show "0" or empty)
           if (valueArray && valueArray.length > 0) {
-            pivotedRow.push('1'); // Indicates this row/column combination exists
+            pivotedRow.push('0'); // Default value when no values are specified
           } else {
             pivotedRow.push('');
           }

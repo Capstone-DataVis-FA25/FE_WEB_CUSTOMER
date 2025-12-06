@@ -281,6 +281,7 @@ export const defaultCyclePlotConfig: CyclePlotConfig = {
   config: defaultSubCyclePlotConfig,
   formatters: defaultFormatterConfig,
   axisConfigs: defaultCyclePlotAxisConfigs,
+  datasetConfig: {},
   chartType: 'cycleplot',
 };
 
@@ -316,6 +317,7 @@ export const defaultHeatmapConfig: HeatmapChartConfig = {
   config: defaultSubHeatmapConfig,
   formatters: defaultFormatterConfig,
   axisConfigs: defaultHeatmapAxisConfigs,
+  datasetConfig: {},
   chartType: 'heatmap',
 };
 
@@ -323,6 +325,7 @@ export const defaultHistogramConfig: HistogramChartConfig = {
   config: defaultSubHistogramConfig,
   formatters: defaultFormatterConfig,
   axisConfigs: defaultAxisConfigs,
+  datasetConfig: {},
   chartType: 'histogram',
 };
 
