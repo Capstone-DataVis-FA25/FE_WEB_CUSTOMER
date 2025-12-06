@@ -3,9 +3,9 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SlideInUp } from '@/theme/animation';
-import { ArrowLeft, Database, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 // removed inline inputs/badge; now inside modular components
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useDataset } from '@/features/dataset/useDataset';
@@ -21,10 +21,10 @@ import DatasetInfoCard from '@/components/dataset/DatasetInfoCard';
 import DatasetActionsCard from '@/components/dataset/DatasetActionsCard';
 
 // Type for header with data
-interface DatasetHeader {
-  name: string;
-  data?: (string | number)[];
-}
+// interface DatasetHeader {
+//   name: string;
+//   data?: (string | number)[];
+// }
 
 const DatasetDetailPage: React.FC = () => {
   const { id: legacyId, slug } = useParams<{ id?: string; slug?: string }>();
@@ -102,38 +102,38 @@ const DatasetDetailPage: React.FC = () => {
     return nameChanged || descriptionChanged;
   }, [editableName, originalName, editableDescription, originalDescription, currentDataset]);
 
-  const exportCsv = (
-    headerRow: { name: string }[],
-    bodyRows: (string | number | null)[][],
-    filename: string
-  ) => {
-    try {
-      if (!headerRow || headerRow.length === 0) return;
+  // const exportCsv = (
+  //   headerRow: { name: string }[],
+  //   bodyRows: (string | number | null)[][],
+  //   filename: string
+  // ) => {
+  //   try {
+  //     if (!headerRow || headerRow.length === 0) return;
 
-      const delimiter = ',';
-      const escapeCell = (v: string | number | null) => {
-        const s = v == null ? '' : String(v);
-        return '"' + s.replace(/"/g, '""') + '"';
-      };
+  //     const delimiter = ',';
+  //     const escapeCell = (v: string | number | null) => {
+  //       const s = v == null ? '' : String(v);
+  //       return '"' + s.replace(/"/g, '""') + '"';
+  //     };
 
-      const headerLine = headerRow.map(h => escapeCell(h.name)).join(delimiter);
-      const lines = bodyRows.map(r => r.map(c => escapeCell(c)).join(delimiter));
-      const csv = [headerLine, ...lines].join('\n');
+  //     const headerLine = headerRow.map(h => escapeCell(h.name)).join(delimiter);
+  //     const lines = bodyRows.map(r => r.map(c => escapeCell(c)).join(delimiter));
+  //     const csv = [headerLine, ...lines].join('\n');
 
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
+  //     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  //     const url = URL.createObjectURL(blob);
 
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export CSV failed', err);
-    }
-  };
+  //     const a = document.createElement('a');
+  //     a.href = url;
+  //     a.download = filename;
+  //     document.body.appendChild(a);
+  //     a.click();
+  //     document.body.removeChild(a);
+  //     URL.revokeObjectURL(url);
+  //   } catch (err) {
+  //     console.error('Export CSV failed', err);
+  //   }
+  // };
 
   // Fetch dataset on component mount
   useEffect(() => {

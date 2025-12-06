@@ -112,7 +112,7 @@ const chartHistorySlice = createSlice({
       })
       .addCase(compareVersionsThunk.fulfilled, (state, action) => {
         state.comparing = false;
-        state.comparisonResult = action.payload;
+        state.comparisonResult = action.payload as any;
       })
       .addCase(compareVersionsThunk.rejected, (state, action) => {
         state.comparing = false;

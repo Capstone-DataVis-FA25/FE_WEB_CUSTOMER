@@ -1,4 +1,4 @@
-import type { ChartConfig, SeriesConfig } from '@/types/chart';
+import type { SeriesConfig } from '@/types/chart';
 
 /**
  * Helper function to check if a column is available for a specific series
@@ -10,7 +10,7 @@ import type { ChartConfig, SeriesConfig } from '@/types/chart';
  */
 export const isColumnAvailableForSeries = (
   axisConfigs: SeriesConfig[],
-  config: ChartConfig,
+  config: { xAxisKey: string },
   column: string,
   seriesId: string
 ) => {
@@ -41,7 +41,7 @@ export const getResponsiveDefaults = () => {
  * Calculate responsive fontSize based on chart dimensions
  * @returns
  */
-export const getResponsiveFontSize = (config: ChartConfig) => {
+export const getResponsiveFontSize = (config: { width: number; height: number }) => {
   const baseSize = Math.min(config.width, config.height);
   if (baseSize <= 300) return { axis: 10, label: 12, title: 14 };
   if (baseSize <= 500) return { axis: 11, label: 13, title: 16 };

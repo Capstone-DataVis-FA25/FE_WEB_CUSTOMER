@@ -11,6 +11,8 @@ const FontSizeConfiguration: React.FC = () => {
   if (!chartConfig) return null;
 
   const config = chartConfig.config;
+  if (!config) return null;
+
   const [localTitleFontSize, setLocalTitleFontSize] = useState(config.titleFontSize);
   const [localLabelFontSize, setLocalLabelFontSize] = useState(config.labelFontSize);
   const [localLegendFontSize, setLocalLegendFontSize] = useState(config.legendFontSize);

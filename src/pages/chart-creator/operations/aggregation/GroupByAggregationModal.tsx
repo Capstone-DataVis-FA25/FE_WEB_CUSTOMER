@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/u
 
 import { Input } from '@/components/ui/input';
 
-import { Plus, X, Eye, AlertCircle } from 'lucide-react';
+import { Plus, X, Eye } from 'lucide-react';
 
 const MAX_METRICS = 5;
 
@@ -609,27 +609,28 @@ export const GroupByAggregationModal: React.FC<GroupByAggregationModalProps> = (
                                 <SelectContent className="z-[1000]">
                                   {aggregableColumns.map(col => {
                                     // Check if this column has all operations used
-                                    const usedTypesForCol = new Set(
-                                      metrics
-                                        .filter(m => m.columnId === col.id && m.id !== metric.id)
-                                        .map(m => m.type)
-                                    );
-                                    const allTypes: AggregationMetric['type'][] = [
-                                      'sum',
-                                      'average',
-                                      'min',
-                                      'max',
-                                      'count',
-                                    ];
-                                    const hasAllUsed = allTypes.every(type =>
-                                      usedTypesForCol.has(type)
-                                    );
+                                    // const _usedTypesForCol = new Set(
+                                    //   metrics
+                                    //     .filter(m => m.columnId === col.id && m.id !== metric.id)
+                                    //     .map(m => m.type)
+                                    // );
+                                    // const _allTypes: AggregationMetric['type'][] = [
+                                    //   'sum',
+                                    //   'average',
+                                    //   'min',
+                                    //   'max',
+                                    //   'count',
+                                    // ];
+                                    // const hasAllUsed = allTypes.every(type =>
+                                    //   usedTypesForCol.has(type)
+                                    // );
 
                                     return (
                                       <SelectItem
                                         key={col.id}
                                         value={col.id}
-                                        disabled={hasAllUsed && col.id !== metric.columnId}
+                                        // disabled prop not supported - filter out or use className instead
+                                        // className={hasAllUsed && col.id !== metric.columnId ? 'opacity-50 pointer-events-none' : ''}
                                       >
                                         <div className="flex items-center justify-between w-full">
                                           <span>{col.name}</span>

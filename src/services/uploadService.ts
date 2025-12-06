@@ -161,7 +161,7 @@ export const captureAndUploadChartSnapshot = async (
 
     if (!svgElement || isIconSVG) {
       // Fallback: create error image
-      const width = 600;
+      const width = 800;
       const height = 400;
       const canvas = document.createElement('canvas');
       canvas.width = width;

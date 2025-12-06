@@ -23,7 +23,6 @@ import ToastContainer from '@/components/ui/toast-container';
 import useToast from '@/hooks/useToast';
 import { usePagination } from '@/hooks/usePagination';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { ChartType } from '@/features/charts';
 
 // Minimal BaseChart type to avoid dependency on missing '@/features/charts/chartTypes'
 type BaseChart = {
@@ -695,18 +694,11 @@ const ChartListPage: React.FC = () => {
                             >
                               <span className="truncate font-semibold">
                                 {(() => {
-                                  const labels: Record<string, string> = {
-                                    all: 'All types',
-                                    line: ChartType.Line,
-                                    bar: ChartType.Bar,
-                                    area: ChartType.Area,
-                                    scatter: ChartType.Scatter,
-                                    pie: ChartType.Pie,
-                                    donut: ChartType.Donut,
-                                    cycleplot: ChartType.CyclePlot,
-                                    heatmap: ChartType.Heatmap,
-                                  };
-                                  return labels[chartTypeFilter] || 'Filter by type';
+                                  const capitalize = (str: string) =>
+                                    str.charAt(0).toUpperCase() + str.slice(1);
+                                  if (chartTypeFilter === 'all') return 'All types';
+                                  if (chartTypeFilter === 'cycleplot') return 'CyclePlot';
+                                  return capitalize(chartTypeFilter);
                                 })()}
                               </span>
                               <svg

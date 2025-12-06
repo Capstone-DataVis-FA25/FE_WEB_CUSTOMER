@@ -33,7 +33,7 @@ export const createChart = async (data: ChartRequest): Promise<ChartAPI> => {
 };
 
 // Update chart
-export const updateChart = async (id: string, data: ChartRequest): Promise<ChartAPI> => {
+export const updateChart = async (id: string, data: Partial<ChartRequest>): Promise<ChartAPI> => {
   const response = await axiosPrivate.patch(API_ENDPOINTS.CHARTS.UPDATE(id), data);
   // Handle wrapped API response format
   if (response.data && typeof response.data === 'object' && 'data' in response.data) {

@@ -151,35 +151,177 @@ export interface HeatmapAxisConfig extends AxisConfig {
 }
 
 export interface ScatterChartConfig {
-  config: SubScatterChartConfig;
-  formatters: Partial<FormatterConfig>;
-  axisConfigs: AxisConfig;
+  // Nested structure properties (for compatibility)
+  config?: SubScatterChartConfig;
+  formatters?: Partial<FormatterConfig>;
+  axisConfigs?: AxisConfig;
   datasetConfig?: DatasetConfig;
   chartType: 'scatter';
+
+  // Flat structure properties (actual usage)
+  width: number;
+  height: number;
+  margin: { top: number; right: number; bottom: number; left: number };
+  title: string;
+  xAxisKey: string;
+  yAxisKeys: string[];
+  xAxisLabel: string;
+  yAxisLabel: string;
+  showLegend: boolean;
+  showGrid: boolean;
+  animationDuration: number;
+  pointRadius?: number;
+  gridOpacity: number;
+  legendPosition: 'top' | 'bottom' | 'left' | 'right';
+  xAxisStart: 'auto' | 'zero';
+  yAxisStart: 'auto' | 'zero';
+  xAxisRotation: number;
+  yAxisRotation: number;
+  showAxisLabels: boolean;
+  showAxisTicks: boolean;
+  enableZoom: boolean;
+  enablePan: boolean;
+  zoomExtent: number;
+  showTooltip: boolean;
+  theme: 'light' | 'dark' | 'auto';
+  backgroundColor: string;
+  titleFontSize: number;
+  labelFontSize: number;
+  legendFontSize: number;
 }
 
 export interface LineChartConfig {
-  config: SubLineChartConfig;
-  formatters: Partial<FormatterConfig>;
-  axisConfigs: AxisConfig;
+  // Nested structure properties (for compatibility)
+  config?: SubLineChartConfig;
+  formatters?: Partial<FormatterConfig>;
+  axisConfigs?: AxisConfig;
   datasetConfig?: DatasetConfig;
   chartType: 'line';
+
+  // Flat structure properties (actual usage)
+  width: number;
+  height: number;
+  margin: { top: number; right: number; bottom: number; left: number };
+  title: string;
+  xAxisKey: string;
+  yAxisKeys: string[];
+  disabledLines: string[];
+  xAxisLabel: string;
+  yAxisLabel: string;
+  showLegend: boolean;
+  showGrid: boolean;
+  showPoints: boolean;
+  showPointValues: boolean;
+  animationDuration: number;
+  curve: keyof typeof curveOptions;
+  lineWidth: number;
+  pointRadius: number;
+  lineStyle?: 'solid' | 'dashed' | 'dotted';
+  pointValueDecimals?: number;
+  gridOpacity: number;
+  legendPosition: 'top' | 'bottom' | 'left' | 'right';
+  xAxisStart: 'auto' | 'zero';
+  yAxisStart: 'auto' | 'zero';
+  xAxisRotation: number;
+  yAxisRotation: number;
+  showAxisLabels: boolean;
+  showAxisTicks: boolean;
+  enableZoom: boolean;
+  enablePan: boolean;
+  zoomExtent: number;
+  showTooltip: boolean;
+  theme: 'light' | 'dark' | 'auto';
+  backgroundColor: string;
+  titleFontSize: number;
+  labelFontSize: number;
+  legendFontSize: number;
 }
 
 export interface BarChartConfig {
-  config: SubBarChartConfig;
-  formatters: Partial<FormatterConfig>;
-  axisConfigs: AxisConfig;
+  // Nested structure properties (for compatibility)
+  config?: SubBarChartConfig;
+  formatters?: Partial<FormatterConfig>;
+  axisConfigs?: AxisConfig;
   datasetConfig?: DatasetConfig;
   chartType: 'bar';
+
+  // Flat structure properties (actual usage)
+  width: number;
+  height: number;
+  margin: { top: number; right: number; bottom: number; left: number };
+  title: string;
+  xAxisKey: string;
+  yAxisKeys: string[];
+  disabledBars: string[];
+  xAxisLabel: string;
+  yAxisLabel: string;
+  showLegend: boolean;
+  showGrid: boolean;
+  showPoints: boolean;
+  showPointValues: boolean;
+  animationDuration: number;
+  barType: 'grouped' | 'stacked' | 'diverging';
+  barWidth: number;
+  barSpacing: number;
+  gridOpacity: number;
+  legendPosition: 'top' | 'bottom' | 'left' | 'right';
+  xAxisStart: 'auto' | 'zero';
+  yAxisStart: 'auto' | 'zero';
+  xAxisRotation: number;
+  yAxisRotation: number;
+  showAxisLabels: boolean;
+  showAxisTicks: boolean;
+  enableZoom: boolean;
+  enablePan: boolean;
+  zoomExtent: number;
+  showTooltip: boolean;
+  theme: 'light' | 'dark' | 'auto';
+  backgroundColor: string;
+  titleFontSize: number;
+  labelFontSize: number;
+  legendFontSize: number;
 }
 
 export interface AreaChartConfig {
-  config: SubAreaChartConfig;
-  formatters: Partial<FormatterConfig>;
-  axisConfigs: AxisConfig;
+  // Nested structure properties (for compatibility)
+  config?: SubAreaChartConfig;
+  formatters?: Partial<FormatterConfig>;
+  axisConfigs?: AxisConfig;
   datasetConfig?: DatasetConfig;
   chartType: 'area';
+
+  // Flat structure properties (actual usage)
+  width: number;
+  height: number;
+  margin: { top: number; right: number; bottom: number; left: number };
+  title: string;
+  xAxisKey: string;
+  yAxisKeys: string[];
+  xAxisLabel: string;
+  yAxisLabel: string;
+  showLegend: boolean;
+  showGrid: boolean;
+  animationDuration: number;
+  showStroke?: boolean;
+  curve?: keyof typeof curveOptions;
+  lineWidth?: number;
+  gridOpacity: number;
+  legendPosition: 'top' | 'bottom' | 'left' | 'right';
+  xAxisStart: 'auto' | 'zero';
+  yAxisStart: 'auto' | 'zero';
+  xAxisRotation: number;
+  yAxisRotation: number;
+  showAxisLabels: boolean;
+  showAxisTicks: boolean;
+  enableZoom: boolean;
+  enablePan: boolean;
+  zoomExtent: number;
+  showTooltip: boolean;
+  theme: 'light' | 'dark' | 'auto';
+  backgroundColor: string;
+  titleFontSize: number;
+  labelFontSize: number;
+  legendFontSize: number;
 }
 
 export interface PieChartConfig {
@@ -347,40 +489,47 @@ export interface SeriesConfig {
   color: string;
   visible: boolean;
   dataColumn: string;
+  lineWidth?: number;
+  pointRadius?: number;
+  lineStyle?: 'solid' | 'dashed' | 'dotted';
+  pointStyle?: 'circle' | 'square' | 'triangle' | 'diamond';
+  opacity?: number;
+  formatter?: 'inherit' | 'custom';
+  customFormatter?: string;
 }
 
 // Base chart configuration interface (common properties)
 export interface BaseChartConfig {
-  width?: number;
-  height?: number;
-  margin?: { top: number; right: number; bottom: number; left: number };
+  width: number;
+  height: number;
+  margin: { top: number; right: number; bottom: number; left: number };
   // xAxisKey?: string;
   // yAxisKeys?: string[];
   title: string;
   // xAxisLabel?: string;
   // yAxisLabel?: string;
-  showLegend?: boolean;
-  showGrid?: boolean;
-  animationDuration?: number;
+  showLegend: boolean;
+  showGrid: boolean;
+  animationDuration: number;
 
   // Styling configs
-  gridOpacity?: number;
-  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
+  gridOpacity: number;
+  legendPosition: 'top' | 'bottom' | 'left' | 'right';
 
   // Axis configs
 
   // Interaction configs
-  enableZoom?: boolean;
-  enablePan?: boolean;
-  zoomExtent?: number;
-  showTooltip?: boolean;
+  enableZoom: boolean;
+  enablePan: boolean;
+  zoomExtent: number;
+  showTooltip: boolean;
 
   // Visual configs
-  theme?: 'light' | 'dark' | 'auto';
-  backgroundColor?: string;
-  titleFontSize?: number;
-  labelFontSize?: number;
-  legendFontSize?: number;
+  theme: 'light' | 'dark' | 'auto';
+  backgroundColor: string;
+  titleFontSize: number;
+  labelFontSize: number;
+  legendFontSize: number;
 }
 
 // Line chart specific configuration

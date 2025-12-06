@@ -207,6 +207,8 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     yAxisLabel: t('barChart_editor_yAxisLabel') || 'Y Axis',
     showLegend: true,
     showGrid: true,
+    showPoints: false,
+    showPointValues: false,
     animationDuration: 1000,
     barType: 'grouped',
     xAxisStart: 'auto', // Default to auto
@@ -236,6 +238,8 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     titleFontSize: 16,
     labelFontSize: 12,
     legendFontSize: 11,
+
+    chartType: 'bar',
 
     ...initialConfig,
   };
@@ -591,19 +595,14 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
   // Apply size preset
   const applySizePreset = (presetKey: keyof typeof sizePresets) => {
     const preset = sizePresets[presetKey];
-    if (presetKey === 'responsive') {
-      const responsive = getResponsiveDefaults();
-      updateConfig({ width: responsive.width, height: responsive.height });
-    } else {
-      updateConfig({ width: preset.width, height: preset.height });
-    }
+    updateConfig({ width: preset.width, height: preset.height });
   };
 
   // Modal functions
-  const openDataModal = () => {
-    setTempData([...data]);
-    setShowDataModal(true);
-  };
+  // const openDataModal = () => {
+  //   setTempData([...data]);
+  //   setShowDataModal(true);
+  // };
 
   const closeDataModal = () => {
     setShowDataModal(false);

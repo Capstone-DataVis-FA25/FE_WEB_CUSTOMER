@@ -14,7 +14,7 @@ interface ExcelRowProps {
   onCellFocus: (rowIndex: number, columnIndex: number) => void;
   onDataChange?: (data: string[][], columns: any[]) => void;
   highlightedColumns?: Set<number>;
-  highlightVersion?: string;
+  _highlightVersion?: string;
   disableSelection?: boolean;
 }
 
@@ -28,7 +28,7 @@ const ExcelRow = memo(
     onCellFocus,
     onDataChange,
     highlightedColumns,
-    highlightVersion,
+    // highlightVersion,
     disableSelection = false,
   }: ExcelRowProps) {
     const isSelectedRedux = useAppSelector(selectIsRowSelected(rowIndex));
@@ -120,7 +120,7 @@ const ExcelRow = memo(
       prevProps.onDataChange === nextProps.onDataChange &&
       prevProps.rowData === nextProps.rowData &&
       prevProps.highlightedColumns === nextProps.highlightedColumns &&
-      prevProps.highlightVersion === nextProps.highlightVersion &&
+      prevProps._highlightVersion === nextProps._highlightVersion &&
       prevProps.disableSelection === nextProps.disableSelection
     );
   }
