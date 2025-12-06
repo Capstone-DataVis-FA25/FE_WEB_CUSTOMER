@@ -13,6 +13,7 @@ const ThemeConfiguration: React.FC = () => {
   if (!chartConfig) return null;
 
   const config = chartConfig.config;
+  if (!config) return null;
 
   // Sync custom color with current background color
   useEffect(() => {

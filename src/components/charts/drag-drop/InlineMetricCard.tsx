@@ -10,8 +10,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { AggregationMetric, DatasetColumnType } from '@/types/chart';
-import { ChevronDown, ChevronUp, Trash2, AlertCircle } from 'lucide-react';
-import { useDebouncedUpdater } from '@/hooks/useDebounce';
+import { ChevronDown, ChevronUp /* , Trash2, AlertCircle */ } from 'lucide-react';
 
 const METRIC_TYPES: { value: AggregationMetric['type']; label: string }[] = [
   { value: 'sum', label: 'Sum' },
@@ -39,7 +38,7 @@ const InlineMetricCard: React.FC<InlineMetricCardProps> = ({
   allMetrics = [],
   groupBy = [],
   onUpdate,
-  onRemove,
+  // onRemove,
   onDragStart,
   onDragEnd,
   excelStyle = false,
@@ -90,47 +89,47 @@ const InlineMetricCard: React.FC<InlineMetricCardProps> = ({
   );
 
   // Helper to check if a name is taken (by ANY column name, group by columns, or other metrics)
-  const isNameTaken = useCallback(
-    (nameToCheck: string, excludeMetricId?: string) => {
-      // Check ALL available column names (to prevent conflicts with columns used in filters, sort, etc.)
-      const allColumnNames = availableColumns.map(col => col.name);
-      if (allColumnNames.includes(nameToCheck)) return true;
-
-      // Check group by column names
-      const groupByNames = groupBy.map(gb => {
-        const col = availableColumns.find(c => c.id === gb.id);
-        return col?.name || gb.name;
-      });
-      if (groupByNames.includes(nameToCheck)) return true;
-
-      // Check other metrics - need to calculate their actual display names in order
-      const otherMetrics = allMetrics.filter(m =>
-        excludeMetricId ? m.id !== excludeMetricId : m.id !== metric.id
-      );
-
-      // Calculate display names for all other metrics in order to ensure deterministic unique names
-      const usedNames = new Set<string>([...allColumnNames, ...groupByNames]);
-      const otherDisplayNames = otherMetrics.map(m => {
-        const displayName = getMetricDisplayName(m);
-        // If this display name is already used, generate unique version
-        if (usedNames.has(displayName)) {
-          let uniqueName = displayName;
-          let counter = 1;
-          while (usedNames.has(uniqueName)) {
-            uniqueName = `${displayName}_${counter}`;
-            counter++;
-          }
-          usedNames.add(uniqueName);
-          return uniqueName;
-        }
-        usedNames.add(displayName);
-        return displayName;
-      });
-
-      return otherDisplayNames.includes(nameToCheck);
-    },
-    [groupBy, allMetrics, metric.id, availableColumns, getMetricDisplayName]
-  );
+  // const _isNameTaken = useCallback(
+  //   (nameToCheck: string, excludeMetricId?: string) => {
+  //     // Check ALL available column names (to prevent conflicts with columns used in filters, sort, etc.)
+  //     const allColumnNames = availableColumns.map(col => col.name);
+  //     if (allColumnNames.includes(nameToCheck)) return true;
+  //
+  //     // Check group by column names
+  //     const groupByNames = groupBy.map(gb => {
+  //       const col = availableColumns.find(c => c.id === gb.id);
+  //       return col?.name || gb.name;
+  //     });
+  //     if (groupByNames.includes(nameToCheck)) return true;
+  //
+  //     // Check other metrics - need to calculate their actual display names in order
+  //     const otherMetrics = allMetrics.filter(m =>
+  //       excludeMetricId ? m.id !== excludeMetricId : m.id !== metric.id
+  //     );
+  //
+  //     // Calculate display names for all other metrics in order to ensure deterministic unique names
+  //     const usedNames = new Set<string>([...allColumnNames, ...groupByNames]);
+  //     const otherDisplayNames = otherMetrics.map(m => {
+  //       const displayName = getMetricDisplayName(m);
+  //       // If this display name is already used, generate unique version
+  //       if (usedNames.has(displayName)) {
+  //         let uniqueName = displayName;
+  //         let counter = 1;
+  //         while (usedNames.has(uniqueName)) {
+  //           uniqueName = `${displayName}_${counter}`;
+  //           counter++;
+  //         }
+  //         usedNames.add(uniqueName);
+  //         return uniqueName;
+  //       }
+  //       usedNames.add(displayName);
+  //       return displayName;
+  //     });
+  //
+  //     return otherDisplayNames.includes(nameToCheck);
+  //   },
+  //   [groupBy, allMetrics, metric.id, availableColumns, getMetricDisplayName]
+  // );
 
   // Calculate placeholder - always show unique name (never generic text)
   const placeholder = useMemo(() => {
@@ -180,23 +179,22 @@ const InlineMetricCard: React.FC<InlineMetricCardProps> = ({
   }, [metricTitle, metric.id, allMetrics, groupBy, availableColumns, getMetricDisplayName]);
 
   // Check if current alias is duplicate
-  const isDuplicate = useMemo(() => {
-    const trimmedAlias = (metric.alias ?? '').trim();
-    if (trimmedAlias === '') return false;
-    return isNameTaken(trimmedAlias);
-  }, [metric.alias, isNameTaken]);
+  // const isDuplicate = useMemo(() => {
+  //   const trimmedAlias = (metric.alias ?? '').trim();
+  //   if (trimmedAlias === '') return false;
+  //   return isNameTaken(trimmedAlias);
+  // }, [metric.alias, isNameTaken]);
 
-  const debouncedUpdateAlias = useDebouncedUpdater<string>(alias => {
-    const trimmed = alias.trim();
-    // Store as empty string if empty (like modal), not undefined
-    const newAlias = trimmed === '' ? '' : trimmed;
-    const currentAlias = metric.alias ?? '';
-
-    // Only update if the value actually changed (don't auto-rename, just show error)
-    if (newAlias !== currentAlias) {
-      onUpdate({ ...metric, alias: newAlias });
-    }
-  }, 250);
+  // const _debouncedUpdateAlias = useDebouncedUpdater<string>((_alias: string) => {
+  //   const trimmed = _alias.trim();
+  //   // Store as empty string if empty (like modal), not undefined
+  //   const _newAlias = trimmed === '' ? '' : trimmed;
+  //   const _currentAlias = metric.alias ?? '';
+  //   // Only update if the value actually changed (don't auto-rename, just show error)
+  //   if (_newAlias !== _currentAlias) {
+  //     onUpdate({ ...metric, alias: _newAlias });
+  //   }
+  // }, 250);
 
   if (excelStyle) {
     return (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Filter, ArrowUpDown, Layers, Table2 } from 'lucide-react';
+import { Filter, ArrowUpDown, /* Layers, */ Table2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type OperationTab = 'filter' | 'sort' | 'aggregation' | 'pivot';

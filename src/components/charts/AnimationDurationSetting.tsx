@@ -10,14 +10,15 @@ const AnimationDurationSetting: React.FC = () => {
   const { handleConfigChange } = useChartEditorActions();
   if (!chartConfig) return null;
 
-  const [localAnimationDuration, setLocalAnimationDuration] = useState(
-    chartConfig.config.animationDuration
-  );
+  const animationDuration =
+    'animationDuration' in chartConfig ? chartConfig.animationDuration : 1000;
+
+  const [localAnimationDuration, setLocalAnimationDuration] = useState(animationDuration);
 
   // Sync local state with chartConfig when it changes (for edit mode)
   useEffect(() => {
-    setLocalAnimationDuration(chartConfig.config.animationDuration);
-  }, [chartConfig?.config.animationDuration]);
+    setLocalAnimationDuration(animationDuration);
+  }, [animationDuration]);
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const debouncedApply = useCallback((apply: () => void) => {

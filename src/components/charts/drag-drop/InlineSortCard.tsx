@@ -18,7 +18,7 @@ interface InlineSortCardProps {
 
 const InlineSortCard: React.FC<InlineSortCardProps> = ({
   level,
-  index,
+  // index,
   availableColumns,
   onUpdate,
   onMoveUp,

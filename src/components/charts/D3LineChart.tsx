@@ -1010,7 +1010,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           .attr('stroke-width', 2)
           .attr('opacity', seriesOpacity)
           .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
-          .on('mouseenter', function (event, d) {
+          .on('mouseenter', function (_event, d) {
             if (!showTooltip) return;
 
             // Find the index of this data point in the original processedData

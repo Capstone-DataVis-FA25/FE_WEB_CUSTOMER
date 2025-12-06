@@ -11,6 +11,7 @@ const DisplayCheckboxes: React.FC = () => {
   if (!chartConfig) return null;
 
   const config = chartConfig.config;
+  if (!config) return null;
 
   return (
     <>

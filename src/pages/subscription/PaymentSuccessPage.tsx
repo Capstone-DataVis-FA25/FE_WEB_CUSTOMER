@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+// import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import useToast from '@/hooks/useToast';
 import paymentsService from '@/services/payments.service';
 import { PaymentStatus } from '@/types/payments';

@@ -141,15 +141,15 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
 
   // Get barType from config to check for diverging mode
   const barType =
-    chartType === ChartType.Bar && hasAxisConfigs(chartConfig)
+    (chartType as any) === ChartType.Bar && hasAxisConfigs(chartConfig)
       ? (chartConfig.axisConfigs as any)?.barType
       : undefined;
 
   // Filter headers valid for Y-axis (series data) based on chart type
   // For line/bar/area charts, Y-axis must be numeric
   // Exception: For diverging bar charts, allow date columns as well (to represent positive/negative timelines)
-  let validYAxisHeaders = filterHeadersByAxisType(dataHeaders, chartType, 'y');
-  if (chartType === ChartType.Bar && barType === 'diverging') {
+  let validYAxisHeaders = filterHeadersByAxisType(dataHeaders, chartType as any, 'y');
+  if ((chartType as any) === ChartType.Bar && barType === 'diverging') {
     // For diverging bars, also allow date columns
     const dateHeaders = dataHeaders.filter((h: any) => h.type === 'date');
     // Merge numeric + date headers, remove duplicates by id

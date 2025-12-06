@@ -101,7 +101,7 @@ export interface D3BarChartProps {
     | 'custom';
 
   // Bar-specific props
-  barType?: 'grouped' | 'stacked';
+  barType?: 'grouped' | 'stacked' | 'diverging';
   barWidth?: number;
   barSpacing?: number;
 
@@ -743,7 +743,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .enter()
           .append('rect')
           .attr('class', `bar-${keyIndex}`)
-          .attr('x', (d, i) => {
+          .attr('x', (_d, i) => {
             const base = (xScale(String(i)) || 0) + (xSubScale(key) || 0);
             const subBW = xSubScale.bandwidth();
             // Use series-specific barWidth if available
@@ -972,7 +972,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         .enter()
         .append('text')
         .attr('class', 'grouped-bar-total')
-        .attr('x', (d, i) => (xScale(String(i)) || 0) + xScale.bandwidth() / 2)
+        .attr('x', (_d, i) => (xScale(String(i)) || 0) + xScale.bandwidth() / 2)
         .attr('y', d => {
           // Find the highest bar in this category group
           const maxValue = Math.max(
@@ -1016,7 +1016,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .enter()
           .append('rect')
           .attr('class', `bar-stack-${seriesIndex}`)
-          .attr('x', (d, i) => xScale(String(i)) || 0)
+          .attr('x', (_d, i) => xScale(String(i)) || 0)
           .attr('y', innerHeight)
           .attr('width', xScale.bandwidth())
           .attr('height', 0)

@@ -1387,5 +1387,22 @@
   "notification_new": "Thông báo mới",
   "notification_seen": "Thông báo đã xem",
   "notification_clean_ready": "Dữ liệu đã clean sẵn sàng",
-  "notification_clean": "Dữ liệu đã clean"
+  "notification_clean": "Dữ liệu đã clean",
+  "ai_clean_sending_title": "Đang làm sạch dữ liệu",
+  "ai_clean_sending_desc": "Bộ dữ liệu của bạn đang được AI xử lý làm sạch. Quá trình này có thể mất vài phút tuỳ theo kích thước và độ phức tạp của dữ liệu. Bạn sẽ nhận thông báo khi hoàn tất.",
+  "ai_clean_processing": "Đang xử lý",
+  "ai_clean_completed": "Hoàn thành",
+  "ai_clean_error": "Lỗi",
+  "ai_clean_view_result": "Xem kết quả",
+  "ai_clean_dismiss": "Đóng",
+  "ai_clean_error_title": "Lỗi lấy kết quả",
+  "ai_clean_error_message": "Không thể lấy kết quả làm sạch",
+  "ai_clean_success_title": "Dữ liệu đã được làm sạch",
+  "ai_clean_success_desc": "Bạn sẽ được chuyển sang bước tiếp theo để tạo dataset.",
+  "ai_clean_upload_success_title": "Đã gửi file để làm sạch",
+  "ai_clean_upload_success_desc": "Bạn sẽ nhận được thông báo khi hoàn tất.",
+  "ai_clean_no_jobid": "Không nhận được jobId từ server",
+  "ai_clean_send_failed": "Gửi job thất bại",
+  "ai_clean_tab_file": "Clean File (Excel/CSV)",
+  "ai_clean_tab_csv": "Clean CSV Text"
 }

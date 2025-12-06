@@ -205,6 +205,24 @@ export const defaultLineChartConfig: LineChartConfig = {
   axisConfigs: defaultAxisConfigs,
   datasetConfig: {},
   chartType: 'line',
+  // Flat properties from defaultSubLineConfig and defaultBaseChartConfig
+  ...defaultSubLineConfig,
+  xAxisKey: '',
+  yAxisKeys: [],
+  disabledLines: [],
+  xAxisLabel: '',
+  yAxisLabel: '',
+  xAxisStart: 'auto',
+  yAxisStart: 'auto',
+  xAxisRotation: 0,
+  yAxisRotation: 0,
+  showAxisLabels: true,
+  showAxisTicks: true,
+  showPoints: false,
+  showPointValues: false,
+  curve: 'curveLinear',
+  lineWidth: 2,
+  pointRadius: 2,
 };
 
 export const defaultAreaChartConfig: AreaChartConfig = {
@@ -213,6 +231,18 @@ export const defaultAreaChartConfig: AreaChartConfig = {
   axisConfigs: defaultAxisConfigs,
   datasetConfig: {},
   chartType: 'area',
+  // Flat properties from defaultSubAreaConfig and defaultBaseChartConfig
+  ...defaultSubAreaConfig,
+  xAxisKey: '',
+  yAxisKeys: [],
+  xAxisLabel: '',
+  yAxisLabel: '',
+  xAxisStart: 'auto',
+  yAxisStart: 'auto',
+  xAxisRotation: 0,
+  yAxisRotation: 0,
+  showAxisLabels: true,
+  showAxisTicks: true,
 };
 
 export const defaultBarChartConfig: BarChartConfig = {
@@ -221,6 +251,18 @@ export const defaultBarChartConfig: BarChartConfig = {
   axisConfigs: defaultAxisConfigs,
   datasetConfig: {},
   chartType: 'bar',
+  // Flat properties from defaultSubBarConfig and defaultBaseChartConfig
+  ...defaultSubBarConfig,
+  xAxisKey: '',
+  yAxisKeys: [],
+  xAxisLabel: '',
+  yAxisLabel: '',
+  xAxisStart: 'auto',
+  yAxisStart: 'auto',
+  xAxisRotation: 0,
+  yAxisRotation: 0,
+  showAxisLabels: true,
+  showAxisTicks: true,
 };
 
 export const defaultScatterChartConfig: ScatterChartConfig = {
@@ -229,6 +271,18 @@ export const defaultScatterChartConfig: ScatterChartConfig = {
   axisConfigs: defaultAxisConfigs,
   datasetConfig: {},
   chartType: 'scatter',
+  // Flat properties from defaultSubScatterConfig and defaultBaseChartConfig
+  ...defaultSubScatterConfig,
+  xAxisKey: '',
+  yAxisKeys: [],
+  xAxisLabel: '',
+  yAxisLabel: '',
+  xAxisStart: 'auto',
+  yAxisStart: 'auto',
+  xAxisRotation: 0,
+  yAxisRotation: 0,
+  showAxisLabels: true,
+  showAxisTicks: true,
 };
 
 export const defaultPieChartConfig: PieChartConfig = {

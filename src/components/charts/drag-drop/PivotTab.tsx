@@ -1,7 +1,7 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, /* useMemo, */ useRef, useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
-import { Filter, Columns3, Rows3, Sigma, ChevronDown } from 'lucide-react';
+import { /* Filter, */ Columns3, Rows3, Sigma /* , ChevronDown */ } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PivotSummaryButton } from '@/pages/chart-creator/operations/pivot/PivotSummaryButton';
 import type { PivotDimension, PivotValue, DatasetColumnType } from '@/types/chart';
@@ -35,7 +35,7 @@ const PivotTab: React.FC<PivotTabProps> = ({
   const rowsDragRegionRef = useRef<HTMLDivElement | null>(null);
   const columnsDragRegionRef = useRef<HTMLDivElement | null>(null);
   const valuesDragRegionRef = useRef<HTMLDivElement | null>(null);
-  const filtersDragRegionRef = useRef<HTMLDivElement | null>(null);
+  // const filtersDragRegionRef = useRef<HTMLDivElement | null>(null);
   const [cardDragOver, setCardDragOver] = useState<string | null>(null);
   const handledDropIdRef = useRef<string | null>(null);
 
@@ -51,7 +51,7 @@ const PivotTab: React.FC<PivotTabProps> = ({
     id: 'pivot-values-zone',
     data: { zone: 'pivot-values' },
   });
-  const { setNodeRef: setFiltersDropRef, isOver: isFiltersOver } = useDroppable({
+  const { setNodeRef: _setFiltersDropRef /* , isOver: isFiltersOver */ } = useDroppable({
     id: 'pivot-filters-zone',
     data: { zone: 'pivot-filters' },
   });
@@ -80,13 +80,13 @@ const PivotTab: React.FC<PivotTabProps> = ({
     [setValuesDropRef]
   );
 
-  const assignFiltersDropRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      filtersDragRegionRef.current = node;
-      setFiltersDropRef(node);
-    },
-    [setFiltersDropRef]
-  );
+  // const assignFiltersDropRef = useCallback(
+  //   (node: HTMLDivElement | null) => {
+  //     filtersDragRegionRef.current = node;
+  //     setFiltersDropRef(node);
+  //   },
+  //   [setFiltersDropRef]
+  // );
 
   const handleRowsUpdate = useCallback(
     (index: number, next: PivotDimension) => {
@@ -126,14 +126,14 @@ const PivotTab: React.FC<PivotTabProps> = ({
     [rows, columns, values, filters, onPivotChange]
   );
 
-  const handleFiltersUpdate = useCallback(
-    (index: number, next: PivotDimension) => {
-      const updated = [...filters];
-      updated[index] = next;
-      onPivotChange(rows, columns, values, updated);
-    },
-    [rows, columns, values, filters, onPivotChange]
-  );
+  // const handleFiltersUpdate = useCallback(
+  //   (index: number, next: PivotDimension) => {
+  //     const updated = [...filters];
+  //     updated[index] = next;
+  //     onPivotChange(rows, columns, values, updated);
+  //   },
+  //   [rows, columns, values, filters, onPivotChange]
+  // );
 
   const handleRowsRemove = useCallback(
     (index: number) => {
@@ -159,13 +159,13 @@ const PivotTab: React.FC<PivotTabProps> = ({
     [rows, columns, values, filters, onPivotChange]
   );
 
-  const handleFiltersRemove = useCallback(
-    (index: number) => {
-      const updated = filters.filter((_, idx) => idx !== index);
-      onPivotChange(rows, columns, values, updated);
-    },
-    [rows, columns, values, filters, onPivotChange]
-  );
+  // const handleFiltersRemove = useCallback(
+  //   (index: number) => {
+  //     const updated = filters.filter((_, idx) => idx !== index);
+  //     onPivotChange(rows, columns, values, updated);
+  //   },
+  //   [rows, columns, values, filters, onPivotChange]
+  // );
 
   const handleDragStart = useCallback((_id: string, event: React.DragEvent<HTMLDivElement>) => {
     const source = event.currentTarget;
@@ -184,7 +184,7 @@ const PivotTab: React.FC<PivotTabProps> = ({
   }, []);
 
   const handleDragRemoval = (
-    regionRef: React.RefObject<HTMLDivElement>,
+    regionRef: React.RefObject<HTMLDivElement | null>,
     callback: () => void,
     event: React.DragEvent<HTMLDivElement>
   ) => {
@@ -241,14 +241,14 @@ const PivotTab: React.FC<PivotTabProps> = ({
     [values, handleValuesRemove]
   );
 
-  const handleFiltersDragEnd = useCallback(
-    (dimensionId: string, event: React.DragEvent<HTMLDivElement>) => {
-      const index = filters.findIndex(d => d.id === dimensionId);
-      if (index === -1) return;
-      handleDragRemoval(filtersDragRegionRef, () => handleFiltersRemove(index), event);
-    },
-    [filters, handleFiltersRemove]
-  );
+  // const _handleFiltersDragEnd = useCallback(
+  //   (dimensionId: string, event: React.DragEvent<HTMLDivElement>) => {
+  //     const index = filters.findIndex(d => d.id === dimensionId);
+  //     if (index === -1) return;
+  //     handleDragRemoval(filtersDragRegionRef, () => handleFiltersRemove(index), event);
+  //   },
+  //   [filters, handleFiltersRemove]
+  // );
 
   const handleCardDragEnter = useCallback(
     (zoneId: string, event: React.DragEvent<HTMLDivElement>) => {

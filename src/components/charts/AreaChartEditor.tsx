@@ -1410,4 +1410,6 @@
 //   );
 // };
 
-// export default AreaChartEditor;
+export default function AreaChartEditor() {
+  return null;
+}

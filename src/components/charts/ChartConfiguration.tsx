@@ -11,6 +11,8 @@ const ChartConfiguration: React.FC = () => {
   if (!chartConfig) return null;
 
   const config = chartConfig.config;
+  if (!config) return null;
+
   const [localGridOpacity, setLocalGridOpacity] = useState(config.gridOpacity);
 
   // Sync local state with chartConfig when it changes (for edit mode)

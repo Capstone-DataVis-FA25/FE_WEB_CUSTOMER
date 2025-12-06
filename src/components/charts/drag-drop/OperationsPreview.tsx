@@ -16,7 +16,6 @@ import {
   getOperatorLabelLower,
 } from '@/utils/filterUtils';
 import type { NumberFormat } from '@/contexts/DatasetContext';
-import { useTranslation } from 'react-i18next';
 
 interface OperationsPreviewProps {
   availableColumns: { id: string; name: string; type: DatasetColumnType; dateFormat?: string }[];
@@ -43,7 +42,7 @@ const OperationsPreview: React.FC<OperationsPreviewProps> = ({
   pivotFilters,
   numberFormat,
 }) => {
-  const { t } = useTranslation();
+  // const { t } = useTranslation();
 
   const renderSingleValue = (col: DatasetFilterColumn, raw: string | number | null | undefined) => {
     const meta = availableColumns.find(c => c.id === col.columnId);
@@ -213,7 +212,7 @@ const OperationsPreview: React.FC<OperationsPreviewProps> = ({
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 <span className="font-medium">Rows:</span>{' '}
                 <span className="text-xs">
-                  {pivotRows
+                  {(pivotRows || [])
                     .map(
                       row =>
                         `${availableColumns.find(c => c.id === row.columnId)?.name || row.name}${
@@ -228,7 +227,7 @@ const OperationsPreview: React.FC<OperationsPreviewProps> = ({
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 <span className="font-medium">Columns:</span>{' '}
                 <span className="text-xs">
-                  {pivotColumns
+                  {(pivotColumns || [])
                     .map(
                       col =>
                         `${availableColumns.find(c => c.id === col.columnId)?.name || col.name}${
@@ -243,7 +242,7 @@ const OperationsPreview: React.FC<OperationsPreviewProps> = ({
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 <span className="font-medium">Values:</span>{' '}
                 <span className="text-xs">
-                  {pivotValues
+                  {(pivotValues || [])
                     .map(value => {
                       const columnName =
                         availableColumns.find(c => c.id === value.columnId)?.name || value.name;
@@ -262,7 +261,7 @@ const OperationsPreview: React.FC<OperationsPreviewProps> = ({
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 <span className="font-medium">Filters:</span>{' '}
                 <span className="text-xs">
-                  {pivotFilters
+                  {(pivotFilters || [])
                     .map(
                       filter =>
                         `${availableColumns.find(c => c.id === filter.columnId)?.name || filter.name}${
