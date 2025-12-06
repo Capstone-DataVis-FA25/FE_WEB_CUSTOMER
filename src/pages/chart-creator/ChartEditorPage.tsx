@@ -47,6 +47,7 @@ import { useChartHistory } from '@/features/chartHistory/useChartHistory';
 import { captureAndUploadChartSnapshot } from '@/services/uploadService';
 import DatasetSelectionDialog from '../chart/components/DatasetSelectionDialog';
 import Routers from '@/router/routers';
+import ChartAIEvaluation from '@/components/chart/ChartAIEvaluation';
 
 const normalizeDateFormat = (fmt?: string) => {
   if (!fmt) return fmt;
@@ -1201,6 +1202,17 @@ const ChartEditorPage: React.FC = () => {
             }
           }}
         />
+      )}
+
+      {/* AI Chart Evaluation - Floating Button */}
+      {mode === 'edit' && chartIdFromUrl && activeTab === 'chart' && datasetId && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <ChartAIEvaluation
+            chartId={chartIdFromUrl}
+            chartContainerId="chart-display-section"
+            language={t('language_code', 'vi')}
+          />
+        </div>
       )}
     </div>
   );
