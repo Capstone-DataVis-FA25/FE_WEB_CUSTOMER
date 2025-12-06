@@ -117,6 +117,68 @@ const DATE_PATTERNS = [
     confidence: 0.95,
     validate: (val: string) => dayjs(val, 'YYYY-MM-DDTHH:mm:ss', true).isValid(),
   },
+  {
+    format: 'YYYY-MM-DD HH:mm' as DateFormat,
+    regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/,
+    confidence: 0.9,
+    validate: (val: string) => dayjs(val, 'YYYY-MM-DD HH:mm', true).isValid(),
+  },
+  {
+    format: 'YYYY-[Q]Q' as DateFormat,
+    // e.g. 2024-Q1
+    regex: /^\d{4}-Q[1-4]$/,
+    confidence: 0.8,
+    validate: (val: string) => /^(\d{4})-Q([1-4])$/.test(val.trim()),
+  },
+  {
+    format: 'DD Month YYYY' as DateFormat,
+    // e.g. 25 December 2024
+    regex: /^\d{1,2} [A-Za-z]+ \d{4}$/,
+    confidence: 0.85,
+    validate: (val: string) => dayjs(val, 'DD MMMM YYYY', true).isValid(),
+  },
+  {
+    format: 'MMMM' as DateFormat,
+    // e.g. February
+    regex: /^[A-Za-z]+$/,
+    confidence: 0.7,
+    validate: (val: string) => dayjs(val, 'MMMM', true).isValid(),
+  },
+  {
+    format: 'MMM' as DateFormat,
+    // e.g. Feb
+    regex: /^[A-Za-z]{3}$/,
+    confidence: 0.7,
+    validate: (val: string) => dayjs(val, 'MMM', true).isValid(),
+  },
+  {
+    format: 'MMMM YYYY' as DateFormat,
+    // e.g. February 2024
+    regex: /^[A-Za-z]+ \d{4}$/,
+    confidence: 0.8,
+    validate: (val: string) => dayjs(val, 'MMMM YYYY', true).isValid(),
+  },
+  {
+    format: 'MMM YYYY' as DateFormat,
+    // e.g. Feb 2024
+    regex: /^[A-Za-z]{3} \d{4}$/,
+    confidence: 0.8,
+    validate: (val: string) => dayjs(val, 'MMM YYYY', true).isValid(),
+  },
+  {
+    format: 'MMMM DD' as DateFormat,
+    // e.g. February 25
+    regex: /^[A-Za-z]+ \d{1,2}$/,
+    confidence: 0.75,
+    validate: (val: string) => dayjs(val, 'MMMM DD', true).isValid(),
+  },
+  {
+    format: 'MMM DD' as DateFormat,
+    // e.g. Feb 25
+    regex: /^[A-Za-z]{3} \d{1,2}$/,
+    confidence: 0.75,
+    validate: (val: string) => dayjs(val, 'MMM DD', true).isValid(),
+  },
 ];
 
 // Common number patterns with separators

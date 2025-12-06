@@ -46,17 +46,17 @@ export const CHART_VALIDATION_RULES: Partial<
   [ChartType.Bar]: {
     xAxis: {
       allowedTypes: ['text', 'date', 'number'],
-      description: 'X-axis should be categorical data (text)',
+      description: 'X-axis can be categorical, date, or numeric (text/date/number)',
     },
     yAxis: {
       allowedTypes: ['number', 'date'],
-      description: 'Y-axis must be numeric values',
+      description: 'Y-axis must be numeric or date values',
     },
   },
   [ChartType.Area]: {
     xAxis: {
-      allowedTypes: ['text', 'date'],
-      description: 'X-axis should be time series or categorical data (text/date)',
+      allowedTypes: ['text', 'date', 'number'],
+      description: 'X-axis can be time series, categorical, or numeric (text/date/number)',
     },
     yAxis: {
       allowedTypes: ['number'],

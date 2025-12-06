@@ -139,6 +139,16 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
   // DataHeaders: Use processed headers (aggregated) if provided, otherwise fall back to original dataset headers
   const dataHeaders = (processedHeaders as any[]) || currentDataset?.headers || [];
 
+  // Helper: Find header by ID or valueId (for pivot tables)
+  const findHeader = (dataColumn: string) => {
+    return dataHeaders.find(
+      h =>
+        (h as any).id === dataColumn ||
+        (h as any).headerId === dataColumn ||
+        (h as any).valueId === dataColumn // Support pivot table valueId matching
+    );
+  };
+
   // Get barType from config to check for diverging mode
   const barType =
     (chartType as any) === ChartType.Bar && hasAxisConfigs(chartConfig)
@@ -161,7 +171,7 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
   const availableColumns = validYAxisHeaders.map(h => h.id);
 
   // Helper: get DataHeader name by ID
-  const getHeaderName = (id: string) => dataHeaders.find(h => h.id === id)?.name || id;
+  const getHeaderName = (id: string) => findHeader(id)?.name || id;
 
   // State for tracking validation errors
   const [seriesNameErrors, setSeriesNameErrors] = useState<Record<string, string>>({});
@@ -213,7 +223,7 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
 
     // Auto-detect and update Y-axis formatter if dataColumn changed for the first series
     if (updates.dataColumn && series.length > 0 && series[0].id === seriesId) {
-      const selectedHeader = dataHeaders.find(h => h.id === updates.dataColumn);
+      const selectedHeader = findHeader(updates.dataColumn);
       if (selectedHeader && selectedHeader.type) {
         const autoFormatterType = getFormatterTypeFromDataType(
           selectedHeader.type as 'text' | 'number' | 'date'

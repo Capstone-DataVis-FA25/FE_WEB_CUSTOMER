@@ -9,8 +9,15 @@ import { Card, CardHeader, CardContent } from '../ui/card';
 import { ChevronDown, ChevronUp, Sliders, Lightbulb } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
+import type { DataHeader } from '@/utils/dataProcessors';
 
-const HeatmapAxisConfigSection: React.FC = () => {
+interface HeatmapAxisConfigSectionProps {
+  processedHeaders?: DataHeader[];
+}
+
+const HeatmapAxisConfigSection: React.FC<HeatmapAxisConfigSectionProps> = ({
+  processedHeaders,
+}) => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { chartConfig, currentChartType } = useChartEditorRead();
@@ -21,7 +28,9 @@ const HeatmapAxisConfigSection: React.FC = () => {
 
   const heatmapConfig = chartConfig as any;
   const axisConfigs = heatmapConfig.axisConfigs || {};
-  const availableColumns = dataset?.headers || [];
+
+  // Use processedHeaders (pivoted) if available, otherwise fallback to original dataset headers
+  const availableColumns = (processedHeaders as any[]) || dataset?.headers || [];
 
   const xAxisKey = axisConfigs.xAxisKey || '';
   const yAxisKey = axisConfigs.yAxisKey || '';

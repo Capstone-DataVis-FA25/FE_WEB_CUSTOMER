@@ -70,7 +70,22 @@ const HeatmapAdvancedOptions: React.FC = () => {
                     onValueChange={v => handleConfigChange({ config: { colorScheme: v } as any })}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue
+                        options={[
+                          { value: 'viridis', label: 'Viridis (Colorful)' },
+                          { value: 'plasma', label: 'Plasma (Purple-Orange)' },
+                          { value: 'inferno', label: 'Inferno (Dark-Warm)' },
+                          { value: 'magma', label: 'Magma (Dark-Purple)' },
+                          { value: 'turbo', label: 'Turbo (Rainbow)' },
+                          { value: 'cividis', label: 'Cividis (Colorblind-Friendly)' },
+                          { value: 'blues', label: 'Blues (Sequential)' },
+                          { value: 'reds', label: 'Reds (Sequential)' },
+                          { value: 'greens', label: 'Greens (Sequential)' },
+                          { value: 'purples', label: 'Purples (Sequential)' },
+                          { value: 'oranges', label: 'Oranges (Sequential)' },
+                          { value: 'greys', label: 'Greys (Monochrome)' },
+                        ]}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="viridis">Viridis (Colorful)</SelectItem>

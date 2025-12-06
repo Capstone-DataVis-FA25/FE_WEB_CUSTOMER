@@ -54,6 +54,17 @@ function CreateDatasetPageContent() {
   // AI Cleaning Progress tracking
   const { activeJobs, addJob, removeJob, handleJobClick } = useAiCleaningProgress(user?.id);
 
+  // Tour function
+  const startTour = () => {
+    const driverObj = driver({
+      showProgress: true,
+      steps: createDatasetSteps,
+      popoverClass: 'driverjs-theme driver-theme-datasets',
+      overlayOpacity: 0,
+    });
+    driverObj.drive();
+  };
+
   useEffect(() => {
     if (isAuthenticated && user?.id) {
       const storageKey = `hasShownCreateDatasetTour_${user.id}`;
@@ -66,7 +77,7 @@ function CreateDatasetPageContent() {
         }, 1000);
       }
     }
-  }, [isAuthenticated, user, startTour]);
+  }, [isAuthenticated, user]);
 
   // Get form states from FormContext
   const { datasetName, description, resetForm } = useForm();
