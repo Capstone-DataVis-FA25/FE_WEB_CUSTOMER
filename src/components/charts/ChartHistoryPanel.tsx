@@ -42,7 +42,7 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
     deleteHistory,
     compareVersions,
     clearComparisonResult,
-    clearHistories,
+    // clearHistories,
   } = useChartHistory();
 
   const {

@@ -8,8 +8,7 @@ import {
   type NumberFormat,
   type DateFormat,
 } from '@/contexts/DatasetContext';
-import type { DatasetConfig, SortLevel } from '@/types/chart';
-import { buildColumnIndexMap } from '@/utils/datasetOps';
+import type { DatasetConfig /* , SortLevel */ } from '@/types/chart';
 
 interface DataTabProps {
   initialData?: string[][];
@@ -40,18 +39,18 @@ const ApplyFormats: React.FC<{ nf?: NumberFormat; df?: DateFormat }> = ({ nf, df
 const DataTab: React.FC<DataTabProps> = ({
   initialData,
   initialColumns,
-  originalColumns,
-  originalData,
-  loading,
-  onOpenDatasetModal,
+  // originalColumns,
+  // originalData,
+  // loading,
+  // onOpenDatasetModal,
   initialNumberFormat,
   initialDateFormat,
   onDataChange,
-  onSorting,
-  datasetName,
+  onSorting: _onSorting,
+  // datasetName,
   highlightHeaderIds,
   datasetConfig,
-  onDatasetConfigChange,
+  // onDatasetConfigChange,
 }) => {
   // Removed artificial padding rows; render exactly what dataset provides
 
@@ -68,82 +67,81 @@ const DataTab: React.FC<DataTabProps> = ({
   }, [initialData, initialColumns, initialNumberFormat, initialDateFormat]);
 
   // Format original data for unique values calculation (before any processing)
-  const formattedOriginalData = React.useMemo(() => {
-    if (!originalData || !originalColumns || originalColumns.length === 0) return originalData;
-    return preformatDataToFormats(
-      originalData,
-      originalColumns,
-      initialNumberFormat,
-      initialDateFormat
-    );
-  }, [originalData, originalColumns, initialNumberFormat, initialDateFormat]);
+  // const _formattedOriginalData = React.useMemo(() => {
+  //   if (!originalData || !originalColumns || originalColumns.length === 0) return originalData;
+  //   return preformatDataToFormats(
+  //     originalData,
+  //     originalColumns,
+  //     initialNumberFormat,
+  //     initialDateFormat
+  //   );
+  // }, [originalData, originalColumns, initialNumberFormat, initialDateFormat]);
 
   // Use original columns for filter/sort operations, aggregated columns for display
-  const columnsForOperations = originalColumns || initialColumns;
+  // const _columnsForOperations = originalColumns || initialColumns;
 
   // Build a lookup from various header identifiers to column index
-  const columnIndexMap = React.useMemo(
-    () => buildColumnIndexMap(columnsForOperations),
-    [columnsForOperations]
-  );
+  // const columnIndexMap = React.useMemo(
+  //   () => buildColumnIndexMap(columnsForOperations),
+  //   [columnsForOperations]
+  // );
 
   // Calculate unique values from ORIGINAL dataset (before filter/sort/aggregation)
   // This ensures equals/not equals dropdowns work correctly
-  const uniqueValuesByColumn = React.useMemo(() => {
-    const colsToUse = columnsForOperations || initialColumns;
-    // MUST use original formatted data, not processed/aggregated data
-    const dataToUse = formattedOriginalData;
-    if (!dataToUse || !colsToUse || colsToUse.length === 0) return {} as Record<string, string[]>;
-    const MAX_TRACKED_UNIQUE_VALUES = Number.POSITIVE_INFINITY; // allow collecting all unique values
-    const columnKeys = colsToUse.map(
-      (col, idx) => (col as any).id || (col as any).headerId || String(col.name || `col_${idx + 1}`)
-    );
-    const maps = colsToUse.map(() => new Map<string, string>());
-
-    // Calculate unique values from original dataset (before any processing)
-    for (const row of dataToUse) {
-      if (!row) continue;
-      colsToUse.forEach((_, idx) => {
-        if (idx >= row.length) return; // Skip if index out of bounds
-        const map = maps[idx];
-        if (!map) return;
-        if (map.size >= MAX_TRACKED_UNIQUE_VALUES) return;
-        const raw = (row as any)[idx];
-        const str = raw === null || raw === undefined ? '' : String(raw).trim();
-        if (!map.has(str)) {
-          map.set(str, str);
-        }
-      });
-    }
-
-    const result: Record<string, string[]> = {};
-    colsToUse.forEach((_, idx) => {
-      const key = columnKeys[idx];
-      if (!key) return;
-      const colType = (colsToUse[idx] as any)?.type || 'text';
-      const values = Array.from(maps[idx].values()).sort((a, b) => {
-        // For number columns, try numeric sorting first
-        if (colType === 'number') {
-          // Remove formatting (commas, spaces) for comparison
-          const cleanA = a.replace(/[,\s]/g, '');
-          const cleanB = b.replace(/[,\s]/g, '');
-          const numA = Number.parseFloat(cleanA);
-          const numB = Number.parseFloat(cleanB);
-          if (!Number.isNaN(numA) && !Number.isNaN(numB)) {
-            return numA - numB;
-          }
-          // If one is numeric and one isn't, numeric comes first
-          if (!Number.isNaN(numA)) return -1;
-          if (!Number.isNaN(numB)) return 1;
-        }
-        // Fallback to locale-aware string comparison
-        return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-      });
-      result[key] = values;
-    });
-
-    return result;
-  }, [formattedOriginalData, columnsForOperations, initialColumns]);
+  // const _uniqueValuesByColumn = React.useMemo(() => {
+  //   const colsToUse = columnsForOperations || initialColumns;
+  //   // MUST use original formatted data, not processed/aggregated data
+  //   const dataToUse = formattedOriginalData;
+  //   if (!dataToUse || !colsToUse || colsToUse.length === 0) return {} as Record<string, string[]>;
+  //   const MAX_TRACKED_UNIQUE_VALUES = Number.POSITIVE_INFINITY; // allow collecting all unique values
+  //   const columnKeys = colsToUse.map(
+  //     (col, idx) => (col as any).id || (col as any).headerId || String(col.name || `col_${idx + 1}`)
+  //   );
+  //   const maps = colsToUse.map(() => new Map<string, string>());
+  //
+  //   // Calculate unique values from original dataset (before any processing)
+  //   for (const row of dataToUse) {
+  //     if (!row) continue;
+  //     colsToUse.forEach((_, idx) => {
+  //       if (idx >= row.length) return; // Skip if index out of bounds
+  //       const map = maps[idx];
+  //       if (!map) return;
+  //       if (map.size >= MAX_TRACKED_UNIQUE_VALUES) return;
+  //       const raw = (row as any)[idx];
+  //       const str = raw === null || raw === undefined ? '' : String(raw).trim();
+  //       if (!map.has(str)) {
+  //         map.set(str, str);
+  //       }
+  //     });
+  //   }
+  //
+  //   const result: Record<string, string[]> = {};
+  //   colsToUse.forEach((_, idx) => {
+  //     const key = columnKeys[idx];
+  //     if (!key) return;
+  //     const colType = (colsToUse[idx] as any)?.type || 'text';
+  //     const values = Array.from(maps[idx].values()).sort((a, b) => {
+  //       // For number columns, try numeric sorting first
+  //       if (colType === 'number') {
+  //         // Remove formatting (commas, spaces) for comparison
+  //         const cleanA = a.replace(/[,\s]/g, '');
+  //         const cleanB = b.replace(/[,\s]/g, '');
+  //         const numA = Number.parseFloat(cleanA);
+  //         const numB = Number.parseFloat(cleanB);
+  //         if (!Number.isNaN(numA) && !Number.isNaN(numB)) {
+  //           return numA - numB;
+  //         }
+  //         // If one is numeric and one isn't, numeric comes first
+  //         if (!Number.isNaN(numA)) return -1;
+  //         if (!Number.isNaN(numB)) return 1;
+  //       }
+  //       // Fallback to locale-aware string comparison
+  //       return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  //     });
+  //     result[key] = values;
+  //   });
+  //   return result;
+  // }, [formattedOriginalData, columnsForOperations, initialColumns]);
 
   // Data is already processed (filtered, sorted, aggregated) by ChartEditorPage
   // Just use the passed data directly
@@ -206,7 +204,8 @@ const DataTab: React.FC<DataTabProps> = ({
                 allowHeaderEdit={false}
                 allowColumnEdit={false}
                 onDataChange={onDataChange}
-                onSorting={onSorting}
+                // onSorting prop not supported in CustomExcelProps
+                // onSorting={onSorting}
                 highlightHeaderIds={highlightHeaderIds}
                 disableSelection={true}
               />

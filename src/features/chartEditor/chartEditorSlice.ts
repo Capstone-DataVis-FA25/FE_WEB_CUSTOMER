@@ -6,7 +6,7 @@ import type { MainChartConfig } from '@/types/chart';
 import { ChartType } from '@/features/charts';
 import type { NumberFormat, DateFormat } from '@/contexts/DatasetContext';
 import type { DataHeader } from '@/utils/dataProcessors';
-import { act } from 'react';
+// import { act } from 'react';
 
 // Deep partial utility type for nested optional properties
 type DeepPartial<T> = {
@@ -290,7 +290,7 @@ const chartEditorSlice = createSlice({
     },
 
     // Clear chart editor state (on unmount)
-    clearChartEditor: state => {
+    clearChartEditor: _state => {
       return initialState;
     },
   },

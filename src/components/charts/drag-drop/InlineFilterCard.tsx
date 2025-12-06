@@ -5,7 +5,7 @@ import { ColumnFilterSection } from '@/pages/chart-creator/operations/filters/Fi
 
 interface InlineFilterCardProps {
   filter: DatasetFilterColumn;
-  index: number;
+  index?: number;
   filters: DatasetFilterColumn[];
   availableColumns: { id: string; name: string; type: DatasetColumnType; dateFormat?: string }[];
   uniqueValuesByColumn: Record<string, string[]>;
@@ -19,7 +19,7 @@ interface InlineFilterCardProps {
 
 const InlineFilterCard: React.FC<InlineFilterCardProps> = ({
   filter,
-  index,
+  // index,
   filters,
   availableColumns,
   uniqueValuesByColumn,
