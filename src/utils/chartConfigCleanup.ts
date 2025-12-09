@@ -1,12 +1,18 @@
-import type { MainChartConfig, DataHeader } from '@/types/chart';
+import type { MainChartConfig } from '@/types/chart';
+import type { DataHeader } from '@/utils/dataProcessors';
 
 /**
  * Checks if a column ID exists in the current headers
+ * Also checks valueId for pivot table headers
  */
 const columnExists = (columnId: string | undefined, headers: DataHeader[]): boolean => {
   if (!columnId) return false;
   return headers.some(
-    h => (h as any).id === columnId || (h as any).headerId === columnId || h.name === columnId
+    h =>
+      (h as any).id === columnId ||
+      (h as any).headerId === columnId ||
+      h.name === columnId ||
+      (h as any).valueId === columnId // Support pivot table valueId matching
   );
 };
 
@@ -19,14 +25,15 @@ export const cleanupChartConfig = (
   currentHeaders: DataHeader[] | undefined
 ): MainChartConfig | null => {
   if (!config || !currentHeaders || currentHeaders.length === 0) {
-    return config;
+    return config ?? null;
   }
 
   const cleaned = { ...config };
   let hasChanges = false;
 
   // Clean up axis configs (for line, bar, area, scatter, cycleplot)
-  if (cleaned.axisConfigs) {
+  // Type guard to check if config has axisConfigs property
+  if ('axisConfigs' in cleaned && cleaned.axisConfigs) {
     const axisConfigs = { ...cleaned.axisConfigs };
 
     // Clean xAxisKey
@@ -37,7 +44,7 @@ export const cleanupChartConfig = (
 
     // Clean seriesConfigs
     if (axisConfigs.seriesConfigs && Array.isArray(axisConfigs.seriesConfigs)) {
-      const cleanedSeries = axisConfigs.seriesConfigs.filter(series => {
+      const cleanedSeries = axisConfigs.seriesConfigs.filter((series: any) => {
         const exists = columnExists(series.dataColumn, currentHeaders);
         if (!exists) {
           hasChanges = true;
@@ -52,22 +59,23 @@ export const cleanupChartConfig = (
 
     // Clean cycleplot keys
     if (cleaned.chartType === 'cycleplot') {
-      if (axisConfigs.cycleKey && !columnExists(axisConfigs.cycleKey, currentHeaders)) {
-        axisConfigs.cycleKey = undefined;
+      const cycleConfigs = axisConfigs as any;
+      if (cycleConfigs.cycleKey && !columnExists(cycleConfigs.cycleKey, currentHeaders)) {
+        cycleConfigs.cycleKey = undefined;
         hasChanges = true;
       }
-      if (axisConfigs.periodKey && !columnExists(axisConfigs.periodKey, currentHeaders)) {
-        axisConfigs.periodKey = undefined;
+      if (cycleConfigs.periodKey && !columnExists(cycleConfigs.periodKey, currentHeaders)) {
+        cycleConfigs.periodKey = undefined;
         hasChanges = true;
       }
-      if (axisConfigs.valueKey && !columnExists(axisConfigs.valueKey, currentHeaders)) {
-        axisConfigs.valueKey = undefined;
+      if (cycleConfigs.valueKey && !columnExists(cycleConfigs.valueKey, currentHeaders)) {
+        cycleConfigs.valueKey = undefined;
         hasChanges = true;
       }
     }
 
-    if (hasChanges) {
-      cleaned.axisConfigs = axisConfigs;
+    if (hasChanges && 'axisConfigs' in cleaned) {
+      (cleaned as any).axisConfigs = axisConfigs;
     }
   }
 

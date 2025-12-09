@@ -15,11 +15,20 @@ import type { CyclePlotConfig } from '@/types/chart';
 import { defaultColorsChart } from '@/utils/Utils';
 import { RefreshCcw, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { DataHeader } from '@/utils/dataProcessors';
+import { useAppSelector } from '@/store/hooks';
 
-const CyclePlotSettingsSection: React.FC = () => {
+interface CyclePlotSettingsSectionProps {
+  processedHeaders?: DataHeader[];
+}
+
+const CyclePlotSettingsSection: React.FC<CyclePlotSettingsSectionProps> = ({
+  processedHeaders,
+}) => {
   const { t } = useTranslation();
   const { chartData, chartConfig, handleConfigChange } = useChartEditor();
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const currentDataset = useAppSelector(state => state.dataset.currentDataset);
 
   // Extract cycle plot specific keys from config
   const cyclePlotConfig = chartConfig as CyclePlotConfig | null;
@@ -27,18 +36,43 @@ const CyclePlotSettingsSection: React.FC = () => {
   const periodKey = cyclePlotConfig?.axisConfigs?.periodKey;
   const valueKey = cyclePlotConfig?.axisConfigs?.valueKey;
 
-  // Get available columns from chart data
+  // Helper to get column name from ID
+  const getColumnName = (id: string | undefined) => {
+    if (!id) return '';
+    const col = availableColumns.find(c => c.id === id);
+    return col?.name || id;
+  };
+
+  // Get available columns from processedHeaders (pivoted) or fallback to chartData
+  // Returns array of objects with {id, name} for use in dropdowns
   const availableColumns = React.useMemo(() => {
+    // Prefer processedHeaders (includes pivot transformations)
+    if (processedHeaders && processedHeaders.length > 0) {
+      return processedHeaders.map((h: any) => ({
+        id: (h.id || h.headerId || h.name) as string,
+        name: h.name || ((h.id || h.headerId) as string),
+      }));
+    }
+
+    // Fallback to currentDataset headers
+    if (currentDataset?.headers && currentDataset.headers.length > 0) {
+      return currentDataset.headers.map((h: any) => ({
+        id: (h.id || h.headerId || h.name) as string,
+        name: h.name || ((h.id || h.headerId) as string),
+      }));
+    }
+
+    // Last resort: get from chartData
     if (!chartData || chartData.length === 0) return [];
 
     // If data is array format, get headers from first row
     if (Array.isArray(chartData[0])) {
-      return chartData[0] as string[];
+      return (chartData[0] as string[]).map(col => ({ id: col, name: col }));
     }
 
     // If data is object format, get keys from first object
-    return Object.keys(chartData[0]);
-  }, [chartData]);
+    return Object.keys(chartData[0]).map(col => ({ id: col, name: col }));
+  }, [processedHeaders, currentDataset?.headers, chartData]);
 
   // Handlers to update config
   const setCycleKey = (value: string) => {
@@ -188,7 +222,13 @@ const CyclePlotSettingsSection: React.FC = () => {
                   onValueChange={value => updateCycleColor(cycle, value)}
                 >
                   <SelectTrigger className="w-36">
-                    <SelectValue placeholder="Select color" />
+                    <SelectValue
+                      placeholder="Select color"
+                      options={colorKeys.map(key => ({
+                        value: key,
+                        label: key.charAt(0).toUpperCase() + key.slice(1),
+                      }))}
+                    />
                   </SelectTrigger>
                   <SelectContent className="z-[100]">
                     {colorKeys.map(key => {
@@ -364,6 +404,16 @@ const CyclePlotSettingsSection: React.FC = () => {
                     <SelectTrigger id="period-ordering" className="w-full max-w-xs">
                       <SelectValue
                         placeholder={t('cycle_period_ordering_placeholder', 'Select ordering')}
+                        options={[
+                          {
+                            value: 'auto',
+                            label: t('cycle_period_ordering_auto', 'Auto (Month/Quarter/Number)'),
+                          },
+                          {
+                            value: 'custom',
+                            label: t('cycle_period_ordering_custom', 'Custom (coming soon)'),
+                          },
+                        ]}
                       />
                     </SelectTrigger>
                     <SelectContent className="z-[100]">
@@ -392,12 +442,13 @@ const CyclePlotSettingsSection: React.FC = () => {
                     <SelectTrigger id="cycle-key" className="w-full">
                       <SelectValue
                         placeholder={t('select_cycle_column', 'Select cycle column (e.g., Year)')}
+                        options={availableColumns.map(col => ({ value: col.id, label: col.name }))}
                       />
                     </SelectTrigger>
                     <SelectContent className="z-[150]">
                       {availableColumns.map(col => (
-                        <SelectItem key={col} value={col}>
-                          {col}
+                        <SelectItem key={col.id} value={col.id}>
+                          {col.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -423,12 +474,13 @@ const CyclePlotSettingsSection: React.FC = () => {
                           'select_period_column',
                           'Select period column (e.g., Month)'
                         )}
+                        options={availableColumns.map(col => ({ value: col.id, label: col.name }))}
                       />
                     </SelectTrigger>
                     <SelectContent className="z-[150]">
                       {availableColumns.map(col => (
-                        <SelectItem key={col} value={col}>
-                          {col}
+                        <SelectItem key={col.id} value={col.id}>
+                          {col.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -451,12 +503,13 @@ const CyclePlotSettingsSection: React.FC = () => {
                     <SelectTrigger id="value-key-select" className="w-full max-w-xs">
                       <SelectValue
                         placeholder={t('value_key_placeholder', 'Select value column')}
+                        options={availableColumns.map(col => ({ value: col.id, label: col.name }))}
                       />
                     </SelectTrigger>
                     <SelectContent className="z-[100]">
                       {availableColumns.map(col => (
-                        <SelectItem key={col} value={col}>
-                          {col}
+                        <SelectItem key={col.id} value={col.id}>
+                          {col.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -473,9 +526,9 @@ const CyclePlotSettingsSection: React.FC = () => {
                       ✓ {t('cycle_plot_configured', 'Cycle Plot Configured')}
                     </p>
                     <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                      {t('cycle_plot_summary', 'Cycle')}: <strong>{cycleKey}</strong> →{' '}
-                      {t('period', 'Period')}: <strong>{periodKey}</strong> → {t('value', 'Value')}:{' '}
-                      <strong>{valueKey}</strong>
+                      {t('cycle_plot_summary', 'Cycle')}: <strong>{getColumnName(cycleKey)}</strong>{' '}
+                      → {t('period', 'Period')}: <strong>{getColumnName(periodKey)}</strong> →{' '}
+                      {t('value', 'Value')}: <strong>{getColumnName(valueKey)}</strong>
                     </p>
                   </div>
                 )}

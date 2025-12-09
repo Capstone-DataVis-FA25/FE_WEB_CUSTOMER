@@ -31,7 +31,15 @@ const HistogramTypeSettings: React.FC = () => {
           onValueChange={value => handleConfigChange({ config: { binMethod: value } as any })}
         >
           <SelectTrigger id="bin-method">
-            <SelectValue />
+            <SelectValue
+              options={[
+                { value: 'sturges', label: t('bin_method_sturges', "Sturges' Formula (Auto)") },
+                { value: 'scott', label: t('bin_method_scott', "Scott's Rule") },
+                { value: 'freedman-diaconis', label: t('bin_method_fd', 'Freedman-Diaconis') },
+                { value: 'count', label: t('bin_method_count', 'Fixed Count') },
+                { value: 'width', label: t('bin_method_width', 'Fixed Width') },
+              ]}
+            />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="sturges">

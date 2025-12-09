@@ -37,8 +37,8 @@ interface DatasetViewerTableProps {
 const normalizeColumns = (cols: (string | ColumnMeta)[]): Required<ColumnMeta>[] =>
   cols.map(c =>
     typeof c === 'string'
-      ? { name: c, type: 'text', dateFormat: undefined }
-      : { name: c.name, type: c.type || 'text', dateFormat: c.dateFormat }
+      ? { name: c, type: 'text', dateFormat: '' }
+      : { name: c.name, type: c.type || 'text', dateFormat: c.dateFormat || '' }
   );
 
 const typeIcon = (type: ColumnMeta['type']) => {

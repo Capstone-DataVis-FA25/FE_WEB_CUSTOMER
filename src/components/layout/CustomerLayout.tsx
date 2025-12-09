@@ -57,7 +57,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
         onLogin={handleLogin}
         onRegister={handleRegister}
         onLogout={handleLogout}
-        notificationCount={0}
+        _notificationCount={0}
       />
 
       {/* Main Content */}

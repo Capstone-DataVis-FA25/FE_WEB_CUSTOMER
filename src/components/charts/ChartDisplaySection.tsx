@@ -35,8 +35,19 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
   // Helper: Map DataHeader ID to name
   // Use processed headers (aggregated) if provided, otherwise use original dataset headers
   const dataHeaders = (processedHeaders as any[]) || currentDataset?.headers || [];
+
+  // Helper: Find header by ID or valueId (for pivot tables)
+  const findHeader = (dataColumn: string) => {
+    return dataHeaders.find(
+      h =>
+        (h as any).id === dataColumn ||
+        (h as any).headerId === dataColumn ||
+        (h as any).valueId === dataColumn // Support pivot table valueId matching
+    );
+  };
+
   const getHeaderName = (id: string) => {
-    const header = dataHeaders.find(h => (h as any).id === id || (h as any).headerId === id);
+    const header = findHeader(id);
     return header ? header.name : id;
   };
 
@@ -86,7 +97,7 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
       axisConfigs = chartConfig.axisConfigs || {};
       (axisConfigs.seriesConfigs || []).forEach((series: any) => {
         if (series.dataColumn && series.color) {
-          const header = dataHeaders.find(h => h.id === series.dataColumn);
+          const header = findHeader(series.dataColumn);
           const columnName = header ? header.name : series.dataColumn;
           colors[columnName] = {
             light: series.color,

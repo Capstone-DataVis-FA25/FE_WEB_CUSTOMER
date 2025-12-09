@@ -21,13 +21,13 @@ import {
   Upload,
   RotateCcw,
   Settings,
-  Database,
-  Edit3,
-  Table,
+  // Database,
+  // Edit3,
+  // Table,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { sizePresets } from '@/types/chart';
-import type { FormatterConfig, ChartDataPoint } from '@/types/chart';
+import type { FormatterConfig } from '@/types/chart';
 
 // Size preset buttons component
 interface SizePresetButtonsProps {
@@ -853,7 +853,7 @@ interface ChartSettingsProps {
   pointRadius?: number;
 
   // Bar chart specific
-  barType?: 'grouped' | 'stacked';
+  barType?: 'grouped' | 'stacked' | 'diverging';
   barWidth?: number;
   barSpacing?: number;
 

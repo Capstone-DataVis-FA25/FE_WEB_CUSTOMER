@@ -17,7 +17,8 @@ import useToast from '@/hooks/useToast';
 import { usePagination } from '@/hooks/usePagination';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
-import { DatasetTab } from '../workspace';
+// import { DatasetTab } from '../workspace';
+import DatasetTab from '../dataset/components/DatasetTab';
 
 const DatasetListPage: React.FC = () => {
   const { t } = useTranslation();

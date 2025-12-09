@@ -22,7 +22,7 @@ interface PivotSummaryButtonProps {
 }
 
 export const PivotSummaryButton: React.FC<PivotSummaryButtonProps> = ({
-  availableColumns,
+  // availableColumns,
   onPivotChange,
   initialRows = [],
   initialColumns = [],

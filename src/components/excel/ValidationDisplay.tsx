@@ -5,6 +5,7 @@ import {
   selectEmptyColumns,
   selectDateFormat,
   selectNumberFormat,
+  selectColumns,
 } from '@/features/excelUI';
 import type { DateFormat, NumberFormat } from '@/contexts/DatasetContext';
 import { t } from 'i18next';
@@ -12,6 +13,56 @@ import { t } from 'i18next';
 interface ValidationDisplayProps {
   columns: Array<{ name: string; type: string }>;
 }
+
+// Build a concrete example string for common date formats
+const getDateExample = (dateFormat: DateFormat): string => {
+  switch (dateFormat) {
+    case 'DD/MM/YYYY':
+      return '25/12/2024';
+    case 'MM/DD/YYYY':
+      return '12/25/2024';
+    case 'YYYY-MM-DD':
+      return '2024-12-25';
+    case 'YYYY/MM/DD':
+      return '2024/12/25';
+    case 'YYYY-MM':
+      return '2024-12';
+    case 'MM/YYYY':
+      return '12/2024';
+    case 'MM/YY':
+      return '12/24';
+    case 'DD-MM-YYYY':
+      return '25-12-2024';
+    case 'MM-DD-YYYY':
+      return '12-25-2024';
+    case 'YYYY-MM-DD HH:mm:ss':
+      return '2024-12-25 14:30:45';
+    case 'YYYY-MM-DDTHH:mm:ss':
+      return '2024-12-25T14:30:45';
+    case 'YYYY-MM-DD HH:mm':
+      return '2024-12-25 14:30';
+    case 'YYYY-[Q]Q':
+      return '2024-Q4';
+    case 'DD Month YYYY':
+      return '25 December 2024';
+    case 'YYYY':
+      return '2024';
+    case 'MMMM':
+      return 'February';
+    case 'MMM':
+      return 'Feb';
+    case 'MMMM YYYY':
+      return 'February 2024';
+    case 'MMM YYYY':
+      return 'Feb 2024';
+    case 'MMMM DD':
+      return 'February 25';
+    case 'MMM DD':
+      return 'Feb 25';
+    default:
+      return '2024-12-25';
+  }
+};
 
 const getExpectedFormat = (
   columnType: string,
@@ -25,8 +76,11 @@ const getExpectedFormat = (
         example: `123${thousandsSeparator}456${decimalSeparator}78`,
       });
     }
-    case 'date':
-      return t('expectedFormat.date', { format: dateFormat });
+    case 'date': {
+      const example = getDateExample(dateFormat);
+      const base = t('expectedFormat.date', { format: dateFormat });
+      return `${base} (e.g. ${example})`;
+    }
     case 'text':
       return t('expectedFormat.text');
     default:
@@ -40,6 +94,7 @@ const ValidationDisplay = memo(function ValidationDisplay({ columns }: Validatio
   const emptyColumns = useAppSelector(selectEmptyColumns);
   const dateFormat = useAppSelector(selectDateFormat);
   const numberFormat = useAppSelector(selectNumberFormat);
+  const reduxColumns = useAppSelector(selectColumns);
 
   const parseMap = parseErrors || {};
   const rows = Object.keys(parseMap)
@@ -71,7 +126,10 @@ const ValidationDisplay = memo(function ValidationDisplay({ columns }: Validatio
   const firstColIdx = (parseMap[firstRow] || [])[0] ?? 0;
   const colName = columns[firstColIdx]?.name ?? '';
   const colType = columns[firstColIdx]?.type ?? 'text';
-  const expectedFormat = getExpectedFormat(colType, dateFormat as DateFormat, numberFormat);
+  // Prefer per-column dateFormat from Redux if available; fall back to global dateFormat
+  const columnDateFormat =
+    (reduxColumns[firstColIdx] as any)?.dateFormat || (dateFormat as DateFormat);
+  const expectedFormat = getExpectedFormat(colType, columnDateFormat as DateFormat, numberFormat);
   const remaining = Math.max(0, rows.length - 1);
   const msg =
     remaining > 0

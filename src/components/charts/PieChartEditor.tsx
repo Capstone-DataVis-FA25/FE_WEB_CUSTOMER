@@ -393,10 +393,10 @@ const PieChartEditor: React.FC<PieChartEditorProps> = ({
   };
 
   // Modal functions
-  const openDataModal = () => {
-    setTempData([...data]);
-    setShowDataModal(true);
-  };
+  // const openDataModal = () => {
+  //   setTempData([...data]);
+  //   setShowDataModal(true);
+  // };
 
   const closeDataModal = () => {
     setShowDataModal(false);
@@ -440,12 +440,12 @@ const PieChartEditor: React.FC<PieChartEditorProps> = ({
     setTempData(tempData.filter((_, i) => i !== index));
   };
 
-  const applySizePreset = (presetKey: keyof typeof sizePresets) => {
-    const preset = sizePresets[presetKey];
+  const applySizePreset = (presetKey: keyof typeof sizePresets | 'responsive') => {
     if (presetKey === 'responsive') {
       const responsive = getResponsiveDefaults();
       updateConfig({ width: responsive.width, height: responsive.height });
     } else {
+      const preset = sizePresets[presetKey];
       updateConfig({ width: preset.width, height: preset.height });
     }
   };

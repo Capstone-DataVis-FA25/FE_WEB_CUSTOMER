@@ -1,7 +1,7 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, /* useMemo, */ useRef, useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
-import { Filter, Columns3, Rows3, Sigma, ChevronDown } from 'lucide-react';
+import { Filter, Columns3, Rows3, Sigma, ChevronDown, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PivotSummaryButton } from '@/pages/chart-creator/operations/pivot/PivotSummaryButton';
 import type { PivotDimension, PivotValue, DatasetColumnType } from '@/types/chart';
@@ -21,6 +21,8 @@ interface PivotTabProps {
     filters: PivotDimension[]
   ) => void;
   onError?: (message: string) => void;
+  autoSelectEnabled?: boolean;
+  onAutoSelectToggle?: (enabled: boolean) => void;
 }
 
 const PivotTab: React.FC<PivotTabProps> = ({
@@ -31,11 +33,14 @@ const PivotTab: React.FC<PivotTabProps> = ({
   filters,
   onPivotChange,
   onError,
+  autoSelectEnabled = true,
+  onAutoSelectToggle,
 }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
   const rowsDragRegionRef = useRef<HTMLDivElement | null>(null);
   const columnsDragRegionRef = useRef<HTMLDivElement | null>(null);
   const valuesDragRegionRef = useRef<HTMLDivElement | null>(null);
-  const filtersDragRegionRef = useRef<HTMLDivElement | null>(null);
+  // const filtersDragRegionRef = useRef<HTMLDivElement | null>(null);
   const [cardDragOver, setCardDragOver] = useState<string | null>(null);
   const handledDropIdRef = useRef<string | null>(null);
 
@@ -51,7 +56,7 @@ const PivotTab: React.FC<PivotTabProps> = ({
     id: 'pivot-values-zone',
     data: { zone: 'pivot-values' },
   });
-  const { setNodeRef: setFiltersDropRef, isOver: isFiltersOver } = useDroppable({
+  const { setNodeRef: _setFiltersDropRef /* , isOver: isFiltersOver */ } = useDroppable({
     id: 'pivot-filters-zone',
     data: { zone: 'pivot-filters' },
   });
@@ -80,13 +85,13 @@ const PivotTab: React.FC<PivotTabProps> = ({
     [setValuesDropRef]
   );
 
-  const assignFiltersDropRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      filtersDragRegionRef.current = node;
-      setFiltersDropRef(node);
-    },
-    [setFiltersDropRef]
-  );
+  // const assignFiltersDropRef = useCallback(
+  //   (node: HTMLDivElement | null) => {
+  //     filtersDragRegionRef.current = node;
+  //     setFiltersDropRef(node);
+  //   },
+  //   [setFiltersDropRef]
+  // );
 
   const handleRowsUpdate = useCallback(
     (index: number, next: PivotDimension) => {
@@ -126,14 +131,14 @@ const PivotTab: React.FC<PivotTabProps> = ({
     [rows, columns, values, filters, onPivotChange]
   );
 
-  const handleFiltersUpdate = useCallback(
-    (index: number, next: PivotDimension) => {
-      const updated = [...filters];
-      updated[index] = next;
-      onPivotChange(rows, columns, values, updated);
-    },
-    [rows, columns, values, filters, onPivotChange]
-  );
+  // const handleFiltersUpdate = useCallback(
+  //   (index: number, next: PivotDimension) => {
+  //     const updated = [...filters];
+  //     updated[index] = next;
+  //     onPivotChange(rows, columns, values, updated);
+  //   },
+  //   [rows, columns, values, filters, onPivotChange]
+  // );
 
   const handleRowsRemove = useCallback(
     (index: number) => {
@@ -159,13 +164,13 @@ const PivotTab: React.FC<PivotTabProps> = ({
     [rows, columns, values, filters, onPivotChange]
   );
 
-  const handleFiltersRemove = useCallback(
-    (index: number) => {
-      const updated = filters.filter((_, idx) => idx !== index);
-      onPivotChange(rows, columns, values, updated);
-    },
-    [rows, columns, values, filters, onPivotChange]
-  );
+  // const handleFiltersRemove = useCallback(
+  //   (index: number) => {
+  //     const updated = filters.filter((_, idx) => idx !== index);
+  //     onPivotChange(rows, columns, values, updated);
+  //   },
+  //   [rows, columns, values, filters, onPivotChange]
+  // );
 
   const handleDragStart = useCallback((_id: string, event: React.DragEvent<HTMLDivElement>) => {
     const source = event.currentTarget;
@@ -184,7 +189,7 @@ const PivotTab: React.FC<PivotTabProps> = ({
   }, []);
 
   const handleDragRemoval = (
-    regionRef: React.RefObject<HTMLDivElement>,
+    regionRef: React.RefObject<HTMLDivElement | null>,
     callback: () => void,
     event: React.DragEvent<HTMLDivElement>
   ) => {
@@ -241,14 +246,14 @@ const PivotTab: React.FC<PivotTabProps> = ({
     [values, handleValuesRemove]
   );
 
-  const handleFiltersDragEnd = useCallback(
-    (dimensionId: string, event: React.DragEvent<HTMLDivElement>) => {
-      const index = filters.findIndex(d => d.id === dimensionId);
-      if (index === -1) return;
-      handleDragRemoval(filtersDragRegionRef, () => handleFiltersRemove(index), event);
-    },
-    [filters, handleFiltersRemove]
-  );
+  // const _handleFiltersDragEnd = useCallback(
+  //   (dimensionId: string, event: React.DragEvent<HTMLDivElement>) => {
+  //     const index = filters.findIndex(d => d.id === dimensionId);
+  //     if (index === -1) return;
+  //     handleDragRemoval(filtersDragRegionRef, () => handleFiltersRemove(index), event);
+  //   },
+  //   [filters, handleFiltersRemove]
+  // );
 
   const handleCardDragEnter = useCallback(
     (zoneId: string, event: React.DragEvent<HTMLDivElement>) => {
@@ -569,6 +574,44 @@ const PivotTab: React.FC<PivotTabProps> = ({
       transition={{ duration: 0.2 }}
       className="flex flex-col"
     >
+      {/* Auto-select toggle */}
+      <div className="mb-3 flex items-center gap-2 px-1">
+        <span className="text-sm text-gray-700 dark:text-gray-300">Auto-select chart series</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={autoSelectEnabled}
+          onClick={() => onAutoSelectToggle?.(!autoSelectEnabled)}
+          className={cn(
+            'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer',
+            autoSelectEnabled ? 'bg-blue-600 dark:bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+          )}
+        >
+          <span
+            className={cn(
+              'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+              autoSelectEnabled ? 'translate-x-6' : 'translate-x-1'
+            )}
+          />
+        </button>
+        <div className="relative">
+          <Info
+            className="w-4 h-4 text-gray-400 dark:text-gray-500 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+          />
+          {showTooltip && (
+            <div className="absolute left-0 bottom-full mb-2 z-[9999] w-72 p-3 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-xl border border-gray-700 pointer-events-none">
+              <p className="leading-relaxed">
+                When enabled, chart series are automatically selected based on pivot configuration.
+                When disabled, you must manually select columns. If selected columns don't exist
+                after pivot changes, they will be cleared.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="mb-3">
         <PivotSummaryButton
           availableColumns={availableColumns}

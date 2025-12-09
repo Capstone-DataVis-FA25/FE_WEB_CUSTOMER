@@ -666,21 +666,12 @@ const ChartListPage: React.FC = () => {
                             >
                               <span className="truncate font-semibold">
                                 {(() => {
-                                  const labels: Record<string, string> = {
-                                    all: t('chart_list_filter_type_all'),
-                                    line: t('chart_type_line'),
-                                    bar: t('chart_type_bar'),
-                                    area: t('chart_type_area'),
-                                    scatter: t('chart_type_scatter'),
-                                    pie: t('chart_type_pie'),
-                                    donut: t('chart_gallery_donut_basic'),
-                                    cycleplot: t('chart_type_cycleplot'),
-                                    heatmap: t('chart_type_heatmap'),
-                                  };
-                                  return (
-                                    labels[chartTypeFilter] ||
-                                    t('chart_list_filter_type_placeholder')
-                                  );
+                                  if (chartTypeFilter === 'all') return t('chart_filter_all_types');
+                                  if (chartTypeFilter === 'cycleplot')
+                                    return t('chart_filter_cycleplot');
+                                  const capitalize = (str: string) =>
+                                    str.charAt(0).toUpperCase() + str.slice(1);
+                                  return capitalize(chartTypeFilter);
                                 })()}
                               </span>
                               <svg

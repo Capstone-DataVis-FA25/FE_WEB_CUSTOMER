@@ -71,7 +71,10 @@ const ChartTypeSwitcher: React.FC<ChartTypeSwitcherProps> = ({
             className={`w-full ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={disabled}
           >
-            <SelectValue placeholder={currentOption?.label || 'Select chart type'} />
+            <SelectValue
+              placeholder={currentOption?.label || 'Select chart type'}
+              options={chartTypeOptions.map(opt => ({ value: opt.value, label: opt.label }))}
+            />
           </SelectTrigger>
           <SelectContent>
             {chartTypeOptions.map(option => {

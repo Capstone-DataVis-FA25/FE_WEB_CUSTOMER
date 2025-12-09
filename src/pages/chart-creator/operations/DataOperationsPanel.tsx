@@ -1,27 +1,26 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import type { DatasetConfig, DatasetColumnType } from '@/types/chart';
 import OperationsBanner from './OperationsBanner';
-import type { NumberFormat } from '@/contexts/DatasetContext';
+import type { DatasetColumnType } from '@/types/chart';
 
 interface DataOperationsPanelProps {
   datasetName?: string;
-  onOpenDatasetModal?: () => void;
+  // onOpenDatasetModal?: () => void;
   availableColumns?: { id: string; name: string; type: DatasetColumnType; dateFormat?: string }[];
-  datasetConfig?: DatasetConfig;
-  onDatasetConfigChange: (next?: DatasetConfig) => void;
-  numberFormat?: NumberFormat;
-  uniqueValuesByColumn?: Record<string, string[]>;
+  // datasetConfig?: DatasetConfig;
+  // onDatasetConfigChange: (next?: DatasetConfig) => void;
+  // numberFormat?: NumberFormat;
+  // uniqueValuesByColumn?: Record<string, string[]>;
 }
 
 const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
   datasetName,
-  onOpenDatasetModal,
+  // onOpenDatasetModal,
   availableColumns = [],
-  datasetConfig,
-  onDatasetConfigChange,
-  numberFormat,
-  uniqueValuesByColumn,
+  // datasetConfig,
+  // onDatasetConfigChange,
+  // numberFormat,
+  // uniqueValuesByColumn,
 }) => {
   const { t } = useTranslation();
 

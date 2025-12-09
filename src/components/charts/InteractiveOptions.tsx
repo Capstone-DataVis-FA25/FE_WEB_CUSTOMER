@@ -1,20 +1,23 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { /* useState, */ useEffect, useMemo } from 'react';
 import { Label } from '../ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '../ui/input';
+// import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
 import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
-import { useDebouncedUpdater } from '@/hooks/useDebounce';
-import { Info } from 'lucide-react';
+// import { Info } from 'lucide-react';
 
 const InteractiveOptions: React.FC = () => {
   const { t } = useTranslation();
-  const { chartConfig, chartData, axisConfigs } = useChartEditorRead();
+  const { chartConfig, chartData } = useChartEditorRead();
   const { handleConfigChange } = useChartEditorActions();
   if (!chartConfig) return null;
 
   const config = chartConfig.config;
-  const [localZoomExtent, setLocalZoomExtent] = useState(config.zoomExtent);
+  if (!config) return null;
+
+  const axisConfigs = 'axisConfigs' in chartConfig ? chartConfig.axisConfigs : undefined;
+
+  // const [localZoomExtent, setLocalZoomExtent] = useState(config.zoomExtent);
 
   // Calculate if chart will auto-expand based on data points
   const isChartAutoExpanded = useMemo(() => {
@@ -43,14 +46,14 @@ const InteractiveOptions: React.FC = () => {
   }, [isChartAutoExpanded]);
 
   // Sync local state with chartConfig when it changes (for edit mode)
-  useEffect(() => {
-    setLocalZoomExtent(config.zoomExtent);
-  }, [config?.zoomExtent]);
+  // useEffect(() => {
+  //   setLocalZoomExtent(config.zoomExtent);
+  // }, [config?.zoomExtent]);
 
   // Debounced update handler using custom hook
-  const debouncedUpdateZoomExtent = useDebouncedUpdater<number>(value =>
-    handleConfigChange({ config: { zoomExtent: value } })
-  );
+  // const debouncedUpdateZoomExtent = useDebouncedUpdater<number>(value =>
+  //   handleConfigChange({ config: { zoomExtent: value } })
+  // );
 
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 pt-4">

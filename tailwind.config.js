@@ -29,10 +29,17 @@ export default {
             opacity: '1',
             maxHeight: '500px',
             transform: 'translateY(0)',
+            typography: {
+              DEFAULT: {
+                css: {
+                  maxWidth: 'none',
+                },
+              },
+            },
           },
         },
+        plugins: [require('@tailwindcss/typography')],
       },
     },
   },
-  plugins: [],
 };

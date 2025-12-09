@@ -257,7 +257,7 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
     const label =
       typeof children === 'string' ? children : itemRef.current?.textContent || String(value);
     registerItem?.(value, label);
-    registerItemRef?.(value, itemRef);
+    registerItemRef?.(value, itemRef as React.RefObject<HTMLDivElement>);
     return () => {
       unregisterItem?.(value);
     };

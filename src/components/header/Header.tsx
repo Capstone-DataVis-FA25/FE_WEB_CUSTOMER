@@ -28,7 +28,7 @@ interface HeaderProps {
   onLogin?: () => void;
   onRegister?: () => void;
   onLogout?: () => void;
-  notificationCount?: number;
+  _notificationCount?: number;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -37,7 +37,7 @@ const Header: React.FC<HeaderProps> = ({
   onLogin,
   onRegister,
   onLogout,
-  notificationCount = 0,
+  // notificationCount = 0,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
