@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import ChartPreview from '@/components/charts/gallery-chart-preview/ChartPreview';
@@ -11,6 +12,7 @@ interface ChartTemplateCardProps {
 }
 
 const ChartTemplateCard: React.FC<ChartTemplateCardProps> = ({ template, isSelected, onClick }) => {
+  const { t } = useTranslation();
   return (
     <motion.div
       key={template.id}
@@ -90,7 +92,7 @@ const ChartTemplateCard: React.FC<ChartTemplateCardProps> = ({ template, isSelec
                 : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800')
             }
           >
-            {isSelected ? 'Selected' : 'Select'}
+            {isSelected ? t('chart_gallery_selected') : t('chart_gallery_select')}
           </button>
         </div>
       </div>

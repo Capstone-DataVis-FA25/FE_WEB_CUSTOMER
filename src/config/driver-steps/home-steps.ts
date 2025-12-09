@@ -1,20 +1,20 @@
 import type { DriveStep } from 'driver.js';
 import { Icons } from './icons';
+import { t } from './i18n-helper';
 
 export const homeSteps: DriveStep[] = [
   {
     popover: {
-      title: `${Icons.Rocket} Welcome to DataVis`,
-      description:
-        "Create beautiful, responsive charts with no coding required. Let's explore what makes DataVis special.",
+      title: `${Icons.Rocket} ${t('tour_home_welcome_title')}`,
+      description: t('tour_home_welcome_desc'),
       align: 'center',
     },
   },
   {
     element: '#hero-cta-build-chart',
     popover: {
-      title: `${Icons.BarChart3} Build Your First Chart`,
-      description: 'Start here! Create custom charts from your data with our intuitive editor.',
+      title: `${Icons.BarChart3} ${t('tour_home_build_title')}`,
+      description: t('tour_home_build_desc'),
       side: 'bottom',
       align: 'start',
     },
@@ -22,9 +22,8 @@ export const homeSteps: DriveStep[] = [
   {
     element: '#chart-types-section',
     popover: {
-      title: `${Icons.LayoutDashboard} Explore Templates`,
-      description:
-        'Discover our collection of professional chart templates. Click to preview and learn more.',
+      title: `${Icons.LayoutDashboard} ${t('tour_home_templates_title')}`,
+      description: t('tour_home_templates_desc'),
       side: 'top',
       align: 'center',
     },
@@ -32,9 +31,8 @@ export const homeSteps: DriveStep[] = [
   {
     element: '#features-section',
     popover: {
-      title: `${Icons.Sparkles} Powerful Features`,
-      description:
-        'Everything you need: customization, collaboration, and export options in one platform.',
+      title: `${Icons.Sparkles} ${t('tour_home_features_title')}`,
+      description: t('tour_home_features_desc'),
       side: 'top',
       align: 'center',
     },

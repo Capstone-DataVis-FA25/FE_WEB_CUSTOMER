@@ -139,10 +139,10 @@ export default function ChooseTemplateTab() {
       }
 
       setShowDatasetModal(false);
-      showSuccess(`Selected datasset successfully`);
+      showSuccess(t('dataset_selection_success'));
     } catch (error) {
       console.error('Failed to load dataset:', error);
-      showError('Failed to load selected dataset');
+      showError(t('dataset_selection_error'));
     } finally {
       setIsLoadingDataset(false);
     }
@@ -153,10 +153,7 @@ export default function ChooseTemplateTab() {
     try {
       // Only allow chart types supported by CreateChartRequest
       if (!isSupportedChartType(template.type)) {
-        showError(
-          t('chart_create_error', 'Error'),
-          t('chart_create_unsupported_type', 'This chart type is not supported for creation.')
-        );
+        showError(t('chart_create_error'), t('chart_create_unsupported_type'));
         return;
       }
 
@@ -179,10 +176,7 @@ export default function ChooseTemplateTab() {
     } catch (error: unknown) {
       console.error('ChooseTemplateTab - Failed to navigate:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      showError(
-        t('chart_create_error', 'Navigation Failed'),
-        errorMessage || t('chart_create_error_message', 'Failed to navigate to chart editor')
-      );
+      showError(t('chart_create_error'), errorMessage || t('chart_create_error_message'));
     }
   };
 
@@ -190,10 +184,7 @@ export default function ChooseTemplateTab() {
   const handleContinueWithTemplate = (template: ChartTemplate) => {
     // clearChartEditor();
     if (!template) {
-      showError(
-        t('chart_create_error', 'Error'),
-        t('chart_create_missing_data', 'Missing template')
-      );
+      showError(t('chart_create_error'), t('chart_create_missing_data'));
       return;
     }
 
@@ -349,7 +340,9 @@ export default function ChooseTemplateTab() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-blue-500" />
-              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Dataset</span>
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                {t('chart_card_dataset')}
+              </span>
             </div>
             <Button
               size="sm"
@@ -358,19 +351,23 @@ export default function ChooseTemplateTab() {
               disabled={isLoadingDataset}
               className="text-xs"
             >
-              {isLoadingDataset ? 'Loading...' : datasetId ? 'Change' : 'Select'}
+              {isLoadingDataset
+                ? t('dataset_loading')
+                : datasetId
+                  ? t('common.change')
+                  : t('chart_gallery_select')}
             </Button>
           </div>
 
           {datasetId ? (
             <div className="text-xs text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded mt-2">
               <div className="font-medium text-blue-800 dark:text-blue-200">
-                Dataset name: {currentDatasetName || 'Selected Dataset'}
+                {t('dataset_name_label')} {currentDatasetName || t('dataset_selected')}
               </div>
             </div>
           ) : (
             <div className="text-xs text-gray-600 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 p-2 rounded mt-2">
-              No dataset selected - will use sample data
+              {t('chart_gallery_no_dataset_selected')}
             </div>
           )}
         </div>
@@ -398,7 +395,7 @@ export default function ChooseTemplateTab() {
             className="w-full justify-start gap-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-700 dark:text-blue-300"
           >
             <HelpCircle className="w-4 h-4" />
-            Start Tour
+            {t('chart_list_start_tour')}
           </Button>
         </div>
 
@@ -573,7 +570,7 @@ export default function ChooseTemplateTab() {
                       }
                     }}
                   >
-                    <span className="text-xs">{t('chart_gallery_continue', 'Continue')}</span>
+                    <span className="text-xs">{t('chart_gallery_continue')}</span>
                     <ArrowRight className="w-3 h-3" />
                   </Button>
                   <Button
@@ -642,20 +639,20 @@ export default function ChooseTemplateTab() {
                         {/* Features */}
                         <div className="mb-4">
                           <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                            {t('chart_gallery_features', 'Features')}
+                            {t('chart_gallery_features')}
                           </h4>
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                               <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                              {t('chart_gallery_responsive', 'Responsive design')}
+                              {t('chart_gallery_responsive')}
                             </div>
                             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                               <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                              {t('chart_gallery_interactive', 'Interactive elements')}
+                              {t('chart_gallery_interactive')}
                             </div>
                             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                               <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                              {t('chart_gallery_customizable', 'Customizable styling')}
+                              {t('chart_gallery_customizable')}
                             </div>
                           </div>
                         </div>
@@ -672,7 +669,7 @@ export default function ChooseTemplateTab() {
                               }
                             }}
                           >
-                            <span>{t('chart_gallery_continue', 'Continue')}</span>
+                            <span>{t('chart_gallery_continue')}</span>
                             <ArrowRight className="w-4 h-4" />
                           </Button>
                           <Button
@@ -680,7 +677,7 @@ export default function ChooseTemplateTab() {
                             variant="outline"
                             onClick={() => setShowTemplateModal(false)}
                           >
-                            {t('chart_gallery_close', 'Close')}
+                            {t('chart_gallery_close')}
                           </Button>
                         </div>
                       </div>
@@ -729,15 +726,17 @@ export default function ChooseTemplateTab() {
               <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-6">
                 <div className="text-center">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    {t('chart_gallery_template_selected', 'Template Selected')}
+                    {t('chart_gallery_template_selected')}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                    {t('chart_gallery_template_selected_desc', 'Ready to create chart with')}{' '}
+                    {t('chart_gallery_template_selected_desc')}{' '}
                     <strong>{selectedTemplate.name}</strong>
                     {datasetId ? (
-                      <div>Dataset name: {currentDatasetName || 'Selected Dataset'}</div>
+                      <div>
+                        {t('dataset_name_label')} {currentDatasetName || t('dataset_selected')}
+                      </div>
                     ) : (
-                      <div>No dataset selected - will use sample data</div>
+                      <div>{t('chart_gallery_no_dataset_selected')}</div>
                     )}
                   </p>
                   <div className="flex gap-3 justify-center">
@@ -747,7 +746,7 @@ export default function ChooseTemplateTab() {
                       size="lg"
                     >
                       <ArrowRight className="w-4 h-4 mr-2" />
-                      {t('chart_gallery_continue', 'Continue')}
+                      {t('chart_gallery_continue')}
                     </Button>
                     {!datasetId && (
                       <Button
@@ -760,7 +759,7 @@ export default function ChooseTemplateTab() {
                         className="px-6 py-2"
                       >
                         <Database className="w-4 h-4 mr-2" />
-                        Select Dataset
+                        {t('dataset_selection_title')}
                       </Button>
                     )}
                   </div>

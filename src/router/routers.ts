@@ -8,6 +8,7 @@ const Routers = {
 
   // Resources routes
   FREQUENT_QUESTIONS: '/resources/frequent-questions',
+  ACADEMIC_DOCS: '/resources/docs',
 
   // Profile routes
   PROFILE: '/profile',

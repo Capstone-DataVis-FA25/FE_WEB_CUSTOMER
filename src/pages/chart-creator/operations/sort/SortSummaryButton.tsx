@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { ArrowUpDown, X } from 'lucide-react';
 import { SortModal } from './SortModal';
@@ -23,6 +24,7 @@ export const SortSummaryButton: React.FC<SortSummaryButtonProps> = ({
   onSortChange,
   initialLevels = [],
 }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [levels, setLevels] = useState<SortLevel[]>(initialLevels);
@@ -76,7 +78,7 @@ export const SortSummaryButton: React.FC<SortSummaryButtonProps> = ({
         isOpen={showClearConfirm}
         onClose={() => setShowClearConfirm(false)}
         onConfirm={handleClearSort}
-        title="Clear Sort"
+        title={t('operations.clearSort', 'Clear Sort')}
         message="Are you sure you want to clear all sort settings? This action cannot be undone."
         confirmText="Clear"
         cancelText="Cancel"

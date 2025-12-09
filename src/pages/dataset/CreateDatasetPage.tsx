@@ -497,8 +497,11 @@ function CreateDatasetPageContent() {
       {isProcessing ? (
         <LoadingSpinner
           fullScreen={true}
-          title="Processing your file..."
-          subtitle="Please wait while we analyze and parse your data"
+          title={t('dataset.processingTitle', 'Processing your file...')}
+          subtitle={t(
+            'dataset.processingSubtitle',
+            'Please wait while we analyze and parse your data'
+          )}
         />
       ) : viewMode === 'view' ? (
         // Data Viewer - Full Width

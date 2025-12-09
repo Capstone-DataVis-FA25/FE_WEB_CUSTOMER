@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
@@ -36,6 +37,7 @@ export const SortLevelRow: React.FC<SortLevelRowProps> = ({
   disableMoveUp,
   disableMoveDown,
 }) => {
+  const { t } = useTranslation();
   const selectedColumn = availableColumns.find(c => c.id === level.columnId);
   const columnName = selectedColumn?.name || level.columnId;
   const columnType = selectedColumn?.type;
@@ -118,7 +120,7 @@ export const SortLevelRow: React.FC<SortLevelRowProps> = ({
             size="sm"
             className="h-9 w-9 p-0 flex-shrink-0 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:pointer-events-none"
             onClick={onMoveUp}
-            title="Move up"
+            title={t('operations.moveUp', 'Move up')}
             disabled={disableMoveUp}
           >
             <ArrowUp className="w-4 h-4" />
@@ -128,7 +130,7 @@ export const SortLevelRow: React.FC<SortLevelRowProps> = ({
             size="sm"
             className="h-9 w-9 p-0 flex-shrink-0 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:pointer-events-none"
             onClick={onMoveDown}
-            title="Move down"
+            title={t('operations.moveDown', 'Move down')}
             disabled={disableMoveDown}
           >
             <ArrowDown className="w-4 h-4" />
@@ -138,7 +140,7 @@ export const SortLevelRow: React.FC<SortLevelRowProps> = ({
             size="sm"
             className="h-9 w-9 p-0 flex-shrink-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500"
             onClick={onRemove}
-            title="Remove sort level"
+            title={t('operations.removeSortLevel', 'Remove sort level')}
           >
             <Trash2 className="w-4 h-4" />
           </Button>

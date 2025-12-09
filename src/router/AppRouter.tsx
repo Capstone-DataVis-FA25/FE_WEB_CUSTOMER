@@ -24,6 +24,9 @@ const componentMap = {
   GeneralSettingsPage: lazy(() => import('../pages/profile/GeneralSettingsPage')),
   AboutPage: lazy(() => import('../pages/about-us/AboutUsPage')),
   FrequentQuestionPage: lazy(() => import('../pages/resources/FrequentQuestionPage')),
+  AcademicUsingChart: lazy(() =>
+    import('../pages/academic/AcademicUsingChart').then(m => ({ default: m.AcademicUsingChart }))
+  ),
   VerifyEmailErrorPage: lazy(() => import('../pages/verify/VerifyEmailErrorPage')),
   ResendEmailPage: lazy(() => import('../pages/verify/ResendEmailPage')),
   LineChartPage: lazy(() => import('../components/charts/page.example/LineChartPage')),

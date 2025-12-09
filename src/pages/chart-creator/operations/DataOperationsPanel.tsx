@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { DatasetConfig, DatasetColumnType } from '@/types/chart';
 import OperationsBanner from './OperationsBanner';
 import type { NumberFormat } from '@/contexts/DatasetContext';
@@ -22,16 +23,18 @@ const DataOperationsPanel: React.FC<DataOperationsPanelProps> = ({
   numberFormat,
   uniqueValuesByColumn,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="h-full min-h-0 w-[480px] min-w-[480px] max-w-[480px] border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 overflow-y-auto hide-scrollbar select-none">
       {!datasetName || availableColumns.length === 0 ? (
         <OperationsBanner
-          title="Operations Disabled"
+          title={t('operations.operationsDisabled', 'Operations Disabled')}
           message="Select a dataset to enable sort and other operations."
         />
       ) : (
         <OperationsBanner
-          title="Operations Moved"
+          title={t('operations.operationsMoved', 'Operations Moved')}
           message="Filter, Sort, and Aggregation operations have been moved to the Dataset Operation section in the chart editor sidebar."
         />
       )}

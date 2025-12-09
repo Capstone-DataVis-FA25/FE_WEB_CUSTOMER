@@ -15,6 +15,23 @@ export default {
         // Default sans-serif sử dụng Roboto
         sans: ['Roboto', 'Inter', 'system-ui', 'sans-serif'],
       },
+      animation: {
+        slideDown: 'slideDown 0.3s ease-out',
+      },
+      keyframes: {
+        slideDown: {
+          from: {
+            opacity: '0',
+            maxHeight: '0',
+            transform: 'translateY(-10px)',
+          },
+          to: {
+            opacity: '1',
+            maxHeight: '500px',
+            transform: 'translateY(0)',
+          },
+        },
+      },
     },
   },
   plugins: [],
