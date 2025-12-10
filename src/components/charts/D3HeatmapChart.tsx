@@ -348,7 +348,7 @@ const D3HeatmapChart: React.FC<D3HeatmapChartProps> = ({
     if (showLegend) {
       const legendWidth = Math.min(chartWidth * 0.6, 400);
       const legendHeight = 20;
-      const legendY = chartHeight + 65;
+      const legendY = chartHeight + 85; // Increased margin between chart and legend
       const legendX = (chartWidth - legendWidth) / 2;
       const legendScale = d3.scaleLinear().domain([minVal, maxVal]).range([0, legendWidth]);
       const legendAxis = d3.axisBottom(legendScale).ticks(legendSteps);
