@@ -11,53 +11,49 @@ import {
 import { FadeIn } from '@/theme/animation';
 import { ChartType } from '@/features/charts';
 import { getSampleCSVForChartType } from '@/data/generatedSamples';
+import { useTranslation } from 'react-i18next';
 
 interface SampleDataUploadProps {
   onSampleSelect: (content: string) => void;
 }
 
 function SampleDataUpload({ onSampleSelect }: SampleDataUploadProps) {
+  const { t } = useTranslation();
   const chartOptions: Array<{ id: ChartType; name: string; description: string; icon: any }> = [
     {
       id: ChartType.Line,
-      name: 'Line Chart Sample',
-      description:
-        'Follow a 3‑year journey of regional sales where seasons drive predictable peaks and dips, and each region (North, South, East, West, Central) pushes the total forward.',
+      name: t('sample_line_chart'),
+      description: t('sample_line_chart_desc'),
       icon: LineChart,
     },
     {
       id: ChartType.Bar,
-      name: 'Bar Chart Sample',
-      description:
-        'Compare how each product SKU performs across regions and channels—online, retail, and wholesale—then see how returns reshape the final net story.',
+      name: t('sample_bar_chart'),
+      description: t('sample_bar_chart_desc'),
       icon: BarChart3,
     },
     {
       id: ChartType.Area,
-      name: 'Area Chart Sample',
-      description:
-        'Watch regions stack together month by month as seasonal demand swells and fades, showing how each area lifts the total over time.',
+      name: t('sample_area_chart'),
+      description: t('sample_area_chart_desc'),
       icon: AreaChart,
     },
     {
       id: ChartType.Scatter,
-      name: 'Scatter Chart Sample',
-      description:
-        'Explore a housing market snapshot where larger homes in pricier cities command higher prices while beds, baths, and age bend the trendline.',
+      name: t('sample_scatter_chart'),
+      description: t('sample_scatter_chart_desc'),
       icon: Dot,
     },
     {
       id: ChartType.Pie,
-      name: 'Pie Chart Sample',
-      description:
-        'See how a marketing budget fragments across channels and how that spend converts into attention, clicks, and ultimately conversions.',
+      name: t('sample_pie_chart'),
+      description: t('sample_pie_chart_desc'),
       icon: ChartPie,
     },
     {
       id: ChartType.Donut,
-      name: 'Donut Chart Sample',
-      description:
-        'A ringed view of the marketing mix—compare slices at a glance and read the story of reach, engagement, and outcomes by channel.',
+      name: t('sample_donut_chart'),
+      description: t('sample_donut_chart_desc'),
       icon: Donut,
     },
   ];
@@ -73,10 +69,10 @@ function SampleDataUpload({ onSampleSelect }: SampleDataUploadProps) {
         <CardHeader className="pb-6">
           <CardTitle className="text-2xl text-gray-900 dark:text-white flex items-center gap-3">
             <FileSpreadsheet className="w-6 h-6 text-blue-600" />
-            Try Sample Data
+            {t('sample_data_title')}
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
-            Generated samples based on chart type. Previous static samples are hidden.
+            {t('sample_data_description')}
           </CardDescription>
         </CardHeader>
 

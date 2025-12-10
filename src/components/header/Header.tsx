@@ -69,7 +69,7 @@ const Header: React.FC<HeaderProps> = ({
     { name: 'FAQ', href: '/resources/frequent-questions' },
     { name: 'Changelog', href: '/resources/changelog' },
     { name: 'Blog', href: '/resources/blog' },
-    { name: 'Docs', href: '/resources/docs' },
+    { name: 'Docs', href: Routers.ACADEMIC_DOCS },
     { name: 'Community', href: '/resources/community' },
     { name: 'Forum', href: '/resources/forum' },
     { name: 'Careers', href: '/resources/careers' },

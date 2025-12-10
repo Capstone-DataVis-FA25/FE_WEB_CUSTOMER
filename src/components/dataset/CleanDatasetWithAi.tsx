@@ -1,5 +1,4 @@
 import type React from 'react';
-
 import { useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -66,7 +65,7 @@ function CleanDatasetWithAI({
   // Handle CSV text cleaning (ASYNC)
   const handleCleanCsv = async () => {
     if (!csvText.trim()) {
-      setError('Please enter CSV data');
+      setError(t('ai_clean_error_enter_csv'));
       return;
     }
     setError(null);
@@ -97,11 +96,10 @@ function CleanDatasetWithAI({
       if (resp.jobId) {
         onJobSubmit?.(resp.jobId, 'CSV Data', 'csv');
       } else {
-        setError('Không nhận được jobId từ server');
+        setError(t('ai_clean_no_jobid'));
       }
     } catch (err) {
-      console.error('Gửi job thất bại:', err);
-      setError('Gửi job thất bại');
+      setError(t('ai_clean_send_failed'));
     } finally {
       setIsLoading(false);
       onProcessingChange?.(false);
@@ -113,7 +111,7 @@ function CleanDatasetWithAI({
     const isExcel = file.name.match(/\.(xlsx?|xls)$/i);
     const isCsv = file.name.match(/\.csv$/i);
     if (!isExcel && !isCsv) {
-      setError('Please select a valid Excel or CSV file (.xlsx, .xls, .csv)');
+      setError(t('ai_clean_error_select_file'));
       return;
     }
     setError(null);
@@ -224,11 +222,10 @@ function CleanDatasetWithAI({
         <CardHeader className="pb-6">
           <CardTitle className="text-2xl text-gray-900 dark:text-white flex items-center gap-3">
             <Sparkles className="w-6 h-6 text-blue-600" />
-            Clean Dataset with AI
+            {t('ai_clean_title')}
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
-            Use AI to automatically clean and standardize your data. Choose between Excel files or
-            CSV text.
+            {t('ai_clean_description')}
           </CardDescription>
         </CardHeader>
 
@@ -247,7 +244,7 @@ function CleanDatasetWithAI({
             >
               <span className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <Sparkles className="w-4 h-4" />
-                Cleaning Options
+                {t('ai_clean_options_title')}
               </span>
               {showAdvancedOptions ? (
                 <ChevronUp className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -261,7 +258,7 @@ function CleanDatasetWithAI({
                 {/* Cleaning Rules Checkboxes */}
                 <div className="space-y-3">
                   <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-                    Cleaning Rules
+                    {t('ai_clean_rules_title')}
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <label className="flex items-start gap-2 cursor-pointer group">
@@ -273,10 +270,10 @@ function CleanDatasetWithAI({
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Remove duplicates
+                          {t('ai_clean_rule_remove_duplicates')}
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Remove exact duplicate rows
+                          {t('ai_clean_rule_remove_duplicates_desc')}
                         </p>
                       </div>
                     </label>
@@ -290,10 +287,10 @@ function CleanDatasetWithAI({
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Fix data types
+                          {t('ai_clean_rule_fix_types')}
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Convert strings to numbers
+                          {t('ai_clean_rule_fix_types_desc')}
                         </p>
                       </div>
                     </label>
@@ -307,10 +304,10 @@ function CleanDatasetWithAI({
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Handle missing values
+                          {t('ai_clean_rule_handle_missing')}
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Fill or remove empty cells
+                          {t('ai_clean_rule_handle_missing_desc')}
                         </p>
                       </div>
                     </label>
@@ -324,10 +321,10 @@ function CleanDatasetWithAI({
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Remove or cap outliers
+                          {t('ai_clean_rule_remove_outliers')}
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Detect and handle anomalies
+                          {t('ai_clean_rule_remove_outliers_desc')}
                         </p>
                       </div>
                     </label>
@@ -341,10 +338,10 @@ function CleanDatasetWithAI({
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Standardize formats
+                          {t('ai_clean_rule_standardize_formats')}
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Normalize dates, phones, etc.
+                          {t('ai_clean_rule_standardize_formats_desc')}
                         </p>
                       </div>
                     </label>
@@ -358,10 +355,10 @@ function CleanDatasetWithAI({
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Validate domain constraints
+                          {t('ai_clean_rule_validate_domain')}
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Check value ranges and formats
+                          {t('ai_clean_rule_validate_domain_desc')}
                         </p>
                       </div>
                     </label>
@@ -375,10 +372,10 @@ function CleanDatasetWithAI({
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Standardize units
+                          {t('ai_clean_rule_standardize_units')}
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Convert to consistent units
+                          {t('ai_clean_rule_standardize_units_desc')}
                         </p>
                       </div>
                     </label>
@@ -395,19 +392,19 @@ function CleanDatasetWithAI({
                       htmlFor="thousandsSeparator"
                       className="text-sm font-medium text-gray-700 dark:text-gray-300"
                     >
-                      Thousands Separator
+                      {t('ai_clean_thousands_separator')}
                     </Label>
                     <Input
                       id="thousandsSeparator"
                       type="text"
                       value={cleaningOptions.thousandsSeparator}
                       onChange={e => handleOptionChange('thousandsSeparator', e.target.value)}
-                      placeholder="Default: , (comma)"
+                      placeholder={t('ai_clean_thousands_placeholder')}
                       maxLength={1}
                       className="bg-background"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      e.g., comma (,) or space ( )
+                      {t('ai_clean_thousands_hint')}
                     </p>
                   </div>
 
@@ -416,19 +413,19 @@ function CleanDatasetWithAI({
                       htmlFor="decimalSeparator"
                       className="text-sm font-medium text-gray-700 dark:text-gray-300"
                     >
-                      Decimal Separator
+                      {t('ai_clean_decimal_separator')}
                     </Label>
                     <Input
                       id="decimalSeparator"
                       type="text"
                       value={cleaningOptions.decimalSeparator}
                       onChange={e => handleOptionChange('decimalSeparator', e.target.value)}
-                      placeholder="Default: . (dot)"
+                      placeholder={t('ai_clean_decimal_placeholder')}
                       maxLength={1}
                       className="bg-background"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      e.g., period (.) or comma (,)
+                      {t('ai_clean_decimal_hint')}
                     </p>
                   </div>
 
@@ -437,19 +434,29 @@ function CleanDatasetWithAI({
                       htmlFor="notes"
                       className="text-sm font-medium text-gray-700 dark:text-gray-300"
                     >
-                      Additional Notes
+                      {t('ai_clean_notes')}
                     </Label>
                     <textarea
                       id="notes"
                       value={cleaningOptions.notes}
                       onChange={e => handleOptionChange('notes', e.target.value)}
-                      placeholder="Optional: Add custom cleaning instructions..."
-                      className="w-full min-h-[60px] p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y"
+                      placeholder={t('ai_clean_notes_placeholder')}
+                      className="w-full min-h-[80px] p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Provide any specific cleaning requirements
+                      {t('ai_clean_notes_hint')}
                     </p>
                   </div>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                  <p className="text-xs text-blue-800 dark:text-blue-200">
+                    <strong>{t('ai_clean_preview')}</strong>{' '}
+                    {t('ai_clean_preview_text', {
+                      thousands: cleaningOptions.thousandsSeparator || ',',
+                      decimal: cleaningOptions.decimalSeparator || '.',
+                    })}
+                  </p>
                 </div>
               </div>
             )}
@@ -543,7 +550,7 @@ function CleanDatasetWithAI({
                 className="w-full px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
-                {isLoading ? 'Cleaning with AI...' : 'Clean File with AI'}
+                {isLoading ? t('ai_clean_button_cleaning') : t('ai_clean_button_clean_file')}
               </Button>
 
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
@@ -574,19 +581,17 @@ function CleanDatasetWithAI({
                   htmlFor="csvInput"
                   className="text-lg font-semibold text-gray-900 dark:text-white"
                 >
-                  Paste your CSV data
+                  {t('ai_clean_paste_csv')}
                 </Label>
                 <textarea
                   id="csvInput"
                   value={csvText}
                   onChange={e => setCsvText(e.target.value)}
-                  placeholder="ID,Name,Age,Salary&#10;1,John Doe,28,1234.56&#10;2,Jane Smith,34,2890.75"
+                  placeholder={t('ai_clean_csv_placeholder')}
                   className="w-full min-h-[300px] p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl font-mono text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y focus:border-blue-200 dark:focus:border-blue-800 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isLoading || isProcessing}
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Paste your CSV data with headers in the first row
-                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('ai_clean_csv_hint')}</p>
               </div>
 
               <Button
@@ -595,7 +600,7 @@ function CleanDatasetWithAI({
                 className="w-full px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
-                {isLoading ? 'Cleaning with AI...' : 'Clean CSV with AI'}
+                {isLoading ? t('ai_clean_button_cleaning') : t('ai_clean_button_clean')}
               </Button>
 
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">

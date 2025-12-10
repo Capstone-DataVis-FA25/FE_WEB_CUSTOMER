@@ -970,7 +970,7 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.3 }}
-        className="sticky top-4 z-10"
+        className="sticky top-4 z-10 h-fit max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar"
       >
         <Card className="backdrop-blur-sm bg-white/95 dark:bg-gray-800/95 border-0 shadow-2xl">
           <CardContent className="p-6">

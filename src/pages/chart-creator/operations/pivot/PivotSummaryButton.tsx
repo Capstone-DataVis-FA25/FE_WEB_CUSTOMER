@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Grid3x3, X } from 'lucide-react';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
@@ -28,6 +29,7 @@ export const PivotSummaryButton: React.FC<PivotSummaryButtonProps> = ({
   initialValues = [],
   initialFilters = [],
 }) => {
+  const { t } = useTranslation();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [rows, setRows] = useState<PivotDimension[]>(initialRows);
   const [columns, setColumns] = useState<PivotDimension[]>(initialColumns);
@@ -89,7 +91,7 @@ export const PivotSummaryButton: React.FC<PivotSummaryButtonProps> = ({
         isOpen={showClearConfirm}
         onClose={() => setShowClearConfirm(false)}
         onConfirm={handleClearPivot}
-        title="Clear Pivot Table"
+        title={t('operations.clearPivotTable', 'Clear Pivot Table')}
         message="Are you sure you want to clear all pivot table settings? This action cannot be undone."
         confirmText="Clear"
         cancelText="Cancel"

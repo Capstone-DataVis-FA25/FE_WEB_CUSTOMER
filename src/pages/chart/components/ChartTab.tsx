@@ -2,7 +2,7 @@ import React from 'react';
 import { Plus, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-// import { useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Pagination from '@/components/ui/pagination';
 import ChartCard from './ChartCard';
@@ -58,7 +58,7 @@ const ChartTab: React.FC<ChartTabProps> = ({
   deletingChartId,
   pagination,
 }) => {
-  // const { t } = useTranslation();
+  const { t } = useTranslation();
 
   if (chartsLoading && allFilteredCharts.length === 0) {
     return (
@@ -81,11 +81,11 @@ const ChartTab: React.FC<ChartTabProps> = ({
             <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center mb-6">
               <BarChart3 className="h-10 w-10 text-white" />
             </div>
-            <h3 className="text-2xl font-semibold mb-2">No charts found</h3>
+            <h3 className="text-2xl font-semibold mb-2">{t('chart_list_no_charts_title')}</h3>
             <p className="text-muted-foreground text-center mb-6 max-w-md">
               {searchTerm
-                ? 'Try adjusting your search terms'
-                : 'Create your first chart to start visualizing your data!'}
+                ? t('chart_list_no_charts_desc_search')
+                : t('chart_list_no_charts_desc_empty')}
             </p>
             {!searchTerm && (
               <Button
@@ -93,7 +93,7 @@ const ChartTab: React.FC<ChartTabProps> = ({
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Create Your First Chart
+                {t('chart_list_create_first')}
               </Button>
             )}
           </CardContent>

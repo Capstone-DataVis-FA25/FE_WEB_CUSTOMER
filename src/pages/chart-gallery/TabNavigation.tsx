@@ -26,7 +26,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
       label: t('chart_gallery_select_with_data'),
       icon: BarChart3,
       description: t('chart_gallery_data_desc'),
-      badge: 'BETA',
+      badge: t('chart_gallery_beta'),
       gradient: 'from-purple-500 to-pink-500',
     },
   ];

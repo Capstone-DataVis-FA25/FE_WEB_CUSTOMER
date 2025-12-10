@@ -80,6 +80,19 @@
   }
 }
 
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    transform: translateY(0);
+  }
+}
+
 /* Animation classes */
 .toast-enter {
   transform: translateX(100%);
@@ -149,15 +162,15 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+  --background: oklch(0.97 0 0); /* Softer off-white/gray */
   --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
+  --card: oklch(1 0 0); /* Keep cards white for contrast */
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  /* Primary color: #ffffff */
-  --primary: oklch(1 0 0);
-  --primary-foreground: oklch(0.145 0 0);
+  /* Primary color: Dark Blue (Brand) */
+  --primary: oklch(0.35 0.12 250);
+  --primary-foreground: oklch(1 0 0);
   /* Secondary color: #f97d32 */
   --secondary: oklch(0.72 0.15 45);
   --secondary-foreground: oklch(0.985 0 0);
@@ -183,7 +196,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  --gradient-main: linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f5f3ff 100%);
+  --gradient-main: linear-gradient(
+    135deg,
+    #e2e8f0 0%,
+    #f8fafc 50%,
+    #e0e7ff 100%
+  ); /* Softer gradient */
 }
 
 .dark {
@@ -193,7 +211,7 @@
   --card-foreground: #f3f4f6;
   --popover: #23232a;
   --popover-foreground: #f3f4f6;
-  --primary: #204188; /* Blue hoặc màu brand */
+  --primary: oklch(0.35 0.12 250); /* Blue hoặc màu brand */
   --primary-foreground: #ffffff;
   --secondary: #f97d32; /* Orange nổi bật */
   --secondary-foreground: #18181b;

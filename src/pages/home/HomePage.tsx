@@ -239,7 +239,7 @@ const HomePage: React.FC = () => {
                 transition={{ delay: 0.2 }}
                 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-foreground mb-6 leading-tight"
               >
-                Create beautiful charts with{' '}
+                {t('home_hero_title_prefix')}{' '}
                 <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   DataVis
                 </span>
@@ -250,7 +250,7 @@ const HomePage: React.FC = () => {
                 transition={{ delay: 0.4 }}
                 className="text-xl lg:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto lg:mx-0 leading-relaxed"
               >
-                Responsive & easy-to-use chart types for every need. No coding required.
+                {t('home_hero_subtitle')}
               </motion.p>
 
               <motion.div
@@ -261,15 +261,15 @@ const HomePage: React.FC = () => {
                 <Button
                   id="hero-cta-build-chart"
                   size="lg"
-                  className="text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group"
+                  className="text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0"
                 >
                   <Play className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-                  Build Your Own Chart
+                  {t('home_hero_cta_build')}
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
                 <Button variant="outline" size="lg" className="text-lg px-8 py-6 rounded-xl">
                   <BookOpen className="w-5 h-5 mr-2" />
-                  View Examples
+                  {t('home_hero_cta_examples')}
                 </Button>
               </motion.div>
             </motion.div>
@@ -349,7 +349,7 @@ const HomePage: React.FC = () => {
                           className={`aspect-square rounded-lg flex items-center justify-center transition-all duration-300 border-2 ${
                             selectedChart === chart.id
                               ? 'bg-primary text-primary-foreground border-primary shadow-lg'
-                              : 'bg-background hover:bg-muted/50 text-muted-foreground hover:text-foreground border-border hover:border-muted-foreground/30'
+                              : 'bg-background hover:bg-gray-100 dark:hover:bg-gray-800 text-muted-foreground hover:text-foreground border-border hover:border-primary/50'
                           }`}
                         >
                           <IconComponent className="w-6 h-6" />
@@ -389,7 +389,7 @@ const HomePage: React.FC = () => {
                               : Routers.AREA_CHART_EDITOR_DEMO)
                       }
                     >
-                      Learn more about our {selectedChartData?.title.toLowerCase()}
+                      {t('home_chart_learn_more')} {selectedChartData?.title.toLowerCase()}
                       <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                     </Button>
                   </motion.div>
@@ -605,7 +605,7 @@ const HomePage: React.FC = () => {
                     <h3 className="font-semibold text-foreground mb-3">{story.case}</h3>
                     <p className="text-muted-foreground mb-4">{story.description}</p>
                     <Button variant="outline" size="sm" className="group">
-                      View Case Study
+                      {t('home_story_view_case')}
                       <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                     </Button>
                   </CardContent>

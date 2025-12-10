@@ -248,6 +248,18 @@ export const publicRoutes: RouteConfig[] = [
     },
   },
   {
+    path: Routers.ACADEMIC_DOCS,
+    name: 'academic-docs',
+    component: 'AcademicUsingChart',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Documentation',
+      description: 'Learn how to use DataVis - comprehensive documentation and guides',
+    },
+  },
+  {
     path: Routers.CHART_EDITOR,
     name: 'chart-editor',
     component: 'ChartEditorPage',

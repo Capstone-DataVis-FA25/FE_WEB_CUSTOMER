@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Database, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +30,7 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
   // onSelectSameDataset removed
 }) => {
   const { datasets, loadingList, getDatasets } = useDataset();
+  const { t } = useTranslation();
   const [selectedDatasetId, setSelectedDatasetId] = useState<string>('');
 
   // Datasets are already fetched in ChartEditorPage on mount
@@ -91,7 +93,7 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
               <Database className="w-6 h-6 text-blue-600" />
-              Select a Dataset
+              {t('dataset_selection_title')}
             </DialogTitle>
             {/* Manual refresh button - always available when not loading */}
             {!loadingList && (
@@ -100,7 +102,7 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
                 size="sm"
                 onClick={handleRefresh}
                 className="text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
-                title="Refresh datasets list"
+                title={t('dataset_selection_refresh')}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -114,22 +116,21 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
                     clipRule="evenodd"
                   />
                 </svg>
-                Refresh
+                {t('dataset_selection_refresh_button')}
               </Button>
             )}
           </div>
           <DialogDescription id="dataset-selection-description" className="text-muted-foreground">
             {currentDatasetId ? (
               <>
-                Choose a dataset for your chart. Your current dataset is marked with a "Current"
-                badge.
+                {t('dataset_selection_desc_current')}
                 <br />
                 <span className="text-amber-600 dark:text-amber-400 font-medium">
-                  Warning: Changing dataset will replace your current chart data.
+                  {t('dataset_selection_warning')}
                 </span>
               </>
             ) : (
-              'Choose a dataset to create your chart. You can only select one dataset at a time.'
+              t('dataset_selection_desc_new')
             )}
           </DialogDescription>
         </DialogHeader>
@@ -142,11 +143,10 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Database className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              No datasets available
+              {t('dataset_list_no_datasets_title')}
             </h3>
             <p className="text-sm text-muted-foreground max-w-md">
-              You need to create a dataset first before creating a chart. Click "New Dataset" to get
-              started.
+              {t('dataset_list_no_datasets_desc')}
             </p>
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
               <Button
@@ -155,7 +155,7 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
                 disabled={loadingList}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                Refresh List
+                {t('dataset_list_refresh')}
               </Button>
             </div>
           </div>
@@ -195,7 +195,7 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
                         {/* Hiển thị badge khi đây là dataset hiện tại */}
                         {currentDatasetId === dataset.id && (
                           <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
-                            Current
+                            {t('dataset_selection_current_badge')}
                           </span>
                         )}
                       </div>
@@ -208,15 +208,15 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
                     )}
                     <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                       <span className="flex items-center">
-                        <span className="font-medium">Rows:</span>
+                        <span className="font-medium">{t('rows')}:</span>
                         <span className="ml-1">{dataset.rowCount}</span>
                       </span>
                       <span className="flex items-center">
-                        <span className="font-medium">Columns:</span>
+                        <span className="font-medium">{t('columns')}:</span>
                         <span className="ml-1">{dataset.columnCount}</span>
                       </span>
                       <span className="flex items-center">
-                        <span className="font-medium">Created:</span>
+                        <span className="font-medium">{t('created')}:</span>
                         <span className="ml-1">
                           {new Date(dataset.createdAt).toLocaleDateString()}
                         </span>
@@ -236,7 +236,7 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
             onClick={handleCancel}
             className="rounded-lg pointer-events-auto"
           >
-            Cancel
+            {t('dataset_selection_cancel_button')}
           </Button>
           <Button
             type="button"
@@ -244,7 +244,7 @@ const DatasetSelectionDialog: React.FC<DatasetSelectionDialogProps> = ({
             disabled={!selectedDatasetId || loadingList}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
           >
-            Switch to Dataset
+            {t('dataset_selection_switch_button')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -303,11 +303,11 @@ const DatasetListPage: React.FC = () => {
                 <Database className="h-6 w-6 text-white" />
               </div>
               <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                My Datasets
+                {t('dataset_list_title')}
               </h1>
             </div>
             <p className="text-lg text-muted-foreground max-w-2xl">
-              Manage and organize your datasets for powerful data visualization
+              {t('dataset_list_description')}
             </p>
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
               <div className="flex items-center space-x-1">
@@ -323,7 +323,7 @@ const DatasetListPage: React.FC = () => {
               className="border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"
             >
               <HelpCircle className="h-4 w-4 mr-2" />
-              <span>Start Tour</span>
+              <span>{t('chart_list_start_tour')}</span>
             </Button>
             <Button
               id="btn-new-dataset"
@@ -331,7 +331,7 @@ const DatasetListPage: React.FC = () => {
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
             >
               <Plus className="h-4 w-4 mr-2" />
-              <span>New Dataset</span>
+              <span>{t('dataset_list_new_dataset')}</span>
             </Button>
           </div>
         </div>
@@ -349,12 +349,12 @@ const DatasetListPage: React.FC = () => {
                   {/* Search */}
                   <div className="flex-1">
                     <Label htmlFor="search-dataset" className="mb-1 block">
-                      Search
+                      {t('common_search')}
                     </Label>
                     <div className="w-full relative">
                       <Input
                         id="search-dataset"
-                        placeholder="Search datasets by name or description..."
+                        placeholder={t('dataset_list_search_placeholder')}
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         className="w-full h-11 px-4 pr-10 text-base font-semibold !border-blue-300 !border-2 focus:!border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-blue-500 hover:bg-blue-100"
@@ -384,7 +384,7 @@ const DatasetListPage: React.FC = () => {
                   <div className="flex flex-col md:flex-row md:items-end md:space-x-3">
                     <div>
                       <Label htmlFor="sortOrder" className="mb-1 block">
-                        Sort by
+                        {t('chart_list_sort_by')}
                       </Label>
                       <div className="w-40">
                         <Select
@@ -396,37 +396,9 @@ const DatasetListPage: React.FC = () => {
                         >
                           <SelectTrigger className="w-full h-11 px-4 pr-10 text-base font-semibold !border-blue-300 !border-2 focus:!border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-blue-500 hover:bg-blue-100">
                             <span className="flex items-center gap-2">
-                              {sortOrder === 'newest' ? (
-                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                                  <circle cx="12" cy="12" r="10" stroke="#3b82f6" strokeWidth="2" />
-                                  <path
-                                    d="M12 6v6l4 2"
-                                    stroke="#3b82f6"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                              ) : (
-                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                                  <rect
-                                    x="4"
-                                    y="4"
-                                    width="16"
-                                    height="16"
-                                    rx="4"
-                                    stroke="#a78bfa"
-                                    strokeWidth="2"
-                                  />
-                                  <path
-                                    d="M8 12h8M8 16h8"
-                                    stroke="#a78bfa"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                  />
-                                </svg>
-                              )}
-                              {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
+                              {sortOrder === 'newest'
+                                ? t('chart_list_sort_newest')
+                                : t('chart_list_sort_oldest')}
                             </span>
                           </SelectTrigger>
                           <SelectContent>
@@ -442,7 +414,7 @@ const DatasetListPage: React.FC = () => {
                                     strokeLinejoin="round"
                                   />
                                 </svg>
-                                Newest
+                                {t('chart_list_sort_newest')}
                               </span>
                             </SelectItem>
                             <SelectItem value="oldest">
@@ -464,7 +436,7 @@ const DatasetListPage: React.FC = () => {
                                     strokeLinecap="round"
                                   />
                                 </svg>
-                                Oldest
+                                {t('chart_list_sort_oldest')}
                               </span>
                             </SelectItem>
                           </SelectContent>
@@ -473,7 +445,7 @@ const DatasetListPage: React.FC = () => {
                     </div>
                     <div className="w-40">
                       <Label htmlFor="createdAtFrom" className="mb-1 block">
-                        From date
+                        {t('chart_list_from_date')}
                       </Label>
                       <div className="relative">
                         <DatePicker
@@ -505,7 +477,7 @@ const DatasetListPage: React.FC = () => {
                                 }
                                 readOnly
                                 className="bg-transparent outline-none w-full cursor-pointer"
-                                placeholder="Select date"
+                                placeholder={t('common.selectDate', 'Select date')}
                               />
                               <span className="absolute right-3 pointer-events-none text-blue-400">
                                 <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
@@ -533,7 +505,7 @@ const DatasetListPage: React.FC = () => {
                     </div>
                     <div className="w-40">
                       <Label htmlFor="createdAtTo" className="mb-1 block">
-                        To date
+                        {t('chart_list_to_date')}
                       </Label>
                       <div className="relative">
                         <DatePicker
@@ -592,7 +564,7 @@ const DatasetListPage: React.FC = () => {
                         className="h-11 px-4 border-2 border-blue-300 hover:border-blue-500 rounded-2xl backdrop-blur-sm flex items-center gap-2 shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-100"
                       >
                         <RotateCcw className="h-4 w-4" />
-                        Reset
+                        {t('common_reset')}
                       </button>
                     </div>
                   </div>

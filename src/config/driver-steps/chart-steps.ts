@@ -1,20 +1,20 @@
 import type { DriveStep } from 'driver.js';
 import { Icons } from './icons';
+import { t } from './i18n-helper';
 
 export const chartListSteps: DriveStep[] = [
   {
     popover: {
-      title: `${Icons.BarChart3} Welcome to Charts`,
-      description:
-        'Manage and visualize your data. This is your personal dashboard for all your charts.',
+      title: `${Icons.BarChart3} ${t('tour_chart_welcome_title')}`,
+      description: t('tour_chart_welcome_desc'),
       align: 'center',
     },
   },
   {
     element: '#btn-new-chart',
     popover: {
-      title: `${Icons.Rocket} Create New Chart`,
-      description: 'Start visualizing! Create a new chart from your datasets with just one click.',
+      title: `${Icons.Rocket} ${t('tour_chart_create_title')}`,
+      description: t('tour_chart_create_desc'),
       side: 'bottom',
       align: 'end',
     },
@@ -22,9 +22,8 @@ export const chartListSteps: DriveStep[] = [
   {
     element: '#search-chart',
     popover: {
-      title: `${Icons.Sparkles} Find & Filter`,
-      description:
-        'Use search and filters to quickly locate specific charts by name, type, or date.',
+      title: `${Icons.Sparkles} ${t('tour_chart_search_title')}`,
+      description: t('tour_chart_search_desc'),
       side: 'bottom',
       align: 'start',
     },
@@ -32,8 +31,8 @@ export const chartListSteps: DriveStep[] = [
   {
     element: '#chart-card-0',
     popover: {
-      title: `${Icons.LayoutDashboard} Chart Actions`,
-      description: 'View, edit, duplicate, or delete your charts directly from the card menu.',
+      title: `${Icons.LayoutDashboard} ${t('tour_chart_actions_title')}`,
+      description: t('tour_chart_actions_desc'),
       side: 'right',
       align: 'center',
     },

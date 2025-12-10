@@ -81,7 +81,7 @@ const ChartHistoryViewPage: React.FC = () => {
   // ============================================================
   useEffect(() => {
     if (!historyId) {
-      showError(t('chartHistory.noHistoryId', 'No history ID provided'));
+      showError(t('chartHistory.noHistoryId'));
       navigate(Routers.WORKSPACE_CHARTS);
       return;
     }
@@ -103,10 +103,10 @@ const ChartHistoryViewPage: React.FC = () => {
             await getDatasetById(history.datasetId);
           }
         } else {
-          showError(t('chartHistory.loadFailed', 'Failed to load history version'));
+          showError(t('chartHistory.loadFailed'));
         }
       } catch (e: any) {
-        const msg = e?.message || 'Error loading history version';
+        const msg = e?.message || t('chartHistory.errorLoading');
         showError(msg);
       }
     })();
@@ -275,13 +275,13 @@ const ChartHistoryViewPage: React.FC = () => {
       }).unwrap();
 
       setRestoreDialogOpen(false);
-      showSuccess(t('chartHistory.restoreSuccess', 'Chart restored successfully'));
+      showSuccess(t('chartHistory.restoreSuccess'));
       await getChartById(chartId);
       await getChartHistory(chartId);
       window.location.href = `${Routers.CHART_EDITOR}?chartId=${chartId}`;
     } catch (error) {
       console.error('[ChartHistoryViewPage] Failed to restore:', error);
-      showError(t('chartHistory.restoreFailed', 'Failed to restore chart'));
+      showError(t('chartHistory.restoreFailed'));
     }
   };
 
@@ -488,49 +488,49 @@ const ChartHistoryViewPage: React.FC = () => {
     switch (chartType) {
       case ChartType.Line:
         return {
-          name: t('chart_type_line', 'Line Chart'),
+          name: t('chart_type_line'),
           icon: '📈',
           color: 'bg-blue-500',
         };
       case ChartType.Bar:
         return {
-          name: t('chart_type_bar', 'Bar Chart'),
+          name: t('chart_type_bar'),
           icon: '📊',
           color: 'bg-green-500',
         };
       case ChartType.Area:
         return {
-          name: t('chart_type_area', 'Area Chart'),
+          name: t('chart_type_area'),
           icon: '📉',
           color: 'bg-purple-500',
         };
       case ChartType.Scatter:
         return {
-          name: t('chart_type_scatter', 'Scatter Chart'),
+          name: t('chart_type_scatter'),
           icon: '⚪️',
           color: 'bg-indigo-500',
         };
       case ChartType.Pie:
         return {
-          name: t('chart_type_pie', 'Pie Chart'),
+          name: t('chart_type_pie'),
           icon: '🥧',
           color: 'bg-pink-500',
         };
       case ChartType.Donut:
         return {
-          name: t('chart_type_donut', 'Donut Chart'),
+          name: t('chart_type_donut'),
           icon: '🍩',
           color: 'bg-yellow-500',
         };
       case ChartType.CyclePlot:
         return {
-          name: t('chart_type_cycle_plot', 'Cycle Plot'),
+          name: t('chart_type_cycle_plot'),
           icon: '🔄',
           color: 'bg-teal-500',
         };
       default:
         return {
-          name: t('chart_type_default', 'Chart'),
+          name: t('chart_type_default'),
           icon: '📊',
           color: 'bg-gray-500',
         };
@@ -544,8 +544,8 @@ const ChartHistoryViewPage: React.FC = () => {
     return (
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
         <LoadingSpinner
-          title="Loading chart history..."
-          subtitle="Please wait while we load the historical version"
+          title={t('chartHistory.loadingTitle')}
+          subtitle={t('chartHistory.loadingSubtitle')}
         />
       </div>
     );
@@ -578,7 +578,7 @@ const ChartHistoryViewPage: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <div className="flex items-center gap-2">
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                      {selectedHistory.name || t('chartHistory.viewTitle', 'Chart History View')}
+                      {selectedHistory.name || t('chartHistory.viewTitle')}
                     </h1>
                   </div>
                   <div className="flex items-center gap-2">
@@ -601,7 +601,7 @@ const ChartHistoryViewPage: React.FC = () => {
                       className="flex items-center gap-1 text-xs border-orange-300 text-orange-600 bg-orange-50 dark:border-orange-600 dark:text-orange-400 dark:bg-orange-900/20"
                     >
                       <Eye className="w-3 h-3" />
-                      {t('viewOnly', 'View Only')}
+                      {t('viewOnly')}
                     </Badge>
                   </div>
                 </div>
@@ -610,7 +610,7 @@ const ChartHistoryViewPage: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <Database className="w-3 h-3" />
                       <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                        {t('description', 'Description')}:
+                        {t('description')}:
                       </span>
                       <span
                         className="text-xs text-gray-700 dark:text-gray-300"
@@ -625,7 +625,7 @@ const ChartHistoryViewPage: React.FC = () => {
                     {selectedHistory.createdAt && (
                       <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                         <Calendar className="w-3 h-3 text-gray-700 dark:text-gray-300" />
-                        <span className="font-medium">{t('chart_created', 'Created')}:</span>
+                        <span className="font-medium">{t('chart_created')}:</span>
                         <span className="text-gray-700 dark:text-gray-300">
                           {Utils.getDate(selectedHistory.createdAt, 18)}
                         </span>
@@ -635,7 +635,7 @@ const ChartHistoryViewPage: React.FC = () => {
                     {selectedHistory.updatedBy && (
                       <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                         <Clock className="w-3 h-3 text-gray-700 dark:text-gray-300" />
-                        <span className="font-medium">{t('updatedBy', 'By')}:</span>
+                        <span className="font-medium">{t('updatedBy')}:</span>
                         <span className="text-gray-700 dark:text-gray-300">
                           {selectedHistory.updatedBy}
                         </span>
@@ -654,7 +654,7 @@ const ChartHistoryViewPage: React.FC = () => {
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" />
-                {t('common_back', 'Back')}
+                {t('common_back')}
               </Button>
               <Button
                 size="sm"
@@ -665,12 +665,12 @@ const ChartHistoryViewPage: React.FC = () => {
                 {restoring ? (
                   <>
                     <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    {t('restoring', 'Restoring...')}
+                    {t('restoring')}
                   </>
                 ) : (
                   <>
                     <RotateCcw className="w-4 h-4" />
-                    {t('restore', 'Restore')}
+                    {t('restore')}
                   </>
                 )}
               </Button>
@@ -694,7 +694,7 @@ const ChartHistoryViewPage: React.FC = () => {
                 >
                   <span className="inline-flex items-center gap-2">
                     <BarChart3 className="w-4 h-4" />
-                    {t('tab_chart', 'Chart')}
+                    {t('tab_chart')}
                   </span>
                   {activeTab === 'chart' && (
                     <motion.div
@@ -715,7 +715,7 @@ const ChartHistoryViewPage: React.FC = () => {
                 >
                   <span className="inline-flex items-center gap-2">
                     <Database className="w-4 h-4" />
-                    {t('tab_data', 'Data')}
+                    {t('tab_data')}
                   </span>
                   {activeTab === 'data' && (
                     <motion.div
