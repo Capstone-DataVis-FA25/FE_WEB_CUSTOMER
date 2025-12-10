@@ -26,8 +26,6 @@ const HeatmapAdvancedOptions: React.FC = () => {
   const colorScheme = cfg.colorScheme ?? 'viridis';
   const cellBorderWidth = cfg.cellBorderWidth ?? 1;
   const legendSteps = cfg.legendSteps ?? 5;
-  const minValue = cfg.minValue ?? 'auto';
-  const maxValue = cfg.maxValue ?? 'auto';
 
   return (
     <motion.div
@@ -108,36 +106,6 @@ const HeatmapAdvancedOptions: React.FC = () => {
                       'Choose a color palette that best represents your data'
                     )}
                   </p>
-                </div>
-
-                {/* Value Range */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">{t('min_value', 'Min Value')}</Label>
-                    <Input
-                      type="text"
-                      value={minValue}
-                      onChange={e => {
-                        const val =
-                          e.target.value === 'auto' ? 'auto' : parseFloat(e.target.value) || 'auto';
-                        handleConfigChange({ config: { minValue: val } as any });
-                      }}
-                      placeholder="auto"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">{t('max_value', 'Max Value')}</Label>
-                    <Input
-                      type="text"
-                      value={maxValue}
-                      onChange={e => {
-                        const val =
-                          e.target.value === 'auto' ? 'auto' : parseFloat(e.target.value) || 'auto';
-                        handleConfigChange({ config: { maxValue: val } as any });
-                      }}
-                      placeholder="auto"
-                    />
-                  </div>
                 </div>
 
                 {/* Display Options */}
