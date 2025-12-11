@@ -1,10 +1,12 @@
-import React, { lazy, Suspense, useState, useEffect } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { allRoutes, type RouteConfig } from '@/config/routes';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import CustomerLayout from '../components/layout/CustomerLayout';
 import { FadeIn } from '../theme/animation';
+import { ErrorBoundaryClass } from '@/components/error/ErrorBoundary';
 import { useAuth } from '@/features/auth/useAuth';
+import DebugContainer from '@/components/debug/DebugContainer';
+import { useTranslation } from 'react-i18next';
 // ================================
 // LAZY LOAD COMPONENTS
 // ================================
@@ -23,36 +25,40 @@ const componentMap = {
   NotificationSettingsPage: lazy(() => import('../pages/profile/NotificationSettingsPage')),
   GeneralSettingsPage: lazy(() => import('../pages/profile/GeneralSettingsPage')),
   AboutPage: lazy(() => import('../pages/about-us/AboutUsPage')),
-  FrequentQuestionPage: lazy(() => import('../pages/resources/FrequentQuestionPage')),
-  AcademicUsingChart: lazy(() =>
-    import('../pages/academic/AcademicUsingChart').then(m => ({ default: m.AcademicUsingChart }))
-  ),
   VerifyEmailErrorPage: lazy(() => import('../pages/verify/VerifyEmailErrorPage')),
   ResendEmailPage: lazy(() => import('../pages/verify/ResendEmailPage')),
   LineChartPage: lazy(() => import('../components/charts/page.example/LineChartPage')),
   BarChartPage: lazy(() => import('../components/charts/page.example/BarChartPage')),
   AreaChartPage: lazy(() => import('../components/charts/page.example/AreaChartPage')),
-  PricingPage: lazy(() => import('../pages/subscription/PricingPage')),
-  PaymentSuccessPage: lazy(() => import('../pages/subscription/PaymentSuccessPage')),
-  TransactionHistoryPage: lazy(() => import('../pages/subscription/TransactionHistoryPage')),
   LineChartEditorDemo: lazy(() => import('../components/charts/page.example/LineChartEditorDemo')),
   BarChartEditorDemo: lazy(() => import('../components/charts/page.example/BarChartEditorDemo')),
   AreaChartEditorDemo: lazy(() => import('../components/charts/page.example/AreaChartEditorDemo')),
   CreateDatasetPage: lazy(() => import('../pages/dataset/CreateDatasetPage')),
-  DatasetDetailPage: lazy(() => import('../pages/dataset/DatasetDetailPage')),
-  ChartGalleryPickerPage: lazy(() => import('../pages/chart-gallery/ChartGalleryPickerPage')),
+  CreateChartPage: lazy(() => import('../pages/chart/CreateChartPage')),
   DatasetListPage: lazy(() => import('../pages/dataset/DatasetListPage')),
-  ChartListPage: lazy(() => import('../pages/chart/ChartListPage')),
+  DatasetDetailPage: lazy(() => import('../pages/dataset/DatasetDetailPage')),
+  EditDatasetPage: lazy(() => import('../pages/dataset/EditDatasetPage')),
+  ChartGalleryPickerPage: lazy(() => import('../pages/chart-gallery/ChartGalleryPickerPage')),
+  WorkspacePage: lazy(() => import('../pages/workspace/WorkspacePage')),
+  ChartCreatorPage: lazy(() => import('../pages/chart-creator/ChartCreatorPage')),
   ChartEditorPage: lazy(() => import('../pages/chart-creator/ChartEditorPage')),
-  ChartHistoryViewPage: lazy(() => import('../pages/chart-history/ChartHistoryViewPage')),
-  PieChartEditorDemo: lazy(() => import('../components/charts/page.example/PieChartEditorDemo')),
-  TermsOfServicePage: lazy(() => import('../pages/privacy-terms/TermsOfServicePage')),
-  PrivacyPolicyPage: lazy(() => import('../pages/privacy-terms/PrivacyPolicyPage')),
 };
 
 // ================================
 // COMPONENTS
 // ================================
+
+const LoadingSpinner: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-accent border-t-transparent"></div>
+        <span className="text-foreground text-lg font-medium">{t('loading')}</span>
+      </div>
+    </div>
+  );
+};
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -60,15 +66,11 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, route }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
-  // if (isLoading) {
-  //   return (
-  //     <LayoutWrapper route={route}>
-  //       <LoadingSpinner />
-  //     </LayoutWrapper>
-  //   );
-  // }
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
 
   // Kiểm tra nếu route được bảo vệ nhưng user chưa đăng nhập
   if (route.isProtected && !isAuthenticated) {
@@ -105,24 +107,6 @@ const LayoutWrapper: React.FC<{
   }
 };
 
-// Delayed fallback component to prevent flashing on fast loads
-const DelayedFallback = () => {
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShow(true), 200);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!show) return null;
-
-  return (
-    <div className="flex items-center justify-center min-h-screen dark:bg-gray-900">
-      <LoadingSpinner />
-    </div>
-  );
-};
-
 // Route renderer component
 const RouteRenderer: React.FC<{ route: RouteConfig }> = ({ route }) => {
   const Component = componentMap[route.component as keyof typeof componentMap];
@@ -135,7 +119,7 @@ const RouteRenderer: React.FC<{ route: RouteConfig }> = ({ route }) => {
   return (
     <ProtectedRoute route={route}>
       <LayoutWrapper route={route}>
-        <Suspense fallback={<DelayedFallback />}>
+        <Suspense fallback={<LoadingSpinner />}>
           <Component />
         </Suspense>
       </LayoutWrapper>
@@ -149,18 +133,20 @@ const RouteRenderer: React.FC<{ route: RouteConfig }> = ({ route }) => {
 
 const AppRouter: React.FC = () => {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Render all routes dynamically */}
-        {allRoutes.map(route => (
-          <Route key={route.name} path={route.path} element={<RouteRenderer route={route} />} />
-        ))}
+    <ErrorBoundaryClass>
+      <BrowserRouter>
+        <Routes>
+          {/* Render all routes dynamically */}
+          {allRoutes.map(route => (
+            <Route key={route.name} path={route.path} element={<RouteRenderer route={route} />} />
+          ))}
 
-        {/* Catch all route */}
-        <Route path="*" element={<Navigate to="/404" replace />} />
-      </Routes>
-      {/* <DebugContainer /> */}
-    </BrowserRouter>
+          {/* Catch all route */}
+          <Route path="*" element={<Navigate to="/404" replace />} />
+        </Routes>
+        <DebugContainer />
+      </BrowserRouter>
+    </ErrorBoundaryClass>
   );
 };
 

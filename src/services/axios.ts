@@ -140,14 +140,14 @@ axiosPublic.interceptors.request.use(
 [axiosPublic, axiosPrivate].forEach(instance => {
   instance.interceptors.response.use(
     (response: AxiosResponse) => {
-      // console.log(`✅ [API Response] ${response.status} ${response.config.url}`);
+      console.log(`✅ [API Response] ${response.status} ${response.config.url}`);
       return response;
     },
     (error: AxiosError) => {
-      // console.log(
-      //   `❌ [API Error] ${error.response?.status} ${error.config?.url}`,
-      //   error.response?.data
-      // );
+      console.log(
+        `❌ [API Error] ${error.response?.status} ${error.config?.url}`,
+        error.response?.data
+      );
 
       // Xử lý lỗi chung
       if (error.response?.status === 500) {

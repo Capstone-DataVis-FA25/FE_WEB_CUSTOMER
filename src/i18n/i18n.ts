@@ -21,10 +21,7 @@ i18n
   .init({
     resources,
     fallbackLng: 'vi',
-    debug: false, // Disable debug mode to suppress console logs
-    saveMissing: false, // Don't save missing keys
-    missingKeyHandler: false, // Disable missing key handler
-    missingKeyNoValueFallbackToKey: false, // Don't fallback to key for missing values
+    debug: process.env.NODE_ENV === 'development',
 
     interpolation: {
       escapeValue: false,

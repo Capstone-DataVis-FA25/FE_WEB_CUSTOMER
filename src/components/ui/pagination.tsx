@@ -17,10 +17,10 @@ export interface PaginationProps {
 const Pagination: React.FC<PaginationProps> = ({
   currentPage,
   totalPages,
-  // totalItems,
-  // itemsPerPage,
+  totalItems,
+  itemsPerPage,
   onPageChange,
-  // showInfo = true,
+  showInfo = true,
   maxVisiblePages = 5,
   disabled = false,
   size = 'md',
@@ -82,16 +82,16 @@ const Pagination: React.FC<PaginationProps> = ({
   };
 
   // Calculate item range info
-  // const getItemRangeInfo = () => {
-  //   if (!totalItems || !itemsPerPage) return null;
+  const getItemRangeInfo = () => {
+    if (!totalItems || !itemsPerPage) return null;
 
-  //   const start = (currentPage - 1) * itemsPerPage + 1;
-  //   const end = Math.min(currentPage * itemsPerPage, totalItems);
+    const start = (currentPage - 1) * itemsPerPage + 1;
+    const end = Math.min(currentPage * itemsPerPage, totalItems);
 
-  //   return { start, end };
-  // };
+    return { start, end };
+  };
 
-  // const itemRange = getItemRangeInfo();
+  const itemRange = getItemRangeInfo();
 
   if (totalPages <= 1) {
     return null;
@@ -99,6 +99,24 @@ const Pagination: React.FC<PaginationProps> = ({
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* Info text */}
+      {showInfo && (
+        <div className="text-sm text-muted-foreground">
+          {itemRange ? (
+            <>
+              Hiển thị <span className="font-medium">{itemRange.start}</span> đến{' '}
+              <span className="font-medium">{itemRange.end}</span> trong tổng số{' '}
+              <span className="font-medium">{totalItems}</span> kết quả
+            </>
+          ) : (
+            <>
+              Trang <span className="font-medium">{currentPage}</span> trong tổng số{' '}
+              <span className="font-medium">{totalPages}</span> trang
+            </>
+          )}
+        </div>
+      )}
+
       {/* Pagination controls */}
       <div className="flex items-center space-x-1">
         {/* Previous button */}

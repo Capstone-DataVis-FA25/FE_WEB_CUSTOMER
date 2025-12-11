@@ -1,2 +1,2 @@
-export { default as ChartCreatorPage } from './ChartEditorPage';
+export { default as ChartCreatorPage } from './ChartCreatorPage';
 export { default as ChartEditorPage } from './ChartEditorPage';

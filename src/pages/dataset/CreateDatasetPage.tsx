@@ -1,6 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
 import DataViewer from '@/components/dataset/DataViewer';
 import FileUpload from '@/components/dataset/FileUpload';
 import SampleDataUpload from '@/components/dataset/SampleDataUpload';
@@ -8,14 +6,11 @@ import TextUpload from '@/components/dataset/TextUpload';
 import UploadMethodNavigation from '@/components/dataset/UploadMethodNavigation';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
-import { FormProvider, useForm } from '@/contexts/FormContext';
 import { useAppDispatch } from '@/store/hooks';
 import { createDatasetThunk } from '@/features/dataset/datasetThunk';
 import { SlideInUp } from '@/theme/animation';
 import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
-import { setSelectedColumn, setSelectedRow } from '@/features/excelUI';
 import {
   getFileDelimiter,
   detectDelimiter,
@@ -28,73 +23,31 @@ import {
   processFileContent,
   readExcelAsText,
   validateFileSize,
-  buildHeadersFromParsed,
-  cleanHeadersRemoveEmptyRows,
 } from '@/utils/dataProcessors';
-import CleanDatasetWithAI from '@/components/dataset/CleanDatasetWithAi';
-import { driver } from 'driver.js';
-import 'driver.js/dist/driver.css';
-import { createDatasetSteps } from '@/config/driver-steps/index';
-import { useAuth } from '@/features/auth/useAuth';
-import Routers from '@/router/routers';
-import { useAiCleaningProgress } from '@/features/ai/useAiCleaningProgress';
-import { AiCleaningProgressBar } from '@/components/dataset/AiCleaningProgressBar';
+import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import buildSlug from '@/utils/slug';
 
-type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'cleanDataset' | 'view';
+type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view';
 
 // Inner component that uses the context
 function CreateDatasetPageContent() {
   const { t } = useTranslation();
   const { showSuccess, showError, showWarning } = useToastContext();
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
-  const location = useLocation();
 
-  // AI Cleaning Progress tracking
-  const { activeJobs, addJob, removeJob, handleJobClick } = useAiCleaningProgress(user?.id);
-
-  // Tour function
-  const startTour = () => {
-    const driverObj = driver({
-      showProgress: true,
-      steps: createDatasetSteps,
-      popoverClass: 'driverjs-theme driver-theme-datasets',
-      overlayOpacity: 0,
-    });
-    driverObj.drive();
-  };
-
-  useEffect(() => {
-    if (isAuthenticated && user?.id) {
-      const storageKey = `hasShownCreateDatasetTour_${user.id}`;
-      const hasShownTour = localStorage.getItem(storageKey);
-
-      if (hasShownTour !== 'true') {
-        setTimeout(() => {
-          startTour();
-          localStorage.setItem(storageKey, 'true');
-        }, 1000);
-      }
-    }
-  }, [isAuthenticated, user]);
-
-  // Get form states from FormContext
-  const { datasetName, description, resetForm } = useForm();
-
-  // Get dataset states from DatasetContext
+  // Get states from context
   const {
     originalTextContent,
     setOriginalTextContent,
-    currentParsedData,
-    setOriginalParsedData,
-    setCurrentParsedData,
+    parsedData,
+    setParsedData,
+    setOriginalHeaders,
     setIsJsonFormat,
     setSelectedDelimiter,
     resetState,
-    parsedValues,
-    numberFormat,
-    setNumberFormat,
+    datasetName,
+    description,
   } = useDataset();
 
   // Local state management (non-shareable states)
@@ -103,56 +56,17 @@ function CreateDatasetPageContent() {
   const [viewMode, setViewMode] = useState<ViewMode>('upload');
   const [previousViewMode, setPreviousViewMode] = useState<ViewMode>('upload');
 
-  // Modal state for confirm create dataset
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [isCreatingDataset, setIsCreatingDataset] = useState(false);
-
   // Handle switching between upload methods; clear transient inputs
   const handleViewModeChange = useCallback(
     (mode: ViewMode) => {
       if (mode !== 'view') {
         setOriginalTextContent('');
-        setCurrentParsedData(null);
+        setParsedData(null);
         setSelectedFile(null);
       }
       setViewMode(mode);
     },
-    [setOriginalTextContent, setCurrentParsedData]
-  );
-
-  const handleCleanDatasetComplete = useCallback(
-    (cleanedData: any) => {
-      try {
-        // Nếu là object kiểu { data: [...] } thì lấy ra .data
-        let matrix = cleanedData;
-        if (cleanedData && typeof cleanedData === 'object' && Array.isArray(cleanedData.data)) {
-          matrix = cleanedData.data;
-        }
-        // Nếu là CSV string, xử lý như text
-        if (typeof matrix === 'string') {
-          handleTextProcess(matrix);
-        } else if (Array.isArray(matrix)) {
-          // Nếu là matrix (từ Excel hoặc từ BE), chuyển đổi thành CSV format
-          const csvContent = matrix
-            .map((row: any[]) =>
-              row
-                .map((cell: any) => {
-                  const cellStr = String(cell ?? '');
-                  return cellStr.includes(',') || cellStr.includes('"')
-                    ? `"${cellStr.replace(/"/g, '""')}"`
-                    : cellStr;
-                })
-                .join(',')
-            )
-            .join('\n');
-          handleTextProcess(csvContent);
-        }
-        showSuccess('Dữ liệu đã được làm sạch', 'Dữ liệu sẵn sàng để tạo dataset');
-      } catch (error) {
-        showError('Lỗi xử lý dữ liệu', 'Không thể xử lý dữ liệu đã làm sạch');
-      }
-    },
-    [showSuccess, showError]
+    [setOriginalTextContent]
   );
 
   // Process file content and switch to view mode
@@ -177,21 +91,14 @@ function CreateDatasetPageContent() {
         const result = await processFileContent(file, { delimiter: detectedDelimiter });
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Set up 3-layer data structure - batch updates to prevent extra re-renders
-        console.log('📊 Setting originalParsedData');
-        setOriginalParsedData(result); // Layer 2: Original parsed data
-        console.log('📊 Setting currentParsedData');
-        setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
+        // Convert result back to 2D array format for backward compatibility
+        const headers = result.headers.map(h => h.name);
+        const data = [headers, ...result.data];
+
+        setParsedData(data);
+        setOriginalHeaders(headers);
         console.log('Processed result:', result);
-
-        if (result.detectedNumberFormat) {
-          console.log('🎯 Auto-applying detected number format:', result.detectedNumberFormat);
-          setNumberFormat(result.detectedNumberFormat);
-          console.log('✅ Number format updated to:', result.detectedNumberFormat);
-        }
-
-        // Batch the remaining state updates
-        console.log('📊 Batching remaining state updates');
+        console.log('Backward compatible format:', data);
         setPreviousViewMode(viewMode);
         setViewMode('view');
       } catch (error) {
@@ -199,19 +106,10 @@ function CreateDatasetPageContent() {
           error instanceof Error ? error.message : t('dataset_fileReadErrorMessage');
         showError(t('dataset_fileReadError'), t(errorMessage));
       } finally {
-        console.log('📊 Setting isProcessing to false');
         setIsProcessing(false);
       }
     },
-    [
-      showError,
-      t,
-      viewMode,
-      setSelectedDelimiter,
-      setOriginalParsedData,
-      setCurrentParsedData,
-      setOriginalTextContent,
-    ]
+    [showError, t, viewMode, setSelectedDelimiter]
   );
 
   // Handle file selection and validation
@@ -242,13 +140,13 @@ function CreateDatasetPageContent() {
   // Handle file removal
   const handleFileRemove = useCallback(() => {
     setSelectedFile(null);
-    setCurrentParsedData(null);
+    setParsedData(null);
     setViewMode('upload');
-  }, [setCurrentParsedData]);
+  }, []);
 
-  // Handle file upload (create dataset) - Execute the actual creation
-  const executeCreateDataset = useCallback(async () => {
-    if (!currentParsedData) {
+  // Handle file upload (create dataset)
+  const handleFileUpload = useCallback(async () => {
+    if (!parsedData) {
       showWarning('No Data Available', 'Please select a file or enter text data first');
       return;
     }
@@ -275,39 +173,52 @@ function CreateDatasetPageContent() {
     }
 
     try {
-      // Build headers from current parsed state and drop fully empty rows anywhere
-      const builtHeaders = buildHeadersFromParsed(currentParsedData, parsedValues as any);
-      const headers = cleanHeadersRemoveEmptyRows(builtHeaders);
+      // Transform parsedData from 2D array to headers format for the new API
+      const headers = [];
+
+      if (parsedData && parsedData.length > 0) {
+        const headerRow = parsedData[0]; // First row contains column names
+        const dataRows = parsedData.slice(1); // Remaining rows contain data
+
+        // Create headers array in the new format
+        for (let columnIndex = 0; columnIndex < headerRow.length; columnIndex++) {
+          const columnName = headerRow[columnIndex] || `Column ${columnIndex + 1}`;
+          const columnData = dataRows.map(row => row[columnIndex] || ''); // Extract column data
+
+          headers.push({
+            name: columnName,
+            type: 'string', // For now, all columns are strings as requested
+            index: columnIndex,
+            data: columnData, // This will be the actual column data for the API
+          });
+        }
+      }
 
       // Prepare the data to send in the new format
       const requestData = {
         name: datasetName.trim(),
         headers: headers,
         ...(description && { description: description.trim() }),
-        thousandsSeparator: numberFormat.thousandsSeparator,
-        decimalSeparator: numberFormat.decimalSeparator,
       };
-
-      // Console log the exact request data being sent
-      console.log('🚀 Upload Request Data:', requestData);
 
       // Use Redux thunk instead of direct axios call
       const result = await dispatch(createDatasetThunk(requestData));
 
       if (createDatasetThunk.fulfilled.match(result)) {
-        // Show success message first
         showSuccess('Dataset Created Successfully', 'Your dataset has been created and saved');
 
-        // Navigate to workspace datasets page
+        // Navigate to detail page with pretty slug
         const created = result.payload as any; // dataset object
         if (created && created.id) {
-          // Use React Router navigation instead of window.location.href
-          navigate(Routers.WORKSPACE_DATASETS);
+          const slug = buildSlug({ id: created.id, name: created.name });
+          window.setTimeout(() => {
+            window.location.href = `/datasets/${slug}`; // using href to fully reset state/context
+          }, 300);
         }
 
         // Reset state after successful upload
         setSelectedFile(null);
-        setCurrentParsedData(null);
+        setParsedData(null);
         setViewMode('upload');
       } else {
         // Handle thunk rejection
@@ -324,66 +235,13 @@ function CreateDatasetPageContent() {
     } catch (error: any) {
       showError(t('dataset_uploadFailed'), error.message || t('dataset_uploadFailedMessage'));
     }
-  }, [
-    currentParsedData,
-    parsedValues,
-    showWarning,
-    showSuccess,
-    showError,
-    datasetName,
-    description,
-    dispatch,
-    navigate,
-    t,
-    setCurrentParsedData,
-    numberFormat.decimalSeparator,
-    numberFormat.thousandsSeparator,
-  ]);
-
-  // Handle file upload (create dataset) - Show confirm modal
-  const handleFileUpload = useCallback(async () => {
-    if (!currentParsedData) {
-      showWarning('No Data Available', 'Please select a file or enter text data first');
-      return;
-    }
-
-    if (!datasetName.trim()) {
-      showWarning('Dataset Name Required', 'Please enter a name for your dataset');
-      return;
-    }
-
-    if (datasetName.length > DATASET_NAME_MAX_LENGTH) {
-      showWarning(
-        t('dataset_nameTooLong'),
-        t('dataset_nameTooLongMessage', { maxLength: DATASET_NAME_MAX_LENGTH })
-      );
-      return;
-    }
-
-    if (description && description.length > DATASET_DESCRIPTION_MAX_LENGTH) {
-      showWarning(
-        t('dataset_descriptionTooLong'),
-        t('dataset_descriptionTooLongMessage', { maxLength: DATASET_DESCRIPTION_MAX_LENGTH })
-      );
-      return;
-    }
-
-    // Show confirmation modal
-    setShowConfirmModal(true);
-  }, [currentParsedData, datasetName, description, showWarning, t]);
+  }, [parsedData, showWarning, showSuccess, showError, datasetName, description, dispatch, t]);
 
   // Handle change data (go back to previous upload method and reset shared state)
   const handleChangeData = useCallback(() => {
     const prevText = originalTextContent;
-    // Clear any row/column selection in the grid when changing data
-    dispatch(setSelectedRow(null));
-    dispatch(setSelectedColumn(null));
     // Reset all shared dataset state back to initial
     resetState();
-    // Reset form fields (name/description)
-    resetForm();
-    // Reset number format to defaults explicitly (UI display only)
-    setNumberFormat({ thousandsSeparator: ',', decimalSeparator: '.' });
     // Clear local file selection
     setSelectedFile(null);
 
@@ -393,15 +251,7 @@ function CreateDatasetPageContent() {
     }
 
     setViewMode(previousViewMode);
-  }, [
-    originalTextContent,
-    previousViewMode,
-    dispatch,
-    resetState,
-    setOriginalTextContent,
-    resetForm,
-    setNumberFormat,
-  ]);
+  }, [originalTextContent, previousViewMode, resetState, setOriginalTextContent]);
 
   // Handle text processing
   const handleTextProcess = useCallback(
@@ -418,38 +268,24 @@ function CreateDatasetPageContent() {
           const result = parseJsonDirectly(content);
           setSelectedDelimiter(','); // Set a default delimiter for display purposes
 
-          // Set up 3-layer data structure
-          setOriginalParsedData(result); // Layer 2: Original parsed data
-          setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
+          // Convert result back to 2D array format for backward compatibility
+          const headers = result.headers.map(h => h.name);
+          const data = [headers, ...result.data];
 
-          // Auto-apply detected formats from parsing result
-          if (result.detectedNumberFormat) {
-            console.log(
-              '🎯 Auto-applying detected number format (JSON):',
-              result.detectedNumberFormat
-            );
-            setNumberFormat(result.detectedNumberFormat);
-            console.log('✅ Number format updated to:', result.detectedNumberFormat);
-          }
+          setParsedData(data);
+          setOriginalHeaders(headers);
         } else {
           // Parse as regular CSV/text data
           const detectedDelimiter = detectDelimiter(content);
           setSelectedDelimiter(detectedDelimiter);
           const result = parseTabularContent(content, { delimiter: detectedDelimiter });
 
-          // Set up 3-layer data structure
-          setOriginalParsedData(result); // Layer 2: Original parsed data
-          setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
+          // Convert result back to 2D array format for backward compatibility
+          const headers = result.headers.map(h => h.name);
+          const data = [headers, ...result.data];
 
-          // Auto-apply detected formats from parsing result
-          if (result.detectedNumberFormat) {
-            // console.log(
-            //   '🎯 Auto-applying detected number format (CSV):',
-            //   result.detectedNumberFormat
-            // );
-            setNumberFormat(result.detectedNumberFormat);
-            // console.log('✅ Number format updated to:', result.detectedNumberFormat);
-          }
+          setParsedData(data);
+          setOriginalHeaders(headers);
         }
 
         setPreviousViewMode(viewMode);
@@ -476,39 +312,13 @@ function CreateDatasetPageContent() {
         showError(t('dataset_parseError'), errorMessage);
       }
     },
-    [
-      showError,
-      t,
-      viewMode,
-      setIsJsonFormat,
-      setOriginalTextContent,
-      setOriginalParsedData,
-      setCurrentParsedData,
-      setSelectedDelimiter,
-      setNumberFormat,
-    ]
+    [showError, t, viewMode, setOriginalHeaders, setIsJsonFormat]
   );
-
-  // Khi vào trang, nếu có cleanedData từ location.state thì tự động xử lý
-  useEffect(() => {
-    if (location.state && location.state.cleanedData) {
-      handleCleanDatasetComplete(location.state.cleanedData);
-      setViewMode('view');
-      navigate(location.pathname, { replace: true, state: {} });
-    }
-  }, [location.state, handleCleanDatasetComplete, navigate, location.pathname]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {isProcessing ? (
-        <LoadingSpinner
-          fullScreen={true}
-          title={t('dataset.processingTitle', 'Processing your file...')}
-          subtitle={t(
-            'dataset.processingSubtitle',
-            'Please wait while we analyze and parse your data'
-          )}
-        />
+        <LoadingSpinner />
       ) : viewMode === 'view' ? (
         // Data Viewer - Full Width
         <div className="py-8">
@@ -521,11 +331,7 @@ function CreateDatasetPageContent() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex gap-6 items-start">
             {/* Left Navigation Component */}
-            <UploadMethodNavigation
-              viewMode={viewMode}
-              onViewModeChange={handleViewModeChange}
-              onStartTour={startTour}
-            />
+            <UploadMethodNavigation viewMode={viewMode} onViewModeChange={handleViewModeChange} />
 
             {/* Main Content */}
             <div className="flex-1">
@@ -543,59 +349,15 @@ function CreateDatasetPageContent() {
                 <SlideInUp key="text-upload" delay={0.2}>
                   <TextUpload onTextProcess={handleTextProcess} isProcessing={isProcessing} />
                 </SlideInUp>
-              ) : viewMode === 'sampleData' ? (
+              ) : (
                 <SlideInUp key="sample-data" delay={0.2}>
                   <SampleDataUpload onSampleSelect={handleTextProcess} />
-                </SlideInUp>
-              ) : (
-                <SlideInUp key="cleanDataset" delay={0.2}>
-                  <CleanDatasetWithAI
-                    onCleanComplete={handleCleanDatasetComplete}
-                    isProcessing={isProcessing}
-                    onProcessingChange={setIsProcessing}
-                    userId={user?.id}
-                    onJobSubmit={(jobId, fileName, type) => {
-                      addJob({ jobId, fileName, type });
-                    }}
-                  />
                 </SlideInUp>
               )}
             </div>
           </div>
         </div>
       )}
-
-      {/* Confirmation Modal */}
-      <ModalConfirm
-        isOpen={showConfirmModal}
-        onClose={() => setShowConfirmModal(false)}
-        onConfirm={async () => {
-          setIsCreatingDataset(true);
-          await executeCreateDataset();
-          setIsCreatingDataset(false);
-          setShowConfirmModal(false);
-        }}
-        title={'Confirm Dataset Creation'}
-        message={`Are you sure you want to create the dataset "${datasetName.trim()}"?`}
-        confirmText={t('dataset_createDatasetButton') || 'Create Dataset'}
-        cancelText={t('cancel') || 'Cancel'}
-        type="info"
-        loading={isCreatingDataset}
-      />
-
-      {/* AI Cleaning Progress Bar - Fixed at bottom right */}
-      <AiCleaningProgressBar
-        jobs={activeJobs}
-        onJobClick={jobId => {
-          handleJobClick(jobId, handleCleanDatasetComplete, err => {
-            showError(
-              t('ai_clean_error_title', 'Lỗi lấy kết quả'),
-              err?.message || t('ai_clean_error_message', 'Không thể lấy kết quả làm sạch')
-            );
-          });
-        }}
-        onRemove={removeJob}
-      />
     </div>
   );
 }
@@ -603,11 +365,9 @@ function CreateDatasetPageContent() {
 // Main component with provider wrapper
 function CreateDatasetPage() {
   return (
-    <FormProvider>
-      <DatasetProvider>
-        <CreateDatasetPageContent />
-      </DatasetProvider>
-    </FormProvider>
+    <DatasetProvider>
+      <CreateDatasetPageContent />
+    </DatasetProvider>
   );
 }
 

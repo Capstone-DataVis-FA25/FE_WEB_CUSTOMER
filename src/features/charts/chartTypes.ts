@@ -1,26 +1,45 @@
-import type { MainChartConfig } from '@/types/chart';
-import type { Dataset } from '../dataset/datasetAPI';
-
-export interface ChartAPI {
+export interface Chart {
   id: string;
   name: string;
   description?: string;
-  type: ChartType;
+  type: 'line' | 'bar' | 'area' | 'pie' | 'scatter';
+  config?: {
+    width?: number;
+    height?: number;
+    margin?: {
+      top?: number;
+      right?: number;
+      bottom?: number;
+      left?: number;
+    };
+    [key: string]: unknown;
+  };
   createdAt: string;
   updatedAt: string;
   datasetId: string;
   userId: string;
-  dataset?: Dataset;
+  dataset?: {
+    id: string;
+    name: string;
+    description?: string;
+  };
   isPublic?: boolean;
   views?: number;
   category?: string;
-  config?: MainChartConfig;
+  // Additional fields that might be present
+  configuration?: {
+    title?: string;
+    xAxisLabel?: string;
+    yAxisLabel?: string;
+    colors?: Record<string, string | { light: string; dark: string }>;
+    [key: string]: unknown;
+  };
   datasetName?: string;
 }
 
 export interface ChartState {
-  charts: ChartAPI[];
-  currentChart: ChartAPI | null;
+  charts: Chart[];
+  currentChart: Chart | null;
   loading: boolean;
   creating: boolean;
   updating: boolean;
@@ -28,31 +47,33 @@ export interface ChartState {
   error: string | null;
 }
 
-export enum ChartType {
-  Line = 'line',
-  Bar = 'bar',
-  Area = 'area',
-  Scatter = 'scatter',
-  Pie = 'pie',
-  Donut = 'donut',
-  CyclePlot = 'cycleplot',
-  Heatmap = 'heatmap',
-  Histogram = 'histogram',
-}
-
-// Chart configuration interfaces
-export interface ChartMargin {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-}
-
-export interface ChartRequest {
+export interface CreateChartRequest {
   name: string;
   description?: string;
-  type: ChartType;
-  config: MainChartConfig;
-  datasetId?: string;
-  imageUrl?: string; // For chart history snapshot
+  type: 'line' | 'bar' | 'area' | 'pie' | 'scatter';
+  datasetId: string;
+  configuration?: {
+    title?: string;
+    xAxisLabel?: string;
+    yAxisLabel?: string;
+    colors?: Record<string, string | { light: string; dark: string }>;
+    [key: string]: unknown;
+  };
+  category?: string;
+  isPublic?: boolean;
+}
+
+export interface UpdateChartRequest {
+  name?: string;
+  description?: string;
+  type?: 'line' | 'bar' | 'area' | 'pie' | 'scatter';
+  configuration?: {
+    title?: string;
+    xAxisLabel?: string;
+    yAxisLabel?: string;
+    colors?: Record<string, string | { light: string; dark: string }>;
+    [key: string]: unknown;
+  };
+  category?: string;
+  isPublic?: boolean;
 }

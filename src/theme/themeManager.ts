@@ -32,14 +32,6 @@ export const getSystemTheme = (): 'light' | 'dark' => {
 // Áp dụng theme vào DOM bằng cách thêm/xóa class 'dark'
 export const applyTheme = (theme: Theme) => {
   const root = document.documentElement;
-
-  // If theme is 'system', use OS/browser preference
-  if (theme === 'system') {
-    const system = getSystemTheme();
-    root.classList.toggle('dark', system === 'dark');
-    return;
-  }
-
   root.classList.toggle('dark', theme === 'dark');
 };
 

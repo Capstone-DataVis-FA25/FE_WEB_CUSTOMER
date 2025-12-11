@@ -1,225 +1,51 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Database, RotateCcw, HelpCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Plus, Edit, Trash2, Eye, Calendar, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import Routers from '@/router/routers';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useDataset } from '@/features/dataset/useDataset';
+import { useToastContext } from '@/components/providers/ToastProvider';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import type { Dataset } from '@/features/dataset/datasetAPI';
-import ToastContainer from '@/components/ui/toast-container';
-import useToast from '@/hooks/useToast';
-import { usePagination } from '@/hooks/usePagination';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
-import { driver } from 'driver.js';
-import 'driver.js/dist/driver.css';
-import { datasetListSteps } from '@/config/driver-steps/index';
-import { useAuth } from '@/features/auth/useAuth';
-import DatasetTab from './components/DatasetTab';
+import Routers from '@/router/routers';
 
 const DatasetListPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { showSuccess, showError, toasts, removeToast } = useToast();
+  const { showSuccess, showError } = useToastContext();
   const modalConfirm = useModalConfirm();
+
   const { datasets, loading, deleting, error, getDatasets, deleteDataset, clearDatasetError } =
     useDataset();
-  const { user, isAuthenticated } = useAuth();
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  // Get initial values from URL
-  const getInitialFromDate = () => {
-    const fromParam = searchParams.get('fromDate');
-    return fromParam ? new Date(fromParam) : null;
-  };
-
-  const getInitialToDate = () => {
-    const toParam = searchParams.get('toDate');
-    return toParam ? new Date(toParam) : new Date();
-  };
-
-  const getInitialSortOrder = (): 'newest' | 'oldest' => {
-    const sortParam = searchParams.get('sort');
-    return sortParam === 'oldest' ? 'oldest' : 'newest';
-  };
-
-  // State for createdAt filter - initialized from URL
-  const [createdAtFrom, setCreatedAtFrom] = useState<Date | null>(getInitialFromDate());
-  const [createdAtTo, setCreatedAtTo] = useState<Date>(getInitialToDate());
-  // State for sort order - initialized from URL
-  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>(getInitialSortOrder());
-
-  // Get current page from URL, default to 1
-  const getCurrentPageFromURL = () => {
-    const pageParam = searchParams.get('page');
-    return pageParam ? Math.max(1, parseInt(pageParam, 10)) : 1;
-  };
-
-  // Update URL with current filter state
-  const updateURL = useCallback(
-    (params: {
-      page?: number;
-      sort?: 'newest' | 'oldest';
-      fromDate?: Date | null;
-      toDate?: Date | null;
-    }) => {
-      const newSearchParams = new URLSearchParams(searchParams);
-
-      if (params.page !== undefined) {
-        newSearchParams.set('page', params.page.toString());
-      }
-
-      if (params.sort !== undefined) {
-        newSearchParams.set('sort', params.sort);
-      }
-
-      if (params.fromDate !== undefined) {
-        if (params.fromDate) {
-          newSearchParams.set('fromDate', params.fromDate.toISOString());
-        } else {
-          newSearchParams.delete('fromDate');
-        }
-      }
-
-      if (params.toDate !== undefined) {
-        if (params.toDate) {
-          newSearchParams.set('toDate', params.toDate.toISOString());
-        } else {
-          newSearchParams.delete('toDate');
-        }
-      }
-
-      navigate(`?${newSearchParams.toString()}`, { replace: true });
-    },
-    [searchParams, navigate]
-  );
-
-  // Pagination for datasets - initialize with URL page
-  const datasetPagination = usePagination({
-    initialPage: getCurrentPageFromURL(),
-    initialPageSize: 8,
-    totalItems: 0, // Will be updated when datasets are loaded
-  });
 
   // Fetch datasets on component mount
   useEffect(() => {
     getDatasets();
   }, [getDatasets]);
 
-  // Tour logic
-  useEffect(() => {
-    if (isAuthenticated && user?.id && datasets.length > 0 && !loading) {
-      const storageKey = `hasShownDatasetListTour_${user.id}`;
-      const hasShownTour = localStorage.getItem(storageKey);
-
-      if (hasShownTour !== 'true') {
-        const driverObj = driver({
-          showProgress: true,
-          steps: datasetListSteps,
-          popoverClass: 'driverjs-theme driver-theme-datasets',
-          overlayOpacity: 0.2,
-        });
-
-        setTimeout(() => {
-          driverObj.drive();
-          localStorage.setItem(storageKey, 'true');
-        }, 1000);
-      }
-    }
-  }, [isAuthenticated, user, datasets.length, loading]);
-
   // Show error toast when error occurs
   useEffect(() => {
     if (error) {
-      console.error('Dataset API error:', error);
-      const errorMessage =
-        typeof error === 'string'
-          ? error
-          : error && typeof error === 'object' && 'message' in error
-            ? (error as { message: string }).message
-            : 'An error occurred';
-
-      // Don't show UUID validation errors as they're usually due to data corruption
-      if (!errorMessage.includes('Invalid character') && !errorMessage.includes('findUnique')) {
-        showError(t('dataset_error', 'Dataset Error'), errorMessage);
-      }
+      showError(t('dataset_error', 'Error'), error);
       clearDatasetError();
     }
   }, [error, showError, t, clearDatasetError]);
 
-  // Filter datasets - using real API data
-  let allFilteredDatasets = Array.isArray(datasets)
-    ? datasets.filter(dataset => {
-        // Search filter
-        const matchesSearch =
-          dataset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  // Filter datasets based on search query
+  const filteredDatasets = Array.isArray(datasets)
+    ? datasets.filter(
+        dataset =>
+          dataset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (dataset.description &&
-            dataset.description.toLowerCase().includes(searchTerm.toLowerCase()));
-
-        // CreatedAt filter
-        let matchesDate = true;
-        if (createdAtFrom) {
-          matchesDate = matchesDate && new Date(dataset.createdAt) >= new Date(createdAtFrom);
-        }
-        if (createdAtTo) {
-          // To date is inclusive
-          const toDate = new Date(createdAtTo);
-          toDate.setHours(23, 59, 59, 999);
-          matchesDate = matchesDate && new Date(dataset.createdAt) <= toDate;
-        }
-
-        return matchesSearch && matchesDate;
-      })
+            dataset.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
     : [];
-
-  // Sort by createdAt
-  allFilteredDatasets = allFilteredDatasets.sort((a, b) => {
-    const dateA = new Date(a.createdAt).getTime();
-    const dateB = new Date(b.createdAt).getTime();
-    return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
-  });
-
-  // Update total items for pagination when filtered datasets change
-  useEffect(() => {
-    datasetPagination.setTotalItems(allFilteredDatasets.length);
-  }, [allFilteredDatasets.length, datasetPagination.setTotalItems]);
-
-  // Sync pagination page changes to URL
-  useEffect(() => {
-    const currentPage = datasetPagination.pagination.currentPage;
-    const urlPage = getCurrentPageFromURL();
-    if (currentPage !== urlPage) {
-      updateURL({
-        page: currentPage,
-        sort: sortOrder,
-        fromDate: createdAtFrom,
-        toDate: createdAtTo,
-      });
-    }
-  }, [
-    datasetPagination.pagination.currentPage,
-    sortOrder,
-    createdAtFrom,
-    createdAtTo,
-    updateURL,
-    getCurrentPageFromURL,
-  ]);
-
-  // Get paginated datasets
-  const filteredDatasets = allFilteredDatasets.slice(
-    datasetPagination.getOffset(),
-    datasetPagination.getOffset() + datasetPagination.getLimit()
-  );
 
   // Handle delete dataset
   const handleDeleteDataset = async (dataset: Dataset) => {
@@ -227,22 +53,6 @@ const DatasetListPage: React.FC = () => {
     modalConfirm.openConfirm(async () => {
       try {
         await deleteDataset(dataset.id).unwrap();
-
-        // Calculate if current page will be empty after deletion
-        const currentPage = datasetPagination.pagination.currentPage;
-        const itemsOnCurrentPage = filteredDatasets.length;
-        const totalItemsAfterDeletion = allFilteredDatasets.length - 1;
-
-        // Check if we need to go back to previous page
-        if (itemsOnCurrentPage === 1 && currentPage > 1) {
-          // This was the last item on current page and we're not on page 1
-          const newPage = Math.max(1, currentPage - 1);
-          datasetPagination.setPage(newPage);
-        } else if (totalItemsAfterDeletion === 0) {
-          // No items left, go to page 1
-          datasetPagination.setPage(1);
-        }
-
         showSuccess(
           t('dataset_deleteSuccess', 'Dataset Deleted'),
           t(
@@ -250,11 +60,10 @@ const DatasetListPage: React.FC = () => {
             `Dataset "${dataset.name}" has been deleted successfully`
           )
         );
-      } catch (error: unknown) {
-        const err = error as { message?: string };
+      } catch (error: any) {
         showError(
           t('dataset_deleteError', 'Delete Failed'),
-          err.message || t('dataset_deleteErrorMessage', 'Failed to delete dataset')
+          error.message || t('dataset_deleteErrorMessage', 'Failed to delete dataset')
         );
       } finally {
         setDeletingId(null);
@@ -262,333 +71,192 @@ const DatasetListPage: React.FC = () => {
     });
   };
 
-  const handleResetFilters = () => {
-    setSearchTerm('');
-    setCreatedAtFrom(null);
-    setCreatedAtTo(new Date());
-    setSortOrder('newest');
-    datasetPagination.setPage(1);
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    // Reset URL to clean state
-    navigate('?page=1', { replace: true });
+    if (diffDays === 1) {
+      return t('dataset_dateToday', 'today');
+    } else if (diffDays === 2) {
+      return t('dataset_dateYesterday', 'a day ago');
+    } else if (diffDays <= 30) {
+      return t('dataset_daysAgo', `${diffDays} days ago`);
+    } else if (diffDays <= 60) {
+      return t('dataset_monthAgo', 'a month ago');
+    } else {
+      const diffMonths = Math.floor(diffDays / 30);
+      return t('dataset_monthsAgo', `${diffMonths} months ago`);
+    }
   };
 
-  const handleCreateDataset = () => {
-    navigate(Routers.CREATE_DATASET);
-  };
-
-  // Function to manually start tour
-  const startTour = () => {
-    const driverObj = driver({
-      showProgress: true,
-      steps: datasetListSteps,
-      popoverClass: 'driverjs-theme driver-theme-datasets',
-      overlayOpacity: 0,
-    });
-    driverObj.drive();
-  };
-
-  // While initial fetch is in-flight and no items yet, show only header + a scoped spinner
-  const isInitialLoading = loading && allFilteredDatasets.length === 0;
+  if (loading && (datasets || []).length === 0) {
+    return <LoadingSpinner />;
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      {/* Main content */}
-      <div className="container mx-auto p-6 space-y-8">
-        {/* Header Section - Enhanced */}
-        <div className="flex flex-col space-y-6 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <div className="space-y-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Database className="h-6 w-6 text-white" />
-              </div>
-              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                {t('dataset_list_title')}
-              </h1>
-            </div>
-            <p className="text-lg text-muted-foreground max-w-2xl">
-              {t('dataset_list_description')}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3">
+              <Database className="w-8 h-8 text-blue-600" />
+              {t('dataset_title', 'Datasets')}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300">
+              {t('dataset_subtitle', 'Manage your data collections')}
             </p>
-            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-              <div className="flex items-center space-x-1">
-                <Database className="h-4 w-4 text-blue-500" />
-                <span>{allFilteredDatasets.length} datasets</span>
-              </div>
-            </div>
           </div>
-          <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
-            <Button
-              onClick={startTour}
-              variant="outline"
-              className="border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-            >
-              <HelpCircle className="h-4 w-4 mr-2" />
-              <span>{t('chart_list_start_tour')}</span>
-            </Button>
-            <Button
-              id="btn-new-dataset"
-              onClick={handleCreateDataset}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              <span>{t('dataset_list_new_dataset')}</span>
-            </Button>
-          </div>
+          <Button
+            onClick={() => navigate('/datasets/create')}
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg transition-all duration-200"
+          >
+            <Plus className="w-4 h-4" />
+            {t('dataset_newDataset', 'New data set')}
+          </Button>
         </div>
 
-        {isInitialLoading ? (
-          <div className="flex justify-center items-center min-h-[calc(100vh-220px)]">
-            <LoadingSpinner />
-          </div>
-        ) : (
-          <>
-            {/* Search & Filter - Enhanced */}
-            <Card className="border-0 shadow-xl bg-white/70 backdrop-blur-sm dark:bg-gray-800/70">
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row md:items-end md:space-x-6 space-y-4 md:space-y-0">
-                  {/* Search */}
-                  <div className="flex-1">
-                    <Label htmlFor="search-dataset" className="mb-1 block">
-                      {t('common_search')}
-                    </Label>
-                    <div className="w-full relative">
-                      <Input
-                        id="search-dataset"
-                        placeholder={t('dataset_list_search_placeholder')}
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full h-11 px-4 pr-10 text-base font-semibold !border-blue-300 !border-2 focus:!border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-blue-500 hover:bg-blue-100"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400">
-                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                          <rect
-                            x="3"
-                            y="5"
-                            width="18"
-                            height="16"
-                            rx="4"
-                            stroke="#3b82f6"
-                            strokeWidth="2"
-                          />
-                          <path
-                            d="M8 11h8M8 15h8"
-                            stroke="#3b82f6"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </span>
-                    </div>
-                  </div>
-                  {/* CreatedAt filter & Sort */}
-                  <div className="flex flex-col md:flex-row md:items-end md:space-x-3">
-                    <div>
-                      <Label htmlFor="sortOrder" className="mb-1 block">
-                        {t('chart_list_sort_by')}
-                      </Label>
-                      <div className="w-40">
-                        <Select
-                          value={sortOrder}
-                          onValueChange={v => {
-                            setSortOrder(v as 'newest' | 'oldest');
-                            updateURL({ sort: v as 'newest' | 'oldest' });
-                          }}
-                        >
-                          <SelectTrigger className="w-full h-11 px-4 pr-10 text-base font-semibold !border-blue-300 !border-2 focus:!border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-blue-500 hover:bg-blue-100">
-                            <span className="flex items-center gap-2">
-                              {sortOrder === 'newest'
-                                ? t('chart_list_sort_newest')
-                                : t('chart_list_sort_oldest')}
-                            </span>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="newest">
-                              <span className="flex items-center gap-2">
-                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                                  <circle cx="12" cy="12" r="10" stroke="#3b82f6" strokeWidth="2" />
-                                  <path
-                                    d="M12 6v6l4 2"
-                                    stroke="#3b82f6"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                                {t('chart_list_sort_newest')}
-                              </span>
-                            </SelectItem>
-                            <SelectItem value="oldest">
-                              <span className="flex items-center gap-2">
-                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                                  <rect
-                                    x="4"
-                                    y="4"
-                                    width="16"
-                                    height="16"
-                                    rx="4"
-                                    stroke="#a78bfa"
-                                    strokeWidth="2"
-                                  />
-                                  <path
-                                    d="M8 12h8M8 16h8"
-                                    stroke="#a78bfa"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                  />
-                                </svg>
-                                {t('chart_list_sort_oldest')}
-                              </span>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="w-40">
-                      <Label htmlFor="createdAtFrom" className="mb-1 block">
-                        {t('chart_list_from_date')}
-                      </Label>
-                      <div className="relative">
-                        <DatePicker
-                          id="createdAtFrom"
-                          selected={createdAtFrom}
-                          onChange={date => {
-                            setCreatedAtFrom(date);
-                            datasetPagination.setPage(1);
-                            if (date && createdAtTo && date > createdAtTo) {
-                              // Nếu chọn ngày sau ToDate thì ToDate = ngày đó
-                              setCreatedAtTo(date);
-                              updateURL({ fromDate: date, toDate: date, page: 1 });
-                            } else {
-                              updateURL({ fromDate: date, page: 1 });
-                            }
-                          }}
-                          maxDate={new Date()}
-                          dateFormat="dd/MM/yyyy"
-                          placeholderText="Select date"
-                          withPortal
-                          portalId="root-portal"
-                          className="w-full h-11 px-4 pr-10 text-base font-semibold !border-blue-300 !border-2 focus:!border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-blue-500 hover:bg-blue-100"
-                          customInput={
-                            <div className="w-full h-11 flex items-center px-4 pr-10 text-base font-semibold border border-blue-300 focus:border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:border-blue-500 hover:bg-blue-100 cursor-pointer">
-                              <input
-                                type="text"
-                                value={
-                                  createdAtFrom ? createdAtFrom.toLocaleDateString('en-GB') : ''
-                                }
-                                readOnly
-                                className="bg-transparent outline-none w-full cursor-pointer"
-                                placeholder={t('common.selectDate', 'Select date')}
-                              />
-                              <span className="absolute right-3 pointer-events-none text-blue-400">
-                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                                  <rect
-                                    x="3"
-                                    y="5"
-                                    width="18"
-                                    height="16"
-                                    rx="4"
-                                    stroke="#3b82f6"
-                                    strokeWidth="2"
-                                  />
-                                  <path
-                                    d="M8 11h8M8 15h8"
-                                    stroke="#3b82f6"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                  />
-                                </svg>
-                              </span>
-                            </div>
-                          }
-                        />
-                      </div>
-                    </div>
-                    <div className="w-40">
-                      <Label htmlFor="createdAtTo" className="mb-1 block">
-                        {t('chart_list_to_date')}
-                      </Label>
-                      <div className="relative">
-                        <DatePicker
-                          id="createdAtTo"
-                          selected={createdAtTo}
-                          onChange={date => {
-                            setCreatedAtTo(date as Date);
-                            datasetPagination.setPage(1);
-                            updateURL({ toDate: date as Date, page: 1 });
-                          }}
-                          minDate={createdAtFrom || undefined}
-                          maxDate={new Date()}
-                          dateFormat="dd/MM/yyyy"
-                          placeholderText="Select date"
-                          withPortal
-                          portalId="root-portal"
-                          className="w-full h-11 px-4 pr-10 text-base font-semibold !border-blue-300 !border-2 focus:!border-blue-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-blue-500 hover:bg-blue-100"
-                          customInput={
-                            <div className="w-full h-11 flex items-center px-4 pr-10 text-base font-semibold border border-purple-300 focus:border-purple-500 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:border-purple-500 hover:bg-purple-100 cursor-pointer">
-                              <input
-                                type="text"
-                                value={createdAtTo ? createdAtTo.toLocaleDateString('en-GB') : ''}
-                                readOnly
-                                className="bg-transparent outline-none w-full cursor-pointer"
-                                placeholder="Select date"
-                              />
-                              <span className="absolute right-3 pointer-events-none text-blue-400">
-                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                                  <rect
-                                    x="3"
-                                    y="5"
-                                    width="18"
-                                    height="16"
-                                    rx="4"
-                                    stroke="#3b82f6"
-                                    strokeWidth="2"
-                                  />
-                                  <path
-                                    d="M8 11h8M8 15h8"
-                                    stroke="#3b82f6"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                  />
-                                </svg>
-                              </span>
-                            </div>
-                          }
-                        />
-                      </div>
-                    </div>
-                    {/* Reset Button */}
-                    <div className="flex items-end">
-                      <button
-                        onClick={handleResetFilters}
-                        type="button"
-                        className="h-11 px-4 border-2 border-blue-300 hover:border-blue-500 rounded-2xl backdrop-blur-sm flex items-center gap-2 shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-100"
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                        {t('common_reset')}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Search Bar */}
+        <Card className="mb-6 backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg">
+          <CardContent className="pt-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder={t('dataset_searchPlaceholder', 'Search datasets...')}
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* Datasets List */}
-            <DatasetTab
-              loading={loading}
-              deleting={deleting}
-              filteredDatasets={filteredDatasets}
-              allFilteredDatasets={allFilteredDatasets}
-              searchTerm={searchTerm}
-              onCreateDataset={handleCreateDataset}
-              onDeleteDataset={handleDeleteDataset}
-              deletingId={deletingId}
-              pagination={datasetPagination}
-            />
-          </>
-        )}
+        {/* Datasets Table */}
+        <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="w-5 h-5" />
+              {t('dataset_yourDatasets', 'Your Datasets')}
+              <span className="text-sm font-normal text-gray-500">({filteredDatasets.length})</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredDatasets.length === 0 ? (
+              <div className="text-center py-12">
+                <Database className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  {searchQuery
+                    ? t('dataset_noSearchResults', 'No datasets found')
+                    : t('dataset_noDatasets', 'No datasets yet')}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-4">
+                  {searchQuery
+                    ? t('dataset_noSearchResultsDesc', 'Try adjusting your search criteria')
+                    : t('dataset_noDatasetsDesc', 'Create your first dataset to get started')}
+                </p>
+                {!searchQuery && (
+                  <Button onClick={() => navigate('/datasets/create')}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t('dataset_createFirst', 'Create your first dataset')}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
+                        {t('dataset_columnName', 'Name')} ▼
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
+                        {t('dataset_columnDescription', 'Description')}
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
+                        {t('dataset_columnSize', 'Size')}
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
+                        {t('dataset_columnLastUpdated', 'Last updated')} ▼
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
+                        {t('dataset_columnActions', 'Actions')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredDatasets.map(dataset => (
+                      <tr
+                        key={dataset.id}
+                        className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      >
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            {dataset.name}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-gray-600 dark:text-gray-300 max-w-xs truncate">
+                            {dataset.description || '-'}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-sm text-gray-600 dark:text-gray-300">
+                            {dataset.rowCount} × {dataset.columnCount}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
+                            <Calendar className="w-3 h-3" />
+                            {formatDate(dataset.updatedAt)}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/datasets/${buildSlug(dataset)}`)}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                navigate(Routers.EDIT_DATASET, {
+                                  state: { datasetId: dataset.id, from: Routers.DATASETS },
+                                })
+                              }
+                              className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-all duration-200"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteDataset(dataset)}
+                              disabled={deleting && deletingId === dataset.id}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200 disabled:opacity-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
       {/* Delete Confirmation Modal */}
       <ModalConfirm
         isOpen={modalConfirm.isOpen}
@@ -596,12 +264,12 @@ const DatasetListPage: React.FC = () => {
         onConfirm={modalConfirm.confirm}
         loading={modalConfirm.isLoading}
         type="danger"
-        title={t('deleteConfirmTitle', 'Do you want to delete this?')}
+        title={t('dataset_deleteConfirmTitle', 'Delete Dataset')}
         message={t(
-          'deleteConfirmMessage',
-          'This action cannot be undone if you proceed. Are you sure you want to continue?'
+          'dataset_deleteConfirmMessage',
+          'Are you sure you want to delete this dataset? This action cannot be undone.'
         )}
-        confirmText={t('deleteConfirm', 'Delete')}
+        confirmText={t('dataset_delete', 'Delete')}
         cancelText={t('common_cancel', 'Cancel')}
       />
     </div>
@@ -609,3 +277,13 @@ const DatasetListPage: React.FC = () => {
 };
 
 export default DatasetListPage;
+
+// helper to build slug from dataset (duplicated also in detail page; consider centralizing later)
+function buildSlug(ds: { id: string; name?: string }) {
+  const namePart = (ds.name || 'dataset')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 60);
+  return `${namePart}-${ds.id}`;
+}

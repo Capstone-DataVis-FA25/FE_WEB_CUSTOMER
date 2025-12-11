@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Grid3X3, BarChart3 } from 'lucide-react';
+import { Grid3X3, BarChart3, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
@@ -26,7 +26,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
       label: t('chart_gallery_select_with_data'),
       icon: BarChart3,
       description: t('chart_gallery_data_desc'),
-      badge: t('chart_gallery_beta'),
+      badge: 'BETA',
       gradient: 'from-purple-500 to-pink-500',
     },
   ];
@@ -64,6 +64,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
 
       <div className="flex flex-col sm:flex-row gap-6 relative z-10">
         {tabs.map((tab, index) => {
+          const IconComponent = tab.icon;
           const isActive = activeTab === tab.id;
 
           return (
@@ -108,7 +109,9 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
                           repeat: isActive ? Infinity : 0,
                           repeatDelay: 3,
                         }}
-                      ></motion.div>
+                      >
+                        <IconComponent className="w-6 h-6" />
+                      </motion.div>
 
                       <span className="font-bold text-lg">{tab.label}</span>
 
@@ -131,7 +134,9 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
                               className="absolute -top-1 -right-1"
                               animate={{ rotate: [0, 360] }}
                               transition={{ duration: 2, repeat: Infinity }}
-                            ></motion.div>
+                            >
+                              <Sparkles className="w-3 h-3 text-yellow-300" />
+                            </motion.div>
                           )}
                         </div>
                       )}

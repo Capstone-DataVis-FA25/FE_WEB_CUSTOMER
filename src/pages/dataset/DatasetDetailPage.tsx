@@ -1,41 +1,33 @@
+'use client';
+
 import type React from 'react';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SlideInUp } from '@/theme/animation';
-import { ArrowLeft, Database } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Download, Database, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-// removed inline inputs/badge; now inside modular components
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useDataset } from '@/features/dataset/useDataset';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
-import { useBeforeUnload } from '@/hooks/useBeforeUnload';
-import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal';
 
 import Routers from '@/router/routers';
-import DatasetPreviewCard from '@/components/dataset/DatasetPreviewCard';
-import DatasetInfoCard from '@/components/dataset/DatasetInfoCard';
-import DatasetActionsCard from '@/components/dataset/DatasetActionsCard';
+import CustomExcel from '@/components/excel/CustomExcel';
 
-// Type for header with data
-// interface DatasetHeader {
-//   name: string;
-//   data?: (string | number)[];
-// }
+// Define types for dataset header and cell
+interface DatasetHeader {
+  name: string;
+  data?: (string | number | null)[];
+}
 
 const DatasetDetailPage: React.FC = () => {
   const { id: legacyId, slug } = useParams<{ id?: string; slug?: string }>();
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const stateDatasetId = (location?.state as { datasetId?: string })?.datasetId;
-  const urlDatasetId = searchParams.get('datasetId');
-
-  // Priority: state > URL search params > URL params > slug > legacy id
-  const rawParam = stateDatasetId || urlDatasetId || slug || legacyId || '';
-
+  const location = useLocation() as any;
+  const stateDatasetId = location?.state?.datasetId as string | undefined;
+  const rawParam = slug || legacyId || stateDatasetId || '';
   // Extract UUID (with hyphens) or fallback to legacy id
   let extractedId = rawParam;
   const uuidRegex = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/;
@@ -43,18 +35,6 @@ const DatasetDetailPage: React.FC = () => {
   if (match) {
     extractedId = match[0];
   }
-
-  // Debug information (can be removed in production)
-  console.log('Dataset Detail Debug:', {
-    stateDatasetId,
-    urlDatasetId,
-    slug,
-    legacyId,
-    rawParam,
-    extractedId,
-    hasState: !!location.state,
-    searchParams: Object.fromEntries(searchParams.entries()),
-  });
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { showSuccess, showError } = useToastContext();
@@ -64,76 +44,12 @@ const DatasetDetailPage: React.FC = () => {
     currentDataset,
     loading,
     deleting,
+    error,
     getDatasetById,
     deleteDataset,
-    updateDataset,
-    clearCurrent: clearCurrentDataset,
+    clearDatasetError,
+    clearCurrent,
   } = useDataset();
-
-  // Edit mode states
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
-  const [editableName, setEditableName] = useState('');
-  const [editableDescription, setEditableDescription] = useState('');
-
-  // Original values for change tracking
-  const [originalName, setOriginalName] = useState('');
-  const [originalDescription, setOriginalDescription] = useState('');
-
-  // Validation states
-  const [validationErrors, setValidationErrors] = useState({
-    name: '',
-    description: '',
-  });
-
-  // Unsaved changes modal state
-  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
-  const [isSavingBeforeLeave, setIsSavingBeforeLeave] = useState(false);
-  const [currentModalAction, setCurrentModalAction] = useState<'save' | 'reset' | null>(null);
-
-  // Check if there are any changes
-  const hasChanges = useMemo(() => {
-    if (!currentDataset) return false;
-
-    const nameChanged = editableName !== originalName;
-    const descriptionChanged = editableDescription !== originalDescription;
-
-    return nameChanged || descriptionChanged;
-  }, [editableName, originalName, editableDescription, originalDescription, currentDataset]);
-
-  // const exportCsv = (
-  //   headerRow: { name: string }[],
-  //   bodyRows: (string | number | null)[][],
-  //   filename: string
-  // ) => {
-  //   try {
-  //     if (!headerRow || headerRow.length === 0) return;
-
-  //     const delimiter = ',';
-  //     const escapeCell = (v: string | number | null) => {
-  //       const s = v == null ? '' : String(v);
-  //       return '"' + s.replace(/"/g, '""') + '"';
-  //     };
-
-  //     const headerLine = headerRow.map(h => escapeCell(h.name)).join(delimiter);
-  //     const lines = bodyRows.map(r => r.map(c => escapeCell(c)).join(delimiter));
-  //     const csv = [headerLine, ...lines].join('\n');
-
-  //     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  //     const url = URL.createObjectURL(blob);
-
-  //     const a = document.createElement('a');
-  //     a.href = url;
-  //     a.download = filename;
-  //     document.body.appendChild(a);
-  //     a.click();
-  //     document.body.removeChild(a);
-  //     URL.revokeObjectURL(url);
-  //   } catch (err) {
-  //     console.error('Export CSV failed', err);
-  //   }
-  // };
 
   // Fetch dataset on component mount
   useEffect(() => {
@@ -141,337 +57,17 @@ const DatasetDetailPage: React.FC = () => {
       getDatasetById(extractedId);
     }
     return () => {
-      clearCurrentDataset();
+      clearCurrent();
     };
-  }, [extractedId, getDatasetById, clearCurrentDataset]);
+  }, [extractedId, getDatasetById, clearCurrent]);
 
-  // Initialize editable fields when dataset is loaded
+  // Show error toast when error occurs
   useEffect(() => {
-    if (currentDataset) {
-      setEditableName(currentDataset.name || '');
-      setEditableDescription(currentDataset.description || '');
-      setOriginalName(currentDataset.name || '');
-      setOriginalDescription(currentDataset.description || '');
+    if (error) {
+      showError(t('dataset_error', 'Error'), error);
+      clearDatasetError();
     }
-  }, [currentDataset]);
-
-  // Enable beforeunload warning when there are unsaved changes
-  useBeforeUnload({
-    hasUnsavedChanges: hasChanges,
-    message: t(
-      'dataset_unsaved_changes_warning',
-      'You have unsaved changes to your dataset. Are you sure you want to leave?'
-    ),
-  });
-
-  // Handle browser back button with unsaved changes
-  useEffect(() => {
-    const handlePopState = (event: PopStateEvent) => {
-      if (hasChanges) {
-        // Prevent the navigation
-        event.preventDefault();
-        window.history.pushState(null, '', window.location.href);
-
-        // Show unsaved changes modal
-        setPendingNavigation(() => () => {
-          // Navigate to workspace datasets when confirmed
-          navigate(Routers.WORKSPACE_DATASETS, { replace: true });
-        });
-        setShowUnsavedModal(true);
-      }
-    };
-
-    // Add popstate listener for browser back button
-    window.addEventListener('popstate', handlePopState);
-
-    // Push a dummy state to prevent immediate back navigation
-    if (hasChanges) {
-      window.history.pushState(null, '', window.location.href);
-    }
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [hasChanges, navigate, t]);
-
-  // Handle name edit - validate before exiting edit mode
-  const handleNameSave = useCallback(() => {
-    // Validate name is not empty
-    if (!editableName.trim()) {
-      setValidationErrors(prev => ({
-        ...prev,
-        name: t('dataset_nameRequired', 'Dataset name is required'),
-      }));
-      return;
-    }
-
-    // Clear validation error and exit editing mode
-    setValidationErrors(prev => ({ ...prev, name: '' }));
-    setIsEditingName(false);
-  }, [editableName, t]);
-
-  // Handle description edit - optional field (no required validation)
-  const handleDescriptionSave = useCallback(() => {
-    // Always clear validation error and exit editing mode
-    setValidationErrors(prev => ({ ...prev, description: '' }));
-    setIsEditingDescription(false);
-  }, []);
-
-  // Handle name change - validate on every change
-  const handleNameChange = useCallback(
-    (value: string) => {
-      setEditableName(value);
-
-      // Real-time validation: clear error if input is not empty
-      if (value.trim()) {
-        setValidationErrors(prev => ({ ...prev, name: '' }));
-      } else {
-        setValidationErrors(prev => ({
-          ...prev,
-          name: t('dataset_nameRequired', 'Dataset name is required'),
-        }));
-      }
-    },
-    [t]
-  );
-
-  // Key handling for name input moved out of JSX to keep markup simple
-  const handleNameKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        handleNameSave();
-      } else if (e.key === 'Escape') {
-        setEditableName(originalName);
-        setIsEditingName(false);
-        setValidationErrors(prev => ({ ...prev, name: '' }));
-      }
-    },
-    [handleNameSave, originalName]
-  );
-
-  const nameInputClass = useMemo(
-    () => `font-medium ${validationErrors.name ? 'border-red-500 focus:ring-red-500' : ''}`,
-    [validationErrors.name]
-  );
-
-  // Handle description change - optional (no required validation)
-  const handleDescriptionChange = useCallback((value: string) => {
-    setEditableDescription(value);
-    // Clear any prior error regardless of content
-    setValidationErrors(prev => ({ ...prev, description: '' }));
-  }, []);
-
-  // Handle save with confirmation
-  const handleSave = useCallback(async () => {
-    if (!currentDataset || !extractedId) return;
-
-    // Validate fields: only name is required
-    if (!editableName.trim()) {
-      showError(
-        t('dataset_validationError', 'Validation Error'),
-        t('dataset_nameRequired', 'Dataset name is required')
-      );
-      return;
-    }
-
-    setCurrentModalAction('save');
-    modalConfirm.openConfirm(async () => {
-      try {
-        const updateData: Record<string, unknown> = {};
-
-        if (editableName !== currentDataset.name) {
-          updateData.name = editableName.trim();
-        }
-        if (editableDescription !== currentDataset.description) {
-          updateData.description = editableDescription.trim();
-        }
-
-        if (Object.keys(updateData).length === 0) {
-          showError(
-            t('dataset_noChanges', 'No Changes'),
-            t('dataset_noChangesMessage', 'No changes were made to the dataset')
-          );
-          setCurrentModalAction(null);
-          return;
-        }
-
-        const response = await updateDataset(extractedId, updateData).unwrap();
-
-        if (response) {
-          console.log('Update response:', response);
-
-          // Update original values after successful save
-          setOriginalName(editableName.trim());
-          setOriginalDescription(editableDescription.trim());
-
-          showSuccess(
-            t('dataset_updateSuccess', 'Dataset Updated'),
-            t('dataset_updateSuccessMessage', 'Dataset has been updated successfully')
-          );
-        }
-
-        // Close the modal after successful save
-        setCurrentModalAction(null);
-      } catch (err: unknown) {
-        console.error('Update error:', err);
-        console.log('Full error object:', JSON.stringify(err, null, 2));
-
-        // Parse error safely - API can return multiple structures
-        let errorStatus: number | undefined;
-        let errorMessage: string | undefined;
-
-        if (err && typeof err === 'object') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const errorObj = err as any;
-
-          // Try to extract status from multiple possible locations
-          errorStatus =
-            errorObj.statusCode ||
-            errorObj.status ||
-            errorObj.data?.statusCode ||
-            errorObj.data?.status ||
-            errorObj.response?.status;
-
-          // Try to extract message from multiple possible locations
-          errorMessage =
-            errorObj.message ||
-            errorObj.data?.message ||
-            errorObj.response?.data?.message ||
-            errorObj.error?.message;
-
-          console.log('Parsed error:', { errorStatus, errorMessage });
-        }
-
-        // Always show error toast
-        if (errorStatus === 409) {
-          showError(
-            t('dataset_nameExists', 'Dataset Name Already Exists'),
-            errorMessage ||
-              t(
-                'dataset_nameExistsMessage',
-                `A dataset with the name "${editableName.trim()}" already exists. Please choose a different name.`
-              )
-          );
-        } else {
-          showError(
-            t('dataset_updateFailed', 'Update Failed'),
-            errorMessage ||
-              t('dataset_updateFailedMessage', 'Failed to update dataset. Please try again.')
-          );
-        }
-
-        // Close the modal - don't throw error to prevent crash
-        setCurrentModalAction(null);
-      }
-    });
-  }, [
-    currentDataset,
-    extractedId,
-    editableName,
-    editableDescription,
-    updateDataset,
-    showSuccess,
-    showError,
-    t,
-    modalConfirm,
-  ]);
-
-  // Handle reset to original values
-  const handleReset = useCallback(() => {
-    if (hasChanges) {
-      setCurrentModalAction('reset');
-      modalConfirm.openConfirm(async () => {
-        try {
-          setEditableName(originalName);
-          setEditableDescription(originalDescription);
-          setIsEditingName(false);
-          setIsEditingDescription(false);
-          setValidationErrors({ name: '', description: '' });
-          showSuccess(t('dataset_reset', 'Dataset reset to original values'));
-        } catch (error) {
-          console.error('Error resetting dataset:', error);
-          showError(t('dataset_reset_error', 'Failed to reset dataset'));
-        }
-      });
-    }
-  }, [hasChanges, originalName, originalDescription, showSuccess, showError, t, modalConfirm]);
-
-  // Handle back navigation with unsaved changes check
-  const handleBack = useCallback(() => {
-    if (hasChanges) {
-      setPendingNavigation(() => () => {
-        // Navigate to workspace datasets to prevent invalid state
-        navigate(Routers.WORKSPACE_DATASETS, { replace: true });
-      });
-      setShowUnsavedModal(true);
-    } else {
-      // Navigate to workspace datasets to prevent invalid state
-      navigate(Routers.WORKSPACE_DATASETS, { replace: true });
-    }
-  }, [hasChanges, navigate]);
-
-  // Handle unsaved changes modal actions
-  const handleSaveAndLeave = useCallback(async () => {
-    if (!currentDataset || !extractedId) return;
-
-    setIsSavingBeforeLeave(true);
-    try {
-      const updateData: Record<string, unknown> = {};
-
-      if (editableName !== currentDataset.name) {
-        updateData.name = editableName.trim();
-      }
-      if (editableDescription !== currentDataset.description) {
-        updateData.description = editableDescription.trim();
-      }
-
-      if (Object.keys(updateData).length > 0) {
-        await updateDataset(extractedId, updateData).unwrap();
-        showSuccess(
-          t('dataset_updateSuccess', 'Dataset Updated'),
-          t('dataset_updateSuccessMessage', 'Dataset has been updated successfully')
-        );
-      }
-
-      // Execute pending navigation
-      if (pendingNavigation) {
-        pendingNavigation();
-      }
-    } catch (error) {
-      console.error('Error saving dataset before leave:', error);
-      showError(t('dataset_update_error', 'Failed to update dataset'));
-      throw error;
-    } finally {
-      setIsSavingBeforeLeave(false);
-    }
-  }, [
-    currentDataset,
-    extractedId,
-    editableName,
-    editableDescription,
-    updateDataset,
-    showSuccess,
-    showError,
-    t,
-    pendingNavigation,
-  ]);
-
-  const handleLeaveAnyway = useCallback(() => {
-    if (pendingNavigation) {
-      pendingNavigation();
-    }
-  }, [pendingNavigation]);
-
-  const handleStay = useCallback(() => {
-    setPendingNavigation(null);
-    setShowUnsavedModal(false);
-  }, []);
-
-  // Handle modal close with action cleanup
-  const handleModalClose = useCallback(() => {
-    setCurrentModalAction(null);
-    modalConfirm.close();
-  }, [modalConfirm]);
+  }, [error, showError, t, clearDatasetError]);
 
   // Handle delete dataset
   const handleDeleteDataset = async () => {
@@ -481,7 +77,7 @@ const DatasetDetailPage: React.FC = () => {
       try {
         await deleteDataset(currentDataset.id).unwrap();
         // build list route
-        navigate(Routers.WORKSPACE_DATASETS);
+        navigate(Routers.DATASETS);
         showSuccess(
           t('dataset_deleteSuccess', 'Dataset Deleted'),
           t(
@@ -504,6 +100,42 @@ const DatasetDetailPage: React.FC = () => {
     });
   };
 
+  // Handle export dataset
+  const handleExportDataset = () => {
+    if (!currentDataset) return;
+
+    // Build tableData from headers (same logic as below)
+    const headerNames = currentDataset.headers?.map((h: DatasetHeader) => h.name) || [];
+    const rowCount = currentDataset.rowCount || 0;
+    const rows: string[][] = Array.from({ length: rowCount }, () =>
+      Array(headerNames.length).fill('')
+    );
+    currentDataset.headers?.forEach((h: DatasetHeader, colIdx: number) => {
+      h.data?.forEach((cell: string | number | null, rowIdx: number) => {
+        if (rows[rowIdx]) rows[rowIdx][colIdx] = String(cell ?? '');
+      });
+    });
+
+    const csvContent = [headerNames, ...rows]
+      .map((row: string[]) => row.map((cell: string) => `"${cell.replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentDataset.name}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showSuccess(
+      t('dataset_exportSuccess', 'Export Successful'),
+      t('dataset_exportSuccessMessage', 'Dataset has been exported successfully')
+    );
+  };
+
   // Format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -516,79 +148,56 @@ const DatasetDetailPage: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
-        <div className="text-center">
-          <LoadingSpinner />
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!currentDataset) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 dark:from-gray-900 dark:via-slate-900 dark:to-indigo-900 relative overflow-hidden">
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        </div>
-
-        <div className="flex items-center justify-center min-h-screen relative z-10">
-          <SlideInUp delay={0.2}>
-            <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/20 shadow-2xl p-8 text-center max-w-md rounded-2xl">
-              <div className="relative mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-gray-400/20 to-gray-600/20 rounded-2xl mx-auto flex items-center justify-center mb-4">
-                  <Database className="w-8 h-8 text-gray-400" />
-                </div>
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">!</span>
-                </div>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-                {t('dataset_notFound', 'Dataset Not Found')}
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                {extractedId
-                  ? t(
-                      'dataset_notFoundMessage',
-                      'The dataset you are looking for does not exist or you do not have access to it.'
-                    )
-                  : t(
-                      'dataset_noIdMessage',
-                      'No dataset ID was provided. Please access this page through the workspace or provide a valid dataset ID.'
-                    )}
-              </p>
-              <div className="space-y-3">
-                <Button
-                  onClick={() => navigate(Routers.WORKSPACE_DATASETS, { replace: true })}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  {t('dataset_backToList', 'Back to Datasets')}
-                </Button>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {extractedId
-                    ? t(
-                        'dataset_notFoundHint',
-                        'Try checking the URL or contact your administrator if you believe this is an error.'
-                      )
-                    : t(
-                        'dataset_noIdHint',
-                        'Access datasets through the workspace to view their details.'
-                      )}
-                </p>
-              </div>
-            </Card>
-          </SlideInUp>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <SlideInUp delay={0.2}>
+          <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl p-8 text-center max-w-md">
+            <Database className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              {t('dataset_notFound', 'Dataset Not Found')}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              {t(
+                'dataset_notFoundMessage',
+                'The dataset you are looking for does not exist or you do not have access to it.'
+              )}
+            </p>
+            <Button
+              onClick={() => navigate(Routers.WORKSPACE_DATASETS)}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              {t('dataset_backToList', 'Back to Datasets')}
+            </Button>
+          </Card>
+        </SlideInUp>
       </div>
     );
   }
 
-  // Main preview now handled by DatasetPreviewCard
+  // Build structured columns + rows for CustomExcel (first row is headers in edit page; here we send body & columns separately)
+  let bodyRows: string[][] = [];
+  let columnDefs: { name: string; type: 'string' }[] = [];
+  let headerRow: string[] = [];
+  if (currentDataset.headers && currentDataset.headers.length) {
+    headerRow = currentDataset.headers.map((h: DatasetHeader) => h.name);
+    columnDefs = headerRow.map(name => ({ name, type: 'string' as const }));
+    const rowCount = currentDataset.rowCount;
+    const rows: string[][] = Array.from({ length: rowCount }, () =>
+      Array(headerRow.length).fill('')
+    );
+    currentDataset.headers.forEach((h: DatasetHeader, idx: number) => {
+      h.data?.forEach((cell: string | number | null, rowIdx: number) => {
+        if (rows[rowIdx]) rows[rowIdx][idx] = String(cell ?? '');
+      });
+    });
+    bodyRows = rows;
+  }
 
-  // Note: unmount cleanup handled in initial data fetch effect above
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 dark:from-gray-900 dark:via-slate-900 dark:to-indigo-900 relative overflow-hidden">
       {/* Animated Background Elements */}
@@ -618,7 +227,7 @@ const DatasetDetailPage: React.FC = () => {
                 )}
               </p>
               <Button
-                onClick={() => navigate(Routers.WORKSPACE_DATASETS, { replace: true })}
+                onClick={() => navigate(Routers.WORKSPACE_DATASETS)}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -631,59 +240,207 @@ const DatasetDetailPage: React.FC = () => {
         <div className="py-8 relative z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex gap-3 items-start">
-              {/* Left Sidebar - Modularized */}
+              {/* Left Sidebar - Dataset Information */}
               <div className="w-80 shrink-0 space-y-6">
                 <SlideInUp delay={0.15}>
-                  <DatasetInfoCard
-                    t={(key: string, fallback?: string) =>
-                      t(key, { defaultValue: fallback ?? key })
-                    }
-                    editableName={editableName}
-                    isEditingName={isEditingName}
-                    setIsEditingName={setIsEditingName}
-                    validationErrors={validationErrors}
-                    handleNameChange={handleNameChange}
-                    handleNameSave={handleNameSave}
-                    handleNameKeyDown={handleNameKeyDown}
-                    nameInputClass={nameInputClass}
-                    editableDescription={editableDescription}
-                    setEditableDescription={setEditableDescription}
-                    isEditingDescription={isEditingDescription}
-                    setIsEditingDescription={setIsEditingDescription}
-                    handleDescriptionChange={handleDescriptionChange}
-                    handleDescriptionSave={handleDescriptionSave}
-                    originalDescription={originalDescription}
-                    setValidationErrors={setValidationErrors}
-                    createdAt={currentDataset.createdAt}
-                    updatedAt={currentDataset.updatedAt}
-                    formatDate={formatDate}
-                  />
+                  <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/20 shadow-xl rounded-2xl overflow-hidden group hover:shadow-2xl transition-all duration-300">
+                    <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4">
+                      <CardTitle className="flex items-center gap-3 text-white">
+                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                          <BarChart3 className="w-4 h-4" />
+                        </div>
+                        <span className="font-semibold">
+                          {t('dataset_information', 'Dataset Information')}
+                        </span>
+                      </CardTitle>
+                    </div>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="space-y-3">
+                        <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-xl">
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                            {t('dataset_name', 'Name')}
+                          </label>
+                          <p className="text-gray-900 dark:text-white font-medium mt-1">
+                            {currentDataset.name}
+                          </p>
+                        </div>
+                        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl">
+                          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                            {t('dataset_description', 'Description')}
+                          </label>
+                          <p className="text-gray-900 dark:text-white font-medium mt-1 leading-relaxed">
+                            {currentDataset.description ||
+                              t('dataset_noDescription', 'No description')}
+                          </p>
+                        </div>
+                        {/* Created & Last Updated info */}
+                        <div className="grid grid-cols-1 gap-3">
+                          <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200/30 dark:border-green-800/30">
+                            <label className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide flex items-center gap-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              {t('dataset_createdAt', 'Created')}
+                            </label>
+                            <p className="text-gray-900 dark:text-white font-medium mt-2">
+                              {formatDate(currentDataset.createdAt)}
+                            </p>
+                          </div>
+                          <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-100 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl border border-blue-200/30 dark:border-blue-800/30">
+                            <label className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide flex items-center gap-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              {t('dataset_updatedAt', 'Last Updated')}
+                            </label>
+                            <p className="text-gray-900 dark:text-white font-medium mt-2">
+                              {formatDate(currentDataset.updatedAt)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </SlideInUp>
+
+                <SlideInUp delay={0.2}>
+                  <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/20 shadow-xl rounded-2xl overflow-hidden group hover:shadow-2xl transition-all duration-300">
+                    <div className="bg-gradient-to-r from-orange-500 to-red-500 p-4">
+                      <CardTitle className="flex items-center gap-3 text-white">
+                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                          <Edit className="w-4 h-4" />
+                        </div>
+                        <span className="font-semibold">{t('dataset_metadata', 'Metadata')}</span>
+                      </CardTitle>
+                    </div>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="grid grid-cols-1 gap-3">
+                        <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200/30 dark:border-green-800/30">
+                          <label className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            {t('dataset_createdAt', 'Created')}
+                          </label>
+                          <p className="text-gray-900 dark:text-white font-medium mt-2">
+                            {formatDate(currentDataset.createdAt)}
+                          </p>
+                        </div>
+                        <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-100 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl border border-blue-200/30 dark:border-blue-800/30">
+                          <label className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide flex items-center gap-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            {t('dataset_updatedAt', 'Last Updated')}
+                          </label>
+                          <p className="text-gray-900 dark:text-white font-medium mt-2">
+                            {formatDate(currentDataset.updatedAt)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </SlideInUp>
 
                 <SlideInUp delay={0.25}>
-                  <DatasetActionsCard
-                    t={(key: string, fallback?: string) =>
-                      t(key, { defaultValue: fallback ?? key })
-                    }
-                    hasChanges={hasChanges}
-                    deleting={deleting}
-                    onSave={handleSave}
-                    onReset={handleReset}
-                    onBack={handleBack}
-                    onDelete={handleDeleteDataset}
-                  />
+                  <Card className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 border border-white/20 dark:border-gray-700/20 shadow-xl rounded-2xl overflow-hidden">
+                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4">
+                      <CardTitle className="flex items-center gap-3 text-white">
+                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                          <ArrowLeft className="w-4 h-4" />
+                        </div>
+                        <span className="font-semibold">Actions</span>
+                      </CardTitle>
+                    </div>
+                    <CardContent className="p-6 space-y-4">
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          navigate(Routers.EDIT_DATASET, {
+                            state: { datasetId: currentDataset.id, from: window.location.pathname },
+                          })
+                        }
+                        className="w-full h-12 flex items-center justify-start gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-800/50 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30 shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 group"
+                      >
+                        <Edit className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                        <span className="text-blue-700 dark:text-blue-300 font-medium text-left">
+                          {t('dataset_edit', 'Edit')}
+                        </span>
+                      </Button>
+
+                      <Button
+                        variant="destructive"
+                        onClick={handleDeleteDataset}
+                        disabled={deleting}
+                        className="w-full h-12 flex items-center justify-start gap-3 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border border-red-200/50 dark:border-red-800/50 hover:from-red-500 hover:to-pink-600 hover:text-white dark:hover:from-red-600 dark:hover:to-pink-700 shadow-md hover:shadow-lg transition-all duration-300 rounded-lg px-4 group disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="w-5 h-5 text-red-600 dark:text-white group-hover:text-white transition-colors flex-shrink-0" />
+                        <span className="text-red-700 dark:text-white font-medium group-hover:text-white text-left">
+                          {deleting ? 'Deleting...' : t('dataset_delete', 'Delete')}
+                        </span>
+                      </Button>
+                    </CardContent>
+                  </Card>
                 </SlideInUp>
               </div>
 
-              {/* Main Content Area - Modularized Preview */}
+              {/* Main Content Area with Enhanced Layout */}
               <div className="max-w-5xl flex-1 space-y-6">
                 <SlideInUp delay={0.3}>
-                  <DatasetPreviewCard
-                    t={(key: string, fallback?: string) =>
-                      t(key, { defaultValue: fallback ?? key })
-                    }
-                    currentDataset={currentDataset}
-                  />
+                  <Card className="backdrop-blur-xl bg-white/95 dark:bg-gray-800/95 border border-white/20 dark:border-gray-700/20 shadow-2xl rounded-2xl overflow-hidden">
+                    <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-6">
+                      <CardTitle className="flex items-center justify-between text-white">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                            <BarChart3 className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-bold">
+                              {t('dataset_dataPreview', 'Data Preview')}
+                            </h3>
+                            <p className="text-violet-100 text-sm mt-1">
+                              Interactive data table with{' '}
+                              {currentDataset.rowCount?.toLocaleString()} rows ×{' '}
+                              {currentDataset.columnCount} columns
+                            </p>
+                          </div>
+                        </div>
+                      </CardTitle>
+                    </div>
+                    <CardContent className="p-6">
+                      {/* Enhanced responsive container with better styling */}
+                      <div className="relative">
+                        {/* Header info bar */}
+                        <div className="mb-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-xl border border-gray-200/50 dark:border-gray-600/50">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                  Columns: {currentDataset.columnCount}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                  Rows: {currentDataset.rowCount?.toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-3 py-1 rounded-full border">
+                              Read-only mode
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Data table container with enhanced styling */}
+                        <div
+                          className="overflow-hidden border-2 border-gray-200/50 dark:border-gray-600/50 rounded-2xl shadow-xl bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-gray-800 dark:via-gray-800 dark:to-gray-700"
+                          style={{ minHeight: '400px', maxHeight: '1000px' }}
+                        >
+                          <div className="overflow-auto h-full">
+                            <CustomExcel
+                              initialData={bodyRows}
+                              initialColumns={columnDefs}
+                              mode="view"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </SlideInUp>
               </div>
             </div>
@@ -693,8 +450,8 @@ const DatasetDetailPage: React.FC = () => {
 
       {/* Delete Confirmation Modal */}
       <ModalConfirm
-        isOpen={modalConfirm.isOpen && currentModalAction === null}
-        onClose={handleModalClose}
+        isOpen={modalConfirm.isOpen}
+        onClose={modalConfirm.close}
         onConfirm={modalConfirm.confirm}
         loading={modalConfirm.isLoading}
         type="danger"
@@ -705,57 +462,6 @@ const DatasetDetailPage: React.FC = () => {
         )}
         confirmText={t('dataset_delete', 'Delete')}
         cancelText={t('common_cancel', 'Cancel')}
-      />
-
-      {/* Save Confirmation Modal */}
-      <ModalConfirm
-        isOpen={currentModalAction === 'save'}
-        onClose={handleModalClose}
-        onConfirm={async () => {
-          await modalConfirm.confirm();
-          handleModalClose();
-        }}
-        loading={modalConfirm.isLoading}
-        type="success"
-        title={t('dataset_saveConfirmTitle', 'Save Changes')}
-        message={t(
-          'dataset_saveConfirmMessage',
-          'Are you sure you want to save the changes to this dataset?'
-        )}
-        confirmText={t('save', 'Save')}
-        cancelText={t('common_cancel', 'Cancel')}
-      />
-
-      {/* Reset Confirmation Modal */}
-      <ModalConfirm
-        isOpen={currentModalAction === 'reset'}
-        onClose={handleModalClose}
-        onConfirm={() => {
-          setEditableName(originalName);
-          setEditableDescription(originalDescription);
-          setIsEditingName(false);
-          setIsEditingDescription(false);
-          setValidationErrors({ name: '', description: '' });
-          handleModalClose();
-        }}
-        type="warning"
-        title={t('dataset_resetConfirmTitle', 'Reset Changes')}
-        message={t(
-          'dataset_resetConfirmMessage',
-          'Are you sure you want to reset all changes? This will discard all unsaved modifications.'
-        )}
-        confirmText={t('reset', 'Reset')}
-        cancelText={t('common_cancel', 'Cancel')}
-      />
-
-      {/* Unsaved Changes Modal */}
-      <UnsavedChangesModal
-        isOpen={showUnsavedModal}
-        onClose={handleStay}
-        onSaveAndLeave={handleSaveAndLeave}
-        onLeaveAnyway={handleLeaveAnyway}
-        onStay={handleStay}
-        loading={isSavingBeforeLeave}
       />
     </div>
   );

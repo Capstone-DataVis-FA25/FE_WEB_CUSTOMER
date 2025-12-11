@@ -2,162 +2,173 @@
 
 import type React from 'react';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useDataset } from '@/contexts/DatasetContext';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import {
-  setSelectedColumn,
-  setSelectedRow,
-  setTouchedCells,
-  setInfoMessage,
-  setDuplicateColumns,
-  setEmptyColumns,
-  setParseErrors,
-  updateParseError,
-  setDateFormat,
-  setNumberFormat,
-  selectSelectedColumn,
-  selectInfoMessage,
-  selectDuplicateColumns,
-  selectParseErrors,
-  clearUIState,
-  setColumns as setColumnsRedux,
-  selectColumns,
-  selectFilters,
-  setFilters,
-} from '@/features/excelUI';
-import ExcelRow from './ExcelRow';
-import ExcelHeaderRow from './ExcelHeaderRow';
-import DeleteRowButton from './DeleteRowButton';
-import ValidationDisplay from './ValidationDisplay';
 import { Button } from '@/components/ui/button';
 import * as XLSX from 'xlsx';
 import saveAs from 'file-saver';
-import { Plus, Copy, FileDown, RotateCcw } from 'lucide-react';
-// removed unused dropdown menu imports
-import dayjs from 'dayjs';
-import customParseFormat from 'dayjs/plugin/customParseFormat';
-dayjs.extend(customParseFormat);
-import { ModalConfirm } from '@/components/ui/modal-confirm';
-import { useModalConfirm } from '@/hooks/useModal';
-import { useToastContext } from '@/components/providers/ToastProvider';
+import {
+  Undo,
+  Redo,
+  Plus,
+  Copy,
+  FileText,
+  FileDigit,
+  Sigma,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  X,
+  FileDown,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 // =============== Types & Helpers =================
-import type { DataHeader } from '@/utils/dataProcessors';
-import { t } from 'i18next';
+export interface Column {
+  name: string;
+  type: 'string' | 'number' | 'decimal' | 'date';
+  width?: number;
+}
 interface CustomExcelProps {
   initialData?: string[][];
-  initialColumns?: DataHeader[];
-  onDataChange?: (d: string[][], c: DataHeader[]) => void;
+  initialColumns?: Column[];
+  onDataChange?: (d: string[][], c: Column[]) => void;
   className?: string;
   mode?: 'edit' | 'view';
-  allowHeaderEdit?: boolean;
-  allowColumnEdit?: boolean;
-  // onSorting?: (s: { column: number; direction: 'asc' | 'desc' } | null) => void;
-  highlightHeaderIds?: string[];
-  disableSelection?: boolean;
 }
+interface HistoryEntry {
+  data: string[][];
+  columns: Column[];
+}
+// Safer clone (JSON stringify can crash large datasets). For large arrays we shallow copy.
+const deepClone = <T,>(v: T, shallow = false): T => {
+  if (shallow) return v;
+  return JSON.parse(JSON.stringify(v));
+};
 const DEFAULT_WIDTH = 180;
+const COLUMN_TYPES = [
+  { label: 'Text', value: 'string', icon: <FileText size={14} /> },
+  { label: 'Number', value: 'number', icon: <FileDigit size={14} /> },
+  { label: 'Decimal', value: 'decimal', icon: <Sigma size={14} /> },
+  { label: 'Date', value: 'date', icon: <FileText size={14} /> },
+];
 
-// removed unused isValidValue
+// Value validators (non-blocking)
+const isValidValue = (type: Column['type'], v: string): boolean => {
+  if (v === '' || v == null) return true;
+  if (type === 'number') return /^[-+]?\d+$/.test(v.trim());
+  if (type === 'decimal') return /^[-+]?\d*(?:\.\d+)?$/.test(v.trim());
+  if (type === 'date') return /^\d{4}-\d{2}-\d{2}$/.test(v.trim());
+  return true;
+};
 
 // Normalization / conversion when changing type
+interface ConvertResult {
+  ok: boolean;
+  value: string;
+  changed: boolean;
+}
+const tryConvert = (type: Column['type'], raw: string): ConvertResult => {
+  const original = raw;
+  const v = raw.trim();
+  if (v === '') return { ok: true, value: '', changed: false };
+  if (type === 'string') return { ok: true, value: original, changed: false };
+  if (type === 'number') {
+    const cleaned = v.replace(/,/g, '');
+    if (!/^[-+]?\d+$/.test(cleaned)) return { ok: false, value: original, changed: false };
+    const normalized = String(parseInt(cleaned, 10));
+    return { ok: true, value: normalized, changed: normalized !== original };
+  }
+  if (type === 'decimal') {
+    const cleaned = v.replace(/,/g, '');
+    if (!/^[-+]?\d*(?:\.\d+)?$/.test(cleaned))
+      return { ok: false, value: original, changed: false };
+    const num = Number.parseFloat(cleaned);
+    const normalized = Number.isFinite(num) ? String(num) : cleaned;
+    return { ok: true, value: normalized, changed: normalized !== original };
+  }
+  if (type === 'date') {
+    const str = v.replace(/\//g, '-');
+    // Direct ISO
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return { ok: true, value: str, changed: str !== original };
+    // Try D-M-YYYY or M-D-YYYY (1/2 digits)
+    if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(str)) {
+      const [a, b, y] = str.split('-');
+      const day = parseInt(a, 10);
+      const month = parseInt(b, 10);
+      // Heuristic: if first > 12 treat first as day else assume D-M (European). (Could be ambiguous; keep simple)
+      if (day <= 12 && parseInt(b, 10) > 12) {
+        // swap to keep day <=31; but if second >12 then second is day. leave as parsed
+      }
+      // Validate
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        const iso = `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(iso))
+          return { ok: true, value: iso, changed: iso !== original };
+      }
+    }
+    // Try YYYY/M/D or YYYY-M-D
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(str)) {
+      const [y, m, d] = str.split('-');
+      const month = parseInt(m, 10);
+      const day = parseInt(d, 10);
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        const iso = `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        return { ok: true, value: iso, changed: iso !== original };
+      }
+    }
+    return { ok: false, value: original, changed: false };
+  }
+  return { ok: true, value: original, changed: false };
+};
 
 // =============== Component =================
-const DEFAULT_COLS: DataHeader[] = [
-  { name: 'Column 1', type: 'text', width: 200, index: 0 },
-  { name: 'Column 2', type: 'text', width: 200, index: 1 },
+const DEFAULT_COLS: Column[] = [
+  { name: 'Column 1', type: 'string', width: 200 },
+  { name: 'Column 2', type: 'string', width: 200 },
 ];
-const createEmptyGrid = (rows: number, cols: number): string[][] =>
-  Array.from({ length: rows }, () => Array(cols).fill(''));
-// const DEFAULT_ROWS: string[][] = createEmptyGrid(8, DEFAULT_COLS.length);
+const DEFAULT_ROWS: string[][] = Array.from({ length: 8 }, () =>
+  Array(DEFAULT_COLS.length).fill('')
+);
 
 const CustomExcel: React.FC<CustomExcelProps> = ({
-  initialData,
-  initialColumns,
+  initialData = DEFAULT_ROWS,
+  initialColumns = DEFAULT_COLS,
   onDataChange,
   className = '',
   mode = 'edit',
-  allowHeaderEdit = true,
-  allowColumnEdit = true,
-  // onSorting,
-  highlightHeaderIds,
-  disableSelection = false,
 }) => {
   // Core state
-  const modalConfirm = useModalConfirm();
-  const { showSuccess } = useToastContext();
-  const columns = useAppSelector(selectColumns);
-  // Keep a ref of columns to avoid function identity churn in callbacks that shouldn't care about header name changes
-  const columnsRef = useRef(columns);
-  useEffect(() => {
-    columnsRef.current = columns;
-  }, [columns]);
+  const [columns, setColumns] = useState<Column[]>([]);
   const [data, setData] = useState<string[][]>([]);
-  const dataRef = useRef<string[][]>([]);
-  useEffect(() => {
-    dataRef.current = data;
-  }, [data]);
-  // Filters moved to Redux; use selector below
+  const [filters, setFilters] = useState<string[]>([]);
   // Track one-time initialization so prop identity changes (triggered by onDataChange upstream) do not reset edited state
   const initializedRef = useRef(false);
 
-  const [ready, setReady] = useState(false);
-  // Flag and timestamp to indicate an internal structure change (add/remove row/column)
-  const pendingStructureChangeRef = useRef(false);
-  const lastStructureChangeAtRef = useRef<number>(0);
-  // Track last initialized dimensions to detect real Change Data
-  const lastInitRowsRef = useRef<number>(0);
-  const lastInitColsRef = useRef<number>(0);
-  // Snapshot of the original dataset (first init or Change Data re-init)
-  const originalColsRef = useRef<DataHeader[] | null>(null);
-  const originalDataRef = useRef<string[][] | null>(null);
-  // Redux dispatch and selectors
-  const dispatch = useAppDispatch();
-  // Only subscribe to selectors that CustomExcel actually needs for its own rendering
-  const selectedColumn = useAppSelector(selectSelectedColumn);
-  const infoMessage = useAppSelector(selectInfoMessage);
-  const filters = useAppSelector(selectFilters);
-  const duplicateColumns = useAppSelector(selectDuplicateColumns);
-  // const currentEmptyColumns = useAppSelector(selectEmptyColumns); // unused
-  // Removed parseErrors - individual cells handle their own validation
-  // Removed touchedCells - not used in CustomExcel rendering
-  const {
-    tryConvert,
-    tryConvertColumn,
-    validateDuplicateColumns,
-    dateFormat,
-    numberFormat,
-    clearExcelErrors,
-    setExcelErrors,
-  } = useDataset();
+  const [sortConfig, setSortConfig] = useState<{
+    column: number;
+    direction: 'asc' | 'desc';
+  } | null>(null);
 
-  // Debounce timer for propagating onDataChange upstream
-  const onChangeDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const [selectedRow, setSelectedRow] = useState<number | null>(null);
+  const [selectedColumn, setSelectedColumn] = useState<number | null>(null);
 
-  // Sync dateFormat to Redux when it changes
-  useEffect(() => {
-    dispatch(setDateFormat(dateFormat));
-  }, [dateFormat, dispatch]);
-
-  // Sync numberFormat to Redux when it changes
-  useEffect(() => {
-    dispatch(setNumberFormat(numberFormat));
-  }, [numberFormat, dispatch]);
-  // Clear selection if disabled
-  useEffect(() => {
-    if (disableSelection) {
-      dispatch(setSelectedRow(null));
-      dispatch(setSelectedColumn(null));
-    }
-  }, [disableSelection, dispatch]);
-  // Temporary edits are now managed by ExcelUIContext
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  // New states for validation UX
+  const [touchedCells, setTouchedCells] = useState<Set<string>>(new Set());
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   // Large dataset heuristics
-  const LARGE_ROW_THRESHOLD = 300; // enable virtualization earlier for smoother UX
-  const LARGE_CELL_THRESHOLD = 20000; // rows * cols
+  const LARGE_ROW_THRESHOLD = 2000;
+  const LARGE_CELL_THRESHOLD = 50000; // rows * cols
   const isLarge =
     data.length > LARGE_ROW_THRESHOLD || data.length * columns.length > LARGE_CELL_THRESHOLD;
-  // history removed
+  const historyEnabled = !isLarge;
 
   // Virtualization states
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -165,594 +176,217 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
   const [viewportHeight, setViewportHeight] = useState(0);
   const ROW_HEIGHT = 40; // approximate row height incl. borders
 
-  // Shared initializer used on first mount and on Change Data
-  const initializeFromProps = useCallback(() => {
-    // init from incoming props
-    const incomingColumns =
-      Array.isArray(initialColumns) && initialColumns.length > 0 ? initialColumns : DEFAULT_COLS;
-    const initCols = incomingColumns.map(c => ({
+  // Always reset state when initialData, initialColumns, or mode changes
+  useEffect(() => {
+    const initCols = (initialColumns.length ? initialColumns : DEFAULT_COLS).map(c => ({
       ...c,
-      id: (c as any).id ?? (c as any).headerId ?? undefined,
       width: c.width || DEFAULT_WIDTH,
     }));
-
-    const providedData = Array.isArray(initialData) ? initialData : undefined;
-    const hasProvidedData = providedData !== undefined;
-    const shouldUseBlankFallback =
-      mode === 'edit' && (!hasProvidedData || providedData.length === 0);
-    const initData = shouldUseBlankFallback
-      ? createEmptyGrid(8, initCols.length)
-      : hasProvidedData
-        ? providedData.map(row => [...row])
-        : mode === 'view'
-          ? []
-          : createEmptyGrid(8, initCols.length);
-    // Capture original snapshot (deep-ish copy) for Reset
-    originalColsRef.current = initCols.map(c => ({ ...c }));
-    originalDataRef.current = initData.map(r => [...r]);
-    // Sync formats to Redux immediately to ensure error messages show correct expected format
-    dispatch(setDateFormat(dateFormat));
-    dispatch(setNumberFormat(numberFormat));
-    dispatch(setColumnsRedux(initCols));
+    const initData = initialData.length
+      ? initialData
+      : DEFAULT_ROWS.map(() => Array(initCols.length).fill(''));
+    setColumns(initCols);
     setData(initData);
-    dispatch(setFilters(Array(initCols.length).fill('')));
-
-    if (initCols.length > 0) {
-      const validationResult = validateDuplicateColumns(initCols);
-      dispatch(
-        setDuplicateColumns({
-          duplicateNames: validationResult.duplicateNames,
-          duplicateColumnIndices: validationResult.duplicateColumnIndices,
-        })
-      );
-      dispatch(setEmptyColumns(validationResult.emptyColumnIndices));
-
-      const parseErrors: Record<number, number[]> = {};
-      initData.forEach((row, rowIndex) => {
-        row.forEach((cellValue, colIndex) => {
-          const colType = initCols[colIndex]?.type ?? 'text';
-          const perColDateFormat = initCols[colIndex]?.dateFormat;
-          const conv = tryConvert(
-            colType,
-            colIndex,
-            rowIndex,
-            cellValue,
-            colType === 'number' ? numberFormat : undefined,
-            colType === 'date' ? (perColDateFormat as any) : undefined
-          );
-          if (!conv.ok) {
-            if (!parseErrors[rowIndex]) parseErrors[rowIndex] = [];
-            parseErrors[rowIndex].push(colIndex);
-          }
-        });
-      });
-      dispatch(setParseErrors(parseErrors));
-    }
-
+    setFilters(Array(initCols.length).fill(''));
     initializedRef.current = true;
-    setReady(true);
-    lastInitRowsRef.current = initData.length;
-    lastInitColsRef.current = initCols.length;
-  }, [
-    initialColumns,
-    initialData,
-    mode,
-    validateDuplicateColumns,
-    dispatch,
-    tryConvert,
-    dateFormat,
-    numberFormat,
-  ]);
+  }, [initialColumns, initialData, mode]);
 
-  // Initialize once from initialData/initialColumns
   useEffect(() => {
-    if (!initializedRef.current) {
-      initializeFromProps();
+    if (historyEnabled && history.length === 0 && columns.length > 0 && data.length > 0) {
+      const first: HistoryEntry = { data: deepClone(data), columns: deepClone(columns) };
+      setHistory([first]);
+      setHistoryIndex(0);
     }
-  }, [initializeFromProps]);
+  }, [columns, data, history.length, historyEnabled]);
 
-  // Hard reset when upstream data/columns truly change (e.g., Change Data flow)
-  useEffect(() => {
-    if (!initializedRef.current) return; // already in init path
-    // Only treat as Change Data if dataset dimensions changed
-    const incomingRows = initialData?.length || 0;
-    const incomingCols = initialColumns?.length || 0;
-    const rowsChanged = incomingRows !== lastInitRowsRef.current;
-    const colsChanged = incomingCols !== lastInitColsRef.current;
-    if (!rowsChanged && !colsChanged) return;
-    // If the dimension change originated from this component (add/remove),
-    // skip the heavy hard reset to preserve scroll and focus.
-    const now = Date.now();
-    // Skip if flagged or very recent internal change (within 400ms)
-    if (pendingStructureChangeRef.current || now - lastStructureChangeAtRef.current < 400) {
-      pendingStructureChangeRef.current = false;
-      // Update the last known dimensions so we don't loop
-      lastInitRowsRef.current = incomingRows;
-      lastInitColsRef.current = incomingCols;
-      return;
-    }
-    // hard reset due to dataset dimensions change
-    // Allow init effect to run again
-    clearExcelErrors();
-    dispatch(clearUIState());
-    initializedRef.current = false;
-    setReady(false);
-    // Wipe local state so init can repopulate
-    setData([]);
-    // Now re-initialize from new props after this tick to avoid race with Redux clear
-    setTimeout(() => {
-      initializeFromProps();
-    }, 0);
-  }, [initialData, initialColumns, dispatch, clearExcelErrors]);
-
-  // Removed internal header metadata sync; parent controls remount via key
-
-  // Keep DatasetContext excelErrors map in sync with Redux parseErrors for Create button validation
-  const reduxParseErrors = useAppSelector(selectParseErrors);
-  useEffect(() => {
-    setExcelErrors({ parseErrors: reduxParseErrors || {} });
-  }, [reduxParseErrors, setExcelErrors]);
-
-  // Sorting moved out of grid; do not emit sorting changes from here
-
-  // Recompute parseErrors when number/date formats or typed column sets change (quiet on name-only changes)
-  const prevNumberColsRef = useRef<number[] | null>(null);
-  const prevDateColsRef = useRef<number[] | null>(null);
-  const prevFormatsRef = useRef<{ dec: string; thou: string; date: string } | null>(null);
-  const prevDataSigRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!columns || columns.length === 0) return;
-    const numberCols = columns.map((c, i) => (c.type === 'number' ? i : -1)).filter(i => i >= 0);
-    const dateCols = columns.map((c, i) => (c.type === 'date' ? i : -1)).filter(i => i >= 0);
-    const formats = {
-      dec: numberFormat.decimalSeparator,
-      thou: numberFormat.thousandsSeparator,
-      date: dateFormat,
-    };
-    // Lightweight data signature: length + first few rows joined
-    const previewRows = 5;
-    const sigRows = data
-      .slice(0, previewRows)
-      .map(r => (r ? r.join('\u001f') : ''))
-      .join('\u001e');
-    const dataSig = `${data.length}|${columns.length}|${sigRows}`;
-
-    const sameNumbers =
-      prevNumberColsRef.current &&
-      prevNumberColsRef.current.length === numberCols.length &&
-      prevNumberColsRef.current.every((v, i) => v === numberCols[i]);
-    const sameDates =
-      prevDateColsRef.current &&
-      prevDateColsRef.current.length === dateCols.length &&
-      prevDateColsRef.current.every((v, i) => v === dateCols[i]);
-    const sameFormats =
-      prevFormatsRef.current &&
-      prevFormatsRef.current.dec === formats.dec &&
-      prevFormatsRef.current.thou === formats.thou &&
-      prevFormatsRef.current.date === formats.date;
-    if (sameNumbers && sameDates && sameFormats && prevDataSigRef.current === dataSig) return;
-
-    // Update refs
-    prevNumberColsRef.current = numberCols;
-    prevDateColsRef.current = dateCols;
-    prevFormatsRef.current = formats;
-    prevDataSigRef.current = dataSig;
-
-    if (numberCols.length === 0 && dateCols.length === 0) return;
-
-    const nextErrors: Record<number, number[]> = {};
-    for (let ri = 0; ri < data.length; ri++) {
-      for (const ci of numberCols) {
-        const v = data[ri]?.[ci] ?? '';
-        const conv = tryConvert('number', ci, ri, v, numberFormat, undefined);
-        if (!conv.ok) {
-          if (!nextErrors[ri]) nextErrors[ri] = [];
-          nextErrors[ri].push(ci);
-        }
-      }
-      for (const ci of dateCols) {
-        const v = data[ri]?.[ci] ?? '';
-        const perColDateFormat = columns[ci]?.dateFormat;
-        const conv = tryConvert('date', ci, ri, v, undefined, perColDateFormat as any);
-        if (!conv.ok) {
-          if (!nextErrors[ri]) nextErrors[ri] = [];
-          nextErrors[ri].push(ci);
-        }
-      }
-    }
-    dispatch(setParseErrors(nextErrors));
-  }, [numberFormat, dateFormat, columns, data, tryConvert, dispatch]);
-
-  // Recompute duplicate/empty column errors whenever column names or count change
-  const prevColSigRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!columns || columns.length === 0) return;
-    const signature = columns.map(c => `${c.name}|${c.type}`).join('||');
-    if (prevColSigRef.current === signature) return;
-    prevColSigRef.current = signature;
-    const { duplicateNames, duplicateColumnIndices, emptyColumnIndices } =
-      validateDuplicateColumns(columns);
-    dispatch(setDuplicateColumns({ duplicateNames, duplicateColumnIndices }));
-    dispatch(setEmptyColumns(emptyColumnIndices));
-  }, [columns, dispatch, validateDuplicateColumns]);
-
-  // Unified commit (no history). Backward-compatible with previous call shapes.
   const commit = useCallback(
-    (
-      nextData: string[][],
-      nextCols: DataHeader[],
-      arg3?:
-        | boolean
-        | {
-            dataChanged?: boolean;
-            columnsChanged?: boolean;
-            validationOnly?: boolean;
-            removedRowIndex?: number;
-            scheduleRevalidate?: boolean;
-          },
-      arg4?: {
-        dataChanged?: boolean;
-        columnsChanged?: boolean;
-        validationOnly?: boolean;
-        removedRowIndex?: number;
-        scheduleRevalidate?: boolean;
+    (nextData: string[][], nextCols: Column[], skipHistory = false) => {
+      setData(nextData);
+      setColumns(nextCols);
+      if (historyEnabled && !skipHistory) {
+        const entry: HistoryEntry = { data: deepClone(nextData), columns: deepClone(nextCols) };
+        setHistory(prev => [...prev.slice(0, historyIndex + 1), entry]);
+        setHistoryIndex(i => i + 1);
       }
-    ) => {
-      let changes: {
-        dataChanged?: boolean;
-        columnsChanged?: boolean;
-        validationOnly?: boolean;
-        removedRowIndex?: number;
-        scheduleRevalidate?: boolean;
-      } = {
-        dataChanged: true,
-        columnsChanged: false,
-      };
-      if (typeof arg3 === 'boolean') {
-        // skipHistory ignored, keep compatibility
-        changes = { ...changes, ...(arg4 || {}) };
-      } else if (typeof arg3 === 'object') {
-        changes = { ...changes, ...arg3 };
-      }
-
-      // Update data
-      if (changes.dataChanged) {
-        const prev = dataRef.current;
-        const rowsEqual = (a?: string[], b?: string[]) => {
-          if (!a || !b) return false;
-          if (a.length !== b.length) return false;
-          for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-          return true;
-        };
-        let optimized: string[][];
-        if (typeof changes.removedRowIndex === 'number') {
-          const removed = changes.removedRowIndex;
-          optimized = nextData.map((row, i) => {
-            // Before removed index, compare against same index
-            if (i < removed) return rowsEqual(row, prev[i]) ? prev[i] : row;
-            // After removed index, compare against prev[i+1] to preserve references
-            return rowsEqual(row, prev[i + 1]) ? (prev[i + 1] as string[]) : row;
-          });
+      // Always notify parent (debounced for large data)
+      if (onDataChange) {
+        if (isLarge) {
+          // Debounce using requestAnimationFrame + timeout
+          if ((onDataChange as any)._timer) clearTimeout((onDataChange as any)._timer);
+          (onDataChange as any)._timer = setTimeout(() => onDataChange(nextData, nextCols), 150);
         } else {
-          optimized = nextData.map((row, i) => (rowsEqual(row, prev[i]) ? prev[i] : row));
-        }
-        setData(optimized);
-      }
-
-      // Update columns only when changed
-      if (changes.columnsChanged) {
-        dispatch(setColumnsRedux(nextCols));
-      }
-
-      // Notify parent on any data or column changes so working dataset stays in sync (debounced)
-      if (onDataChange && (changes.dataChanged || changes.columnsChanged)) {
-        if (onChangeDebounceRef.current) clearTimeout(onChangeDebounceRef.current);
-        onChangeDebounceRef.current = setTimeout(
-          () => {
-            onDataChange(nextData, nextCols);
-          },
-          isLarge ? 150 : 100
-        );
-      }
-
-      // Revalidate entire sheet for non-keystroke commits
-      const doRevalidate = () => {
-        const numberCols = nextCols
-          .map((c, i) => (c.type === 'number' ? i : -1))
-          .filter(i => i >= 0);
-        const dateCols = nextCols.map((c, i) => (c.type === 'date' ? i : -1)).filter(i => i >= 0);
-        const nextErrors: Record<number, number[]> = {};
-        for (let ri = 0; ri < nextData.length; ri++) {
-          for (const ci of numberCols) {
-            const v = nextData[ri]?.[ci] ?? '';
-            const conv = tryConvert('number', ci, ri, v, numberFormat, undefined);
-            if (!conv.ok) {
-              if (!nextErrors[ri]) nextErrors[ri] = [];
-              nextErrors[ri].push(ci);
-            }
-          }
-          for (const ci of dateCols) {
-            const v = nextData[ri]?.[ci] ?? '';
-            const perColDateFormat = nextCols[ci]?.dateFormat;
-            const conv = tryConvert('date', ci, ri, v, undefined, perColDateFormat as any);
-            if (!conv.ok) {
-              if (!nextErrors[ri]) nextErrors[ri] = [];
-              nextErrors[ri].push(ci);
-            }
-          }
-        }
-        dispatch(setParseErrors(nextErrors));
-      };
-      if (!changes.validationOnly && (changes.dataChanged || changes.columnsChanged)) {
-        if (changes.scheduleRevalidate) {
-          // Defer heavy revalidation to keep UI smooth
-          setTimeout(doRevalidate, 0);
-        } else {
-          doRevalidate();
+          onDataChange(nextData, nextCols);
         }
       }
     },
-    [onDataChange, isLarge, numberFormat, dateFormat, tryConvert, dispatch]
+    [historyIndex, onDataChange, historyEnabled, isLarge]
   );
+
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const idx = historyIndex - 1;
+      const st = history[idx];
+      setHistoryIndex(idx);
+      setData(deepClone(st.data));
+      setColumns(deepClone(st.columns));
+      setFilters(Array(st.columns.length).fill(''));
+      setSelectedRow(null);
+      setSelectedColumn(null);
+      setSortConfig(null);
+      if (onDataChange) onDataChange(st.data, st.columns);
+    }
+  }, [historyIndex, history, onDataChange]);
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const idx = historyIndex + 1;
+      const st = history[idx];
+      setHistoryIndex(idx);
+      setData(deepClone(st.data));
+      setColumns(deepClone(st.columns));
+      setFilters(Array(st.columns.length).fill(''));
+      setSelectedRow(null);
+      setSelectedColumn(null);
+      setSortConfig(null);
+      if (onDataChange) onDataChange(st.data, st.columns);
+    }
+  }, [historyIndex, history, onDataChange]);
+
+  useEffect(() => {
+    if (mode === 'edit') {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        const target = e.target as HTMLElement;
+
+        // Skip if user is typing in input fields
+        if (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+
+        // Handle Ctrl+Z (Undo)
+        if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          undo();
+          return;
+        }
+
+        // Handle Ctrl+Y or Ctrl+Shift+Z (Redo)
+        if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+          e.preventDefault();
+          e.stopPropagation();
+          redo();
+          return;
+        }
+      };
+
+      document.addEventListener('keydown', handleKeyDown, true);
+      return () => document.removeEventListener('keydown', handleKeyDown, true);
+    }
+  }, [undo, redo, mode]);
 
   // Generic mutation helpers
-  // setCell no longer used with temp editing; setHeader removed (name edits now dispatch from header)
-
-  // Internal type change logic (mutates columns/data/history)
-  const setTypeInternal = useCallback(
-    (c: number, val: 'text' | 'number' | 'date') => {
-      console.log('🔧 setType called:', { column: c, newType: val });
-      dispatch(setInfoMessage(null));
-
-      const { nextData, nextColumns } = tryConvertColumn(c, val);
-
-      // For column type changes, only update columns initially (no data re-render)
-      // The validation will run separately and only update data if needed
-      commit(nextData, nextColumns, false, {
-        dataChanged: false, // Don't re-render data cells
-        columnsChanged: true, // Only update column headers
-      });
-
-      // Recompute Redux parseErrors for this column based on new type
-      const colType = nextColumns[c]?.type ?? 'text';
-      for (let ri = 0; ri < nextData.length; ri++) {
-        const v = nextData[ri]?.[c] ?? '';
-        const perColDateFormat = nextColumns[c]?.dateFormat;
-        const conv = tryConvert(
-          colType,
-          c,
-          ri,
-          v,
-          colType === 'number' ? numberFormat : undefined,
-          colType === 'date' ? (perColDateFormat as any) : undefined
-        );
-        dispatch(updateParseError({ row: ri, column: c, hasError: !conv.ok }));
+  const setCell = (r: number, c: number, val: string) => {
+    // For date normalization only (do not block typing)
+    const col = columns[c];
+    if (col?.type === 'date') {
+      val = val.replace(/\//g, '-');
+    }
+    // Only update local state; defer history commit to blur/Enter to avoid duplicate / rapid history states
+    setData(prev => {
+      const nd = [...prev];
+      const row = [...nd[r]];
+      row[c] = val;
+      nd[r] = row;
+      return nd;
+    });
+  };
+  const setHeader = (c: number, val: string) => {
+    const nc = deepClone(columns, true).map((col, i) => (i === c ? { ...col, name: val } : col));
+    nc[c].name = val;
+    commit(data, nc);
+  };
+  const setType = (c: number, val: 'string' | 'number' | 'decimal' | 'date') => {
+    if (columns[c].type === val) return;
+    setInfoMessage(null);
+    // Attempt conversion & validation
+    const invalidRows: number[] = [];
+    const changedRows: number[] = [];
+    const nextData = deepClone(data, true).map(r => [...r]);
+    for (let ri = 0; ri < nextData.length; ri++) {
+      const current = nextData[ri][c] ?? '';
+      const conv = tryConvert(val, current);
+      if (!conv.ok) {
+        invalidRows.push(ri + 1);
+        if (invalidRows.length >= 10) break;
+      } else if (conv.changed) {
+        nextData[ri][c] = conv.value;
+        changedRows.push(ri + 1);
+      } else if (conv.ok && conv.value !== current) {
+        // value different but not flagged changed? keep semantics
+        nextData[ri][c] = conv.value;
+        if (!changedRows.includes(ri + 1)) changedRows.push(ri + 1);
       }
-
-      dispatch(setTouchedCells([]));
-    },
-    [dispatch, tryConvertColumn, commit, tryConvert, dateFormat]
-  );
-
-  // Expose a stable callback to children to prevent prop identity churn
-  const setTypeRef = useRef(setTypeInternal);
-  useEffect(() => {
-    setTypeRef.current = setTypeInternal;
-  }, [setTypeInternal]);
-  const setType = useCallback(
-    (c: number, val: 'text' | 'number' | 'date') => setTypeRef.current(c, val),
-    []
-  );
-
-  // Handle cell focus to select column
-  const handleCellFocus = useCallback(
-    (_rowIndex: number, columnIndex: number) => {
-      if (disableSelection) return;
-      // Select the column when a cell is focused
-      dispatch(setSelectedColumn(columnIndex));
-    },
-    [dispatch, disableSelection]
-  );
-
-  // Handle cell changes from individual ExcelCell components
-  const handleCellChange = useCallback(
-    (rowIndex: number, columnIndex: number, newValue: string) => {
-      const finalVal = newValue.trim();
-      const currentValue = data[rowIndex]?.[columnIndex] || '';
-
-      // Skip if value hasn't actually changed
-      if (finalVal === currentValue) {
-        return;
-      }
-
-      // Commit trimmed value to data only (no normalization)
-      const nextData = [...data];
-      const rowCopy = [...nextData[rowIndex]];
-      rowCopy[columnIndex] = finalVal;
-      nextData[rowIndex] = rowCopy;
-      // Use latest columns via ref; mark as validationOnly so we don't recompute the whole sheet here
-      commit(nextData, columnsRef.current, false, {
-        dataChanged: true,
-        columnsChanged: false,
-        validationOnly: true,
-      });
-    },
-    [data, commit]
-  );
+    }
+    if (invalidRows.length) {
+      setErrorMessage(
+        `Không thể đổi kiểu cột: ${invalidRows.length} dòng không hợp lệ (ví dụ dòng: ${invalidRows.slice(0, 5).join(', ')}). Hãy sửa dữ liệu trước.`
+      );
+      return;
+    }
+    const nc = columns.map((col, i) => (i === c ? { ...col, type: val } : col));
+    commit(nextData, nc);
+    setErrorMessage(null);
+    if (changedRows.length) {
+      setInfoMessage(
+        `Đã chuẩn hoá ${changedRows.length} giá trị cho cột "${columns[c].name}" (ví dụ dòng: ${changedRows.slice(0, 5).join(', ')})`
+      );
+    }
+    // When type changes we re-validate touched cells for this column
+    setTouchedCells(prev => new Set([...prev]));
+  };
 
   // Add/remove
   const addRow = () => {
     if (mode === 'view') return;
-    pendingStructureChangeRef.current = true;
-    lastStructureChangeAtRef.current = Date.now();
     const nd = [...data, Array(columns.length).fill('')];
-    // Adding row changes both data and columns (new row added)
-    commit(nd, columns, {
-      dataChanged: true, // Update data cells
-      columnsChanged: false, // Do not notify parent; columns unchanged
-      scheduleRevalidate: true,
-    });
-    // Scroll to the new row (do not auto-select to avoid flashing in delete controls)
-    const newIndex = nd.length - 1;
-    // Scroll after layout so virtualization has updated
-    setTimeout(() => {
-      const el = scrollRef.current;
-      const tryScroll = (attempt: number) => {
-        if (!el) return;
-        const targetInput = el.querySelector(
-          `input[data-cell='${newIndex}-0']`
-        ) as HTMLElement | null;
-        if (targetInput) {
-          // Scroll only the container, not the whole page
-          const containerRect = el.getBoundingClientRect();
-          const targetRect = targetInput.getBoundingClientRect();
-          const thead = el.querySelector('thead') as HTMLElement | null;
-          const headerH = thead ? thead.getBoundingClientRect().height : 0;
-          const current = el.scrollTop;
-          const offsetWithin = targetRect.top - containerRect.top;
-          // Aim to place the row a little below the header
-          const desiredTop = Math.max(0, current + offsetWithin - headerH - 8);
-          el.scrollTo({ top: desiredTop, behavior: 'smooth' });
-          return;
-        }
-        // Nudge to bottom to force virtualization to render last rows
-        el.scrollTop = el.scrollHeight;
-        if (attempt < 5) {
-          requestAnimationFrame(() => tryScroll(attempt + 1));
-        }
-      };
-      tryScroll(0);
-    }, 0);
+    commit(nd, columns);
   };
   const addColumn = () => {
     if (mode === 'view') return;
-    pendingStructureChangeRef.current = true;
-    lastStructureChangeAtRef.current = Date.now();
-    const nc: DataHeader[] = [
+    const nc: Column[] = [
       ...columns,
-      {
-        name: `Column ${columns.length + 1}`,
-        type: 'text' as const,
-        width: DEFAULT_WIDTH,
-        index: columns.length,
-      },
+      { name: `Column ${columns.length + 1}`, type: 'string' as const, width: DEFAULT_WIDTH },
     ];
     const nd = data.map(r => [...r, '']) as string[][];
-    // Update columns locally without notifying parent
-    dispatch(setColumnsRedux(nc));
-    commit(nd, nc, {
-      dataChanged: true, // Update data cells (new column added)
-      columnsChanged: false, // columns already updated locally; avoid parent notify
-      scheduleRevalidate: true,
-    });
-    dispatch(setFilters([...(filters || []), '']));
-    // Select and scroll to the new column
-    const newColIndex = nc.length - 1;
-    dispatch(setSelectedColumn(newColIndex));
-    setTimeout(() => {
-      const el = scrollRef.current;
-      if (el) {
-        // Wait one frame to ensure layout has updated widths
-        requestAnimationFrame(() => {
-          el.scrollTo({ left: el.scrollWidth, behavior: 'smooth' });
-        });
-      }
-    }, 0);
+    commit(nd, nc);
+    setFilters(f => [...f, '']);
   };
 
   const removeRow = (r: number) => {
     if (mode === 'view' || data.length <= 1) return;
-    pendingStructureChangeRef.current = true;
-    lastStructureChangeAtRef.current = Date.now();
-    // Measure the pre-delete visual offset of the row so we can preserve it post-delete
-    let anchorOffset = 0;
-    const containerBefore = scrollRef.current;
-    if (containerBefore) {
-      const beforeEl = containerBefore.querySelector(
-        `input[data-cell='${r}-0']`
-      ) as HTMLElement | null;
-      if (beforeEl) {
-        const containerRect = containerBefore.getBoundingClientRect();
-        const targetRect = beforeEl.getBoundingClientRect();
-        anchorOffset = targetRect.top - containerRect.top;
-      }
-    }
     const nd = data.filter((_, i) => i !== r);
-    // Removing row changes both data and columns
-    commit(nd, columns, {
-      dataChanged: true, // Update data cells
-      columnsChanged: false, // Do not notify parent; columns unchanged
-      removedRowIndex: r,
-      scheduleRevalidate: true,
-    });
-    // Keep selection at the same visual position: select the row that shifted up (same index),
-    // or the last row if we deleted the last one.
-    const nextIndex = Math.min(r, nd.length - 1);
-    if (nextIndex >= 0) {
-      dispatch(setSelectedRow(nextIndex));
-      // Scroll into view after layout updates
-      setTimeout(() => {
-        const el = scrollRef.current;
-        if (!el) return;
-        const target = el.querySelector(`input[data-cell='${nextIndex}-0']`) as HTMLElement | null;
-        if (target) {
-          const containerRect = el.getBoundingClientRect();
-          const targetRect = target.getBoundingClientRect();
-          const current = el.scrollTop;
-          const offsetWithin = targetRect.top - containerRect.top;
-          // Preserve the pre-delete visual offset by applying the delta
-          const desiredTop = Math.max(0, current + (offsetWithin - anchorOffset));
-          el.scrollTo({ top: desiredTop, behavior: 'auto' });
-        }
-      }, 0);
-    } else {
-      dispatch(setSelectedRow(null));
-    }
+    setSelectedRow(null);
+    commit(nd, columns);
   };
 
   const removeColumn = (c: number) => {
     if (mode === 'view' || columns.length <= 1) return;
-    pendingStructureChangeRef.current = true;
-    lastStructureChangeAtRef.current = Date.now();
     const nc = columns.filter((_, i) => i !== c);
     const nd = data.map(r => r.filter((_, i) => i !== c));
-    // Determine next convenient selection before state updates
-    const nextColIndex = Math.min(c, nc.length - 1);
-    // Clear selection momentarily to avoid stale highlights during update
-    dispatch(setSelectedColumn(null));
-    // Update columns locally without notifying parent
-    dispatch(setColumnsRedux(nc));
-    // Sorting removed from grid: no need to adjust sort state on column removal
-    commit(nd, nc, {
-      dataChanged: true, // Update data cells
-      columnsChanged: false, // columns already updated locally; avoid parent notify
-      scheduleRevalidate: true,
-    });
-    dispatch(setFilters((filters || []).filter((_, i) => i !== c)));
-    // Reselect and scroll into view similar to row deletion behavior
-    if (nextColIndex >= 0 && nc.length > 0) {
-      dispatch(setSelectedColumn(nextColIndex));
-      setTimeout(() => {
-        const el = scrollRef.current;
-        if (!el) return;
-        // Try to find a cell in the first row for the target column
-        const target = el.querySelector(
-          `input[data-cell='0-${nextColIndex}']`
-        ) as HTMLElement | null;
-        if (target) {
-          const containerRect = el.getBoundingClientRect();
-          const targetRect = target.getBoundingClientRect();
-          const currentLeft = el.scrollLeft;
-          const offsetWithin = targetRect.left - containerRect.left;
-          const desiredLeft = Math.max(0, currentLeft + offsetWithin - 16);
-          el.scrollTo({ left: desiredLeft, behavior: 'auto' });
-        }
-      }, 0);
-    }
+    setSelectedColumn(null);
+    setSortConfig(null);
+    commit(nd, nc);
+    setFilters(f => f.filter((_, i) => i !== c));
   };
 
-  const deleteSelectedRow = (rowIndex: number) => {
-    removeRow(rowIndex);
+  const deleteSelectedRow = () => {
+    if (selectedRow !== null) {
+      removeRow(selectedRow);
+    }
   };
   const deleteSelectedColumn = () => {
     if (selectedColumn !== null) {
@@ -760,184 +394,93 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     }
   };
 
-  // Sorting handled in header via Redux; CustomExcel derives sorted view by sortConfig
+  const handleSort = (columnIndex: number) => {
+    if (mode === 'view') return;
 
-  // Filters now handled in Redux in column header
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.column === columnIndex && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+
+    setSortConfig({ column: columnIndex, direction });
+
+    const nd = [...data];
+    const columnType = columns[columnIndex].type;
+
+    nd.sort((a, b) => {
+      const aVal = a[columnIndex] || '';
+      const bVal = b[columnIndex] || '';
+
+      if (columnType === 'number' || columnType === 'decimal') {
+        const aNum = Number.parseFloat(aVal) || 0;
+        const bNum = Number.parseFloat(bVal) || 0;
+        return direction === 'asc' ? aNum - bNum : bNum - aNum;
+      } else {
+        return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+    });
+
+    commit(nd, columns);
+  };
+
+  // Filters
+  const changeFilter = (c: number, v: string) =>
+    setFilters(fs => {
+      const nf = [...fs];
+      nf[c] = v;
+      return nf;
+    });
 
   const filteredData = useMemo(() => {
-    const indexed = data.map((row, i) => ({ row, i }));
-    if (!filters.some(f => f)) return indexed;
-    return indexed.filter(({ row }) =>
-      row.every((cell, ci) =>
-        filters[ci] ? String(cell).toLowerCase().includes(filters[ci].toLowerCase()) : true
-      )
-    );
+    if (!filters.some(f => f)) return data.map((row, i) => ({ row, i }));
+    return data
+      .map((row, i) => ({ row, i }))
+      .filter(({ row }) =>
+        row.every((cell, ci) =>
+          filters[ci] ? String(cell).toLowerCase().includes(filters[ci].toLowerCase()) : true
+        )
+      );
   }, [data, filters]);
 
-  const sortedFilteredData = filteredData;
-
-  // Sorting removed from grid
-
-  // Sorting persistence removed from grid
-
-  // Virtualization calculations: robustly measure visible height
+  // Virtualization calculations
   useEffect(() => {
+    if (!scrollRef.current) return;
     const el = scrollRef.current;
-    if (!el) return;
+    const resize = () => setViewportHeight(el.clientHeight);
+    resize();
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, []);
 
-    const measure = () => {
-      const containerH = el.clientHeight || el.getBoundingClientRect().height;
-      const thead = el.querySelector('thead') as HTMLElement | null;
-      const headerH = thead ? thead.getBoundingClientRect().height : 0;
-      const bodyH = Math.max(0, containerH - headerH);
-      if (bodyH > 0) setViewportHeight(bodyH);
-    };
+  const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  };
 
-    // Initial measure (in case effect runs before layout stabilizes)
-    measure();
-    // Retry once on next frame if zero height
-    if (el.getBoundingClientRect().height === 0) {
-      requestAnimationFrame(measure);
-    }
-
-    // Observe size changes of the scroll container
-    const ro = new ResizeObserver(() => {
-      measure();
-    });
-    ro.observe(el);
-
-    const onWinResize = () => measure();
-    window.addEventListener('resize', onWinResize);
-
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('resize', onWinResize);
-    };
-  }, [ready]);
-
-  // Use useRef to track scroll position without causing re-renders
-  const scrollTopRef = useRef(0);
-  const rafRef = useRef<number | null>(null);
-
-  const onScroll = useCallback(
-    (e: React.UIEvent<HTMLDivElement>) => {
-      const newScrollTop = e.currentTarget.scrollTop;
-      scrollTopRef.current = newScrollTop;
-
-      // Cancel previous animation frame
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
-
-      // Use requestAnimationFrame for smooth updates
-      rafRef.current = requestAnimationFrame(() => {
-        // Only update state if we need to recalculate visible rows
-        if (isLarge) {
-          const newStartIndex = Math.max(0, Math.floor(newScrollTop / ROW_HEIGHT) - 2);
-          const currentStartIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 2);
-
-          // Only update if the visible range actually changed
-          if (newStartIndex !== currentStartIndex) {
-            setScrollTop(newScrollTop);
-          }
-        }
-      });
-    },
-    [isLarge, scrollTop, ROW_HEIGHT]
-  );
-
-  const visibleCount = Math.ceil(viewportHeight / ROW_HEIGHT) + 8;
-  const rawStart = isLarge ? Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 2) : 0;
-  const maxStart = Math.max(0, sortedFilteredData.length - visibleCount);
-  const startIndex = Math.min(rawStart, maxStart);
+  const visibleCount = Math.ceil(viewportHeight / ROW_HEIGHT) + 5;
+  const startIndex = isLarge ? Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 2) : 0;
   const endIndex = isLarge
-    ? Math.min(sortedFilteredData.length, startIndex + visibleCount)
-    : sortedFilteredData.length;
-  const rowsToRender = sortedFilteredData.slice(startIndex, endIndex);
-  const totalRowsCount = sortedFilteredData.length;
-  const topSpacerHeight = isLarge ? startIndex * ROW_HEIGHT : 0;
-  const bottomSpacerHeight = isLarge ? Math.max(0, (totalRowsCount - endIndex) * ROW_HEIGHT) : 0;
-  useEffect(() => {
-    // console.log('[CustomExcel] rows debug', {
-    //   dataLength: data.length,
-    //   filteredLength: filteredData.length,
-    //   rowsToRender: rowsToRender.length,
-    //   isLarge,
-    // });
-  }, [data.length, filteredData.length, rowsToRender.length, isLarge]);
-
-  // If data length shrinks while scrolled far, clamp scrollTop to keep viewport filled
-  useEffect(() => {
-    if (!isLarge) return;
-    const desiredMaxStart = Math.max(0, sortedFilteredData.length - visibleCount);
-    const currentStart = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 2);
-    if (currentStart > desiredMaxStart) {
-      const clampedScroll = (desiredMaxStart + 2) * ROW_HEIGHT; // +2 to keep buffer logic
-      setScrollTop(clampedScroll);
-      scrollTopRef.current = clampedScroll;
-    }
-  }, [isLarge, sortedFilteredData.length, visibleCount, ROW_HEIGHT]);
+    ? Math.min(filteredData.length, startIndex + visibleCount)
+    : filteredData.length;
+  const rowsToRender = filteredData.slice(startIndex, endIndex);
+  const topSpacer = startIndex * ROW_HEIGHT;
+  const bottomSpacer = (filteredData.length - endIndex) * ROW_HEIGHT;
 
   const totalWidth = Math.max(
     columns.reduce((s, c) => s + (c.width || DEFAULT_WIDTH), 0),
     600
   );
 
-  // Compute highlighted columns by matching current column ids, fallback to names when needed
-  const highlightedColumns = useMemo(() => {
-    const out = new Set<number>();
-    if (highlightHeaderIds && highlightHeaderIds.length) {
-      const idSet = new Set<string>(highlightHeaderIds);
-      columns.forEach((c, i) => {
-        if (c?.id && idSet.has(c.id)) out.add(i);
-      });
-    }
-    return out;
-  }, [columns, highlightHeaderIds]);
-
-  // Version string to force shallow-prop change when highlight set changes
-  const highlightVersion = useMemo(() => {
-    return Array.from(highlightedColumns.values())
-      .sort((a, b) => a - b)
-      .join(',');
-  }, [highlightedColumns]);
-
-  // // Debug: log highlight resolution details
-  // useEffect(() => {
-  //   console.log('[HighlightDebug][CustomExcel] resolve', {
-  //     incomingIds: highlightHeaderIds || [],
-  //     columnIds: columns.map(c => (c as any)?.id ?? (c as any)?.headerId ?? null),
-  //     highlightedIndices: Array.from(highlightedColumns.values()),
-  //   });
-  // }, [columns, highlightHeaderIds, highlightedColumns]);
-
-  // Read highlightVersion to satisfy lints about unused var in rows; keeps stable prop churn minimal
-  useEffect(() => {
-    void highlightVersion;
-  }, [highlightVersion]);
-
   // ===== Clipboard & Export Helpers =====
-  const copyAll = useCallback(async () => {
+  const copyAll = useCallback(() => {
     try {
-      const escapeCSV = (val: unknown): string => {
-        const s = val == null ? '' : String(val);
-        // Escape double quotes by doubling them
-        const escaped = s.replace(/"/g, '""');
-        // If contains comma, quote, or newline, wrap in quotes
-        if (/[",\n]/.test(escaped)) {
-          return `"${escaped}"`;
-        }
-        return escaped;
-      };
-      const header = columns.map(c => escapeCSV(c.name));
-      const body = data.map(r => r.map(v => escapeCSV(v)));
-      const csv = [header, ...body].map(row => row.join(',')).join('\n');
-      await navigator.clipboard.writeText(csv);
-      showSuccess('Copied to clipboard');
+      const header = columns.map(c => c.name);
+      const body = data.map(r => r.map(v => v ?? ''));
+      const text = [header, ...body].map(row => row.join('\t')).join('\n');
+      void navigator.clipboard.writeText(text);
     } catch (e) {
       console.error('Copy failed', e);
     }
-  }, [columns, data, showSuccess]);
+  }, [columns, data]);
 
   const exportXlsx = useCallback(() => {
     try {
@@ -952,56 +495,6 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
       console.error('Export failed', e);
     }
   }, [columns, data]);
-
-  // Reset to original dataset snapshot captured on init (rows, columns, and data)
-  const handleResetOriginal = useCallback(() => {
-    try {
-      const origData = originalDataRef.current;
-      const origCols = originalColsRef.current;
-      if (!origData || !origCols) {
-        // Fallback if snapshot missing
-        initializeFromProps();
-        return;
-      }
-
-      // Restore columns first to ensure widths/types/format match snapshot
-      const restoredCols = origCols.map(c => ({ ...c }));
-      dispatch(setColumnsRedux(restoredCols));
-
-      // Clear UI state tied to current edits
-      dispatch(setFilters(Array(restoredCols.length).fill('')));
-
-      // Restore data
-      clearExcelErrors();
-      const restoredData = origData.map(r => [...r]);
-      setData(restoredData);
-
-      // Recompute parse errors on the restored sheet using RESTORED columns
-      const nextErrors: Record<number, number[]> = {};
-      for (let ri = 0; ri < restoredData.length; ri++) {
-        for (let ci = 0; ci < restoredCols.length; ci++) {
-          const col = restoredCols[ci];
-          const colType = col?.type ?? 'text';
-          const v = restoredData[ri]?.[ci] ?? '';
-          const conv = tryConvert(
-            colType as any,
-            ci,
-            ri,
-            v,
-            colType === 'number' ? numberFormat : undefined,
-            colType === 'date' ? (col as any)?.dateFormat : undefined
-          );
-          if (!conv.ok) {
-            if (!nextErrors[ri]) nextErrors[ri] = [];
-            nextErrors[ri].push(ci);
-          }
-        }
-      }
-      dispatch(setParseErrors(nextErrors));
-    } catch (e) {
-      console.error('Reset failed', e);
-    }
-  }, [dispatch, clearExcelErrors, initializeFromProps, tryConvert, numberFormat]);
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTableElement>) => {
@@ -1035,11 +528,11 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
         }
         // (Optional) grow columns if needed
         const colsNeeded = baseCol + Math.max(...rows.map(r => r.length));
-        if (allowColumnEdit && colsNeeded > columns.length) {
-          // Add new columns automatically (text type) if paste exceeds width
-          const added: DataHeader[] = [];
+        if (colsNeeded > columns.length) {
+          // Add new columns automatically (string type) if paste exceeds width
+          const added: Column[] = [];
           for (let ci = columns.length; ci < colsNeeded; ci++) {
-            added.push({ name: `Column ${ci + 1}`, type: 'text', width: DEFAULT_WIDTH, index: ci });
+            added.push({ name: `Column ${ci + 1}`, type: 'string', width: DEFAULT_WIDTH });
           }
           if (added.length) {
             const newCols = [...columns, ...added];
@@ -1050,21 +543,18 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
               }
               return r;
             });
-            dispatch(setColumnsRedux(newCols));
+            setColumns(newCols);
           }
         }
         // Apply pasted cells
         rows.forEach((prow, ri) => {
-          // Clone the target row before mutating to avoid writing into a frozen array
-          const original = next[baseRow + ri] ?? Array(columns.length).fill('');
-          const tr = Array.isArray(original) ? [...original] : Array(columns.length).fill('');
+          const tr = next[baseRow + ri];
           prow.forEach((val, ci) => {
-            // When column edits are disabled, do not write beyond current width
             if (baseCol + ci < tr.length) {
               tr[baseCol + ci] = val;
             }
           });
-          next[baseRow + ri] = tr;
+          next[baseRow + ri] = [...tr];
         });
         // Commit via helper (columns state may have been updated asynchronously if columns grew)
         commit(next, columns);
@@ -1073,18 +563,6 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
     },
     [mode, columns, commit]
   );
-
-  if (!ready) {
-    return (
-      <div
-        className={`w-full max-w-full p-4 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}
-      >
-        <div className="border rounded-md bg-white dark:bg-gray-800 h-[60vh] relative overflow-hidden flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
-          Loading...
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -1096,79 +574,68 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
             <Button size="sm" onClick={addRow} className="gap-1">
               <Plus size={14} /> Row
             </Button>
-            {allowColumnEdit && (
-              <Button size="sm" onClick={addColumn} className="gap-1">
-                <Plus size={14} /> Col
-              </Button>
-            )}
+            <Button size="sm" onClick={addColumn} className="gap-1">
+              <Plus size={14} /> Col
+            </Button>
             <div className="h-5 w-px bg-gray-300 dark:bg-gray-600" />
-            <DeleteRowButton onDelete={deleteSelectedRow} dataLength={data.length} />
-            {allowColumnEdit && (
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={deleteSelectedColumn}
-                disabled={selectedColumn === null || columns.length <= 1}
-                className="gap-1"
-              >
-                Delete Col {selectedColumn !== null ? `"${columns[selectedColumn]?.name}"` : ''}
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={deleteSelectedRow}
+              disabled={selectedRow === null || data.length <= 1}
+              className="gap-1"
+            >
+              Delete Row {selectedRow !== null ? `#${selectedRow + 1}` : ''}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={deleteSelectedColumn}
+              disabled={selectedColumn === null || columns.length <= 1}
+              className="gap-1"
+            >
+              Delete Col {selectedColumn !== null ? `"${columns[selectedColumn]?.name}"` : ''}
+            </Button>
             <div className="h-5 w-px bg-gray-300 dark:bg-gray-600" />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={e => {
+                e.preventDefault();
+                undo();
+              }}
+              disabled={!historyEnabled || historyIndex <= 0}
+              title={historyEnabled ? 'Undo (Ctrl+Z)' : 'Undo disabled for large dataset'}
+            >
+              <Undo size={16} />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={e => {
+                e.preventDefault();
+                redo();
+              }}
+              disabled={!historyEnabled || historyIndex >= history.length - 1}
+              title={historyEnabled ? 'Redo (Ctrl+Y)' : 'Redo disabled for large dataset'}
+            >
+              <Redo size={16} />
+            </Button>
+            <div className="h-5 w-px bg-gray-300 dark:bg-gray-600" />
+            <Button size="sm" variant="outline" onClick={copyAll} className="gap-1 bg-transparent">
+              <Copy size={14} /> Copy
+            </Button>
           </>
         )}
-        <Button size="sm" variant="outline" onClick={copyAll} className="gap-1 bg-transparent">
-          <Copy size={14} /> Copy
-        </Button>
         <Button size="sm" variant="outline" onClick={exportXlsx} className="gap-1 bg-transparent">
           <FileDown size={14} /> Export
         </Button>
-        {mode === 'edit' && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              modalConfirm.openConfirm(async () => {
-                handleResetOriginal();
-                showSuccess('Reset successful');
-              })
-            }
-            className="gap-1 bg-transparent"
-          >
-            <RotateCcw size={14} /> Reset
-          </Button>
-        )}
         <div className="flex-grow text-xs text-gray-500 dark:text-gray-400">
           {isLarge && (
             <span>
               Virtualized view: showing {rowsToRender.length} of {filteredData.length} rows
             </span>
           )}
-        </div>
-        <div className="ml-auto flex items-center gap-3 text-xs">
-          <span className="text-gray-600 dark:text-gray-300">Thousand separator:</span>
-          {numberFormat.thousandsSeparator === '' ? (
-            <span
-              className="inline-block w-5 h-5 rounded-sm border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700"
-              title="Empty (no thousands separator)"
-            />
-          ) : (
-            <span className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-mono">
-              {numberFormat.thousandsSeparator}
-            </span>
-          )}
-          <span className="text-gray-600 dark:text-gray-300">Decimal separator:</span>
-          <span className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-mono">
-            {numberFormat.decimalSeparator}
-          </span>
-          <span className="text-gray-600 dark:text-gray-300">Columns:</span>
-          <span className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-mono">
-            {columns.length}
-          </span>
-          <span className="text-gray-600 dark:text-gray-300">Rows:</span>
-          <span className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-mono">
-            {filteredData.length}
-          </span>
         </div>
       </div>
 
@@ -1190,41 +657,163 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
             }}
             onPaste={handlePaste}
           >
-            <ExcelHeaderRow
-              mode={mode}
-              onTypeChange={setType}
-              allowHeaderEdit={allowHeaderEdit}
-              highlightedColumns={highlightedColumns}
-              showColumnDeselect={disableSelection ? false : allowColumnEdit}
-              disableSelection={disableSelection}
-            />
+            <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0 z-30 select-none">
+              <tr>
+                <th className="sticky left-0 z-40 bg-gray-100 dark:bg-gray-700 border-r border-b border-gray-300 dark:border-gray-600 w-12 text-center font-semibold">
+                  #
+                </th>
+                {columns.map((col, ci) => (
+                  <th
+                    key={ci}
+                    className={`relative group border-b border-r border-gray-300 dark:border-gray-600 p-2 align-top font-semibold text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 ${
+                      selectedColumn === ci ? 'bg-blue-100 dark:bg-blue-900/50' : ''
+                    }`}
+                    style={{ width: col.width || DEFAULT_WIDTH, minWidth: 150 }}
+                    onClick={() => setSelectedColumn(selectedColumn === ci ? null : ci)}
+                  >
+                    <div className="flex items-center gap-1">
+                      {mode === 'edit' && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost" className="w-6 h-6 flex-shrink-0">
+                              {COLUMN_TYPES.find(t => t.value === col.type)?.icon}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            {COLUMN_TYPES.map(t => (
+                              <DropdownMenuItem
+                                key={t.value}
+                                onClick={() => setType(ci, t.value as any)}
+                                className="gap-2"
+                              >
+                                {t.icon} {t.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                      <input
+                        value={col.name}
+                        readOnly={mode === 'view'}
+                        onChange={e => setHeader(ci, e.target.value)}
+                        className={`flex-grow bg-transparent font-bold text-sm px-2 py-1 rounded-md min-w-0 ${mode === 'edit' ? 'focus:outline-none focus:ring-1 focus:ring-blue-500 hover:bg-gray-50 dark:hover:bg-gray-600' : 'cursor-default'}`}
+                        style={{ maxWidth: '140px' }}
+                      />
+                      {mode === 'edit' && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleSort(ci);
+                          }}
+                          className="w-6 h-6 flex-shrink-0"
+                          title="Sort column"
+                        >
+                          {sortConfig?.column === ci ? (
+                            sortConfig.direction === 'asc' ? (
+                              <ArrowUp size={12} />
+                            ) : (
+                              <ArrowDown size={12} />
+                            )
+                          ) : (
+                            <ArrowUpDown size={12} />
+                          )}
+                        </Button>
+                      )}
+                      {selectedColumn === ci && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={e => {
+                            e.stopPropagation();
+                            setSelectedColumn(null);
+                          }}
+                          className="w-6 h-6 flex-shrink-0"
+                        >
+                          <X size={12} className="text-blue-500" />
+                        </Button>
+                      )}
+                    </div>
+                    {mode === 'edit' && (
+                      <input
+                        value={filters[ci] || ''}
+                        onChange={e => changeFilter(ci, e.target.value)}
+                        placeholder="Filter..."
+                        className="w-full text-xs border rounded px-2 py-1 mt-1 bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      />
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
             <tbody>
-              {isLarge && topSpacerHeight > 0 && (
-                <tr>
-                  <td colSpan={columns.length} style={{ padding: 0, border: 'none' }}>
-                    <div style={{ height: topSpacerHeight }} />
-                  </td>
+              {isLarge && topSpacer > 0 && (
+                <tr style={{ height: topSpacer }}>
+                  <td colSpan={columns.length + 1} />
                 </tr>
               )}
               {rowsToRender.map(({ row, i }) => (
-                <ExcelRow
+                <tr
                   key={i}
-                  rowIndex={i}
-                  rowData={row}
-                  columnsLength={columns.length}
-                  mode={mode}
-                  onCellChange={handleCellChange}
-                  onCellFocus={handleCellFocus}
-                  highlightedColumns={highlightedColumns}
-                  _highlightVersion={highlightVersion}
-                  disableSelection={disableSelection}
-                />
-              ))}
-              {isLarge && bottomSpacerHeight > 0 && (
-                <tr>
-                  <td colSpan={columns.length} style={{ padding: 0, border: 'none' }}>
-                    <div style={{ height: bottomSpacerHeight }} />
+                  className={`hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+                    selectedRow === i ? 'bg-blue-100 dark:bg-blue-900/50' : ''
+                  }`}
+                  onClick={() => setSelectedRow(selectedRow === i ? null : i)}
+                >
+                  <td className="sticky left-0 z-20 bg-gray-100 dark:bg-gray-700 border-r border-b border-gray-300 dark:border-gray-600 text-center text-gray-600 dark:text-gray-300 px-2 text-xs">
+                    {i + 1}
+                    {selectedRow === i && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={e => {
+                          e.stopPropagation();
+                          setSelectedRow(null);
+                        }}
+                        className="w-4 h-4 ml-1"
+                      >
+                        <X size={10} className="text-blue-500" />
+                      </Button>
+                    )}
                   </td>
+                  {columns.map((col, ci) => (
+                    <td
+                      key={ci}
+                      className="border-b border-r border-gray-200 dark:border-gray-600"
+                      style={{ width: col.width || DEFAULT_WIDTH, minWidth: 150 }}
+                    >
+                      <input
+                        data-cell={`${i}-${ci}`}
+                        value={row[ci] || ''}
+                        readOnly={mode === 'view'}
+                        onChange={e => setCell(i, ci, e.target.value)}
+                        onBlur={() => {
+                          setTouchedCells(s => new Set(s).add(`${i}-${ci}`));
+                          commit(data, columns);
+                        }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
+                        type="text"
+                        placeholder={col.type === 'date' ? 'YYYY-MM-DD' : ''}
+                        className={`w-full h-full p-2 bg-transparent border-none text-sm ${mode === 'edit' ? 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-blue-50 dark:focus:bg-blue-900/40' : 'cursor-default'} ${touchedCells.has(`${i}-${ci}`) && !isValidValue(col.type, row[ci] || '') ? 'bg-red-50 dark:bg-red-900/30 ring-1 ring-red-400' : ''}`}
+                        title={
+                          touchedCells.has(`${i}-${ci}`) && !isValidValue(col.type, row[ci] || '')
+                            ? 'Giá trị không hợp lệ cho kiểu ' + col.type
+                            : ''
+                        }
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              {isLarge && bottomSpacer > 0 && (
+                <tr style={{ height: bottomSpacer }}>
+                  <td colSpan={columns.length + 1} />
                 </tr>
               )}
             </tbody>
@@ -1242,50 +831,41 @@ const CustomExcel: React.FC<CustomExcelProps> = ({
 
       {mode === 'edit' && (
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-1">
-          {(() => {
-            // Duplicate column errors
-            if (duplicateColumns && duplicateColumns.duplicateNames.length > 0) {
-              const duplicateNames = duplicateColumns.duplicateNames.join(', ');
-              return (
-                <div className="text-red-600 dark:text-red-400 flex items-start gap-2">
-                  <span>{t('excelErrors.duplicateColumns', { names: duplicateNames })}</span>
-                </div>
-              );
-            }
-            return null;
-          })()}
-          <ValidationDisplay columns={columns} />
+          {errorMessage && (
+            <div className="text-red-600 dark:text-red-400 flex items-start gap-2">
+              <span>{errorMessage}</span>
+              <button
+                onClick={() => setErrorMessage(null)}
+                className="ml-auto text-red-500 hover:text-red-700 dark:hover:text-red-300"
+              >
+                ×
+              </button>
+            </div>
+          )}
           {infoMessage && (
             <div className="text-blue-600 dark:text-blue-400 flex items-start gap-2">
               <span>{infoMessage}</span>
               <button
-                onClick={() => dispatch(setInfoMessage(null))}
+                onClick={() => setInfoMessage(null)}
                 className="ml-auto text-blue-500 hover:text-blue-700 dark:hover:text-blue-300"
               >
                 ×
               </button>
             </div>
           )}
-          {/* Sorting footer removed */}
+          <p>
+            {historyEnabled ? (
+              <>
+                History: {historyIndex + 1}/{history.length} states available
+              </>
+            ) : (
+              <>History disabled (large dataset)</>
+            )}
+            {sortConfig &&
+              ` | Sorted by "${columns[sortConfig.column]?.name}" (${sortConfig.direction})`}
+          </p>
         </div>
       )}
-
-      {/* View-mode sorting footer removed */}
-
-      <ModalConfirm
-        isOpen={modalConfirm.isOpen}
-        onClose={modalConfirm.close}
-        onConfirm={modalConfirm.confirm}
-        loading={modalConfirm.isLoading}
-        type="danger"
-        title={t('reset_confirm_title', 'Reset data')}
-        message={t(
-          'reset_confirm_message',
-          'Restore original rows, columns, and data. Sorting and filters will be cleared. This cannot be undone.'
-        )}
-        confirmText={t('reset_confirm_yes', 'Reset')}
-        cancelText={t('reset_confirm_no', 'Cancel')}
-      />
     </div>
   );
 };

@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { containerVariants } from '@/theme/animation/animation.config';
 import SelectWithDataTab from './SelectWithDataTab';
@@ -9,31 +8,7 @@ import ChooseTemplateTab from './ChooseTemplateTab';
 type TabType = 'template' | 'data';
 
 export default function ChartGalleryPickerPage() {
-  const location = useLocation();
-
-  // Mặc định trỏ vào tab template
   const [activeTab, setActiveTab] = useState<TabType>('template');
-
-  // Lấy data từ state
-  const locationState = location.state as { activeTab?: TabType; datasetId?: string } | null;
-  const initialActiveTab = locationState?.activeTab;
-  const datasetIdFromState = locationState?.datasetId;
-
-  useEffect(() => {
-    console.log('ChartGalleryPickerPage - useEffect triggered with:', {
-      initialActiveTab,
-      datasetIdFromState,
-      currentActiveTab: activeTab,
-    });
-
-    // Set initial active tab from location state if provided
-    if (initialActiveTab) {
-      console.log('Setting activeTab from initialActiveTab:', initialActiveTab);
-      setActiveTab(initialActiveTab);
-    }
-    // Remove auto-switch to 'data' tab when datasetId exists
-    // Let user choose template first, then proceed with data
-  }, [initialActiveTab, activeTab, datasetIdFromState]);
 
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);

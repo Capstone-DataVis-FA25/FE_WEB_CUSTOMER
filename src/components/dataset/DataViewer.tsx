@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import DataViewerOptions from './DataViewerOptions';
 import DataViewerContent from './DataViewerContent';
 
@@ -7,7 +6,7 @@ interface DataViewerProps {
   onChangeData?: () => void;
 }
 
-const DataViewer = memo(function DataViewer({ onUpload, onChangeData }: DataViewerProps) {
+function DataViewer({ onUpload, onChangeData }: DataViewerProps) {
   return (
     <div className="flex flex-col lg:flex-row gap-6 p-4 sm:p-6 relative">
       {/* Left Sidebar - Options */}
@@ -21,6 +20,6 @@ const DataViewer = memo(function DataViewer({ onUpload, onChangeData }: DataView
       </div>
     </div>
   );
-});
+}
 
 export default DataViewer;
