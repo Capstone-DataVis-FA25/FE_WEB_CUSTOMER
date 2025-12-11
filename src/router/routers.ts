@@ -6,10 +6,6 @@ const Routers = {
   RESET_PASSWORD: '/auth/reset-password',
   ABOUT_US: '/about-us',
 
-  // Resources routes
-  FREQUENT_QUESTIONS: '/resources/frequent-questions',
-  ACADEMIC_DOCS: '/resources/docs',
-
   // Profile routes
   PROFILE: '/profile',
   PROFILE_CHANGE_PASSWORD: '/profile/change-password',
@@ -18,17 +14,15 @@ const Routers = {
 
   // Chart Gallery
   CHART_GALLERY: '/chart-gallery',
-  PRICING: '/pricing',
-  PAYMENT_SUCCESS: '/subscription/success',
-  TRANSACTION_HISTORY: '/transaction-history',
 
+  // Dataset routes
+  CREATE_CHART: '/create-chart',
+  DATASETS: '/datasets',
   // For state-based navigation, use location.state.datasetId (recommended)
   DATASET_DETAIL: '/datasets/detail', // state-based route, do not use slug param
   CREATE_DATASET: '/datasets/create',
-  CREATE_DATASET_UPLOAD: '/datasets/create/upload',
-  CREATE_DATASET_TEXT: '/datasets/create/text',
-  CREATE_DATASET_SAMPLE: '/datasets/create/sample',
-  CREATE_DATASET_VIEW: '/datasets/create/view',
+  EDIT_DATASET: '/datasets/edit', // new state-based edit route (datasetId passed via location.state)
+  EDIT_DATASET_LEGACY: '/datasets/:slug/edit', // legacy param route for backward compatibility
 
   // Error routes
   NOT_FOUND: '/404',
@@ -47,19 +41,13 @@ const Routers = {
   BAR_CHART_EDITOR_DEMO: '/demo/bar-chart-editor',
   AREA_CHART_DEMO: '/chart/area-chart',
   AREA_CHART_EDITOR_DEMO: '/demo/area-chart-editor',
-  PIE_CHART_DEMO: '/chart/pie-chart',
-  PIE_CHART_EDITOR_DEMO: '/demo/pie-chart-editor',
 
   //Workspace routes
+  WORKSPACE: '/workspace',
   WORKSPACE_DATASETS: '/workspace/datasets',
   WORKSPACE_CHARTS: '/workspace/charts',
   CHART_CREATOR: '/chart-creator',
   CHART_EDITOR: '/chart-editor',
-  CHART_HISTORY_VIEW: '/chart-history/view',
-
-  // Privacy and Terms
-  TERMS_OF_SERVICE: '/terms-of-service',
-  PRIVACY_POLICY: '/privacy-policy',
 } as const;
 
 export default Routers;

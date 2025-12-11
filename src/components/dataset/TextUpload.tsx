@@ -19,24 +19,19 @@ function TextUpload({ onTextProcess, isProcessing = false }: TextUploadProps) {
     if (!originalTextContent.trim()) {
       return;
     }
-    const normalized = originalTextContent
-      .split(/\r?\n/)
-      .map(line => line.trim())
-      .join('\n');
-    onTextProcess(normalized);
+    onTextProcess(originalTextContent);
   };
 
   const handleSampleData = () => {
-    const sampleData =
-      'ID,Name,Age,DateOfBirth,Salary,Bonus\n' +
-      '1,John Doe,28,1997-05-14,1234.56,300\n' +
-      '2,Jane Smith,34,1991-03-22,2890.75,500\n' +
-      '3,Michael Lee,45,1980-08-10,3567.90,700\n' +
-      '4,Sarah Kim,29,1996-01-30,1987.25,350\n' +
-      '5,David Chen,38,1987-07-19,4123.80,600\n' +
-      '6,Linda Park,31,1994-11-05,2456.40,400\n' +
-      '7,Robert Brown,42,1983-09-12,5678.95,800';
-
+    const sampleData = 
+    `ID,Age,Salary,Bonus
+1,28,1234.56,300
+2,34,2890.75,500
+3,45,3567.90,700
+4,29,1987.25,350
+5,38,4123.80,600
+6,31,2456.40,400
+7,42,5678.95,800`;
     setOriginalTextContent(sampleData);
   };
 
@@ -63,7 +58,8 @@ function TextUpload({ onTextProcess, isProcessing = false }: TextUploadProps) {
             {t('textUpload_title')}
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
-            {t('text_upload_description')}
+            Paste your tabular data directly as text. Supports CSV, TSV, JSON (2D arrays), and other
+            delimited formats.
           </CardDescription>
         </CardHeader>
 
@@ -89,7 +85,9 @@ function TextUpload({ onTextProcess, isProcessing = false }: TextUploadProps) {
                   className="w-full min-h-[300px] p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl font-mono text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y focus:border-blue-200 dark:focus:border-blue-800 focus:outline-none"
                   disabled={isProcessing}
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('textUpload_tip')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('textUpload_tip')}
+                </p>
               </div>
             </div>
           </div>

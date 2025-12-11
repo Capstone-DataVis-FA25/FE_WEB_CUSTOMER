@@ -30,7 +30,6 @@ import {
   updateProfileThunk,
   deleteUserThunk,
   resendVerifyEmailThunk,
-  viewProfileThunk,
 } from './authThunk';
 import type { SignInRequest, SignUpRequest, GoogleAuthRequest, User } from './authType';
 
@@ -104,10 +103,6 @@ export const useAuth = () => {
     dispatch(clearResendEmailStatus());
   };
 
-  const refreshUser = () => {
-    return dispatch(viewProfileThunk());
-  };
-
   return {
     // State - Trạng thái hiện tại
     user, // User object hoặc null
@@ -145,6 +140,5 @@ export const useAuth = () => {
     setLoading: setAuthLoading, // Function(boolean) => void - set loading manually
     resendVerifyEmail, // Function(email: string) => Promise - gửi lại email xác thực
     clearResendEmailError, // Function() => void - clear resend email error
-    refreshUser, // Function() => Promise - refresh user data from server
   };
 };

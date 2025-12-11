@@ -1,7 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import * as datasetAPI from './datasetAPI';
 import type { CreateDatasetRequest, UpdateDatasetRequest } from './datasetAPI';
-import { getErrorMessage, getErrorStatus } from '@/utils/errorUtils';
 
 // Get all datasets
 export const fetchDatasets = createAsyncThunk(
@@ -10,10 +9,10 @@ export const fetchDatasets = createAsyncThunk(
     try {
       const response = await datasetAPI.getAllDatasets();
       return response;
-    } catch (error: unknown) {
+    } catch (error: any) {
       return rejectWithValue({
-        message: getErrorMessage(error) || 'Failed to fetch datasets',
-        status: getErrorStatus(error),
+        message: error.response?.data?.message || error.message || 'Failed to fetch datasets',
+        status: error.response?.status,
       });
     }
   }
@@ -26,11 +25,10 @@ export const fetchDatasetById = createAsyncThunk(
     try {
       const response = await datasetAPI.getDatasetById(id);
       return response;
-    } catch (error: unknown) {
-      console.error('Error fetching dataset by ID:', id, error);
+    } catch (error: any) {
       return rejectWithValue({
-        message: getErrorMessage(error) || 'Failed to fetch dataset',
-        status: getErrorStatus(error),
+        message: error.response?.data?.message || error.message || 'Failed to fetch dataset',
+        status: error.response?.status,
       });
     }
   }
@@ -43,10 +41,10 @@ export const createDatasetThunk = createAsyncThunk(
     try {
       const response = await datasetAPI.createDataset(data);
       return response;
-    } catch (error: unknown) {
+    } catch (error: any) {
       return rejectWithValue({
-        message: getErrorMessage(error) || 'Failed to create dataset',
-        status: getErrorStatus(error),
+        message: error.response?.data?.message || error.message || 'Failed to create dataset',
+        status: error.response?.status,
       });
     }
   }
@@ -59,10 +57,10 @@ export const updateDatasetThunk = createAsyncThunk(
     try {
       const response = await datasetAPI.updateDataset(id, data);
       return response;
-    } catch (error: unknown) {
+    } catch (error: any) {
       return rejectWithValue({
-        message: getErrorMessage(error) || 'Failed to update dataset',
-        status: getErrorStatus(error),
+        message: error.response?.data?.message || error.message || 'Failed to update dataset',
+        status: error.response?.status,
       });
     }
   }
@@ -75,10 +73,10 @@ export const deleteDatasetThunk = createAsyncThunk(
     try {
       await datasetAPI.deleteDataset(id);
       return id;
-    } catch (error: unknown) {
+    } catch (error: any) {
       return rejectWithValue({
-        message: getErrorMessage(error) || 'Failed to delete dataset',
-        status: getErrorStatus(error),
+        message: error.response?.data?.message || error.message || 'Failed to delete dataset',
+        status: error.response?.status,
       });
     }
   }

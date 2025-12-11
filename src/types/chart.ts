@@ -1,378 +1,7 @@
-import * as d3 from 'd3-shape';
-// Removed direct d3 import to avoid hard dependency during type-check
+import * as d3 from 'd3';
 
 // Color configuration
 export type ColorConfig = Record<string, { light: string; dark: string }>;
-
-// CHART TYPE GENERATION
-
-// Dataset-level configuration (optional per chart)
-export interface SortLevel {
-  columnId: string;
-  direction: 'asc' | 'desc';
-}
-
-export interface GroupByColumn {
-  id: string;
-  name: string;
-  timeUnit?: 'second' | 'minute' | 'hour' | 'day' | 'month' | 'quarter' | 'year';
-}
-
-export interface AggregationMetric {
-  id: string;
-  type: 'sum' | 'average' | 'min' | 'max' | 'count';
-  columnId?: string;
-  alias?: string;
-}
-
-export interface PivotDimension {
-  id: string;
-  columnId: string;
-  name: string;
-  columnType: DatasetColumnType;
-  timeUnit?: 'second' | 'minute' | 'hour' | 'day' | 'month' | 'quarter' | 'year';
-}
-
-export interface PivotValue {
-  id: string;
-  columnId: string;
-  name: string;
-  aggregationType: 'sum' | 'average' | 'min' | 'max' | 'count';
-  alias?: string;
-}
-
-export interface DatasetConfig {
-  // Multi-level sort: applied in array order (stable sort semantics)
-  sort?: SortLevel[];
-  // Optional dataset-level filters (UI schema)
-  filters?: DatasetFilterColumn[];
-  // Optional aggregation configuration
-  aggregation?: {
-    groupBy?: GroupByColumn[];
-    metrics?: AggregationMetric[];
-  };
-  // Optional pivot table configuration
-  pivot?: {
-    rows?: PivotDimension[];
-    columns?: PivotDimension[];
-    values?: PivotValue[];
-    filters?: PivotDimension[];
-  };
-}
-
-export type DatasetColumnType = 'text' | 'number' | 'date';
-
-export type DatasetFilterValue = string | number | null | (string | number | null)[];
-
-export interface DatasetFilterCondition {
-  id: string;
-  operator: string;
-  value: DatasetFilterValue;
-  valueEnd?: string | number | null;
-  includeStart?: boolean;
-  includeEnd?: boolean;
-}
-
-export interface DatasetFilterColumn {
-  id: string;
-  columnId: string;
-  columnName: string;
-  columnType: DatasetColumnType;
-  conditions: DatasetFilterCondition[]; // AND semantics within a column (OR logic covered by equals/not_equals with multiple values)
-}
-
-export type MainChartConfig =
-  | LineChartConfig
-  | BarChartConfig
-  | AreaChartConfig
-  | ScatterChartConfig
-  | PieChartConfig
-  | DonutChartConfig
-  | CyclePlotConfig
-  | HeatmapChartConfig
-  | HistogramChartConfig;
-// Scatter chart specific configuration
-export interface SubScatterChartConfig extends BaseChartConfig {
-  pointRadius?: number;
-}
-
-// Cycle Plot specific configuration
-export interface SubCyclePlotChartConfig extends BaseChartConfig {
-  showPoints?: boolean;
-  curve?: keyof typeof curveOptions;
-  lineWidth?: number;
-  pointRadius?: number;
-}
-
-// Histogram specific configuration
-export interface SubHistogramChartConfig extends BaseChartConfig {
-  binCount?: number; // Number of bins (default: auto-calculate using Sturges' formula)
-  binWidth?: number; // Fixed bin width
-  binMethod?: 'count' | 'width' | 'sturges' | 'scott' | 'freedman-diaconis'; // Binning method
-  customBinEdges?: number[]; // Custom bin edges for advanced users
-  showDensity?: boolean; // Show density curve overlay
-  showCumulativeFrequency?: boolean; // Show cumulative frequency line
-  barColor?: string; // Single color for histogram bars
-  showMean?: boolean; // Show mean line
-  showMedian?: boolean; // Show median line
-  showPointValues?: boolean; // Show frequency values on bars
-  normalize?: boolean; // Normalize to show probability density
-}
-
-// Heatmap specific configuration
-export interface SubHeatmapChartConfig extends BaseChartConfig {
-  colorScheme?:
-    | 'blues'
-    | 'reds'
-    | 'greens'
-    | 'purples'
-    | 'oranges'
-    | 'greys'
-    | 'viridis'
-    | 'plasma'
-    | 'inferno'
-    | 'magma'
-    | 'turbo'
-    | 'cividis';
-  showValues?: boolean;
-  cellBorderWidth?: number;
-  cellBorderColor?: string;
-  valuePosition?: 'center' | 'top' | 'bottom';
-  minValue?: number | 'auto';
-  maxValue?: number | 'auto';
-  nullColor?: string;
-  legendSteps?: number;
-}
-
-export interface HeatmapAxisConfig extends AxisConfig {
-  xAxisKey?: string;
-  yAxisKey?: string;
-  valueKey?: string;
-}
-
-export interface ScatterChartConfig {
-  // Nested structure properties (for compatibility)
-  config?: SubScatterChartConfig;
-  formatters?: Partial<FormatterConfig>;
-  axisConfigs?: AxisConfig;
-  datasetConfig?: DatasetConfig;
-  chartType: 'scatter';
-
-  // Flat structure properties (actual usage)
-  width: number;
-  height: number;
-  margin: { top: number; right: number; bottom: number; left: number };
-  title: string;
-  xAxisKey: string;
-  yAxisKeys: string[];
-  xAxisLabel: string;
-  yAxisLabel: string;
-  showLegend: boolean;
-  showGrid: boolean;
-  animationDuration: number;
-  pointRadius?: number;
-  gridOpacity: number;
-  legendPosition: 'top' | 'bottom' | 'left' | 'right';
-  xAxisStart: 'auto' | 'zero';
-  yAxisStart: 'auto' | 'zero';
-  xAxisRotation: number;
-  yAxisRotation: number;
-  showAxisLabels: boolean;
-  showAxisTicks: boolean;
-  enableZoom: boolean;
-  enablePan: boolean;
-  zoomExtent: number;
-  showTooltip: boolean;
-  theme: 'light' | 'dark' | 'auto';
-  backgroundColor: string;
-  titleFontSize: number;
-  labelFontSize: number;
-  legendFontSize: number;
-}
-
-export interface LineChartConfig {
-  // Nested structure properties (for compatibility)
-  config?: SubLineChartConfig;
-  formatters?: Partial<FormatterConfig>;
-  axisConfigs?: AxisConfig;
-  datasetConfig?: DatasetConfig;
-  chartType: 'line';
-
-  // Flat structure properties (actual usage)
-  width: number;
-  height: number;
-  margin: { top: number; right: number; bottom: number; left: number };
-  title: string;
-  xAxisKey: string;
-  yAxisKeys: string[];
-  disabledLines: string[];
-  xAxisLabel: string;
-  yAxisLabel: string;
-  showLegend: boolean;
-  showGrid: boolean;
-  showPoints: boolean;
-  showPointValues: boolean;
-  animationDuration: number;
-  curve: keyof typeof curveOptions;
-  lineWidth: number;
-  pointRadius: number;
-  lineStyle?: 'solid' | 'dashed' | 'dotted';
-  pointValueDecimals?: number;
-  gridOpacity: number;
-  legendPosition: 'top' | 'bottom' | 'left' | 'right';
-  xAxisStart: 'auto' | 'zero';
-  yAxisStart: 'auto' | 'zero';
-  xAxisRotation: number;
-  yAxisRotation: number;
-  showAxisLabels: boolean;
-  showAxisTicks: boolean;
-  enableZoom: boolean;
-  enablePan: boolean;
-  zoomExtent: number;
-  showTooltip: boolean;
-  theme: 'light' | 'dark' | 'auto';
-  backgroundColor: string;
-  titleFontSize: number;
-  labelFontSize: number;
-  legendFontSize: number;
-}
-
-export interface BarChartConfig {
-  // Nested structure properties (for compatibility)
-  config?: SubBarChartConfig;
-  formatters?: Partial<FormatterConfig>;
-  axisConfigs?: AxisConfig;
-  datasetConfig?: DatasetConfig;
-  chartType: 'bar';
-
-  // Flat structure properties (actual usage)
-  width: number;
-  height: number;
-  margin: { top: number; right: number; bottom: number; left: number };
-  title: string;
-  xAxisKey: string;
-  yAxisKeys: string[];
-  disabledBars: string[];
-  xAxisLabel: string;
-  yAxisLabel: string;
-  showLegend: boolean;
-  showGrid: boolean;
-  showPoints: boolean;
-  showPointValues: boolean;
-  animationDuration: number;
-  barType: 'grouped' | 'stacked' | 'diverging';
-  barWidth: number;
-  barSpacing: number;
-  gridOpacity: number;
-  legendPosition: 'top' | 'bottom' | 'left' | 'right';
-  xAxisStart: 'auto' | 'zero';
-  yAxisStart: 'auto' | 'zero';
-  xAxisRotation: number;
-  yAxisRotation: number;
-  showAxisLabels: boolean;
-  showAxisTicks: boolean;
-  enableZoom: boolean;
-  enablePan: boolean;
-  zoomExtent: number;
-  showTooltip: boolean;
-  theme: 'light' | 'dark' | 'auto';
-  backgroundColor: string;
-  titleFontSize: number;
-  labelFontSize: number;
-  legendFontSize: number;
-}
-
-export interface AreaChartConfig {
-  // Nested structure properties (for compatibility)
-  config?: SubAreaChartConfig;
-  formatters?: Partial<FormatterConfig>;
-  axisConfigs?: AxisConfig;
-  datasetConfig?: DatasetConfig;
-  chartType: 'area';
-
-  // Flat structure properties (actual usage)
-  width: number;
-  height: number;
-  margin: { top: number; right: number; bottom: number; left: number };
-  title: string;
-  xAxisKey: string;
-  yAxisKeys: string[];
-  xAxisLabel: string;
-  yAxisLabel: string;
-  showLegend: boolean;
-  showGrid: boolean;
-  animationDuration: number;
-  showStroke?: boolean;
-  curve?: keyof typeof curveOptions;
-  lineWidth?: number;
-  gridOpacity: number;
-  legendPosition: 'top' | 'bottom' | 'left' | 'right';
-  xAxisStart: 'auto' | 'zero';
-  yAxisStart: 'auto' | 'zero';
-  xAxisRotation: number;
-  yAxisRotation: number;
-  showAxisLabels: boolean;
-  showAxisTicks: boolean;
-  enableZoom: boolean;
-  enablePan: boolean;
-  zoomExtent: number;
-  showTooltip: boolean;
-  theme: 'light' | 'dark' | 'auto';
-  backgroundColor: string;
-  titleFontSize: number;
-  labelFontSize: number;
-  legendFontSize: number;
-}
-
-export interface PieChartConfig {
-  config: SubPieDonutChartConfig;
-  formatters: Partial<PieDonutFormatterConfig>;
-  datasetConfig?: DatasetConfig;
-  chartType: 'pie';
-}
-
-export interface DonutChartConfig {
-  config: SubPieDonutChartConfig;
-  formatters: Partial<PieDonutFormatterConfig>;
-  datasetConfig?: DatasetConfig;
-  chartType: 'donut';
-}
-
-export interface CyclePlotAxisConfig extends AxisConfig {
-  cycleKey?: string;
-  periodKey?: string;
-  valueKey?: string;
-  cycleColors?: Record<string, { light: string; dark: string }>;
-  showAverageLine?: boolean;
-  emphasizeLatestCycle?: boolean;
-  showRangeBand?: boolean;
-  periodOrdering?: 'auto' | 'custom';
-  showTooltipDelta?: boolean;
-}
-
-export interface CyclePlotConfig {
-  config: SubCyclePlotChartConfig;
-  formatters: Partial<FormatterConfig>;
-  axisConfigs: CyclePlotAxisConfig;
-  datasetConfig?: DatasetConfig;
-  chartType: 'cycleplot';
-}
-
-export interface HeatmapChartConfig {
-  config: SubHeatmapChartConfig;
-  formatters: Partial<FormatterConfig>;
-  axisConfigs: HeatmapAxisConfig;
-  datasetConfig?: DatasetConfig;
-  chartType: 'heatmap';
-}
-
-export interface HistogramChartConfig {
-  config: SubHistogramChartConfig;
-  formatters: Partial<FormatterConfig>;
-  axisConfigs: AxisConfig;
-  datasetConfig?: DatasetConfig;
-  chartType: 'histogram';
-}
 
 // Curve options
 export const curveOptions = {
@@ -385,7 +14,7 @@ export const curveOptions = {
   curveStep: d3.curveStep,
   curveStepBefore: d3.curveStepBefore,
   curveStepAfter: d3.curveStepAfter,
-} as const;
+};
 
 // Common chart size presets (unified for all chart types)
 export const sizePresets = {
@@ -404,8 +33,8 @@ export const sizePresets = {
     label: 'Presentation',
   },
   mobile: { width: 350, height: 300, labelKey: 'size_preset_mobile', label: 'Mobile' },
-  // tablet: { width: 768, height: 480, labelKey: 'size_preset_tablet', label: 'Tablet' },
-  // responsive: { width: 0, height: 0, labelKey: 'size_preset_responsive', label: 'Responsive' },
+  tablet: { width: 768, height: 480, labelKey: 'size_preset_tablet', label: 'Tablet' },
+  responsive: { width: 0, height: 0, labelKey: 'size_preset_responsive', label: 'Responsive' },
 };
 
 // Common utility function to get responsive defaults
@@ -416,7 +45,7 @@ export const getResponsiveDefaults = () => {
 
   const screenWidth = window.innerWidth;
   const containerWidth = Math.min(screenWidth * 0.8, 1200);
-  const aspectRatio = 0.6;
+  const aspectRatio = 0.6; // 16:10 aspect ratio
 
   return {
     width: Math.max(containerWidth, 300),
@@ -424,71 +53,13 @@ export const getResponsiveDefaults = () => {
   };
 };
 
-export interface AxisConfig {
-  xAxisKey?: string;
-  xAxisLabel?: string;
-  yAxisLabel?: string;
-  xAxisStart?: 'auto' | 'zero';
-  yAxisStart?: 'auto' | 'zero';
-  xAxisRotation?: number;
-  yAxisRotation?: number;
-  showAxisLabels?: boolean;
-  showAxisTicks?: boolean;
-  showAllXAxisTicks?: boolean; // Show all X-axis ticks without sampling (useful for dense date data with compact formats)
-  seriesConfigs?: SeriesConfig[];
-}
-
-export type DataBoundField =
-  | 'xAxisKey'
-  | 'yAxisKey'
-  | 'seriesConfigs'
-  | 'labelKey'
-  | 'valueKey'
-  | 'cycleKey'
-  | 'periodKey';
-
-export const CHART_DATA_BINDING_KEYS: Record<MainChartConfig['chartType'], DataBoundField[]> = {
-  line: ['xAxisKey', 'seriesConfigs'],
-  bar: ['xAxisKey', 'seriesConfigs'],
-  area: ['xAxisKey', 'seriesConfigs'],
-  scatter: ['xAxisKey', 'seriesConfigs'],
-  pie: ['labelKey', 'valueKey'],
-  donut: ['labelKey', 'valueKey'],
-  cycleplot: ['cycleKey', 'periodKey', 'valueKey'],
-  heatmap: ['xAxisKey', 'yAxisKey', 'valueKey'],
-  histogram: ['seriesConfigs'],
-};
-
-// Path-based definition that reflects actual nesting
-export type DataBindingPath =
-  | 'axisConfigs.xAxisKey'
-  | 'axisConfigs.yAxisKey'
-  | 'axisConfigs.seriesConfigs'
-  | 'config.labelKey'
-  | 'config.valueKey'
-  | 'axisConfigs.cycleKey'
-  | 'axisConfigs.periodKey'
-  | 'axisConfigs.valueKey';
-
-export const CHART_DATA_BINDING_PATHS: Record<MainChartConfig['chartType'], DataBindingPath[]> = {
-  line: ['axisConfigs.xAxisKey', 'axisConfigs.seriesConfigs'],
-  bar: ['axisConfigs.xAxisKey', 'axisConfigs.seriesConfigs'],
-  area: ['axisConfigs.xAxisKey', 'axisConfigs.seriesConfigs'],
-  scatter: ['axisConfigs.xAxisKey', 'axisConfigs.seriesConfigs'],
-  pie: ['config.labelKey', 'config.valueKey'],
-  donut: ['config.labelKey', 'config.valueKey'],
-  cycleplot: ['axisConfigs.cycleKey', 'axisConfigs.periodKey', 'axisConfigs.valueKey'],
-  heatmap: ['axisConfigs.xAxisKey', 'axisConfigs.yAxisKey', 'axisConfigs.valueKey'],
-  histogram: ['axisConfigs.seriesConfigs'],
-};
-
 // Series configuration interface for Data Series management
 export interface SeriesConfig {
   id: string;
   name: string;
+  dataColumn: string;
   color: string;
   visible: boolean;
-  dataColumn: string;
   lineWidth?: number;
   pointRadius?: number;
   lineStyle?: 'solid' | 'dashed' | 'dotted';
@@ -503,20 +74,26 @@ export interface BaseChartConfig {
   width: number;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
-  // xAxisKey?: string;
-  // yAxisKeys?: string[];
+  xAxisKey: string;
+  yAxisKeys: string[];
   title: string;
-  // xAxisLabel?: string;
-  // yAxisLabel?: string;
+  xAxisLabel: string;
+  yAxisLabel: string;
   showLegend: boolean;
   showGrid: boolean;
   animationDuration: number;
+  xAxisStart: 'auto' | 'zero' | number;
+  yAxisStart: 'auto' | 'zero' | number;
 
   // Styling configs
   gridOpacity: number;
   legendPosition: 'top' | 'bottom' | 'left' | 'right';
 
   // Axis configs
+  xAxisRotation: number;
+  yAxisRotation: number;
+  showAxisLabels: boolean;
+  showAxisTicks: boolean;
 
   // Interaction configs
   enableZoom: boolean;
@@ -533,151 +110,63 @@ export interface BaseChartConfig {
 }
 
 // Line chart specific configuration
-export interface SubLineChartConfig extends BaseChartConfig {
+export interface LineChartConfig extends BaseChartConfig {
   disabledLines: string[];
-  showPoints?: boolean;
-  showPointValues?: boolean; // Show values on data points
-  curve?: keyof typeof curveOptions;
-  lineWidth?: number;
-  pointRadius?: number;
-  lineStyle?: 'solid' | 'dashed' | 'dotted';
-  pointValueDecimals?: number;
+  showPoints: boolean;
+  curve: keyof typeof curveOptions;
+  lineWidth: number;
+  pointRadius: number;
 }
 
 // Area chart specific configuration
-export interface SubAreaChartConfig extends BaseChartConfig {
-  showStroke?: boolean;
-  curve?: keyof typeof curveOptions;
-  lineWidth?: number;
+export interface AreaChartConfig extends BaseChartConfig {
+  disabledLines: string[];
+  showPoints: boolean;
+  showStroke: boolean;
+  curve: keyof typeof curveOptions;
+  lineWidth: number;
+  pointRadius: number;
+  opacity: number;
+  stackedMode: boolean;
 }
 
 // Bar chart specific configuration
-export interface SubBarChartConfig extends BaseChartConfig {
+export interface BarChartConfig extends BaseChartConfig {
   disabledBars: string[];
-  showPoints: boolean;
-  showPointValues: boolean; // Show values on bars
-  barType: 'grouped' | 'stacked' | 'diverging';
+  barType: 'grouped' | 'stacked';
   barWidth: number;
   barSpacing: number;
 }
 
-export interface SubPieDonutChartConfig extends BaseChartConfig {
-  labelKey: string;
-  valueKey: string;
-  showLabels?: boolean;
-  showPercentage?: boolean;
-  showSliceValues?: boolean;
-  enableAnimation?: boolean;
-  innerRadius?: number;
-  cornerRadius?: number;
-  padAngle?: number;
-  startAngle?: number;
-  endAngle?: number;
-  sortSlices?: 'ascending' | 'descending' | 'none';
-  sliceOpacity?: number;
-  legendMaxItems?: number;
-  strokeWidth?: number;
-  strokeColor?: string;
-  hoverScale?: number;
-  enableHoverEffect?: boolean;
-  titleColor?: string;
-  labelColor?: string;
-  showTitle?: boolean;
-}
-
 // For backward compatibility, keep ChartConfig as LineChartConfig
-export type ChartConfig =
-  | LineChartConfig
-  | BarChartConfig
-  | AreaChartConfig
-  | PieChartConfig
-  | ScatterChartConfig;
+export type ChartConfig = LineChartConfig;
 
 // Formatter configuration
 export interface FormatterConfig {
   useYFormatter: boolean;
   useXFormatter: boolean;
   yFormatterType:
-    | 'none'
-    | 'number'
     | 'currency'
     | 'percentage'
+    | 'number'
     | 'decimal'
     | 'scientific'
     | 'bytes'
     | 'duration'
     | 'date'
-    | 'compact'
-    | 'ordinal'
     | 'custom';
   xFormatterType:
-    | 'none'
-    | 'number'
     | 'currency'
     | 'percentage'
+    | 'number'
     | 'decimal'
     | 'scientific'
     | 'bytes'
     | 'duration'
     | 'date'
-    | 'compact'
-    | 'ordinal'
     | 'custom';
   customYFormatter: string;
   customXFormatter: string;
-  // Additional formatter options
-  yCurrencySymbol?: string;
-  xCurrencySymbol?: string;
-  yDecimalPlaces?: number;
-  xDecimalPlaces?: number;
-  yLocale?: string;
-  xLocale?: string;
-  // Sub-type variants for each formatter
-  yCurrencyStyle?: 'symbol' | 'code' | 'name'; // $1,234 | USD 1,234 | 1,234 US dollars
-  xCurrencyStyle?: 'symbol' | 'code' | 'name';
-  yNumberNotation?: 'standard' | 'compact' | 'scientific' | 'engineering';
-  xNumberNotation?: 'standard' | 'compact' | 'scientific' | 'engineering';
-  yDateFormat?:
-    | 'auto'
-    | 'numeric'
-    | 'short'
-    | 'medium'
-    | 'long'
-    | 'full'
-    | 'relative'
-    | 'year-only'
-    | 'month-year'
-    | 'iso';
-  xDateFormat?:
-    | 'auto'
-    | 'numeric'
-    | 'short'
-    | 'medium'
-    | 'long'
-    | 'full'
-    | 'relative'
-    | 'year-only'
-    | 'month-year'
-    | 'iso';
-  yDurationFormat?: 'short' | 'narrow' | 'long'; // 1h 23m | 1h23m | 1 hour 23 minutes
-  xDurationFormat?: 'short' | 'narrow' | 'long';
-  // Grouping control (thousands separator)
-  yUseGrouping?: boolean; // false for years (2024), true for regular numbers (1,234)
-  xUseGrouping?: boolean;
-}
-
-export interface PieDonutFormatterConfig {
-  useValueFormatter: boolean;
-  valueFormatterType:
-    | 'currency'
-    | 'percentage'
-    | 'number'
-    | 'decimal'
-    | 'scientific'
-    | 'bytes'
-    | 'duration'
-    | 'custom';
-  customValueFormatter: string;
 }
 
 // Chart data point interface

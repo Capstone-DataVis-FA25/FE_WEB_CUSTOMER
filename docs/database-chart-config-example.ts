@@ -62,7 +62,7 @@ SET config = '{
     "customYFormatter": "",
     "customXFormatter": ""
   },
-  "axisConfigs": [
+  "seriesConfigs": [
     {
       "name": "Age",
       "dataColumn": "Age",
@@ -155,7 +155,7 @@ export const SAMPLE_CHART_CONFIG_FOR_DATABASE = {
     customYFormatter: '',
     customXFormatter: '',
   },
-  axisConfigs: [
+  seriesConfigs: [
     {
       name: 'Age',
       dataColumn: 'Age',

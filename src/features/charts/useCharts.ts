@@ -1,19 +1,19 @@
 import { useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  createChartThunk,
-  deleteChartThunk,
-  fetchChartById,
   fetchCharts,
+  fetchChartById,
+  createChartThunk,
   updateChartThunk,
+  deleteChartThunk,
 } from './chartThunk';
-import { clearCurrentChart, clearError } from './chartSlice';
-import type { ChartRequest } from './chartTypes';
+import { clearError, clearCurrentChart } from './chartSlice';
+import type { CreateChartRequest, UpdateChartRequest } from './chartTypes';
 
 export const useCharts = () => {
   const dispatch = useAppDispatch();
   const { charts, currentChart, loading, creating, updating, deleting, error } = useAppSelector(
-    state => state.chart
+    state => state.charts
   );
 
   // Get all charts
@@ -29,13 +29,17 @@ export const useCharts = () => {
     [dispatch]
   );
 
-  const createChart = (data: ChartRequest) => {
-    return dispatch(createChartThunk(data));
-  };
+  // Create chart
+  const createChart = useCallback(
+    (data: CreateChartRequest) => {
+      return dispatch(createChartThunk(data));
+    },
+    [dispatch]
+  );
 
   // Update chart
   const updateChart = useCallback(
-    (id: string, data: Partial<ChartRequest>) => {
+    (id: string, data: UpdateChartRequest) => {
       return dispatch(updateChartThunk({ id, data }));
     },
     [dispatch]

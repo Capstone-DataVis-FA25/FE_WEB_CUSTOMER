@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, X, Info } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
@@ -181,13 +181,13 @@ export const PasswordStrengthChecker: React.FC<PasswordStrengthCheckerProps> = (
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
 
   // Auto hiển thị tooltip khi có password
-  useEffect(() => {
+  React.useEffect(() => {
     setIsTooltipVisible(password.length > 0);
   }, [password]);
 
   // Tự động ẩn tooltip sau 5 giây khi mật khẩu đủ mạnh
   const { isStrong } = usePasswordStrength(password);
-  useEffect(() => {
+  React.useEffect(() => {
     if (isStrong && isTooltipVisible) {
       const timer = setTimeout(() => {
         setIsTooltipVisible(false);

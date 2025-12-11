@@ -5,13 +5,6 @@
 
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import {
-  detectColumnFormats,
-  applyDetectedFormats,
-  FORMAT_APPLICATION_CONFIDENCE_THRESHOLD,
-} from './smartColumnDetector';
-import type { DateFormat, NumberFormat } from '@/contexts/DatasetContext';
-import { formatDateUsingDayjs } from '@/utils/dateFormat';
 
 // File validation configuration constants
 export const ALLOWED_TYPES = [
@@ -43,152 +36,17 @@ export interface FileProcessingOptions {
 }
 
 export interface DataHeader {
-  id?: string;
   name: string;
-  type: 'text' | 'number' | 'date';
+  type: string;
   index: number;
-  width?: number;
-  dateFormat?: DateFormat; // per-column date format (when type = 'date')
 }
 
 export interface ParsedDataResult {
   headers: DataHeader[];
   data: string[][];
-  detectionResult?: any; // Smart detection results
-  detectedDateFormat?: DateFormat | null; // Auto-detected date format
-  detectedNumberFormat?: NumberFormat | null; // Auto-detected number format
 }
 
-export const formatNumberString = (raw: string, nf: NumberFormat): string => {
-  const num = Number(String(raw).replace(/[^0-9+\-\.]/g, '.'));
-  if (!isFinite(num)) return raw;
-  const neg = num < 0 ? '-' : '';
-  const abs = Math.abs(num);
-  const [intPart, fracPart] = abs.toString().split('.');
-  const withThousands = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, nf.thousandsSeparator || '');
-  if (fracPart && fracPart.length > 0) {
-    return `${neg}${withThousands}${nf.decimalSeparator}${fracPart}`;
-  }
-  return `${neg}${withThousands}`;
-};
 
-// ================= Dataset payload helpers =================
-
-export type DatasetCell = string | number | boolean | null;
-
-export interface HeaderLike {
-  name: string;
-  type: string;
-  index: number;
-  data: DatasetCell[];
-  dateFormat?: string;
-}
-
-// Build headers array from parsed page state
-// - currentParsedData: { headers: { name, type }[], data: any[][] }
-// - parsedValues: Record<columnIndex, (string|number|boolean|null|undefined)[]>
-export const buildHeadersFromParsed = (
-  currentParsedData: any,
-  parsedValues: Record<number, (string | number | boolean | null | undefined)[] | undefined>
-): HeaderLike[] => {
-  const headers: HeaderLike[] = [];
-  if (!currentParsedData || !Array.isArray(currentParsedData.headers)) return headers;
-
-  for (let columnIndex = 0; columnIndex < currentParsedData.headers.length; columnIndex++) {
-    const header = currentParsedData.headers[columnIndex];
-    const parsedCol = parsedValues[columnIndex];
-    let columnData: DatasetCell[];
-    if (parsedCol && Array.isArray(parsedCol)) {
-      // Convert undefined to null; for non-text columns also convert '' to null
-      columnData = parsedCol.map(v => {
-        if (header.type !== 'text') {
-          if (v === undefined || v === '') return null;
-        }
-        return v === undefined ? null : (v as DatasetCell);
-      });
-    } else {
-      columnData = (currentParsedData.data || []).map((row: any[]) => {
-        const raw = row?.[columnIndex];
-        if (header.type !== 'text') {
-          return raw === '' || raw === undefined ? null : (raw as DatasetCell);
-        }
-        return (raw ?? null) as DatasetCell;
-      });
-    }
-    headers.push({
-      name: header.name,
-      type: header.type,
-      index: columnIndex,
-      data: columnData,
-      dateFormat: header.type === 'date' ? header.dateFormat || 'YYYY-MM-DD' : undefined,
-    });
-  }
-  return headers;
-};
-
-// Remove fully empty rows anywhere and align column lengths
-// - A row is considered empty if every column is null/''/undefined (text nulls are normalized to '')
-// - For text columns, null/undefined becomes ''
-// - For non-text columns, undefined becomes null
-export const cleanHeadersRemoveEmptyRows = (headers: HeaderLike[]): HeaderLike[] => {
-  if (!headers || headers.length === 0) return headers;
-  const colCount = headers.length;
-  const rowCount = Math.max(...headers.map(h => h.data?.length || 0));
-  const keepIndices: number[] = [];
-  for (let r = 0; r < rowCount; r++) {
-    let allEmpty = true;
-    for (let c = 0; c < colCount; c++) {
-      const h = headers[c];
-      const v = h.data?.[r] as any;
-      const norm = h.type === 'text' ? (v == null ? '' : v) : v;
-      if (!(norm === null || norm === '' || norm === undefined)) {
-        allEmpty = false;
-        break;
-      }
-    }
-    if (!allEmpty) keepIndices.push(r);
-  }
-  return headers.map(h => ({
-    ...h,
-    data: keepIndices.map(i => {
-      const v = h.data?.[i] as any;
-      if (h.type === 'text') return v == null ? '' : (v as DatasetCell);
-      // For number/date: coerce '' and undefined to null
-      if (v === '' || v === undefined) return null;
-      return v as DatasetCell;
-    }),
-  }));
-};
-
-// Map our DateFormat tokens to Day.js-compatible patterns where needed
-const toDayjsPattern = (df: DateFormat): string => {
-  if (df === 'DD Month YYYY') return 'DD MMMM YYYY';
-  return df;
-};
-
-export const normalizeDateString = (raw: string, df: DateFormat): string => {
-  if (!raw) return raw;
-  const pattern = toDayjsPattern(df);
-  return formatDateUsingDayjs(raw, pattern);
-};
-
-export const preformatDataToFormats = (
-  data: string[][],
-  columns: DataHeader[],
-  nf?: NumberFormat,
-  df?: DateFormat
-): string[][] => {
-  if (!data || !columns || columns.length === 0) return data;
-  return data.map(row =>
-    row.map((v, ci) => {
-      const col = columns[ci];
-      if (!col) return v;
-      if (col.type === 'number' && v !== '' && nf) return formatNumberString(v, nf);
-      if (col.type === 'date' && v !== '' && df) return normalizeDateString(v, df);
-      return v;
-    })
-  );
-};
 
 /**
  * Determine the appropriate delimiter for a file
@@ -230,6 +88,7 @@ const handleDuplicateHeaders = (headers: string[]): string[] => {
 
   return processedHeaders;
 };
+
 
 /**
  * Normalize 2D array data to ensure consistent row lengths and handle duplicate headers
@@ -305,6 +164,8 @@ export const detectDelimiter = (
   return bestDelimiter;
 };
 
+
+
 /**
  * Parse tabular data from text content using Papa Parse
  */
@@ -345,32 +206,16 @@ export const parseTabularContent = (
   const headerRow = normalizedData[0] || [];
   const dataRows = normalizedData.slice(1);
 
-  // Create headers array with type detection (defaulting to text for now)
+  // Create headers array with type detection (defaulting to string for now)
   const headers: DataHeader[] = headerRow.map((headerName, index) => ({
     name: headerName || `Column ${index + 1}`,
-    type: 'text', // Default to text for now
-    index: index,
+    type: 'string', // Default to string for now
+    index: index
   }));
 
-  // Run smart detection on the data (exclude header row)
-  const detectionResult = detectColumnFormats(dataRows, 20);
-
-  // Apply detected column types to headers
-  const smartHeaders = applyDetectedFormats(headers, detectionResult);
-
   return {
-    headers: smartHeaders,
-    data: dataRows,
-    detectionResult,
-    // Auto-apply detected formats if confidence is high enough
-    detectedDateFormat:
-      detectionResult.confidence.dateFormat >= FORMAT_APPLICATION_CONFIDENCE_THRESHOLD
-        ? detectionResult.dateFormat
-        : null,
-    detectedNumberFormat:
-      detectionResult.confidence.numberFormat >= FORMAT_APPLICATION_CONFIDENCE_THRESHOLD
-        ? detectionResult.numberFormat
-        : null,
+    headers,
+    data: dataRows
   };
 };
 
@@ -402,10 +247,7 @@ export const processFileContent = async (
 /**
  * Validate file size
  */
-export const validateFileSize = (
-  file: File,
-  maxSizeInBytes: number = 50 * 1024 * 1024
-): boolean => {
+export const validateFileSize = (file: File, maxSizeInBytes: number = 50 * 1024 * 1024): boolean => {
   return file.size <= maxSizeInBytes;
 };
 
@@ -420,6 +262,47 @@ export const isValidFileType = (file: File): boolean => {
 };
 
 /**
+ * Transforms data from wide format to long format (melt operation)
+ * @param data - 2D array of data with headers in first row
+ * @param transformationColumn - Column name to use as identifier
+ * @returns Transformed data in long format
+ */
+export const transformWideToLong = (
+  data: string[][],
+  transformationColumn: string
+): string[][] => {
+  if (!data || data.length === 0) return data;
+
+  const headers = data[0];
+  const columnIndex = headers?.indexOf(transformationColumn);
+  if (columnIndex === undefined || columnIndex < 0) return data;
+
+  // Store indexes and column names for all columns except the transformation column
+  const otherColumnIndexes = headers
+    .map((col, idx) => ({ col, idx }))
+    .filter(({ idx }) => idx !== columnIndex);
+
+  // Create new headers: [selectedColumn, 'variable', 'value']
+  const transformed: string[][] = [];
+  transformed.push([transformationColumn, 'variable', 'value']);
+
+  // Process each data row
+  for (let i = 1; i < data.length; i += 1) {
+    const row = data[i] || [];
+    const idValue = (row[columnIndex] ?? '').toString();
+
+    // Loop over only the "other" columns we prepared
+    for (const { col, idx } of otherColumnIndexes) {
+      const cellValue = (row[idx] ?? '').toString();
+      transformed.push([idValue, col, cellValue]);
+    }
+  }
+
+  return transformed;
+};
+
+
+/**
  * Read text content from Excel files (.xls, .xlsx)
  * @param file - Excel file to read
  * @returns Promise that resolves to text content in CSV format
@@ -428,7 +311,7 @@ export const readExcelAsText = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onload = e => {
+    reader.onload = (e) => {
       try {
         const data = e.target?.result;
         if (!data) {
@@ -455,11 +338,7 @@ export const readExcelAsText = async (file: File): Promise<string> => {
 
         resolve(csvText);
       } catch (error) {
-        reject(
-          new Error(
-            `dataset_excelParseFailed:${error instanceof Error ? error.message : 'Unknown error'}`
-          )
-        );
+        reject(new Error(`dataset_excelParseFailed:${error instanceof Error ? error.message : 'Unknown error'}`));
       }
     };
 
@@ -531,7 +410,9 @@ export const parseJsonDirectly = (jsonText: string): ParsedDataResult => {
     });
 
     // Convert to string format for consistency
-    const stringData: string[][] = data.map(row => row.map(cell => String(cell ?? '')));
+    const stringData: string[][] = data.map(row =>
+      row.map(cell => String(cell ?? ''))
+    );
 
     // Normalize the data directly
     const normalizedData = normalizeArrayData(stringData);
@@ -540,41 +421,28 @@ export const parseJsonDirectly = (jsonText: string): ParsedDataResult => {
     const headerRow = normalizedData[0] || [];
     const dataRows = normalizedData.slice(1);
 
-    // Create headers array with type detection (defaulting to text for now)
+    // Create headers array with type detection (defaulting to string for now)
     const headers: DataHeader[] = headerRow.map((headerName, index) => ({
       name: headerName || `Column ${index + 1}`,
-      type: 'text', // Default to text for now
-      index: index,
+      type: 'string', // Default to string for now
+      index: index
     }));
 
-    // Run smart detection on the data (exclude header row)
-    const detectionResult = detectColumnFormats(dataRows, 20);
-
-    // Apply detected column types to headers
-    const smartHeaders = applyDetectedFormats(headers, detectionResult);
-
     return {
-      headers: smartHeaders,
-      data: dataRows,
-      detectionResult,
-      // Auto-apply detected formats if confidence is high enough
-      detectedDateFormat:
-        detectionResult.confidence.dateFormat >= FORMAT_APPLICATION_CONFIDENCE_THRESHOLD
-          ? detectionResult.dateFormat
-          : null,
-      detectedNumberFormat:
-        detectionResult.confidence.numberFormat >= FORMAT_APPLICATION_CONFIDENCE_THRESHOLD
-          ? detectionResult.numberFormat
-          : null,
+      headers,
+      data: dataRows
     };
+
   } catch (error) {
     // If it's already a translation key, throw it directly
     if (error instanceof Error && error.message.startsWith('dataset_')) {
       throw error;
     }
     // Otherwise, throw the unknown error key with the error message
-    throw new Error(
-      `dataset_jsonUnknownError:${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+    throw new Error(`dataset_jsonUnknownError:${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
+
+
+
+

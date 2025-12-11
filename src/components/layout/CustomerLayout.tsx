@@ -1,15 +1,10 @@
 import React from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import Header from '../header/Header';
 import Footer from '../footer/Footer';
-
-// import { useTranslation } from 'react-i18next';
-import SimpleChatBox from '../ui/SimpleChatBox';
-import { PageTransition } from '../../theme/animation';
-
-// import { useTranslation } from 'react-i18next';
+import { PageTransition, LoadingSpinner } from '../../theme/animation';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/useAuth';
-import Routers from '@/router/routers';
 
 interface CustomerLayoutProps {
   children?: React.ReactNode;
@@ -17,12 +12,8 @@ interface CustomerLayoutProps {
 
 const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
-  // const { t } = useTranslation();
-  const location = useLocation();
-  const isFullScreen =
-    location.pathname.includes('/chart-editor') ||
-    location.pathname.includes(`${Routers.CHART_HISTORY_VIEW}`);
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { t } = useTranslation();
 
   const handleLogin = () => {
     navigate('/auth');
@@ -36,20 +27,19 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
     logout();
   };
 
-  // if (isLoading) {
-  //   console.log('TÔI ĐANG Ở CUSTOMER LAYOUT');
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5">
-  //       <div className="text-center space-y-4">
-  //         <LoadingSpinner />
-  //         <p className="text-gray-600 font-medium">{t('loading')}</p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5">
+        <div className="text-center space-y-4">
+          <LoadingSpinner size={48} className="border-primary/30 border-t-primary" />
+          <p className="text-gray-600 font-medium">{t('loading')}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col min-w-0 bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Header */}
       <Header
         isAuthenticated={isAuthenticated}
@@ -57,7 +47,7 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
         onLogin={handleLogin}
         onRegister={handleRegister}
         onLogout={handleLogout}
-        _notificationCount={0}
+        notificationCount={0}
       />
 
       {/* Main Content */}
@@ -68,11 +58,8 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
         </PageTransition>
       </main>
 
-      {/* Chatbox */}
-      <SimpleChatBox />
-
       {/* Footer */}
-      {!isFullScreen && <Footer />}
+      <Footer />
     </div>
   );
 };

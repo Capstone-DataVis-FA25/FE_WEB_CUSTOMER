@@ -51,25 +51,6 @@ export const colors = {
     950: '#0f1d3e',
   },
 
-  randomSeriesColor: [
-    '#f97316', // orange
-    '#ec4899', // pink
-    '#8b5cf6', // purple
-    '#06b6d4', // cyan
-    '#10b981', // green
-    '#f59e0b', // amber
-    '#ef4444', // red
-    '#3b82f6', // blue
-    '#14b8a6', // teal
-    '#f43f5e', // rose
-    '#a855f7', // violet
-    '#84cc16', // lime
-    '#6366f1', // indigo
-    '#22c55e', // emerald
-    '#eab308', // yellow
-    '#d946ef', // fuchsia
-  ],
-
   // Extended palette
   success: '#22c55e',
   warning: '#f59e0b',

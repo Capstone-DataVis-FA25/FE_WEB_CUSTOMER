@@ -4,29 +4,18 @@ import storage from 'redux-persist/lib/storage';
 import { combineReducers } from '@reduxjs/toolkit';
 import authReducer from '../features/auth/authSlice';
 import datasetReducer from '../features/dataset/datasetSlice';
-import type { AuthState } from '../features/auth/authType';
-import type { DatasetState } from '../features/dataset/datasetSlice';
-import { chartReducer, type ChartState } from '@/features/charts';
-import { chartNoteReducer, type ChartNoteState } from '@/features/chartNotes';
-import { chartEditorReducer, type ChartEditorState } from '@/features/chartEditor';
-import { excelUIReducer, type ExcelUIState } from '@/features/excelUI';
-import chartHistoryReducer from '@/features/chartHistory/chartHistorySlice';
-import type { ChartHistoryState } from '@/features/chartHistory/chartHistoryTypes';
+import chartReducer from '../features/charts/chartSlice';
 
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth', 'chartNote'], // Persist auth and chartNote state
+  whitelist: ['auth'], // Chỉ persist auth state, không persist dataset
 };
 
 const rootReducer = combineReducers({
   auth: authReducer,
   dataset: datasetReducer,
-  chart: chartReducer,
-  chartNote: chartNoteReducer,
-  chartEditor: chartEditorReducer,
-  excelUI: excelUIReducer,
-  chartHistory: chartHistoryReducer,
+  charts: chartReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -43,14 +32,14 @@ export const store = configureStore({
 
 export const persistor = persistStore(store);
 
-export type RootState = {
-  auth: AuthState;
-  dataset: DatasetState;
-  chart: ChartState;
-  chartNote: ChartNoteState;
-  chartEditor: ChartEditorState;
-  excelUI: ExcelUIState;
-  chartHistory: ChartHistoryState;
-};
-
+export type RootState = ReturnType<typeof rootReducer>;
 export type AppDispatch = typeof store.dispatch;
+
+// const dispatch = useAppDispatch();
+
+// const result = await dispatch(
+//   signInWithEmailAndPassword({
+//     email: formData.email,
+//     password: formData.password,
+//   })
+// ).unwrap();

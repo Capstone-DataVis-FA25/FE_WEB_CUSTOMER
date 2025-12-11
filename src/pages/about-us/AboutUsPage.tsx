@@ -20,7 +20,6 @@ import {
   Globe,
   Clock,
   Play,
-  Youtube,
 } from 'lucide-react';
 import {
   containerVariants,
@@ -30,84 +29,83 @@ import {
   viewportConfigs,
 } from '@/theme/animation/animation.config';
 import Lottie from 'lottie-react';
-import { useTranslation } from 'react-i18next';
 
 const features = [
   {
     icon: Database,
-    titleKey: 'about_feature_processing_title',
-    descriptionKey: 'about_feature_processing_description',
+    title: 'Advanced Data Processing',
+    description: 'Handle massive datasets with our enterprise-grade processing engine',
   },
   {
     icon: BarChart3,
-    titleKey: 'about_feature_dashboards_title',
-    descriptionKey: 'about_feature_dashboards_description',
+    title: 'Interactive Dashboards',
+    description: 'Create stunning, real-time dashboards with drag-and-drop simplicity',
   },
   {
     icon: TrendingUp,
-    titleKey: 'about_feature_analytics_title',
-    descriptionKey: 'about_feature_analytics_description',
+    title: 'Predictive Analytics',
+    description: 'AI-powered insights that help you stay ahead of trends',
   },
   {
     icon: Users,
-    titleKey: 'about_feature_collaboration_title',
-    descriptionKey: 'about_feature_collaboration_description',
+    title: 'Team Collaboration',
+    description: 'Share insights and collaborate seamlessly across your organization',
   },
   {
     icon: Shield,
-    titleKey: 'about_feature_security_title',
-    descriptionKey: 'about_feature_security_description',
+    title: 'Enterprise Security',
+    description: 'Bank-level security with SOC 2 compliance and data encryption',
   },
   {
     icon: Globe,
-    titleKey: 'about_feature_scale_title',
-    descriptionKey: 'about_feature_scale_description',
+    title: 'Global Scale',
+    description: 'Trusted by companies worldwide with 99.9% uptime guarantee',
   },
 ];
 
 const achievements = [
-  { number: '500K+', labelKey: 'about_stats_daily_points' },
-  { number: '1,200+', labelKey: 'about_stats_clients' },
-  { number: '99.9%', labelKey: 'about_stats_uptime' },
-  { number: '50+', labelKey: 'about_stats_countries' },
+  { number: '500K+', label: 'Data Points Processed Daily' },
+  { number: '1,200+', label: 'Enterprise Clients' },
+  { number: '99.9%', label: 'Uptime Guarantee' },
+  { number: '50+', label: 'Countries Served' },
 ];
 
 const showcaseImages = [
   {
-    titleKey: 'about_showcase_realtime_title',
-    descriptionKey: 'about_showcase_realtime_description',
-    image: new URL('../../assets/images/showcase_dashboard.png', import.meta.url).href,
-    categoryKey: 'about_showcase_realtime_category',
+    title: 'Real-time Analytics Dashboard',
+    description: 'Monitor your business metrics with live data visualization',
+    image: '/placeholder.svg?height=400&width=600',
+    category: 'Dashboard',
   },
   {
-    titleKey: 'about_showcase_exploration_title',
-    descriptionKey: 'about_showcase_exploration_description',
-    image: new URL('../../assets/images/showcase_exploration.png', import.meta.url).href,
-    categoryKey: 'about_showcase_exploration_category',
+    title: 'Interactive Data Exploration',
+    description: 'Dive deep into your data with intuitive exploration tools',
+    image: '/placeholder.svg?height=400&width=600',
+    category: 'Analytics',
   },
   {
-    titleKey: 'about_showcase_reporting_title',
-    descriptionKey: 'about_showcase_reporting_description',
-    image: new URL('../../assets/images/showcase_reporting.png', import.meta.url).href,
-    categoryKey: 'about_showcase_reporting_category',
+    title: 'Collaborative Reporting',
+    description: 'Share insights across teams with beautiful, automated reports',
+    image: '/placeholder.svg?height=400&width=600',
+    category: 'Reports',
   },
   {
-    titleKey: 'about_showcase_mobile_title',
-    descriptionKey: 'about_showcase_mobile_description',
-    image: new URL('../../assets/images/showcase_mobile.png', import.meta.url).href,
-    categoryKey: 'about_showcase_mobile_category',
+    title: 'Mobile-First Design',
+    description: 'Access your data insights anywhere, on any device',
+    image: '/placeholder.svg?height=400&width=600',
+    category: 'Mobile',
   },
   {
-    titleKey: 'about_showcase_ai_title',
-    descriptionKey: 'about_showcase_ai_description',
-    image: new URL('../../assets/images/showcase_ai.png', import.meta.url).href,
-    categoryKey: 'about_showcase_ai_category',
+    title: 'AI-Powered Insights',
+    description: 'Let artificial intelligence uncover hidden patterns in your data',
+    image: '/placeholder.svg?height=400&width=600',
+    category: 'AI',
   },
   {
-    titleKey: 'about_showcase_integration_title',
-    descriptionKey: 'about_showcase_integration_description',
-    image: new URL('../../assets/images/showcase_integration.png', import.meta.url).href,
-    categoryKey: 'about_showcase_integration_category',
+    title: 'Enterprise Integration',
+    description: 'Seamlessly connect with your existing business tools',
+    image: '/placeholder.svg?height=400&width=600',
+    category: 'Integration',
   },
 ];
 
@@ -144,8 +142,6 @@ const teamMembers = [
 ];
 
 export default function AboutPage() {
-  const { t } = useTranslation();
-
   return (
     <div className="min-h-screen bg-gradient-to-br bg-[var(--gradient-main)]">
       {/* Hero Section */}
@@ -156,7 +152,7 @@ export default function AboutPage() {
         viewport={viewportConfigs.repeat}
         variants={containerVariants}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 border-t border-blue-100 dark:border-gray-800" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 border-t border-blue-100 dark:border-gray-800"/>
         <div className="relative max-w-6xl mx-auto">
           <motion.div
             className="grid lg:grid-cols-2 gap-12 items-center"
@@ -166,25 +162,26 @@ export default function AboutPage() {
             variants={containerVariants}
           >
             <motion.div variants={repeatableVariants.slideRepeatLeft} className="space-y-8">
-              <motion.div
+              <motion.div 
                 variants={repeatableVariants.slideRepeatBottom}
                 transition={{ delay: 0.2 }}
               >
                 <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400 mb-6">
-                  {t('navigation_about')}
+                  About Us
                 </h1>
                 <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-                  {t('about_subtitle')}
+                  Chúng tôi là đội ngũ phát triển DataVis, mang đến giải pháp trực quan hóa dữ liệu
+                  hiện đại.
                 </p>
               </motion.div>
-              <motion.div
-                variants={repeatableVariants.fadeElastic}
+              <motion.div 
+                variants={repeatableVariants.fadeElastic} 
                 transition={{ delay: 0.4 }}
                 className="flex gap-4"
               >
                 <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
                   <Button className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 shadow-lg transition-all duration-300">
-                    {t('about_view_platform')}
+                    Xem sản phẩm
                   </Button>
                 </motion.div>
                 <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
@@ -192,7 +189,7 @@ export default function AboutPage() {
                     variant="outline"
                     className="border-blue-300 text-blue-600 dark:text-blue-300"
                   >
-                    {t('about_contact_email_title')}
+                    Liên hệ
                   </Button>
                 </motion.div>
               </motion.div>
@@ -220,16 +217,19 @@ export default function AboutPage() {
 
       {/* Stats Section */}
       <motion.section
-        className="py-16 px-4 bg-gray-50 dark:bg-gray-800"
+        className="py-16 px-4 bg-foreground dark:bg-gray-800"
         initial="hidden"
         whileInView="visible"
         viewport={viewportConfigs.repeat}
         variants={containerVariants}
       >
         <div className="max-w-6xl mx-auto">
-          <motion.div variants={repeatableVariants.bounceIn} className="text-center mb-8">
+          <motion.div 
+            variants={repeatableVariants.bounceIn} 
+            className="text-center mb-8"
+          >
             <h2 className="text-3xl font-bold mb-2 text-blue-600 dark:text-blue-400">
-              {t('about_achievements_title')}
+              Achievements
             </h2>
           </motion.div>
           <motion.div
@@ -252,7 +252,7 @@ export default function AboutPage() {
                   {achievement.number}
                 </div>
                 <div className="text-gray-600 dark:text-gray-400 font-medium">
-                  {t(achievement.labelKey)}
+                  {achievement.label}
                 </div>
               </motion.div>
             ))}
@@ -268,12 +268,15 @@ export default function AboutPage() {
         variants={containerVariants}
       >
         <div className="max-w-6xl mx-auto">
-          <motion.div variants={repeatableVariants.fadeElastic} className="text-center mb-12">
+          <motion.div 
+            variants={repeatableVariants.fadeElastic} 
+            className="text-center mb-12"
+          >
             <h2 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-              {t('about_showcase_title')}
+              Product Showcase
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              {t('about_showcase_description')}
+              Discover how DataVis transforms complex data into beautiful, actionable insights
             </p>
           </motion.div>
 
@@ -285,10 +288,10 @@ export default function AboutPage() {
             variants={containerVariants}
           >
             {showcaseImages.map((item, index) => (
-              <motion.div
-                key={index}
-                variants={repeatableVariants.slideRepeatBottom}
-                custom={index}
+              <motion.div 
+                key={index} 
+                variants={repeatableVariants.slideRepeatBottom} 
+                custom={index} 
                 whileHover="hover"
                 transition={{ delay: index * 0.1 }}
               >
@@ -296,7 +299,7 @@ export default function AboutPage() {
                   <div className="relative overflow-hidden">
                     <motion.img
                       src={item.image || '/placeholder.svg'}
-                      alt={t(item.titleKey)}
+                      alt={item.title}
                       className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -305,7 +308,7 @@ export default function AboutPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <div className="absolute top-4 right-4">
                       <Badge className="text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/70 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
-                        {t(item.categoryKey)}
+                        {item.category}
                       </Badge>
                     </div>
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -315,17 +318,17 @@ export default function AboutPage() {
                           className="bg-white/90 text-gray-800 hover:bg-white dark:bg-gray-800/90 dark:text-gray-200 dark:hover:bg-gray-800 shadow-lg"
                         >
                           <Play className="h-4 w-4 mr-2" />
-                          {t('about_view_demo')}
+                          View Demo
                         </Button>
                       </motion.div>
                     </div>
                   </div>
                   <CardContent className="p-6">
                     <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">
-                      {t(item.titleKey)}
+                      {item.title}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                      {t(item.descriptionKey)}
+                      {item.description}
                     </p>
                   </CardContent>
                 </Card>
@@ -334,13 +337,15 @@ export default function AboutPage() {
           </motion.div>
 
           <motion.div variants={scaleVariants} className="text-center mt-12">
-            <Button
-              size="lg"
-              className="px-8 py-3 text-lg font-semibold bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-500 dark:hover:bg-purple-600 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-105"
-            >
-              <Eye className="mr-2 h-5 w-5" />
-              {t('about_view_all_features')}
-            </Button>
+            <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
+              <Button
+                size="lg"
+                className="px-8 py-3 text-lg font-semibold bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-500 dark:hover:bg-purple-600 shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Eye className="mr-2 h-5 w-5" />
+                View All Features
+              </Button>
+            </motion.div>
           </motion.div>
         </div>
       </motion.section>
@@ -354,15 +359,15 @@ export default function AboutPage() {
         variants={containerVariants}
       >
         <div className="max-w-6xl mx-auto">
-          <motion.div
+          <motion.div 
             className="grid md:grid-cols-3 gap-8"
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
             viewport={viewportConfigs.repeat}
           >
-            <motion.div
-              variants={repeatableVariants.slideRepeatLeft}
+            <motion.div 
+              variants={repeatableVariants.slideRepeatLeft} 
               whileHover="hover"
               transition={{ delay: 0.1 }}
             >
@@ -372,17 +377,18 @@ export default function AboutPage() {
                     <Target className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                   </div>
                   <h3 className="text-2xl font-bold mb-4 text-blue-600 dark:text-blue-400">
-                    {t('about_mission_title')}
+                    Our Mission
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {t('about_mission_description')}
+                    To democratize data visualization and make complex analytics accessible to
+                    businesses of all sizes, enabling smarter decisions through intuitive insights.
                   </p>
                 </CardContent>
               </Card>
             </motion.div>
 
-            <motion.div
-              variants={repeatableVariants.slideRepeatBottom}
+            <motion.div 
+              variants={repeatableVariants.slideRepeatBottom} 
               whileHover="hover"
               transition={{ delay: 0.2 }}
             >
@@ -392,17 +398,18 @@ export default function AboutPage() {
                     <Lightbulb className="h-8 w-8 text-purple-600 dark:text-purple-400" />
                   </div>
                   <h3 className="text-2xl font-bold mb-4 text-purple-600 dark:text-purple-400">
-                    {t('about_vision_title')}
+                    Our Vision
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {t('about_vision_description')}
+                    To be the world's leading data visualization platform, transforming how
+                    organizations understand and act on their data in the digital age.
                   </p>
                 </CardContent>
               </Card>
             </motion.div>
 
-            <motion.div
-              variants={repeatableVariants.slideRepeatRight}
+            <motion.div 
+              variants={repeatableVariants.slideRepeatRight} 
               whileHover="hover"
               transition={{ delay: 0.3 }}
             >
@@ -412,10 +419,11 @@ export default function AboutPage() {
                     <Heart className="h-8 w-8 text-green-600 dark:text-green-400" />
                   </div>
                   <h3 className="text-2xl font-bold mb-4 text-green-600 dark:text-green-400">
-                    {t('about_values_title')}
+                    Our Values
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {t('about_values_description')}
+                    Innovation, transparency, and customer success drive everything we do. We
+                    believe data should empower, not overwhelm.
                   </p>
                 </CardContent>
               </Card>
@@ -433,16 +441,19 @@ export default function AboutPage() {
         variants={containerVariants}
       >
         <div className="max-w-6xl mx-auto">
-          <motion.div variants={repeatableVariants.bounceIn} className="text-center mb-12">
+          <motion.div 
+            variants={repeatableVariants.bounceIn} 
+            className="text-center mb-12"
+          >
             <h2 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-              {t('about_features_title')}
+              Why Choose DataVis
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              {t('about_features_description')}
+              Enterprise-grade features designed for modern data-driven organizations
             </p>
           </motion.div>
 
-          <motion.div
+          <motion.div 
             className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
             variants={containerVariants}
             initial="hidden"
@@ -450,10 +461,10 @@ export default function AboutPage() {
             viewport={viewportConfigs.repeat}
           >
             {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                variants={repeatableVariants.slideRepeatBottom}
-                whileHover="hover"
+              <motion.div 
+                key={index} 
+                variants={repeatableVariants.slideRepeatBottom} 
+                whileHover="hover" 
                 custom={index}
                 transition={{ delay: index * 0.1 }}
               >
@@ -463,10 +474,10 @@ export default function AboutPage() {
                       <feature.icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">
-                      {t(feature.titleKey)}
+                      {feature.title}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                      {t(feature.descriptionKey)}
+                      {feature.description}
                     </p>
                   </CardContent>
                 </Card>
@@ -485,24 +496,27 @@ export default function AboutPage() {
         variants={containerVariants}
       >
         <div className="max-w-6xl mx-auto text-center">
-          <motion.div variants={repeatableVariants.fadeElastic} className="mb-12">
+          <motion.div 
+            variants={repeatableVariants.fadeElastic} 
+            className="mb-12"
+          >
             <h2 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-              {t('about_awards_title')}
+              Industry Recognition
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300">
-              {t('about_awards_description')}
+              Trusted by industry leaders and recognized globally
             </p>
           </motion.div>
 
-          <motion.div
-            variants={containerVariants}
+          <motion.div 
+            variants={containerVariants} 
             className="grid md:grid-cols-4 gap-8"
             initial="hidden"
             whileInView="visible"
             viewport={viewportConfigs.repeat}
           >
-            <motion.div
-              variants={repeatableVariants.slideRepeatLeft}
+            <motion.div 
+              variants={repeatableVariants.slideRepeatLeft} 
               className="text-center group"
               transition={{ delay: 0.1 }}
             >
@@ -510,15 +524,13 @@ export default function AboutPage() {
                 <Award className="h-8 w-8 text-blue-600 dark:text-blue-400" />
               </div>
               <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">
-                {t('about_award_platform_title')}
+                Best Data Platform 2024
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('about_award_platform_source')}
-              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">TechCrunch Awards</p>
             </motion.div>
 
-            <motion.div
-              variants={repeatableVariants.slideRepeatBottom}
+            <motion.div 
+              variants={repeatableVariants.slideRepeatBottom} 
               className="text-center group"
               transition={{ delay: 0.2 }}
             >
@@ -526,15 +538,13 @@ export default function AboutPage() {
                 <Globe className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               </div>
               <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">
-                {t('about_award_innovation_title')}
+                Global Innovation Leader
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('about_award_innovation_source')}
-              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Forbes Tech Council</p>
             </motion.div>
 
-            <motion.div
-              variants={repeatableVariants.slideRepeatRight}
+            <motion.div 
+              variants={repeatableVariants.slideRepeatRight} 
               className="text-center group"
               transition={{ delay: 0.3 }}
             >
@@ -542,15 +552,13 @@ export default function AboutPage() {
                 <Users className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
               <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">
-                {t('about_award_customer_title')}
+                Customer Choice Award
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('about_award_customer_source')}
-              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Gartner Peer Insights</p>
             </motion.div>
 
-            <motion.div
-              variants={repeatableVariants.fadeElastic}
+            <motion.div 
+              variants={repeatableVariants.fadeElastic} 
               className="text-center group"
               transition={{ delay: 0.4 }}
             >
@@ -558,11 +566,9 @@ export default function AboutPage() {
                 <Clock className="h-8 w-8 text-orange-600 dark:text-orange-400" />
               </div>
               <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">
-                {t('about_award_growth_title')}
+                Fastest Growing SaaS
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('about_award_growth_source')}
-              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Inc. 5000</p>
             </motion.div>
           </motion.div>
         </div>
@@ -577,12 +583,15 @@ export default function AboutPage() {
         variants={containerVariants}
       >
         <div className="max-w-6xl mx-auto">
-          <motion.div variants={repeatableVariants.bounceIn} className="text-center mb-12">
+          <motion.div 
+            variants={repeatableVariants.bounceIn} 
+            className="text-center mb-12"
+          >
             <h2 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-              {t('about_team_title')}
+              Development Team Members
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              {t('about_team_description')}
+              Meet the web development team behind DataVis
             </p>
           </motion.div>
 
@@ -594,10 +603,10 @@ export default function AboutPage() {
             variants={containerVariants}
           >
             {teamMembers.map((member, idx) => (
-              <motion.div
-                key={idx}
-                variants={repeatableVariants.slideRepeatBottom}
-                custom={idx}
+              <motion.div 
+                key={idx} 
+                variants={repeatableVariants.slideRepeatBottom} 
+                custom={idx} 
                 whileHover="hover"
                 transition={{ delay: idx * 0.1 }}
               >
@@ -625,116 +634,83 @@ export default function AboutPage() {
         </div>
       </motion.section>
 
-      {/* YouTube Section */}
-      <motion.section
-        className="py-16 px-4 bg-white dark:bg-gray-900"
-        initial="hidden"
-        whileInView="visible"
-        viewport={viewportConfigs.repeat}
-        variants={containerVariants}
-      >
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div variants={repeatableVariants.fadeElastic}>
-            <div className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center bg-gradient-to-br from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 shadow-lg">
-              <Youtube className="h-10 w-10 text-white" />
-            </div>
-            <h2 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-              {t('about_youtube_title')}
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-              {t('about_youtube_description')}
-            </p>
-          </motion.div>
-
-          <motion.div variants={repeatableVariants.bounceIn} transition={{ delay: 0.2 }}>
-            <Button
-              size="lg"
-              className="px-12 py-4 text-lg font-semibold bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95"
-              onClick={() => window.open('https://www.youtube.com/@YourChannelName', '_blank')}
-            >
-              <Youtube className="mr-2 h-5 w-5" />
-              {t('about_youtube_button')}
-            </Button>
-          </motion.div>
-        </div>
-      </motion.section>
-
       {/* Contact Section */}
       <motion.section
-        className="py-16 px-4 bg-gray-50 dark:bg-gray-800"
+        className="py-16 px-4 bg-foreground dark:bg-gray-800"
         initial="hidden"
         whileInView="visible"
         viewport={viewportConfigs.repeat}
         variants={containerVariants}
       >
         <div className="max-w-4xl mx-auto text-center">
-          <motion.div variants={repeatableVariants.fadeElastic}>
+          <motion.div 
+            variants={repeatableVariants.fadeElastic}
+          >
             <h2 className="text-4xl font-bold mb-6 text-gray-900 dark:text-white">
-              {t('about_contact_title')}
+              Ready to Transform Your Data?
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-              {t('about_contact_description')}
+              Join thousands of companies already using DataVis to drive growth
             </p>
           </motion.div>
 
-          <motion.div
-            variants={containerVariants}
+          <motion.div 
+            variants={containerVariants} 
             className="grid md:grid-cols-3 gap-8 mb-12"
             initial="hidden"
             whileInView="visible"
             viewport={viewportConfigs.repeat}
           >
-            <motion.div
-              variants={repeatableVariants.slideRepeatLeft}
+            <motion.div 
+              variants={repeatableVariants.slideRepeatLeft} 
               className="text-center group"
               transition={{ delay: 0.1 }}
             >
               <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-blue-100 dark:bg-blue-900/50 group-hover:bg-blue-200 dark:group-hover:bg-blue-800/70 transition-colors duration-300">
                 <Mail className="h-8 w-8 text-blue-600 dark:text-blue-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
-                {t('about_contact_email_title')}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">{t('about_contact_email')}</p>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Email Us</h3>
+              <p className="text-gray-600 dark:text-gray-400">hello@datavis.com</p>
             </motion.div>
 
-            <motion.div
-              variants={repeatableVariants.slideRepeatBottom}
+            <motion.div 
+              variants={repeatableVariants.slideRepeatBottom} 
               className="text-center group"
               transition={{ delay: 0.2 }}
             >
               <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-purple-100 dark:bg-purple-900/50 group-hover:bg-purple-200 dark:group-hover:bg-purple-800/70 transition-colors duration-300">
                 <Phone className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
-                {t('about_contact_phone_title')}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">{t('about_contact_phone')}</p>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Call Us</h3>
+              <p className="text-gray-600 dark:text-gray-400">+1 (555) 123-4567</p>
             </motion.div>
 
-            <motion.div
-              variants={repeatableVariants.slideRepeatRight}
+            <motion.div 
+              variants={repeatableVariants.slideRepeatRight} 
               className="text-center group"
               transition={{ delay: 0.3 }}
             >
               <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-green-100 dark:bg-green-900/50 group-hover:bg-green-200 dark:group-hover:bg-green-800/70 transition-colors duration-300">
                 <MapPin className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
-                {t('about_contact_location_title')}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">{t('about_contact_location')}</p>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Visit Us</h3>
+              <p className="text-gray-600 dark:text-gray-400">San Francisco, CA</p>
             </motion.div>
           </motion.div>
 
-          <motion.div variants={repeatableVariants.bounceIn} transition={{ delay: 0.4 }}>
-            <Button
-              size="lg"
-              className="px-12 py-4 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white dark:from-blue-500 dark:to-purple-500 dark:hover:from-blue-600 dark:hover:to-purple-600 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95"
-            >
-              <Eye className="mr-2 h-5 w-5" />
-              {t('about_start_trial')}
-            </Button>
+          <motion.div 
+            variants={repeatableVariants.bounceIn}
+            transition={{ delay: 0.4 }}
+          >
+            <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
+              <Button
+                size="lg"
+                className="px-12 py-4 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white dark:from-blue-500 dark:to-purple-500 dark:hover:from-blue-600 dark:hover:to-purple-600 shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Eye className="mr-2 h-5 w-5" />
+                Start Free Trial
+              </Button>
+            </motion.div>
           </motion.div>
         </div>
       </motion.section>

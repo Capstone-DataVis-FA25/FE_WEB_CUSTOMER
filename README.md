@@ -352,21 +352,6 @@ For support and questions:
 - **Documentation**: [Project Wiki](link-to-wiki)
 - **Issues**: [GitHub Issues](link-to-issues)
 
-## How to scale chart validation for each chart
-
-```bash
-   // 1. Add to enum
-   export enum ChartType {
-   Pie = 'pie'  // NEW
-   }
-
-   // 2. Add validation rule
-   [ChartType.Pie]: {
-   xAxis: { allowedTypes: ['text'], description: '...' },
-   yAxis: { allowedTypes: ['number'], description: '...' }
-   }
-```
-
 ---
 
 **Happy Coding! 🚀**
