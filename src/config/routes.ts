@@ -21,7 +21,6 @@ export const Permission = {
   VIEW_PROFILE: 'view_profile',
   EDIT_PROFILE: 'edit_profile',
   CHANGE_PASSWORD: 'change_password',
-  VIEW_OWN_TRANSACTIONS: 'view_own_transactions',
 
   // Admin permissions
   ADMIN_ACCESS: 'admin_access',
@@ -39,7 +38,6 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     Permission.VIEW_PROFILE,
     Permission.EDIT_PROFILE,
     Permission.CHANGE_PASSWORD,
-    Permission.VIEW_OWN_TRANSACTIONS,
   ],
   [UserRole.ADMIN]: [
     Permission.VIEW_PUBLIC,
@@ -223,18 +221,6 @@ export const publicRoutes: RouteConfig[] = [
       title: 'Payment Success',
       description: 'Confirm payment status',
       hideFromNav: true,
-    },
-  },
-  {
-    path: Routers.TRANSACTION_HISTORY,
-    name: 'transaction-history',
-    component: 'TransactionHistoryPage',
-    layout: 'USER',
-    isProtected: true,
-    permissions: [Permission.VIEW_OWN_TRANSACTIONS],
-    meta: {
-      title: 'Transaction History',
-      description: 'View your payment and subscription history',
     },
   },
   {
