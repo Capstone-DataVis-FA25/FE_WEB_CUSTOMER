@@ -16,8 +16,6 @@ import { HelpCircle } from 'lucide-react';
 import { useAuth } from '@/features/auth/useAuth';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { pricingSteps } from '@/config/driver-steps/pricing-steps';
-import { Link } from 'react-router-dom';
-import Routers from '@/router/routers';
 
 const PricingPage: React.FC = () => {
   const user = useSelector(selectUser);
@@ -136,26 +134,14 @@ const PricingPage: React.FC = () => {
           </h1>
           <p className="text-lg text-muted-foreground">{t('subscription.pricing.subtitle')}</p>
 
-          {/* Action Buttons */}
-          <div className="absolute top-0 right-0 flex gap-2">
-            {isAuthenticated && (
-              <Link to={Routers.TRANSACTION_HISTORY}>
-                <Button
-                  variant="outline"
-                  className="rounded-full px-4 py-2 shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2"
-                >
-                  Transaction History
-                </Button>
-              </Link>
-            )}
-            <Button
-              onClick={startTour}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-full px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
-            >
-              <HelpCircle className="w-4 h-4" />
-              {t('subscription.pricing.start_tour')}
-            </Button>
-          </div>
+          {/* Start Tour Button */}
+          <Button
+            onClick={startTour}
+            className="absolute top-0 right-0 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-full px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
+          >
+            <HelpCircle className="w-4 h-4" />
+            {t('subscription.pricing.start_tour')}
+          </Button>
         </div>
 
         {loading && (

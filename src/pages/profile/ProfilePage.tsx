@@ -31,7 +31,6 @@ import { AvatarImage } from '@radix-ui/react-avatar';
 import Routers from '@/router/routers';
 import { FadeIn, SlideInRight } from '@/theme/animation';
 import { NAME_REGEX } from '@/utils/validation';
-import ResourceUsageCard from '@/components/subscription/ResourceUsageCard';
 
 interface UserProfile {
   id: string;
@@ -549,12 +548,7 @@ const ProfilePage: React.FC = () => {
               </Card>
             </SlideInRight>
 
-            <SlideInRight delay={0.1}>
-              {/* Resource Usage Card */}
-              <ResourceUsageCard className="shadow-lg border-0" />
-            </SlideInRight>
-
-            <SlideInRight delay={0.2}>
+            <SlideInRight>
               {/* Quick Settings */}
               <Card className="shadow-lg border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
                 <CardHeader className="pb-4">
