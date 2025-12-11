@@ -1,6 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import * as chartAPI from './chartAPI';
-import type { CreateChartRequest, UpdateChartRequest } from './chartTypes';
+import type { ChartRequest } from './chartTypes';
 
 // Get all charts
 export const fetchCharts = createAsyncThunk(
@@ -44,8 +44,8 @@ export const fetchChartById = createAsyncThunk(
 
 // Create chart
 export const createChartThunk = createAsyncThunk(
-  'charts/createChart',
-  async (data: CreateChartRequest, { rejectWithValue }) => {
+  'chart/createChart',
+  async (data: ChartRequest, { rejectWithValue }) => {
     try {
       const response = await chartAPI.createChart(data);
       return response;
@@ -65,7 +65,7 @@ export const createChartThunk = createAsyncThunk(
 // Update chart
 export const updateChartThunk = createAsyncThunk(
   'charts/updateChart',
-  async ({ id, data }: { id: string; data: UpdateChartRequest }, { rejectWithValue }) => {
+  async ({ id, data }: { id: string; data: Partial<ChartRequest> }, { rejectWithValue }) => {
     try {
       const response = await chartAPI.updateChart(id, data);
       return response;

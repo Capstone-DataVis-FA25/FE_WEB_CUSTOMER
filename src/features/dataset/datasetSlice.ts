@@ -12,7 +12,8 @@ import {
 export interface DatasetState {
   datasets: Dataset[];
   currentDataset: Dataset | null;
-  loading: boolean;
+  loading: boolean; // For fetching dataset by ID
+  loadingList: boolean; // For fetching datasets list
   creating: boolean;
   updating: boolean;
   deleting: boolean;
@@ -23,6 +24,7 @@ const initialState: DatasetState = {
   datasets: [],
   currentDataset: null,
   loading: false,
+  loadingList: false,
   creating: false,
   updating: false,
   deleting: false,
@@ -33,30 +35,30 @@ const datasetSlice = createSlice({
   name: 'dataset',
   initialState,
   reducers: {
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
     },
-    clearCurrentDataset: (state) => {
+    clearCurrentDataset: state => {
       state.currentDataset = null;
     },
   },
-  extraReducers: (builder) => {
+  extraReducers: builder => {
     builder
       // Fetch all datasets
-      .addCase(fetchDatasets.pending, (state) => {
-        state.loading = true;
+      .addCase(fetchDatasets.pending, state => {
+        state.loadingList = true;
         state.error = null;
       })
       .addCase(fetchDatasets.fulfilled, (state, action: PayloadAction<Dataset[]>) => {
-        state.loading = false;
+        state.loadingList = false;
         state.datasets = action.payload;
       })
       .addCase(fetchDatasets.rejected, (state, action) => {
-        state.loading = false;
+        state.loadingList = false;
         state.error = action.payload as string;
       })
       // Fetch dataset by ID
-      .addCase(fetchDatasetById.pending, (state) => {
+      .addCase(fetchDatasetById.pending, state => {
         state.loading = true;
         state.error = null;
       })
@@ -69,20 +71,24 @@ const datasetSlice = createSlice({
         state.error = action.payload as string;
       })
       // Create dataset
-      .addCase(createDatasetThunk.pending, (state) => {
+      .addCase(createDatasetThunk.pending, state => {
         state.creating = true;
         state.error = null;
       })
       .addCase(createDatasetThunk.fulfilled, (state, action: PayloadAction<Dataset>) => {
         state.creating = false;
+        // Add to datasets list
         state.datasets.unshift(action.payload);
+        // Also set the newly created dataset as the current dataset so UI flows that
+        // expect `currentDataset` (e.g. chart creation) will have access to it immediately.
+        state.currentDataset = action.payload;
       })
       .addCase(createDatasetThunk.rejected, (state, action) => {
         state.creating = false;
         state.error = action.payload as string;
       })
       // Update dataset
-      .addCase(updateDatasetThunk.pending, (state) => {
+      .addCase(updateDatasetThunk.pending, state => {
         state.updating = true;
         state.error = null;
       })
@@ -101,7 +107,7 @@ const datasetSlice = createSlice({
         state.error = action.payload as string;
       })
       // Delete dataset
-      .addCase(deleteDatasetThunk.pending, (state) => {
+      .addCase(deleteDatasetThunk.pending, state => {
         state.deleting = true;
         state.error = null;
       })

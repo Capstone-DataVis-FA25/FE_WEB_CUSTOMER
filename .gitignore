@@ -8,5 +8,10 @@
 /build
 /dist
 
+#
+
 #package
 package-lock.json
+
+# linter config
+eslint.config.js

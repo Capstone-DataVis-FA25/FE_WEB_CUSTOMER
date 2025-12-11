@@ -16,17 +16,19 @@ export interface ChartCategory {
   templates: ChartTemplate[];
 }
 
-export type ChartType = 
-  | 'line' 
-  | 'bar' 
-  | 'pie' 
-  | 'area' 
-  | 'donut' 
-  | 'column' 
-  | 'scatter' 
-  | 'map' 
-  | 'heatmap' 
-  | 'bubble' 
+export type ChartType =
+  | 'line'
+  | 'bar'
+  | 'pie'
+  | 'area'
+  | 'donut'
+  | 'column'
+  | 'scatter'
+  | 'cycleplot'
+  | 'map'
+  | 'heatmap'
+  | 'histogram'
+  | 'bubble'
   | 'radar'
   | 'treemap'
   | 'sankey'
@@ -34,11 +36,11 @@ export type ChartType =
   | 'funnel'
   | 'waterfall';
 
-export type ChartPurpose = 
-  | 'comparison' 
-  | 'distribution' 
-  | 'change-over-time' 
-  | 'correlation' 
+export type ChartPurpose =
+  | 'comparison'
+  | 'distribution'
+  | 'change-over-time'
+  | 'correlation'
   | 'geographical';
 
 export interface ChartConfiguration {
@@ -64,7 +66,7 @@ export interface Dataset {
 export interface DataColumn {
   id: string;
   name: string;
-  type: 'string' | 'number' | 'date' | 'boolean';
+  type: 'text' | 'number' | 'date' | 'boolean';
   nullable: boolean;
   unique: boolean;
 }

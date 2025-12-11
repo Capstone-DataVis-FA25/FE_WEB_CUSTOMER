@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { Chart, ChartState } from './chartTypes';
+import type { ChartAPI, ChartState } from './chartTypes';
 import {
   fetchCharts,
   fetchChartById,
@@ -37,7 +37,7 @@ const chartSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchCharts.fulfilled, (state, action: PayloadAction<Chart[]>) => {
+      .addCase(fetchCharts.fulfilled, (state, action: PayloadAction<ChartAPI[]>) => {
         state.loading = false;
         state.charts = action.payload;
       })
@@ -50,7 +50,7 @@ const chartSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchChartById.fulfilled, (state, action: PayloadAction<Chart>) => {
+      .addCase(fetchChartById.fulfilled, (state, action: PayloadAction<ChartAPI>) => {
         state.loading = false;
         state.currentChart = action.payload;
       })
@@ -63,9 +63,10 @@ const chartSlice = createSlice({
         state.creating = true;
         state.error = null;
       })
-      .addCase(createChartThunk.fulfilled, (state, action: PayloadAction<Chart>) => {
+      .addCase(createChartThunk.fulfilled, (state, action: PayloadAction<ChartAPI>) => {
         state.creating = false;
         state.charts.unshift(action.payload);
+        state.currentChart = action.payload;
       })
       .addCase(createChartThunk.rejected, (state, action) => {
         state.creating = false;
@@ -76,7 +77,7 @@ const chartSlice = createSlice({
         state.updating = true;
         state.error = null;
       })
-      .addCase(updateChartThunk.fulfilled, (state, action: PayloadAction<Chart>) => {
+      .addCase(updateChartThunk.fulfilled, (state, action: PayloadAction<ChartAPI>) => {
         state.updating = false;
         const index = state.charts.findIndex(c => c.id === action.payload.id);
         if (index !== -1) {

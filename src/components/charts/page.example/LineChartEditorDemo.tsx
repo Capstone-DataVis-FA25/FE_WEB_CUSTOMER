@@ -13,8 +13,7 @@ const LineChartEditorDemo: React.FC = () => {
         title: t('lineChart_editor_demo_financialData'),
         xAxisLabel: t('lineChart_editor_xAxisLabel'),
         yAxisLabel: t('lineChart_editor_yAxisLabel'),
-        xAxisKey: 'month',
-        yAxisKeys: ['ecommerce', 'retail', 'wholesale'],
+        xAxisKey: 'Month',
         width: 800,
         height: 400,
         showLegend: true,
@@ -32,8 +31,6 @@ const LineChartEditorDemo: React.FC = () => {
         customYFormatter: '',
         customXFormatter: '',
       }}
-      title={t('lineChart_editor_demo_financialData')}
-      description={t('lineChart_editor_demo_financialDataDesc')}
     />
   );
 };

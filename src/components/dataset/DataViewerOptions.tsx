@@ -1,131 +1,101 @@
-import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { memo, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Upload, RefreshCw, Settings } from 'lucide-react';
-import DelimiterSelector from './DelimiterSelector';
-import { NumberFormatSelector } from './NumberFormatSelector';
-import DataTransformationSelector from './DataTransformationSelector';
-import { useDataset } from '@/contexts/DatasetContext';
-import { DATASET_NAME_MAX_LENGTH, DATASET_DESCRIPTION_MAX_LENGTH } from '@/utils/Consts';
-import {
-  transformWideToLong,
-  parseJsonDirectly,
-  parseTabularContent,
-} from '@/utils/dataProcessors';
-import './scrollbar.css';
-import { useCallback } from 'react';
-import { useToastContext } from '../providers/ToastProvider';
+import { useDataset, type NumberFormat } from '@/contexts/DatasetContext';
+import { useForm } from '@/contexts/FormContext';
 import { useAppSelector } from '@/store/hooks';
+import { selectDuplicateColumns, selectEmptyColumns } from '@/features/excelUI';
+import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
+import { Settings, Upload } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useToastContext } from '@/components/providers/ToastProvider';
+import { NumberFormatSelector } from './NumberFormatSelector';
+import './scrollbar.css';
+import DelimiterSelector from './DelimiterSelector';
+import { parseTabularContent } from '@/utils/dataProcessors';
 
 interface DataViewerOptionsProps {
   onUpload?: () => void;
   onChangeData?: () => void;
 }
 
-function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
+const DataViewerOptions = memo(function DataViewerOptions({
+  onUpload,
+  onChangeData,
+}: DataViewerOptionsProps) {
   const { t } = useTranslation();
   const { showError } = useToastContext();
   const { creating: isUploading } = useAppSelector(state => state.dataset);
+  const duplicateColumns = useAppSelector(selectDuplicateColumns);
+  const emptyColumns = useAppSelector(selectEmptyColumns);
 
-  // Get states from context
+  // Get form states from FormContext
   const {
     datasetName,
     setDatasetName,
     description,
     setDescription,
-    selectedDelimiter,
-    setSelectedDelimiter,
+    validationErrors: formValidationErrors,
+    setValidationError: setFormValidationError,
+    hasValidationErrors: hasFormValidationErrors,
+  } = useForm();
+
+  // Get dataset states from DatasetContext
+  const {
+    originalTextContent,
     numberFormat,
     setNumberFormat,
-    parsedData,
-    originalHeaders,
-    setOriginalHeaders,
+    hasValidationErrors: hasDatasetValidationErrors,
     isJsonFormat,
-    transformationColumn,
-    setTransformationColumn,
-    originalTextContent,
-    setParsedData,
+    selectedDelimiter,
+    setSelectedDelimiter,
+    setOriginalParsedData,
+    setCurrentParsedData,
   } = useDataset();
 
-  // Handle delimiter change - reparse the original content with new delimiter
-  const handleDelimiterChange = useCallback(
-    (delimiter: string) => {
-      if (!originalTextContent) return;
+  // Initialize dataset name error on mount and when name changes (centralized)
+  useEffect(() => {
+    const isEmpty = !datasetName.trim();
+    setFormValidationError('datasetName', 'empty', isEmpty);
+  }, [datasetName, setFormValidationError]);
 
+  // Handle delimiter change - reparse the original content with the new delimiter
+  const handleDelimiterChange = (delimiter: string) => {
+    // If same delimiter or no raw content, just sync the state and exit
+    if (delimiter === selectedDelimiter || !originalTextContent) {
       setSelectedDelimiter(delimiter);
-      // Reset transformation when delimiter changes
-      setTransformationColumn(null);
-      try {
-        const result = parseTabularContent(originalTextContent, { delimiter });
-        // Convert result back to 2D array format for backward compatibility
-        const headers = result.headers.map(h => h.name);
-        const data = [headers, ...result.data];
-        setParsedData(data);
-        setOriginalHeaders(headers);
-      } catch (error) {
-        showError('Parse Error', 'Failed to parse with the selected delimiter');
-      }
-    },
-    [originalTextContent, showError, setOriginalHeaders]
-  );
-
-  const handleNumberFormatChange = (
-    type: 'thousandsSeparator' | 'decimalSeparator',
-    value: string
-  ) => {
-    const newFormat = {
-      ...numberFormat,
-      [type]: value,
-    };
-    setNumberFormat(newFormat);
-  };
-
-  const handleTransformationColumnChange = (column: string) => {
-    setTransformationColumn(column);
-
-    // Always re-parse from original content to get fresh data
-    if (!originalTextContent) return;
+      return;
+    }
 
     try {
-      // Re-parse from original content to get fresh data
-      let originalData: string[][];
-
-      // Use the stored format flag instead of recalculating
-      if (isJsonFormat) {
-        const result = parseJsonDirectly(originalTextContent);
-        // Convert result back to 2D array format for backward compatibility
-        const headers = result.headers.map(h => h.name);
-        originalData = [headers, ...result.data];
-      } else {
-        const result = parseTabularContent(originalTextContent, {
-          delimiter: selectedDelimiter,
-        });
-        // Convert result back to 2D array format for backward compatibility
-        const headers = result.headers.map(h => h.name);
-        originalData = [headers, ...result.data];
-      }
-
-      // If no column selected, use original data
-      if (!column) {
-        setParsedData(originalData);
-        setOriginalHeaders(originalData[0] || []);
-        return;
-      }
-
-      // Transform the original data (not the current parsedData)
-      const transformed = transformWideToLong(originalData, column);
-
-      // Update the parsed data with transformed data
-      // Keep original headers - don't change them for transformations
-      setParsedData(transformed);
+      const result = parseTabularContent(originalTextContent, { delimiter });
+      // Update Layer 2: Original parsed data
+      setOriginalParsedData(result);
+      // Update Layer 3: Current working data (starts as copy of original)
+      setCurrentParsedData(result);
+      // Persist the selected delimiter
+      setSelectedDelimiter(delimiter);
     } catch (error) {
-      showError('Parse Error', 'Failed to process data transformation');
+      showError('Parse Error', 'Failed to parse with the selected delimiter');
     }
   };
 
+  const handleNumberFormatChange = (format: NumberFormat) => {
+    // Replace old state with the new format
+    setNumberFormat(format);
+  };
+
+  // Memoize expensive validation check - combine both form and dataset validation
+  const hasErrors = useMemo(() => {
+    const hasHeaderErrors =
+      (duplicateColumns && duplicateColumns.duplicateNames.length > 0) ||
+      (emptyColumns && emptyColumns.length > 0);
+    return hasFormValidationErrors() || hasDatasetValidationErrors() || hasHeaderErrors;
+  }, [hasFormValidationErrors, hasDatasetValidationErrors, duplicateColumns, emptyColumns]);
+
   return (
-  <div className="w-full flex-shrink-0">
+    <div className="w-full flex-shrink-0">
       <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm h-fit">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg text-gray-900 dark:text-white flex items-center gap-2">
@@ -153,13 +123,17 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
               disabled={isUploading}
             />
             <div className="flex justify-between items-center mt-1">
-              {!datasetName.trim() && (
-                <p className="text-sm text-gray-600 dark:text-gray-300">
+              {formValidationErrors.datasetName?.empty && (
+                <p className="text-sm text-red-600 dark:text-red-400">
                   Please enter a name before creating the dataset
                 </p>
               )}
               <p
-                className={`text-xs ml-auto ${datasetName.length > DATASET_NAME_MAX_LENGTH * 0.8 ? 'text-orange-500' : 'text-gray-400'}`}
+                className={`text-xs ml-auto ${
+                  datasetName.length > DATASET_NAME_MAX_LENGTH * 0.8
+                    ? 'text-orange-500'
+                    : 'text-gray-400'
+                }`}
               >
                 {datasetName.length}/{DATASET_NAME_MAX_LENGTH}
               </p>
@@ -184,7 +158,11 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
               disabled={isUploading}
             />
             <p
-              className={`text-xs text-right mt-1 ${description.length > DATASET_DESCRIPTION_MAX_LENGTH * 0.8 ? 'text-orange-500' : 'text-gray-400'}`}
+              className={`text-xs text-right mt-1 ${
+                description.length > DATASET_DESCRIPTION_MAX_LENGTH * 0.8
+                  ? 'text-orange-500'
+                  : 'text-gray-400'
+              }`}
             >
               {description.length}/{DATASET_DESCRIPTION_MAX_LENGTH}
             </p>
@@ -207,19 +185,11 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
             disabled={isUploading}
           />
 
-          {/* Data Transformation Selector */}
-          <DataTransformationSelector
-            headers={originalHeaders}
-            value={transformationColumn ?? ''}
-            onChange={handleTransformationColumnChange}
-            disabled={isUploading || !parsedData}
-          />
-
           {/* Action Buttons */}
           <div className="space-y-3 pt-4">
             <Button
               onClick={onUpload}
-              disabled={isUploading || !datasetName.trim()}
+              disabled={isUploading || hasErrors}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isUploading ? (
@@ -235,19 +205,20 @@ function DataViewerOptions({ onUpload, onChangeData }: DataViewerOptionsProps) {
               )}
             </Button>
 
-            <Button
-              onClick={onChangeData}
-              variant="outline"
-              className="w-full flex items-center justify-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              {t('dataset_changeData')}
-            </Button>
+            {onChangeData && (
+              <Button
+                onClick={onChangeData}
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2"
+              >
+                {t('dataset_changeData')}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
     </div>
   );
-}
+});
 
 export default DataViewerOptions;

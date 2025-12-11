@@ -1,31 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { useTranslation } from 'react-i18next';
+import { defaultColorsChart } from '@/utils/Utils';
+import { renderD3Tooltip, createHeader, createStatLine } from './ChartTooltip';
 
-// Define convertArrayToChartData function directly in this file
-/**
- * Converts 2D array data to ChartDataPoint format for D3 visualization
- *
- * Expected input format:
- * [
- *   ['column1', 'column2', 'column3'],  // Headers row
- *   ['value1', 'value2', 'value3'],      // Data row 1
- *   ['value4', 'value5', 'value6'],      // Data row 2
- *   // ... more data rows
- * ]
- *
- * Output format:
- * [
- *   { column1: 'value1', column2: 'value2', column3: 'value3' },
- *   { column1: 'value4', column2: 'value5', column3: 'value6' },
- *   // ... more data objects
- * ]
- */
 function convertArrayToChartData(arrayData: (string | number)[][]): ChartDataPoint[] {
-  console.log('convertArrayToChartData input:', arrayData);
-
   if (!arrayData || arrayData.length === 0) {
-    console.log('No array data provided');
     return [];
   }
 
@@ -38,9 +17,6 @@ function convertArrayToChartData(arrayData: (string | number)[][]): ChartDataPoi
   const headers = arrayData[0] as string[];
   const dataRows = arrayData.slice(1);
 
-  console.log('Headers:', headers);
-  console.log('Data rows:', dataRows);
-
   if (headers.length === 0) {
     console.warn('No headers found in first row');
     return [];
@@ -48,7 +24,6 @@ function convertArrayToChartData(arrayData: (string | number)[][]): ChartDataPoi
 
   const chartData: ChartDataPoint[] = dataRows.map((row, rowIndex) => {
     const dataPoint: ChartDataPoint = {};
-
     headers.forEach((header, headerIndex) => {
       const value = row[headerIndex];
 
@@ -67,15 +42,17 @@ function convertArrayToChartData(arrayData: (string | number)[][]): ChartDataPoi
         return;
       }
 
-      // Try to convert to number if it's a numeric string
+      // Try to convert to number if it's a numeric string (strict check)
       if (typeof value === 'string') {
-        // Clean the string (remove commas, spaces, etc.)
+        // Clean the string (remove commas, spaces)
         const cleanedValue = value.replace(/[,\s]/g, '');
-        const numValue = parseFloat(cleanedValue);
-        if (!isNaN(numValue)) {
-          dataPoint[header] = numValue;
+        // Only treat as numeric if the entire cleaned string is a valid number (no letters, dashes, etc.)
+        const numericPattern = /^[+-]?\d+(?:\.\d+)?$/;
+        if (numericPattern.test(cleanedValue)) {
+          dataPoint[header] = parseFloat(cleanedValue);
         } else {
-          dataPoint[header] = value; // Keep as string if not numeric
+          // Keep as original string (useful for dates like '2024-01')
+          dataPoint[header] = value;
         }
       } else {
         dataPoint[header] = value;
@@ -85,7 +62,6 @@ function convertArrayToChartData(arrayData: (string | number)[][]): ChartDataPoi
     return dataPoint;
   });
 
-  console.log('Converted chart data:', chartData);
   return chartData;
 }
 
@@ -103,8 +79,9 @@ export interface D3LineChartProps {
   disabledLines?: string[]; // New prop for disabled lines
   colors?: Record<string, { light: string; dark: string }>;
   seriesNames?: Record<string, string>; // Add series names mapping
+  xAxisNames?: Record<string, string>; // Map X-axis values from ID to display name
   // Individual series configurations
-  seriesConfigs?: Record<
+  axisConfigs?: Record<
     string,
     {
       lineWidth?: number;
@@ -121,13 +98,35 @@ export interface D3LineChartProps {
   showLegend?: boolean;
   showGrid?: boolean;
   showPoints?: boolean;
-  xAxisStart?: 'auto' | 'zero' | number; // Add custom X-axis start option
-  yAxisStart?: 'auto' | 'zero' | number; // Add custom Y-axis start option
+  xAxisStart?: 'auto' | 'zero'; // X-axis start option
+  yAxisStart?: 'auto' | 'zero'; // Y-axis start option
   animationDuration?: number;
   curve?: d3.CurveFactory;
   yAxisFormatter?: (value: number) => string; // Add custom Y-axis formatter
   xAxisFormatter?: (value: number) => string; // Add custom X-axis formatter
   fontSize?: { axis: number; label: number; title: number }; // Add fontSize prop
+
+  // Formatter type props for displaying in axis labels
+  yFormatterType?:
+    | 'currency'
+    | 'percentage'
+    | 'number'
+    | 'decimal'
+    | 'scientific'
+    | 'bytes'
+    | 'duration'
+    | 'date'
+    | 'custom';
+  xFormatterType?:
+    | 'currency'
+    | 'percentage'
+    | 'number'
+    | 'decimal'
+    | 'scientific'
+    | 'bytes'
+    | 'duration'
+    | 'date'
+    | 'custom';
 
   // New styling props
   lineWidth?: number;
@@ -143,6 +142,8 @@ export interface D3LineChartProps {
 
   // New interaction props
   enableZoom?: boolean;
+  enablePan?: boolean;
+  zoomExtent?: number;
   showTooltip?: boolean;
 
   // New visual props
@@ -151,30 +152,28 @@ export interface D3LineChartProps {
   titleFontSize?: number;
   labelFontSize?: number;
   legendFontSize?: number;
+  showPointValues?: boolean; // Show values on data points
+  // Preview variant: render without frame/background card
+  variant?: 'default' | 'preview';
+  // Show all X-axis ticks without sampling (useful for date data with compact formatting)
+  // Show all X-axis ticks without sampling (useful for date data with compact formatting)
+  showAllXAxisTicks?: boolean;
+  lineStyle?: 'solid' | 'dashed' | 'dotted';
+  pointValueDecimals?: number;
 }
-
-export const defaultColors: Record<string, { light: string; dark: string }> = {
-  line1: { light: '#3b82f6', dark: '#60a5fa' },
-  line2: { light: '#f97316', dark: '#fb923c' },
-  line3: { light: '#6b7280', dark: '#9ca3af' },
-  line4: { light: '#eab308', dark: '#facc15' },
-  line5: { light: '#ef4444', dark: '#f87171' },
-  line6: { light: '#10b981', dark: '#34d399' },
-  line7: { light: '#8b5cf6', dark: '#a78bfa' },
-  line8: { light: '#f59e0b', dark: '#fbbf24' },
-};
 
 const D3LineChart: React.FC<D3LineChartProps> = ({
   arrayData,
   width = 800,
   height = 600, // Reduced from 500 to 400 for better proportions
-  margin = { top: 20, right: 40, bottom: 60, left: 80 }, // Increased left margin for better Y-axis spacing
+  margin = { top: 60, right: 60, bottom: 60, left: 60 }, // Optimized left margin for Y-axis
   xAxisKey,
   yAxisKeys,
   disabledLines = [], // Default to no disabled lines
-  colors = defaultColors,
+  colors = defaultColorsChart,
   seriesNames = {}, // Default to empty object
-  seriesConfigs = {}, // Individual series configurations
+  xAxisNames = {}, // X-axis names mapping from ID to display name
+  axisConfigs = {}, // Individual series configurations
   title,
   yAxisLabel,
   xAxisLabel,
@@ -188,6 +187,10 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   yAxisFormatter, // Optional custom Y-axis formatter
   xAxisFormatter, // Optional custom X-axis formatter
   fontSize = { axis: 12, label: 14, title: 16 }, // Default fontSize
+
+  // Formatter type props
+  yFormatterType,
+  xFormatterType,
 
   // New styling props with defaults
   lineWidth = 2,
@@ -203,6 +206,8 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
   // New interaction props with defaults
   enableZoom = false,
+  enablePan = false,
+  zoomExtent = 8,
   showTooltip = true,
 
   // New visual props with defaults
@@ -211,15 +216,67 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   titleFontSize = 16,
   labelFontSize = 12,
   legendFontSize = 11,
+  showPointValues = false, // Default to not showing values on points
+  variant = 'default',
+  showAllXAxisTicks = false, // Default to sampling ticks
+  lineStyle = 'solid',
+  pointValueDecimals = 0,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [dimensions, setDimensions] = React.useState({ width, height });
-  const { t } = useTranslation();
-  console.log('Arraydata: ', arrayData);
-  console.log('xAxisKey', xAxisKey);
-  console.log('yAxisKey', yAxisKeys);
+
+  // Tooltip management refs
+  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentTooltipRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(
+    null
+  );
+
+  // Helper function to get formatter symbol from formatter type
+  const getFormatterSymbol = (formatterType?: string): string => {
+    switch (formatterType) {
+      case 'currency':
+        return '$';
+      case 'percentage':
+        return '%';
+      case 'bytes':
+        return 'MB';
+      case 'duration':
+        return 'min';
+      case 'date':
+        return 'date';
+      case 'decimal':
+        return 'dec';
+      case 'scientific':
+        return 'sci';
+      case 'number':
+        return '#';
+      case 'custom':
+        return 'custom';
+      default:
+        return '';
+    }
+  };
+
+  // Helper functions for tooltip management
+  const clearTooltipTimeout = () => {
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+      tooltipTimeoutRef.current = null;
+    }
+  };
+
+  const hideCurrentTooltip = () => {
+    if (currentTooltipRef.current) {
+      currentTooltipRef.current
+        .transition()
+        .duration(200) // Fast fade out transition
+        .style('opacity', 0)
+        .remove();
+      currentTooltipRef.current = null;
+    }
+  };
 
   // Helper function for different point shapes
   const getPointPath = (style: string, radius: number): string => {
@@ -237,19 +294,22 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
   };
 
   // Update fontSize object with new props
-  const responsiveFontSize = {
-    axis: fontSize.axis,
-    label: labelFontSize,
-    title: titleFontSize,
-  };
+  const responsiveFontSize = React.useMemo(
+    () => ({
+      axis: fontSize.axis,
+      label: labelFontSize,
+      title: titleFontSize,
+    }),
+    [fontSize.axis, labelFontSize, titleFontSize]
+  );
+
+  // Note: Suppress unused variable warning for xAxisNames (used in axis formatting and tooltips)
+  void xAxisNames;
 
   // Convert arrayData to ChartDataPoint[] if provided
   const processedData = React.useMemo((): ChartDataPoint[] => {
-    console.log('ProcessedData useMemo running with arrayData:', arrayData);
-
     if (arrayData && arrayData.length > 0) {
       const converted = convertArrayToChartData(arrayData);
-      console.log('Converted data in processedData:', converted);
 
       // Validate the converted data
       if (converted.length === 0) {
@@ -261,20 +321,14 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       const firstPoint = converted[0];
       const availableKeys = Object.keys(firstPoint);
 
-      console.log('Available keys in data:', availableKeys);
-      console.log('Required xAxisKey:', xAxisKey);
-      console.log('Required yAxisKeys:', yAxisKeys);
-
       // Validate xAxisKey exists
       if (!availableKeys.includes(xAxisKey)) {
-        console.error(`xAxisKey '${xAxisKey}' not found in data. Available keys:`, availableKeys);
         return [];
       }
 
       // Validate yAxisKeys exist and have numeric values
       const validYAxisKeys = yAxisKeys.filter(key => {
         if (!availableKeys.includes(key)) {
-          console.error(`yAxisKey '${key}' not found in data. Available keys:`, availableKeys);
           return false;
         }
 
@@ -285,7 +339,6 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         });
 
         if (!hasNumericValues) {
-          console.error(`yAxisKey '${key}' does not contain numeric values`);
           return false;
         }
 
@@ -293,18 +346,14 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       });
 
       if (validYAxisKeys.length === 0) {
-        console.error('No valid yAxisKeys with numeric data found');
         return [];
       }
 
       // Note: xAxisKey can contain string or numeric values (for categories or continuous data)
-      console.log(`xAxisKey '${xAxisKey}' validation passed (can be string or numeric)`);
-      console.log(`Valid yAxisKeys with numeric data: ${validYAxisKeys.join(', ')}`);
 
       return converted;
     }
 
-    console.log('No array data provided, returning empty array');
     return [];
   }, [arrayData, xAxisKey, yAxisKeys]);
 
@@ -326,7 +375,23 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         }
 
         const newWidth = Math.min(containerWidth - 16, width); // 16px for minimal padding
-        const newHeight = newWidth * aspectRatio;
+        let newHeight = newWidth * aspectRatio;
+
+        // Add extra height for axis labels
+        const hasXAxisLabel = xAxisLabel && showAxisLabels;
+
+        if (hasXAxisLabel) {
+          newHeight += containerWidth < 640 ? 35 : 40; // Extra space for X-axis label
+        }
+
+        // Adjust chart size when legend is bottom to make room for legend
+        if (showLegend && legendPosition === 'bottom') {
+          // Reduce chart height to make room for legend and add extra space
+          newHeight = newHeight * 0.8; // Reduce chart to 80% to make room
+          const legendExtraHeight = 150; // Extra space for bottom legend
+          newHeight += legendExtraHeight;
+        }
+
         setDimensions({ width: newWidth, height: newHeight });
       }
     };
@@ -339,7 +404,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     }
 
     return () => resizeObserver.disconnect();
-  }, [width, height]);
+  }, [width, height, showLegend, legendPosition, showAxisLabels, xAxisLabel]);
 
   // Monitor theme changes
   useEffect(() => {
@@ -365,18 +430,19 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     }
   }, [theme]);
 
+  // Cleanup tooltip timeout on unmount
   useEffect(() => {
-    console.log('D3LineChart useEffect running');
-    console.log('processedData:', processedData);
-    console.log('svgRef.current:', svgRef.current);
+    return () => {
+      clearTooltipTimeout();
+    };
+  }, []);
 
+  useEffect(() => {
     if (!svgRef.current) {
-      console.log('No svgRef, skipping chart creation');
       return;
     }
 
     if (!processedData.length) {
-      console.log('No processed data, clearing any existing chart');
       d3.select(svgRef.current).selectAll('*').remove();
       return;
     }
@@ -397,16 +463,29 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         console.error(`No valid yAxisKeys found in first data point:`, firstPoint);
         return;
       }
-
-      console.log('All validations passed, proceeding with chart creation');
     } catch (error) {
       console.error('Error during data validation:', error);
       return;
     }
 
-    // Use responsive dimensions
-    const currentWidth = dimensions.width;
+    // Calculate dynamic width based on number of data points for categorical X-axis
+    const xValues = processedData.map(d => d[xAxisKey]);
+    const hasStringXValues = xValues.some(v => typeof v === 'string');
+
+    // Minimum width per data point (adjust based on rotation)
+    const minWidthPerPoint = xAxisRotation === 0 ? 60 : 30; // More space for horizontal labels
+    const calculatedMinWidth = hasStringXValues
+      ? Math.max(dimensions.width, processedData.length * minWidthPerPoint)
+      : dimensions.width;
+
+    // Use responsive dimensions (with dynamic width for categorical data)
+    const currentWidth = calculatedMinWidth;
     const currentHeight = dimensions.height;
+
+    // Auto-enable pan when chart is wider than container (due to many data points)
+    const isChartExpanded = currentWidth > dimensions.width;
+    const shouldEnablePan = enablePan || isChartExpanded;
+    const shouldEnableZoom = enableZoom; // Keep zoom as user preference
 
     // Get current theme colors for enabled lines only
     const getCurrentColors = () => {
@@ -415,7 +494,7 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       const enabledLines = yAxisKeys.filter(key => !disabledLines.includes(key));
       enabledLines.forEach((key, index) => {
         const colorKey = colors[key] ? key : `line${index + 1}`;
-        result[key] = colors[colorKey]?.[theme] || defaultColors[`line${index + 1}`][theme];
+        result[key] = colors[colorKey]?.[theme] || defaultColorsChart[`color${index + 1}`][theme];
       });
       return result;
     };
@@ -429,42 +508,82 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
 
     // Use backgroundColor prop or fallback to theme default
     const chartBackgroundColor =
-      backgroundColor !== 'transparent' ? backgroundColor : isDarkMode ? '#111827' : '#ffffff';
+      variant === 'preview'
+        ? 'transparent'
+        : backgroundColor !== 'transparent'
+          ? backgroundColor
+          : isDarkMode
+            ? '#111827'
+            : '#ffffff';
 
     // Clear previous chart
     d3.select(svgRef.current).selectAll('*').remove();
 
     const svg = d3.select(svgRef.current);
 
-    // Responsive margin adjustments - better spacing for Y-axis
+    // Responsive margin adjustments - optimized spacing with label support
+    const hasXAxisLabel = xAxisLabel && showAxisLabels;
+    const hasYAxisLabel = yAxisLabel && showAxisLabels;
+
     const responsiveMargin = {
-      top: currentWidth < 640 ? margin.top * 0.8 : margin.top,
-      right: currentWidth < 640 ? margin.right * 0.7 : margin.right,
-      bottom: currentWidth < 640 ? margin.bottom * 0.8 : margin.bottom,
-      left: currentWidth < 640 ? margin.left * 0.8 : margin.left, // Better left spacing on mobile
+      top: currentWidth < 640 ? Math.max(margin.top * 0.8, 15) : margin.top,
+      right: currentWidth < 640 ? Math.max(margin.right * 0.7, 20) : margin.right,
+      bottom:
+        showLegend && legendPosition === 'bottom'
+          ? currentWidth < 640
+            ? Math.max(margin.bottom * 2.5, 120) // Ensure minimum space for legend
+            : Math.max(margin.bottom * 2.0, 100)
+          : hasXAxisLabel
+            ? currentWidth < 640
+              ? Math.max(margin.bottom + 30, 50) // Ensure minimum 50px for X-axis label on mobile
+              : Math.max(margin.bottom + 35, 55) // Ensure minimum 55px for X-axis label on desktop
+            : currentWidth < 640
+              ? Math.max(margin.bottom * 0.8, 25) // Minimum 25px on mobile
+              : Math.max(margin.bottom, 30), // Minimum 30px for X-axis ticks
+      left: hasYAxisLabel
+        ? currentWidth < 640
+          ? Math.max(margin.left * 0.7 + 20, 60) // Ensure minimum 60px for Y-axis label on mobile
+          : Math.max(margin.left + 25, 70) // Ensure minimum 70px for Y-axis label on desktop
+        : currentWidth < 640
+          ? Math.max(margin.left * 0.7, 40) // Minimum 40px on mobile for Y-axis ticks
+          : Math.max(margin.left, 50), // Minimum 50px for Y-axis ticks
     };
 
-    // Set dimensions
-    const innerWidth = currentWidth - responsiveMargin.left - responsiveMargin.right;
-    const innerHeight = currentHeight - responsiveMargin.top - responsiveMargin.bottom;
+    // Set dimensions with validation
+    const innerWidth = Math.max(currentWidth - responsiveMargin.left - responsiveMargin.right, 100);
+    const innerHeight = Math.max(
+      currentHeight - responsiveMargin.top - responsiveMargin.bottom,
+      100
+    );
 
-    // Add background
-    svg
-      .append('rect')
-      .attr('width', currentWidth)
-      .attr('height', currentHeight)
-      .attr('fill', chartBackgroundColor)
-      .attr('rx', 8);
+    // Validate dimensions
+    if (innerWidth < 50 || innerHeight < 50) {
+      console.warn('⚠️  Chart dimensions too small, skipping render');
+      return;
+    }
 
-    // Add subtle Y-axis background area
-    svg
-      .append('rect')
-      .attr('x', 0)
-      .attr('y', 0)
-      .attr('width', responsiveMargin.left)
-      .attr('height', currentHeight)
-      .attr('fill', isDarkMode ? '#111827' : '#f8fafc')
-      .attr('opacity', 0.3);
+    // Add background (skip in preview variant)
+    if (variant !== 'preview') {
+      svg
+        .append('rect')
+        .attr('width', currentWidth)
+        .attr('height', currentHeight)
+        .attr('fill', chartBackgroundColor)
+        .attr('rx', 8);
+    }
+
+    // Add SVG title at the top, centered (like D3PieChart)
+    if (title && title.trim() !== '') {
+      svg
+        .append('text')
+        .attr('x', currentWidth / 2)
+        .attr('y', Math.max(20, (titleFontSize || 16) * 1.2))
+        .attr('text-anchor', 'middle')
+        .attr('fill', textColor)
+        .style('font-size', `${titleFontSize || 16}px`)
+        .style('font-weight', 700)
+        .text(title);
+    }
 
     // Create main group
     const g = svg
@@ -472,44 +591,36 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top})`);
 
     // Enhanced scales with support for categorical X-axis
-    const xValues = processedData.map(d => d[xAxisKey]);
-    const hasStringXValues = xValues.some(v => typeof v === 'string');
-
-    console.log('X values:', xValues);
-    console.log('Has string X values:', hasStringXValues);
-
+    // xValues and hasStringXValues already calculated earlier for dynamic width
     let xScale: any;
 
     if (hasStringXValues) {
-      // Use ordinal scale for categorical data (like city names)
-      const uniqueXValues = [...new Set(xValues)] as string[];
-      console.log('Unique categorical X values:', uniqueXValues);
+      // For categorical data (like dates or city names), preserve original order
+      // Do NOT use Set to avoid losing duplicates and changing order
+      const xDomain = processedData.map((d, idx) => {
+        const val = d[xAxisKey];
+        // For duplicate values, append index to make them unique for positioning
+        return `${val}_${idx}`;
+      });
 
-      xScale = d3.scaleBand().domain(uniqueXValues).range([0, innerWidth]).padding(0.1);
+      xScale = d3.scaleBand().domain(xDomain).range([0, innerWidth]).padding(0.1);
     } else {
       // Use linear scale for numeric data
       const numericXValues = xValues.filter(v => typeof v === 'number' && !isNaN(v)) as number[];
       const xExtent = d3.extent(numericXValues) as [number, number];
 
       if ((!xExtent[0] && xExtent[0] !== 0) || (!xExtent[1] && xExtent[1] !== 0)) {
-        console.error('Invalid xExtent:', xExtent, 'from numericXValues:', numericXValues);
         return;
       }
 
       // Dynamic X scale domain based on xAxisStart prop
       let xDomain: [number, number];
-      if (xAxisStart === 'auto') {
-        xDomain = xExtent;
-      } else if (xAxisStart === 'zero') {
+      if (xAxisStart === 'zero') {
         xDomain = [0, xExtent[1]];
-      } else if (typeof xAxisStart === 'number') {
-        xDomain = [xAxisStart, xExtent[1]];
       } else {
-        xDomain = xExtent[0] > 0 && xExtent[0] <= 1 ? [0, xExtent[1]] : xExtent;
+        // Default to 'auto' for all other cases
+        xDomain = xExtent;
       }
-
-      console.log('xDomain:', xDomain);
-
       xScale = d3.scaleLinear().domain(xDomain).range([0, innerWidth]);
     }
 
@@ -519,33 +630,30 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .filter(v => typeof v === 'number' && !isNaN(v));
 
     if (allYValues.length === 0) {
-      console.error('No valid numeric Y values found');
       return;
     }
 
     const yExtent = d3.extent(allYValues) as [number, number];
 
     if ((!yExtent[0] && yExtent[0] !== 0) || (!yExtent[1] && yExtent[1] !== 0)) {
-      console.error('Invalid yExtent:', yExtent, 'from allYValues:', allYValues);
       return;
     }
 
     // Dynamic Y scale domain based on yAxisStart prop
     let yDomain: [number, number];
-    if (yAxisStart === 'auto') {
-      yDomain = yExtent;
-    } else if (yAxisStart === 'zero') {
+
+    if (yAxisStart === 'zero') {
       yDomain = [0, yExtent[1]];
-    } else if (typeof yAxisStart === 'number') {
-      yDomain = [yAxisStart, yExtent[1]];
     } else {
-      // Fallback to old logic for backward compatibility
-      yDomain = yExtent[0] > 0 ? [0, yExtent[1]] : yExtent;
+      // Default to 'auto' for all other cases
+      yDomain = yExtent;
     }
 
-    console.log('yDomain:', yDomain);
-
-    const yScale = d3.scaleLinear().domain(yDomain).nice().range([innerHeight, 0]);
+    // Create Y scale - only use .nice() when starting from zero
+    const yScale =
+      yAxisStart === 'auto'
+        ? d3.scaleLinear().domain(yDomain).range([innerHeight, 0])
+        : d3.scaleLinear().domain(yDomain).nice().range([innerHeight, 0]);
 
     // Grid lines
     if (showGrid) {
@@ -605,21 +713,53 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     let xAxis: any;
 
     if (hasStringXValues) {
-      // For categorical data, use all unique values as ticks
-      const uniqueXValues = [...new Set(xValues)] as string[];
+      // For categorical data (including date strings), show ALL labels
+      const domainVals = (xScale as any).domain() as string[];
+
+      // Show all labels - chart width already adjusted to fit all
+      const tickVals: string[] = domainVals;
+
       xAxis = d3
         .axisBottom(xScale)
+        .tickValues(tickVals)
         .tickSizeInner(showAxisTicks ? 6 : 0)
         .tickSizeOuter(showAxisTicks ? 6 : 0)
-        .tickFormat((d: any) => String(d));
+        .tickFormat((d: any) => {
+          // Remove the _index suffix to get the original value
+          const rawValue = String(d).replace(/_\d+$/, '');
+
+          // Try to format as date if xAxisFormatter exists
+          if (xAxisFormatter) {
+            // Check if it's a date string (ISO format or timestamp)
+            const dateTest = new Date(rawValue);
+            if (!isNaN(dateTest.getTime())) {
+              // It's a valid date, format it
+              return xAxisFormatter(dateTest.getTime());
+            }
+
+            // Try as number
+            const numValue = Number(rawValue);
+            if (!isNaN(numValue)) {
+              return xAxisFormatter(numValue);
+            }
+          }
+
+          // Fallback to display name or raw value
+          const displayName = xAxisNames[rawValue] || rawValue;
+          return displayName;
+        });
     } else {
-      // For numeric data, use actual data values as ticks
+      // For numeric data, use default linear scale behavior
       const uniqueXValues = [...new Set(processedData.map(d => d[xAxisKey] as number))].sort(
         (a, b) => a - b
       );
+
+      // For numeric data, use D3's default tick algorithm
+      const tickVals: number[] = uniqueXValues;
+
       xAxis = d3
         .axisBottom(xScale)
-        .tickValues(uniqueXValues)
+        .tickValues(tickVals)
         .tickSizeInner(showAxisTicks ? 6 : 0)
         .tickSizeOuter(showAxisTicks ? 6 : 0)
         .tickFormat((d: any) => {
@@ -627,7 +767,9 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           if (xAxisFormatter && !isNaN(value)) {
             return xAxisFormatter(value);
           }
-          return d3.format('d')(value);
+          // Use xAxisNames to map ID to display name for numeric values too
+          const displayName = xAxisNames[String(d)] || d3.format('d')(value);
+          return displayName;
         });
     }
 
@@ -652,11 +794,11 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       .axisLeft(yScale)
       .tickFormat(d => {
         const value = d.valueOf();
-        // Use custom formatter if provided, otherwise use simple number formatting
+        // Use custom formatter if provided, otherwise fallback to simple string
         if (yAxisFormatter) {
           return yAxisFormatter(value);
         }
-        return value.toLocaleString();
+        return String(value);
       })
       .tickSizeInner(showAxisTicks ? -5 : 0) // Control inner tick size
       .tickSizeOuter(showAxisTicks ? 6 : 0) // Control outer tick size
@@ -695,8 +837,6 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     const enabledLines = yAxisKeys.filter(key => !disabledLines.includes(key));
 
     enabledLines.forEach((key, index) => {
-      console.log(`Creating line for key: ${key}`);
-
       // Validate that this key has valid data
       const keyData = processedData.filter(d => {
         const xVal = d[xAxisKey];
@@ -713,31 +853,29 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       });
 
       if (keyData.length === 0) {
-        console.warn(`No valid data points for key: ${key}`);
         return;
       }
 
-      console.log(`Valid data points for ${key}:`, keyData.length);
-
-      const seriesConfig = seriesConfigs[key] || {};
+      const seriesConfig = axisConfigs[key] || {};
 
       // Get individual series configurations or fallback to global
       const seriesLineWidth = seriesConfig.lineWidth ?? lineWidth;
       const seriesPointRadius = seriesConfig.pointRadius ?? pointRadius;
       const seriesOpacity = seriesConfig.opacity ?? 1;
-      const seriesLineStyle = seriesConfig.lineStyle ?? 'solid';
+      const seriesLineStyle = seriesConfig.lineStyle ?? lineStyle;
       const seriesPointStyle = seriesConfig.pointStyle ?? 'circle';
 
       // Custom line generator for this specific key with validation
       const keyLine = d3
         .line<ChartDataPoint>()
-        .x(d => {
+        .x((d, i) => {
           const xVal = d[xAxisKey];
           let scaledVal: number;
 
           if (hasStringXValues) {
-            // For categorical data, use band scale
-            scaledVal = (xScale as any)(xVal) + (xScale as any).bandwidth() / 2;
+            // For categorical data, use the indexed key for positioning
+            const indexedKey = `${xVal}_${i}`;
+            scaledVal = (xScale as any)(indexedKey) + (xScale as any).bandwidth() / 2;
           } else {
             // For numeric data, use linear scale
             scaledVal = xScale(xVal as number);
@@ -845,13 +983,14 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           .enter()
           .append('path')
           .attr('class', `point-${index}`)
-          .attr('transform', d => {
+          .attr('transform', (d, i) => {
             const xVal = d[xAxisKey];
             let x: number;
 
             if (hasStringXValues) {
-              // For categorical data, use band scale
-              x = (xScale as any)(xVal) + (xScale as any).bandwidth() / 2;
+              // For categorical data, use the indexed key for positioning
+              const indexedKey = `${xVal}_${i}`;
+              x = (xScale as any)(indexedKey) + (xScale as any).bandwidth() / 2;
             } else {
               // For numeric data, use linear scale
               x = xScale(xVal as number);
@@ -871,8 +1010,14 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
           .attr('stroke-width', 2)
           .attr('opacity', seriesOpacity)
           .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
-          .on('mouseover', function (_event, d) {
+          .on('mouseenter', function (_event, d) {
             if (!showTooltip) return;
+
+            // Find the index of this data point in the original processedData
+            const dataIndex = processedData.findIndex(item => item === d);
+
+            // Clear any existing timeout to prevent auto-hide
+            clearTooltipTimeout();
 
             // Enhanced tooltip on hover
             d3.select(this)
@@ -881,16 +1026,33 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
               .attr('d', getPointPath(seriesPointStyle, seriesPointRadius * 1.5))
               .attr('stroke-width', 3);
 
+            // Hide current tooltip if exists (instant switch)
+            hideCurrentTooltip();
+
             // Create enhanced tooltip
+            const rawXValue = d[xAxisKey];
             const xValue =
-              typeof d[xAxisKey] === 'number' ? d[xAxisKey].toLocaleString() : d[xAxisKey];
-            const yValue = typeof d[key] === 'number' ? d[key].toLocaleString() : d[key];
+              typeof rawXValue === 'number'
+                ? xAxisFormatter
+                  ? xAxisFormatter(rawXValue)
+                  : String(rawXValue)
+                : rawXValue;
+            // Use xAxisNames to get display name for X-axis value
+            const xDisplayName = xAxisNames[String(rawXValue)] || xValue;
+            const yValue =
+              typeof d[key] === 'number'
+                ? yAxisFormatter
+                  ? yAxisFormatter(d[key])
+                  : String(d[key])
+                : d[key];
             const seriesName = seriesNames[key] || key;
 
             const pointX = (() => {
               const xVal = d[xAxisKey];
               if (hasStringXValues) {
-                return (xScale as any)(xVal) + (xScale as any).bandwidth() / 2;
+                // Use the indexed key to get correct position
+                const indexedKey = `${xVal}_${dataIndex}`;
+                return (xScale as any)(indexedKey) + (xScale as any).bandwidth() / 2;
               } else {
                 return xScale(xVal as number);
               }
@@ -902,89 +1064,141 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
               return;
             }
 
-            const tooltip = g
-              .append('g')
-              .attr('class', 'tooltip')
-              .attr('transform', `translate(${pointX}, ${pointY - 25})`);
+            const tooltip = g.append('g').attr('class', 'tooltip');
 
-            // Tooltip background with shadow - make it larger for more content
-            tooltip
-              .append('rect')
-              .attr('x', -50)
-              .attr('y', -35)
-              .attr('width', 100)
-              .attr('height', 45)
-              .attr('fill', isDarkMode ? '#1f2937' : '#ffffff')
-              .attr('stroke', currentColors[key])
-              .attr('stroke-width', 2)
-              .attr('rx', 6)
-              .style('filter', 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))')
-              .style('opacity', 0)
-              .transition()
-              .duration(200)
-              .style('opacity', 0.95);
+            // Set as current tooltip
+            currentTooltipRef.current = tooltip;
 
-            // Series name
-            tooltip
-              .append('text')
-              .attr('text-anchor', 'middle')
-              .attr('y', -25)
-              .attr('fill', textColor)
-              .style('font-size', `${Math.max(responsiveFontSize.axis - 1, 10)}px`)
-              .style('font-weight', '600')
-              .style('opacity', 0)
-              .text(seriesName)
-              .transition()
-              .duration(200)
-              .style('opacity', 1);
+            // Prepare tooltip lines
+            const tooltipLines = [
+              createHeader(seriesName, { color: currentColors[key] }),
+              createStatLine(xAxisLabel || 'X', xDisplayName),
+              createStatLine(yAxisLabel || 'Value', yValue, { fontWeight: '600' }),
+            ];
 
-            // X value
-            tooltip
-              .append('text')
-              .attr('text-anchor', 'middle')
-              .attr('y', -12)
-              .attr('fill', textColor)
-              .style('font-size', `${Math.max(responsiveFontSize.axis - 1, 10)}px`)
-              .style('font-weight', '500')
-              .style('opacity', 0)
-              .text(`${xAxisLabel || 'X'}: ${xValue}`)
-              .transition()
-              .duration(200)
-              .style('opacity', 0.8);
+            // Render tooltip using shared component
+            renderD3Tooltip(tooltip, {
+              lines: tooltipLines,
+              position: { x: pointX, y: pointY },
+              isDarkMode: isDarkMode,
+              containerWidth: innerWidth,
+              containerHeight: innerHeight,
+              preferPosition: 'auto',
+              avoidPointer: true,
+            });
 
-            // Y value
-            tooltip
-              .append('text')
-              .attr('text-anchor', 'middle')
-              .attr('y', 2)
-              .attr('fill', textColor)
-              .style('font-size', `${responsiveFontSize.axis}px`)
-              .style('font-weight', '600')
-              .style('opacity', 0)
-              .text(`${yValue}`)
-              .transition()
-              .duration(200)
-              .style('opacity', 1);
+            // Tooltip will stay visible while hovering, no auto-hide timeout
           })
-          .on('mouseout', function () {
+          .on('mousemove', function (event, d) {
+            if (!showTooltip || !currentTooltipRef.current) return;
+
+            // Get mouse position relative to the chart group
+            const [mouseX, mouseY] = d3.pointer(event, g.node());
+
+            // Re-create tooltip lines (cheap operation) to ensure we have the correct content
+            // Note: We could store this on the element, but recalculating is fast enough
+            const rawXValue = d[xAxisKey];
+            const xValue =
+              typeof rawXValue === 'number'
+                ? xAxisFormatter
+                  ? xAxisFormatter(rawXValue)
+                  : String(rawXValue)
+                : rawXValue;
+            const xDisplayName = xAxisNames[String(rawXValue)] || xValue;
+            const yValue =
+              typeof d[key] === 'number'
+                ? yAxisFormatter
+                  ? yAxisFormatter(d[key])
+                  : String(d[key])
+                : d[key];
+            const seriesName = seriesNames[key] || key;
+
+            const tooltipLines = [
+              createHeader(seriesName, { color: currentColors[key] }),
+              createStatLine(xAxisLabel || 'X', xDisplayName),
+              createStatLine(yAxisLabel || 'Value', yValue, { fontWeight: '600' }),
+            ];
+
+            // Update tooltip position with 0 duration for immediate follow
+            renderD3Tooltip(currentTooltipRef.current, {
+              lines: tooltipLines,
+              position: { x: mouseX, y: mouseY },
+              isDarkMode: isDarkMode,
+              containerWidth: innerWidth,
+              containerHeight: innerHeight,
+              preferPosition: 'auto',
+              avoidPointer: true,
+              animationDuration: 0, // Instant update for smooth following
+            });
+          })
+          .on('mouseleave', function () {
             d3.select(this)
               .transition()
               .duration(200)
               .attr('d', getPointPath(seriesPointStyle, seriesPointRadius))
               .attr('stroke-width', 2);
 
-            g.select('.tooltip').transition().duration(150).style('opacity', 0).remove();
+            // Hide tooltip immediately when not hovering
+            clearTooltipTimeout();
+            hideCurrentTooltip();
           })
           .transition()
           .delay(animationDuration + index * 100)
           .duration(300)
           .ease(d3.easeBackOut)
           .attr('d', getPointPath(seriesPointStyle, seriesPointRadius));
+
+        // Add point values if showPointValues is enabled
+        if (showPointValues) {
+          g.selectAll(`.point-value-${index}`)
+            .data(validPoints)
+            .enter()
+            .append('text')
+            .attr('class', `point-value-${index}`)
+            .attr('x', (d, i) => {
+              const xVal = d[xAxisKey];
+              if (hasStringXValues) {
+                // Use the indexed key for positioning
+                const indexedKey = `${xVal}_${i}`;
+                return (xScale as any)(indexedKey) + (xScale as any).bandwidth() / 2;
+              } else {
+                return xScale(xVal as number);
+              }
+            })
+            .attr('y', d => {
+              return yScale(d[key] as number) - seriesPointRadius - 8; // Position above the point
+            })
+            .attr('text-anchor', 'middle')
+            .attr('fill', textColor)
+            .style('font-size', `${Math.max(responsiveFontSize.axis - 2, 9)}px`)
+            .style('font-weight', '600')
+            .style('opacity', 0)
+            .style(
+              'text-shadow',
+              isDarkMode ? '1px 1px 2px rgba(0,0,0,0.8)' : '1px 1px 2px rgba(255,255,255,0.8)'
+            )
+            .text(d => {
+              const yValue = d[key] as number;
+              // If we have a specific decimal setting, use it
+              if (typeof yValue === 'number' && pointValueDecimals !== undefined) {
+                return yValue.toFixed(pointValueDecimals);
+              }
+              if (yAxisFormatter) {
+                return yAxisFormatter(yValue);
+              }
+              return String(yValue);
+            })
+            .transition()
+            .delay(animationDuration + index * 100 + 300) // Show after points are drawn
+            .duration(300)
+            .style('opacity', 0.8);
+        }
       }
     });
 
     // Enhanced zoom and pan with mouse interactions
-    if (enableZoom) {
+    // Use shouldEnablePan instead of enablePan to auto-enable when chart is expanded
+    if (shouldEnableZoom || shouldEnablePan) {
       let zoomLevel = 1;
       let translateX = 0;
       let translateY = 0;
@@ -994,120 +1208,141 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
       let dragStartTranslateX = 0;
       let dragStartTranslateY = 0;
 
-      // Mouse wheel zoom
-      svg.on('wheel', function (event) {
-        event.preventDefault();
+      // Mouse wheel zoom - only if enableZoom is true
+      if (shouldEnableZoom) {
+        svg.on('wheel', function (event) {
+          event.preventDefault();
 
-        // Get mouse position relative to the chart
-        const rect = svg.node()?.getBoundingClientRect();
-        if (!rect) return;
+          // Get mouse position relative to the chart
+          const rect = svg.node()?.getBoundingClientRect();
+          if (!rect) return;
 
-        const mouseX = event.clientX - rect.left - responsiveMargin.left;
-        const mouseY = event.clientY - rect.top - responsiveMargin.top;
+          const mouseX = event.clientX - rect.left - responsiveMargin.left;
+          const mouseY = event.clientY - rect.top - responsiveMargin.top;
 
-        const delta = event.deltaY;
-        const scaleFactor = delta > 0 ? 0.9 : 1.1;
-        const newZoomLevel = zoomLevel * scaleFactor;
+          const delta = event.deltaY;
+          const scaleFactor = delta > 0 ? 0.9 : 1.1;
+          const newZoomLevel = zoomLevel * scaleFactor;
 
-        // Limit zoom
-        const clampedZoomLevel = Math.max(0.5, Math.min(3, newZoomLevel));
-        const actualScaleFactor = clampedZoomLevel / zoomLevel;
+          // Limit zoom
+          const clampedZoomLevel = Math.max(0.5, Math.min(zoomExtent, newZoomLevel));
+          const actualScaleFactor = clampedZoomLevel / zoomLevel;
 
-        // Calculate new translation to zoom at mouse position
-        const newTranslateX = translateX + (mouseX - translateX) * (1 - actualScaleFactor);
-        const newTranslateY = translateY + (mouseY - translateY) * (1 - actualScaleFactor);
+          // Calculate new translation to zoom at mouse position
+          const newTranslateX = translateX + (mouseX - translateX) * (1 - actualScaleFactor);
+          const newTranslateY = translateY + (mouseY - translateY) * (1 - actualScaleFactor);
 
-        // Update zoom state
-        zoomLevel = clampedZoomLevel;
-        translateX = newTranslateX;
-        translateY = newTranslateY;
+          // Update zoom state
+          zoomLevel = clampedZoomLevel;
+          translateX = newTranslateX;
+          translateY = newTranslateY;
 
-        // Apply zoom and pan transform
-        const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
-        g.attr('transform', transform);
-      });
+          // Apply zoom and pan transform
+          const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
+          g.attr('transform', transform);
+        });
+      }
 
-      // Mouse drag to pan
-      svg.on('mousedown', function (event) {
-        if (event.button !== 0) return; // Only left mouse button
+      // Mouse drag to pan - only if shouldEnablePan is true (includes auto-enable)
+      if (shouldEnablePan) {
+        svg.on('mousedown', function (event) {
+          if (event.button !== 0) return; // Only left mouse button
 
-        isDragging = true;
-        dragStartX = event.clientX;
-        dragStartY = event.clientY;
-        dragStartTranslateX = translateX;
-        dragStartTranslateY = translateY;
+          isDragging = true;
+          dragStartX = event.clientX;
+          dragStartY = event.clientY;
+          dragStartTranslateX = translateX;
+          dragStartTranslateY = translateY;
 
-        // Change cursor to grabbing
-        svg.style('cursor', 'grabbing');
+          // Change cursor to grabbing
+          svg.style('cursor', 'grabbing');
 
-        // Prevent text selection during drag
-        event.preventDefault();
-      });
+          // Prevent text selection during drag
+          event.preventDefault();
+        });
 
-      svg.on('mousemove', function (event) {
-        if (!isDragging) {
-          // Show grab cursor when zoomed in
-          if (zoomLevel > 1) {
-            svg.style('cursor', 'grab');
-          } else {
+        svg.on('mousemove', function (event) {
+          if (!isDragging) {
+            // Show grab cursor when pan is enabled
+            if (shouldEnablePan) {
+              svg.style('cursor', 'grab');
+            } else {
+              svg.style('cursor', 'default');
+            }
+            return;
+          }
+
+          const deltaX = event.clientX - dragStartX;
+          const deltaY = event.clientY - dragStartY;
+
+          // Update translation based on drag distance
+          translateX = dragStartTranslateX + deltaX;
+          translateY = dragStartTranslateY + deltaY;
+
+          // Apply pan transform
+          const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
+          g.attr('transform', transform);
+        });
+
+        svg.on('mouseup', function () {
+          if (isDragging) {
+            isDragging = false;
+
+            // Reset cursor
+            if (shouldEnablePan) {
+              svg.style('cursor', 'grab');
+            } else {
+              svg.style('cursor', 'default');
+            }
+          }
+        });
+
+        // Handle mouse leave to stop dragging and hide tooltips
+        svg.on('mouseleave', function () {
+          if (isDragging) {
+            isDragging = false;
             svg.style('cursor', 'default');
           }
-          return;
-        }
+          // Also hide any tooltips when leaving the chart area
+          clearTooltipTimeout();
+          hideCurrentTooltip();
+        });
+      }
 
-        const deltaX = event.clientX - dragStartX;
-        const deltaY = event.clientY - dragStartY;
+      // Double-click to reset zoom and pan
+      if (shouldEnableZoom || shouldEnablePan) {
+        svg.on('dblclick', function () {
+          zoomLevel = 1;
+          translateX = 0;
+          translateY = 0;
 
-        // Update translation based on drag distance
-        translateX = dragStartTranslateX + deltaX;
-        translateY = dragStartTranslateY + deltaY;
-
-        // Apply pan transform
-        const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
-        g.attr('transform', transform);
-      });
-
-      svg.on('mouseup', function () {
-        if (isDragging) {
-          isDragging = false;
-
-          // Reset cursor
-          if (zoomLevel > 1) {
-            svg.style('cursor', 'grab');
-          } else {
-            svg.style('cursor', 'default');
-          }
-        }
-      });
-
-      // Handle mouse leave to stop dragging
-      svg.on('mouseleave', function () {
-        if (isDragging) {
-          isDragging = false;
           svg.style('cursor', 'default');
-        }
-      });
 
-      // Double-click to reset zoom
-      svg.on('dblclick', function () {
-        zoomLevel = 1;
-        translateX = 0;
-        translateY = 0;
+          g.transition()
+            .duration(300)
+            .ease(d3.easeQuadOut)
+            .attr(
+              'transform',
+              `translate(${responsiveMargin.left},${responsiveMargin.top}) scale(1)`
+            );
+        });
+      }
+    }
 
-        svg.style('cursor', 'default');
-
-        g.transition()
-          .duration(300)
-          .ease(d3.easeQuadOut)
-          .attr(
-            'transform',
-            `translate(${responsiveMargin.left},${responsiveMargin.top}) scale(1)`
-          );
+    // Global mouseleave handler for tooltip management (even when zoom/pan disabled)
+    if (!enableZoom && !enablePan && showTooltip) {
+      svg.on('mouseleave', function () {
+        clearTooltipTimeout();
+        hideCurrentTooltip();
       });
     }
 
     // Add axis labels with responsive font sizes
     if (xAxisLabel && showAxisLabels) {
+      // Get X-axis formatter symbol
+      const xFormatterSymbol = getFormatterSymbol(xFormatterType);
+      const xLabelText = xFormatterSymbol ? `${xAxisLabel} (${xFormatterSymbol})` : xAxisLabel;
+
       g.append('text')
         .attr('x', innerWidth / 2)
         .attr('y', innerHeight + (currentWidth < 768 ? 40 : 50))
@@ -1115,10 +1350,14 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr('fill', textColor)
         .style('font-size', `${responsiveFontSize.label}px`)
         .style('font-weight', '600')
-        .text(xAxisLabel);
+        .text(xLabelText);
     }
 
     if (yAxisLabel && showAxisLabels) {
+      // Get Y-axis formatter symbol
+      const yFormatterSymbol = getFormatterSymbol(yFormatterType);
+      const yLabelText = yFormatterSymbol ? `${yAxisLabel} (${yFormatterSymbol})` : yAxisLabel;
+
       g.append('text')
         .attr('transform', `rotate(-90)`)
         .attr('x', -innerHeight / 2)
@@ -1127,7 +1366,326 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
         .attr('fill', textColor)
         .style('font-size', `${responsiveFontSize.label}px`)
         .style('font-weight', '600')
-        .text(yAxisLabel);
+        .text(yLabelText);
+    }
+
+    // Add responsive legend directly in SVG
+    if (showLegend) {
+      const enabledLines = yAxisKeys.filter(key => !disabledLines.includes(key));
+      const isMobile = currentWidth < 640;
+      const isTablet = currentWidth < 1024;
+      const legendItemHeight = isMobile ? 20 : isTablet ? 22 : 25;
+      const legendItems = enabledLines;
+
+      // Legend dimensions depend on orientation and chart size
+      let legendWidth = isMobile ? 120 : isTablet ? 140 : 150;
+      let legendHeight = legendItems.length * legendItemHeight + (isMobile ? 15 : 20);
+
+      // For horizontal legend (top/bottom)
+      if (legendPosition === 'top' || legendPosition === 'bottom') {
+        // Calculate width based on items laid out horizontally
+        const itemWidth = isMobile ? 70 : isTablet ? 85 : 100;
+        legendWidth = Math.min(innerWidth - 40, legendItems.length * itemWidth + 40);
+        legendHeight = isMobile ? 40 : isTablet ? 45 : 50; // Fixed height for horizontal legend
+      }
+
+      const legendGroup = g.append('g').attr('class', 'legend-group');
+
+      let legendX = 0;
+      let legendY = 0;
+
+      // Device-aware extra spacing to keep legend away from chart edges
+      const extraLegendSpacing = isMobile ? 8 : isTablet ? 12 : 20;
+      const legendSpacingFromChart = isMobile ? 35 : isTablet ? 65 : 85;
+
+      switch (legendPosition) {
+        case 'top':
+          legendX = innerWidth / 2 - legendWidth / 2;
+          legendY = -10;
+          break;
+        case 'bottom':
+          legendX = innerWidth / 2 - legendWidth / 2;
+          legendY = innerHeight + legendSpacingFromChart;
+          break;
+        case 'left':
+          legendX = extraLegendSpacing;
+          legendY = innerHeight / 2 - legendHeight * 2;
+          break;
+        case 'right':
+        default:
+          legendX = innerWidth - legendWidth - extraLegendSpacing;
+          legendY = innerHeight / 2 - legendHeight * 2;
+          break;
+      }
+
+      // Create legend background and a contents group we'll measure
+      const legendBg = legendGroup
+        .append('rect')
+        .attr('x', legendX)
+        .attr('y', legendY)
+        .attr('width', legendWidth)
+        .attr('height', legendHeight)
+        .attr('fill', isDarkMode ? 'rgba(55, 65, 81, 0.8)' : 'rgba(248, 250, 252, 0.9)')
+        .attr('stroke', isDarkMode ? 'rgba(107, 114, 128, 0.3)' : 'rgba(209, 213, 219, 0.3)')
+        .attr('stroke-width', 1)
+        .attr('rx', 8)
+        .style('filter', 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))');
+
+      const legendContents = legendGroup.append('g').attr('class', 'legend-contents');
+
+      if (legendPosition === 'top' || legendPosition === 'bottom') {
+        // Horizontal legend - items laid out horizontally
+        const itemPadding = isMobile ? 6 : 8;
+
+        // Build items inside legendContents and support up to 2 rows if needed
+        const localIconSize = isMobile ? 12 : isTablet ? 13 : 14;
+        const padX = isMobile ? 12 : 16;
+        const padY = isMobile ? 8 : 10;
+        const availableContentWidth = legendWidth - padX * 2;
+
+        // Precompute display labels with increased character limits to show more text
+        const itemsMeta = legendItems.map(key => {
+          const label = seriesNames[key] || key;
+          const maxLabelLength = isMobile ? 12 : isTablet ? 18 : 20;
+          const displayLabel =
+            label.length > maxLabelLength ? label.substring(0, maxLabelLength) + '...' : label;
+          return { displayLabel, key };
+        });
+
+        // Use fixed per-item container width so all items align on a grid (not centered per-item)
+        const itemContainerW = isMobile ? 100 : isTablet ? 120 : 140;
+
+        const totalSingleWidth = itemContainerW * legendItems.length;
+        const useTwoRows = totalSingleWidth > availableContentWidth && legendItems.length > 1;
+
+        if (!useTwoRows) {
+          // Single centered row - items aligned on grid
+          let currentX = 0;
+          legendItems.forEach((key, idx) => {
+            const { displayLabel } = itemsMeta[idx];
+            const legendItem = legendContents
+              .append('g')
+              .attr('class', `legend-item-${idx}`)
+              .style('cursor', 'pointer')
+              .attr('transform', `translate(${currentX}, 0)`);
+
+            legendItem
+              .append('rect')
+              .attr('x', 0)
+              .attr('y', 0)
+              .attr('width', localIconSize)
+              .attr('height', localIconSize)
+              .attr('rx', 3)
+              .attr('fill', currentColors[key])
+              .style('filter', `drop-shadow(0 2px 4px ${currentColors[key]}40)`);
+
+            legendItem
+              .append('text')
+              .attr('x', localIconSize + itemPadding)
+              .attr('y', localIconSize / 2)
+              .attr('dy', '0.35em')
+              .attr('fill', textColor)
+              .style('font-size', `${legendFontSize}px`)
+              .style('font-weight', '600')
+              .text(displayLabel);
+
+            legendItem
+              .on('mouseenter', function () {
+                d3.select(this).style('opacity', '0.8');
+              })
+              .on('mouseleave', function () {
+                d3.select(this).style('opacity', '1');
+              });
+
+            currentX += itemContainerW;
+          });
+        } else {
+          // Two-row layout using uniform item container width for consistent columns
+          const firstRowCount = Math.ceil(legendItems.length / 2);
+          const rowY = localIconSize + padY;
+
+          // First row
+          let x0 = 0;
+          for (let i = 0; i < firstRowCount; i++) {
+            const { displayLabel, key } = itemsMeta[i];
+            const legendItem = legendContents
+              .append('g')
+              .attr('class', `legend-item-${i}`)
+              .style('cursor', 'pointer')
+              .attr('transform', `translate(${x0}, 0)`);
+
+            legendItem
+              .append('rect')
+              .attr('x', 0)
+              .attr('y', 0)
+              .attr('width', localIconSize)
+              .attr('height', localIconSize)
+              .attr('rx', 3)
+              .attr('fill', currentColors[key])
+              .style('filter', `drop-shadow(0 2px 4px ${currentColors[key]}40)`);
+
+            legendItem
+              .append('text')
+              .attr('x', localIconSize + itemPadding)
+              .attr('y', localIconSize / 2)
+              .attr('dy', '0.35em')
+              .attr('fill', textColor)
+              .style('font-size', `${legendFontSize}px`)
+              .style('font-weight', '600')
+              .text(displayLabel);
+
+            legendItem
+              .on('mouseenter', function () {
+                d3.select(this).style('opacity', '0.8');
+              })
+              .on('mouseleave', function () {
+                d3.select(this).style('opacity', '1');
+              });
+
+            x0 += itemContainerW;
+          }
+
+          // Second row
+          let x1 = 0;
+          for (let j = firstRowCount; j < legendItems.length; j++) {
+            const { displayLabel, key } = itemsMeta[j];
+            const legendItem = legendContents
+              .append('g')
+              .attr('class', `legend-item-${j}`)
+              .style('cursor', 'pointer')
+              .attr('transform', `translate(${x1}, ${rowY})`);
+
+            legendItem
+              .append('rect')
+              .attr('x', 0)
+              .attr('y', 0)
+              .attr('width', localIconSize)
+              .attr('height', localIconSize)
+              .attr('rx', 3)
+              .attr('fill', currentColors[key])
+              .style('filter', `drop-shadow(0 2px 4px ${currentColors[key]}40)`);
+
+            legendItem
+              .append('text')
+              .attr('x', localIconSize + itemPadding)
+              .attr('y', localIconSize / 2)
+              .attr('dy', '0.35em')
+              .attr('fill', textColor)
+              .style('font-size', `${legendFontSize}px`)
+              .style('font-weight', '600')
+              .text(displayLabel);
+
+            legendItem
+              .on('mouseenter', function () {
+                d3.select(this).style('opacity', '0.8');
+              })
+              .on('mouseleave', function () {
+                d3.select(this).style('opacity', '1');
+              });
+
+            x1 += itemContainerW;
+          }
+        }
+
+        // Measure and center contents inside background, then resize background
+        try {
+          const bbox = (legendContents.node() as SVGGElement).getBBox();
+          const extraWidth = isMobile ? 8 : isTablet ? 12 : 16;
+          const desiredBgWidth = Math.max(
+            bbox.width + padX * 2 + extraWidth,
+            legendWidth + extraWidth
+          );
+          const desiredBgHeight = Math.max(bbox.height + padY * 2, legendHeight);
+
+          // For top/bottom: center the background by desired width so it doesn't look left-shifted
+          const bgX =
+            legendPosition === 'top' || legendPosition === 'bottom'
+              ? innerWidth / 2 - desiredBgWidth / 2
+              : legendX;
+
+          legendBg
+            .attr('x', bgX)
+            .attr('y', legendY)
+            .attr('width', desiredBgWidth)
+            .attr('height', desiredBgHeight);
+
+          // center contents horizontally within the bg and vertically with some padding
+          const contentsX = bgX + (desiredBgWidth - bbox.width) / 2;
+          const contentsY = legendY + padY + (desiredBgHeight - (bbox.height + padY * 2)) / 2;
+          legendContents.attr('transform', `translate(${contentsX}, ${contentsY})`);
+        } catch {
+          console.warn('legend bbox measurement failed');
+        }
+      } else {
+        // Vertical legend (left/right)
+        const iconSize = isMobile ? 14 : 16;
+
+        let currentY = 0;
+        legendItems.forEach((key, i) => {
+          const label = seriesNames[key] || key;
+          const displayLabel =
+            label.length > (isMobile ? 10 : isTablet ? 12 : 15)
+              ? label.substring(0, isMobile ? 10 : isTablet ? 12 : 15) + '...'
+              : label;
+
+          const legendItem = legendContents
+            .append('g')
+            .attr('class', `legend-item-${i}`)
+            .style('cursor', 'pointer')
+            .attr('transform', `translate(${isMobile ? 8 : 10}, ${currentY})`);
+
+          // Color indicator
+          legendItem
+            .append('rect')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', iconSize)
+            .attr('height', iconSize)
+            .attr('rx', 3)
+            .attr('fill', currentColors[key])
+            .style('filter', `drop-shadow(0 2px 4px ${currentColors[key]}40)`);
+
+          // Label
+          legendItem
+            .append('text')
+            .attr('x', iconSize + (isMobile ? 6 : 8))
+            .attr('y', iconSize / 2)
+            .attr('dy', '0.35em')
+            .attr('fill', textColor)
+            .style('font-size', `${legendFontSize}px`)
+            .style('font-weight', '600')
+            .text(displayLabel);
+
+          // Hover effects
+          legendItem
+            .on('mouseenter', function () {
+              d3.select(this).style('opacity', '0.8');
+            })
+            .on('mouseleave', function () {
+              d3.select(this).style('opacity', '1');
+            });
+
+          currentY += legendItemHeight;
+        });
+
+        // Measure and position vertical contents
+        try {
+          const bbox = (legendContents.node() as SVGGElement).getBBox();
+          const padX = isMobile ? 8 : 10;
+          const padY = isMobile ? 8 : 10;
+          const contentsX = legendX + padX;
+          const contentsY = legendY + padY;
+          legendContents.attr('transform', `translate(${contentsX}, ${contentsY})`);
+          const extraWidthV = isMobile ? 6 : 10;
+          legendBg
+            .attr('x', legendX)
+            .attr('y', legendY)
+            .attr('width', Math.max(bbox.width + padX * 2 + extraWidthV, legendWidth + extraWidthV))
+            .attr('height', Math.max(bbox.height + padY * 2, legendHeight));
+        } catch {
+          console.warn('legend bbox measurement failed');
+        }
+      }
     }
   }, [
     processedData,
@@ -1136,7 +1694,8 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     yAxisKeys,
     disabledLines,
     colors,
-    seriesConfigs,
+    axisConfigs,
+    seriesNames,
     showLegend,
     showGrid,
     showPoints,
@@ -1161,152 +1720,56 @@ const D3LineChart: React.FC<D3LineChartProps> = ({
     yAxisRotation,
     showAxisLabels,
     showAxisTicks,
+    enableZoom,
+    enablePan,
+    zoomExtent,
     theme,
+    backgroundColor,
     legendFontSize,
+    yFormatterType,
+    xFormatterType,
+    showPointValues,
+    variant,
+    showAllXAxisTicks,
   ]);
 
   return (
-    <div
-      ref={containerRef}
-      className={`w-full ${legendPosition === 'top' || legendPosition === 'bottom' ? 'space-y-4' : 'flex gap-4'}`}
-    >
-      {title && title.trim() !== '' && (
-        <h3
-          className="font-bold text-gray-900 dark:text-white text-center"
-          style={{ fontSize: `${responsiveFontSize.title}px` }}
-        >
-          {title}
-        </h3>
-      )}
-
-      {/* Legend Top */}
-      {showLegend && legendPosition === 'top' && (
-        <div className="w-full">
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <h4
-              className="font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center"
-              style={{ fontSize: `${legendFontSize}px` }}
-            >
-              {t('legend')}
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {renderLegendItems()}
-            </div>
-          </div>
-        </div>
-      )}
-
+    <div ref={containerRef} className="w-full">
       <div
-        className={`${legendPosition === 'left' || legendPosition === 'right' ? 'flex gap-4' : ''}`}
+        className={
+          variant === 'preview'
+            ? 'relative overflow-hidden'
+            : 'chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden'
+        }
       >
-        {/* Legend Left */}
-        {showLegend && legendPosition === 'left' && (
-          <div className="w-64 flex-shrink-0">
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-              <h4
-                className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center"
-                style={{ fontSize: `${legendFontSize}px` }}
-              >
-                {t('legend')}
-              </h4>
-              <div className="flex flex-col gap-3">{renderLegendItems()}</div>
-            </div>
-          </div>
-        )}
-
-        {/* Chart Container */}
-        <div
-          className={`relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden pl-3 ${legendPosition === 'left' || legendPosition === 'right' ? 'flex-1' : 'w-full'}`}
+        <svg
+          ref={svgRef}
+          width={dimensions.width}
+          height={dimensions.height}
+          className="w-full h-auto chart-svg"
+          viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+          style={{ display: 'block' }}
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label={`Line chart${title ? `: ${title}` : ''}`}
         >
-          <svg
-            ref={svgRef}
-            width={dimensions.width}
-            height={dimensions.height}
-            className="w-full h-auto"
-            viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-            preserveAspectRatio="xMidYMid meet"
-          />
-        </div>
-
-        {/* Legend Right */}
-        {showLegend && legendPosition === 'right' && (
-          <div className="w-64 flex-shrink-0">
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-              <h4
-                className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center"
-                style={{ fontSize: `${legendFontSize}px` }}
-              >
-                {t('legend')}
-              </h4>
-              <div className="flex flex-col gap-3">{renderLegendItems()}</div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Legend Bottom */}
-      {showLegend && legendPosition === 'bottom' && (
-        <div className="w-full">
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <h4
-              className="font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 text-center"
-              style={{ fontSize: `${legendFontSize}px` }}
+          {/* SVG Title, centered at the top, matching D3PieChart */}
+          {title && title.trim() !== '' && (
+            <text
+              x={dimensions.width / 2}
+              y={Math.max(20, (titleFontSize || 16) * 1.2)}
+              textAnchor="middle"
+              fill={isDarkMode ? '#f3f4f6' : '#1f2937'}
+              style={{ fontSize: `${titleFontSize || 16}px`, fontWeight: 700 }}
+              className="chart-title"
             >
-              {t('legend')}
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {renderLegendItems()}
-            </div>
-          </div>
-        </div>
-      )}
+              {title}
+            </text>
+          )}
+        </svg>
+      </div>
     </div>
   );
-
-  function renderLegendItems() {
-    return yAxisKeys
-      .filter(key => !disabledLines.includes(key))
-      .map((key, index) => {
-        const colorKey = colors[key] ? key : `line${index + 1}`;
-        const color =
-          colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
-          defaultColors[`line${index + 1}`][isDarkMode ? 'dark' : 'light'];
-
-        // Use series name if provided, otherwise fallback to key
-        const displayName = seriesNames[key] || key;
-
-        return (
-          <div
-            key={key}
-            className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer group"
-          >
-            {/* Color Indicator */}
-            <div className="flex-shrink-0">
-              <div
-                className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-gray-400 dark:group-hover:border-gray-500 transition-colors duration-200"
-                style={{ backgroundColor: color }}
-              />
-            </div>
-
-            {/* Label */}
-            <span
-              className="font-medium text-gray-700 dark:text-gray-300 capitalize group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-200"
-              style={{ fontSize: `${legendFontSize}px` }}
-            >
-              {displayName}
-            </span>
-
-            {/* Line Preview */}
-            <div className="flex-1 flex justify-end">
-              <div
-                className="w-8 sm:w-8 h-2 sm:h-3 rounded opacity-60 group-hover:opacity-100 transition-opacity duration-200"
-                style={{ backgroundColor: color }}
-              />
-            </div>
-          </div>
-        );
-      });
-  }
 };
 
 export default D3LineChart;

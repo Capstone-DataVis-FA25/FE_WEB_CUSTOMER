@@ -21,13 +21,13 @@ import {
   Upload,
   RotateCcw,
   Settings,
-  Database,
-  Edit3,
-  Table,
+  // Database,
+  // Edit3,
+  // Table,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { sizePresets } from '@/types/chart';
-import type { FormatterConfig, ChartDataPoint } from '@/types/chart';
+import type { FormatterConfig } from '@/types/chart';
 
 // Size preset buttons component
 interface SizePresetButtonsProps {
@@ -281,6 +281,10 @@ interface SeriesManagementProps {
   onMoveSeriesUp: (seriesId: string) => void;
   onMoveSeriesDown: (seriesId: string) => void;
   availableColumns: string[];
+  getAvailableColumnsForSeries?: (seriesId: string) => string[];
+  validationErrors?: {
+    seriesNames: Record<string, boolean>;
+  };
 }
 
 export const SeriesManagement: React.FC<SeriesManagementProps> = ({
@@ -291,7 +295,9 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
   onMoveSeriesUp,
   onMoveSeriesDown,
   availableColumns,
+  getAvailableColumnsForSeries,
 }) => {
+  // I18N setup
   const { t } = useTranslation();
 
   return (
@@ -344,7 +350,6 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
 
               {/* Action Buttons with Modern Design */}
               <div className="flex items-center gap-1 bg-background/50 rounded-lg p-1 backdrop-blur-sm">
-                {/* Visibility Toggle with Enhanced States */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -384,7 +389,7 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
                   <ArrowDown className="w-4 h-4" />
                 </Button>
 
-                {/* Remove Button with Warning Style */}
+                {/* Remove Button with Confirmation */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -399,31 +404,53 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
 
             {/* Form Fields with Enhanced Styling */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Series Name Field */}
+              {/* Series Name Field - Read Only, synced with Data Column */}
               <div className="space-y-2">
                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {t('chart_editor_series_name')}
+                  {/* {t('chart_editor_series_name')} */}
+                  Chart Editor Series Name
                 </Label>
-                <Input
-                  value={seriesItem.name}
-                  onChange={e => onUpdateSeries(seriesItem.id, { name: e.target.value })}
-                  className="text-sm h-9 border-0 bg-background/60 backdrop-blur-sm focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all duration-200"
-                  placeholder={t('chart_editor_series_name_placeholder')}
-                />
+                <div className="flex flex-col gap-1">
+                  <Input
+                    value={seriesItem.dataColumn} // Use dataColumn as the display name
+                    readOnly
+                    disabled
+                    className="text-sm h-9 border-0 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed"
+                    placeholder={t(
+                      'chart_editor_series_name_auto',
+                      'Auto generated from data column'
+                    )}
+                  />
+                </div>
               </div>
 
               {/* Data Column Field */}
               <div className="space-y-2">
                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {t('chart_editor_data_column')}
+                  {/* {t('chart_editor_data_column')} */}
+                  Chart Editor Data Column
                 </Label>
                 <select
                   value={seriesItem.dataColumn}
-                  onChange={e => onUpdateSeries(seriesItem.id, { dataColumn: e.target.value })}
+                  onChange={e => {
+                    const newDataColumn = e.target.value;
+                    // Auto update name to match data column
+                    onUpdateSeries(seriesItem.id, {
+                      dataColumn: newDataColumn,
+                      name: newDataColumn, // Sync name with data column
+                    });
+                  }}
                   className="w-full p-2 text-sm border-0 rounded-lg bg-background/60 backdrop-blur-sm focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all duration-200 h-9"
                 >
+                  {/* Current column - always show the current selection */}
                   <option value={seriesItem.dataColumn}>{seriesItem.dataColumn}</option>
-                  {availableColumns.map(column => (
+                  {/* Available columns - use specific function if provided, otherwise use general available columns */}
+                  {(getAvailableColumnsForSeries
+                    ? getAvailableColumnsForSeries(seriesItem.id).filter(
+                        col => col !== seriesItem.dataColumn
+                      )
+                    : availableColumns
+                  ).map(column => (
                     <option key={column} value={column}>
                       {column}
                     </option>
@@ -461,7 +488,8 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
               <div className="p-1 rounded-full bg-primary/20 group-hover:bg-primary/30 transition-colors duration-200">
                 <Plus className="w-4 h-4 text-primary" />
               </div>
-              <span className="text-primary">{t('chart_editor_add_series')}</span>
+              {/* <span className="text-primary">{t('chart_editor_add_series')}</span> */}
+              <span className="text-primary">Chart Editor Series</span>
             </div>
           </Button>
         </motion.div>
@@ -531,140 +559,6 @@ export const ConfigManagementDropdown: React.FC<ConfigManagementDropdownProps> =
   );
 };
 
-// Data Editor Section component
-interface DataEditorSectionProps {
-  data: ChartDataPoint[];
-  xAxisKey: string;
-  yAxisKeys: string[];
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
-  onOpenModal: () => void;
-}
-
-export const DataEditorSection: React.FC<DataEditorSectionProps> = ({
-  data,
-  xAxisKey,
-  yAxisKeys,
-  isCollapsed,
-  onToggleCollapse,
-  onOpenModal,
-}) => {
-  const { t } = useTranslation();
-  console.log('Data at data editor section:', data);
-  return (
-    <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-      <CardHeader
-        className="flex flex-row items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
-        onClick={onToggleCollapse}
-      >
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          {t('lineChart_editor_dataEditor')}
-        </h3>
-        <div className="flex items-center gap-2">
-          {!isCollapsed && (
-            <Button
-              onClick={e => {
-                e.stopPropagation();
-                onOpenModal();
-              }}
-              size="sm"
-              variant="outline"
-            >
-              <Edit3 className="h-4 w-4 mr-1" />
-              {t('lineChart_editor_editData')}
-            </Button>
-          )}
-          {isCollapsed ? (
-            <ChevronDown className="h-5 w-5 text-gray-500" />
-          ) : (
-            <ChevronUp className="h-5 w-5 text-gray-500" />
-          )}
-        </div>
-      </CardHeader>
-      {!isCollapsed && (
-        <CardContent>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mt-2">
-              <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
-                <Table className="h-4 w-4" />
-                <span className="text-sm font-medium">{t('lineChart_editor_dataPreview')}</span>
-              </div>
-              <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                {t('lineChart_editor_editDataDescription')}
-              </p>
-            </div>
-
-            {/* Table Preview */}
-            <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      #
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      {xAxisKey}
-                    </th>
-                    {yAxisKeys.map(key => (
-                      <th
-                        key={key}
-                        className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                      >
-                        {key}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
-                  {data.slice(0, 5).map((point, index) => {
-                    console.log('Point: ', point);
-                    return (
-                      <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                          {index + 1}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
-                          {typeof point[xAxisKey] === 'string'
-                            ? point[xAxisKey]
-                            : Number.parseFloat(point[xAxisKey] as unknown as string) || 'N/A'}
-                        </td>
-                        {yAxisKeys.map(key => (
-                          <td
-                            key={key}
-                            className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100"
-                          >
-                            {typeof point[key] === 'string' && point[key] === 'N/A'
-                              ? 'N/A'
-                              : typeof point[key] === 'number'
-                                ? Number.parseFloat(point[key] as unknown as string).toFixed(2)
-                                : Number.parseFloat(point[key] as string) || 'N/A'}
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {data.length > 5 && (
-                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 text-center text-xs text-gray-500 dark:text-gray-400">
-                  {t('lineChart_editor_moreRows', { count: data.length - 5 })}
-                </div>
-              )}
-            </div>
-
-            <div className="text-center py-2 text-gray-500 dark:text-gray-400">
-              <p className="text-sm">
-                {t('lineChart_editor_totalDataPoints', { count: data.length })}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      )}
-    </Card>
-  );
-};
-
 // Basic Settings Section component
 interface BasicSettingsSectionProps {
   config: {
@@ -682,12 +576,9 @@ interface BasicSettingsSectionProps {
   onToggleCollapse: () => void;
   onUpdateConfig: (updates: Partial<BasicSettingsSectionProps['config']>) => void;
   onApplySizePreset: (presetKey: keyof typeof sizePresets) => void;
-  onExportConfig: () => void;
-  onImportConfig: () => void;
-  onResetToDefault: () => void;
-  showConfigDropdown: boolean;
-  onToggleConfigDropdown: () => void;
-  configDropdownRef: React.RefObject<HTMLDivElement | null>;
+  validationErrors?: {
+    title: boolean;
+  };
 }
 
 export const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({
@@ -696,12 +587,7 @@ export const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({
   onToggleCollapse,
   onUpdateConfig,
   onApplySizePreset,
-  onExportConfig,
-  onImportConfig,
-  onResetToDefault,
-  showConfigDropdown,
-  onToggleConfigDropdown,
-  configDropdownRef,
+  validationErrors,
 }) => {
   const { t } = useTranslation();
 
@@ -717,101 +603,6 @@ export const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({
             {t('lineChart_editor_basicSettings')}
           </h3>
           <div className="flex items-center gap-2">
-            {!isCollapsed && (
-              <div className="relative" ref={configDropdownRef}>
-                <Button
-                  onClick={e => {
-                    e.stopPropagation();
-                    onToggleConfigDropdown();
-                  }}
-                  size="sm"
-                  variant="outline"
-                  className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                  title={t('lineChart_editor_configManagement')}
-                >
-                  <Settings className="h-4 w-4" />
-                  <span className="hidden sm:inline">{t('lineChart_editor_configManagement')}</span>
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-
-                {/* Dropdown Menu */}
-                {showConfigDropdown && (
-                  <div className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 z-50 overflow-hidden">
-                    <div className="py-2">
-                      {/* Header */}
-                      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-600">
-                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                          <Settings className="h-4 w-4" />
-                          {t('lineChart_editor_configManagement')}
-                        </h4>
-                      </div>
-
-                      {/* Export/Import Actions */}
-                      <div className="px-2 py-1">
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            onExportConfig();
-                            onToggleConfigDropdown();
-                          }}
-                          className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md flex items-center gap-3 transition-colors"
-                        >
-                          <Download className="h-4 w-4 text-green-600" />
-                          <div>
-                            <div className="font-medium">
-                              {t('lineChart_editor_downloadConfig')}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {t('lineChart_editor_exportSettingsAsJSON')}
-                            </div>
-                          </div>
-                        </button>
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            onImportConfig();
-                            onToggleConfigDropdown();
-                          }}
-                          className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md flex items-center gap-3 transition-colors"
-                        >
-                          <Upload className="h-4 w-4 text-blue-600" />
-                          <div>
-                            <div className="font-medium">{t('lineChart_editor_uploadConfig')}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {t('lineChart_editor_loadSettingsFromJSON')}
-                            </div>
-                          </div>
-                        </button>
-                      </div>
-
-                      <div className="border-t border-gray-200 dark:border-gray-600 mx-2"></div>
-
-                      {/* Reset Action */}
-                      <div className="px-2 py-1">
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            onResetToDefault();
-                            onToggleConfigDropdown();
-                          }}
-                          className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-md flex items-center gap-3 transition-colors"
-                        >
-                          <RotateCcw className="h-4 w-4 text-orange-600" />
-                          <div>
-                            <div className="font-medium">
-                              {t('lineChart_editor_resetToDefault')}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {t('lineChart_editor_restoreDefaultSettings')}
-                            </div>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
             {isCollapsed ? (
               <ChevronDown className="h-5 w-5 text-gray-500" />
             ) : (
@@ -997,13 +788,25 @@ export const BasicSettingsSection: React.FC<BasicSettingsSectionProps> = ({
           <div>
             <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {t('lineChart_editor_title_chart')}
+              <span className="text-red-500 ml-1">*</span>
             </Label>
-            <Input
-              value={config.title}
-              onChange={e => onUpdateConfig({ title: e.target.value })}
-              placeholder={t('lineChart_editor_title_chart')}
-              className="mt-1"
-            />
+            <div className="flex flex-col gap-1">
+              <Input
+                value={config.title}
+                onChange={e => onUpdateConfig({ title: e.target.value })}
+                placeholder={t('chart_title_required', 'Chart title is required')}
+                className={`mt-1 ${
+                  validationErrors?.title
+                    ? '!border-red-500 focus:!border-red-500 focus:!ring-red-500 ring-1 ring-red-500'
+                    : ''
+                }`}
+              />
+              {validationErrors?.title && (
+                <span className="text-red-500 text-xs">
+                  {t('field_required', 'This field is required')}
+                </span>
+              )}
+            </div>
           </div>
         </CardContent>
       )}
@@ -1029,6 +832,7 @@ interface ChartSettingsConfig {
   titleFontSize: number;
   labelFontSize: number;
   legendFontSize: number;
+  showPointValues?: boolean; // Show values on data points (line chart specific)
 }
 
 interface ChartSettingsProps {
@@ -1039,7 +843,7 @@ interface ChartSettingsProps {
   onUpdateChartSpecific: (updates: Record<string, unknown>) => void;
 
   // Chart type specific props
-  chartType: 'line' | 'bar' | 'area';
+  chartType: 'line' | 'bar' | 'area' | 'scatter' | 'pie' | 'trend' | 'map' | 'table';
 
   // Line chart specific
   curveType?: string;
@@ -1049,9 +853,15 @@ interface ChartSettingsProps {
   pointRadius?: number;
 
   // Bar chart specific
-  barType?: 'grouped' | 'stacked';
+  barType?: 'grouped' | 'stacked' | 'diverging';
   barWidth?: number;
   barSpacing?: number;
+
+  // Validation props
+  validationErrors?: {
+    xAxisLabel?: boolean;
+    yAxisLabel?: boolean;
+  };
 }
 
 export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
@@ -1061,14 +871,13 @@ export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
   onUpdateConfig,
   onUpdateChartSpecific,
   chartType,
-  curveType,
-  curveOptions,
   showPoints,
   lineWidth,
   pointRadius,
   barType,
   barWidth,
   barSpacing,
+  validationErrors,
 }) => {
   const { t } = useTranslation();
 
@@ -1097,22 +906,48 @@ export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
             <div>
               <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 {t('chart_editor_x_axis_label')}
+                <span className="text-red-500 ml-1">*</span>
               </Label>
-              <Input
-                value={config.xAxisLabel}
-                onChange={e => onUpdateConfig({ xAxisLabel: e.target.value })}
-                className="mt-1"
-              />
+              <div className="flex flex-col gap-1">
+                <Input
+                  value={config.xAxisLabel}
+                  onChange={e => onUpdateConfig({ xAxisLabel: e.target.value })}
+                  placeholder={t('x_axis_label_required', 'X-axis label is required')}
+                  className={`mt-1 ${
+                    validationErrors?.xAxisLabel
+                      ? '!border-red-500 focus:!border-red-500 focus:!ring-red-500 ring-1 ring-red-500'
+                      : ''
+                  }`}
+                />
+                {validationErrors?.xAxisLabel && (
+                  <span className="text-red-500 text-xs">
+                    {t('field_required', 'This field is required')}
+                  </span>
+                )}
+              </div>
             </div>
             <div>
               <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 {t('chart_editor_y_axis_label')}
+                <span className="text-red-500 ml-1">*</span>
               </Label>
-              <Input
-                value={config.yAxisLabel}
-                onChange={e => onUpdateConfig({ yAxisLabel: e.target.value })}
-                className="mt-1"
-              />
+              <div className="flex flex-col gap-1">
+                <Input
+                  value={config.yAxisLabel}
+                  onChange={e => onUpdateConfig({ yAxisLabel: e.target.value })}
+                  placeholder={t('y_axis_label_required', 'Y-axis label is required')}
+                  className={`mt-1 ${
+                    validationErrors?.yAxisLabel
+                      ? '!border-red-500 focus:!border-red-500 focus:!ring-red-500 ring-1 ring-red-500'
+                      : ''
+                  }`}
+                />
+                {validationErrors?.yAxisLabel && (
+                  <span className="text-red-500 text-xs">
+                    {t('field_required', 'This field is required')}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1131,25 +966,7 @@ export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
             />
           </div>
 
-          {/* Line Chart Specific: Curve Type */}
-          {chartType === 'line' && curveOptions && (
-            <div>
-              <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                {t('chart_editor_curve_type')}
-              </Label>
-              <select
-                value={curveType}
-                onChange={e => onUpdateChartSpecific({ curve: e.target.value })}
-                className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                {Object.keys(curveOptions).map(curve => (
-                  <option key={curve} value={curve}>
-                    {curve.replace('curve', '')}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Curve type setting moved to CurveTypeSetting component */}
 
           {/* Bar Chart Specific: Bar Type */}
           {chartType === 'bar' && (
@@ -1239,21 +1056,42 @@ export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
               </Label>
             </div>
 
-            {/* Line Chart Specific: Show Points */}
+            {/* Line Chart Specific: Show Points (Area chart no longer needs points toggle) */}
             {chartType === 'line' && (
-              <div className="flex items-center space-x-2 mb-1">
-                <Checkbox
-                  id="showPoints"
-                  checked={showPoints}
-                  onCheckedChange={checked => onUpdateChartSpecific({ showPoints: !!checked })}
-                />
-                <Label
-                  htmlFor="showPoints"
-                  className="text-sm font-medium text-gray-900 dark:text-gray-100"
-                >
-                  {t('chart_editor_show_points')}
-                </Label>
-              </div>
+              <>
+                <div className="flex items-center space-x-2 mb-1">
+                  <Checkbox
+                    id="showPoints"
+                    checked={showPoints}
+                    onCheckedChange={checked => onUpdateChartSpecific({ showPoints: !!checked })}
+                  />
+                  <Label
+                    htmlFor="showPoints"
+                    className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                  >
+                    {t('chart_editor_show_points')}
+                  </Label>
+                </div>
+
+                {/* Show Point Values - only show if points are enabled */}
+                {showPoints && (
+                  <div className="flex items-center space-x-2 mb-1">
+                    <Checkbox
+                      id="showPointValues"
+                      checked={config.showPointValues}
+                      onCheckedChange={checked =>
+                        onUpdateChartSpecific({ showPointValues: !!checked })
+                      }
+                    />
+                    <Label
+                      htmlFor="showPointValues"
+                      className="text-sm font-medium text-gray-600 dark:text-gray-300"
+                    >
+                      {t('chart_editor_show_point_values')}
+                    </Label>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Styling Configuration */}
@@ -1540,8 +1378,8 @@ export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
 
 interface AxisConfigurationConfig {
   xAxisKey: string;
-  xAxisStart: 'auto' | 'zero' | number;
-  yAxisStart: 'auto' | 'zero' | number;
+  xAxisStart: 'auto' | 'zero';
+  yAxisStart: 'auto' | 'zero';
   showAxisLabels: boolean;
   showAxisTicks: boolean;
   xAxisRotation: number;
@@ -1556,6 +1394,10 @@ interface AxisConfigurationProps {
   onToggleCollapse: () => void;
   onUpdateConfig: (updates: Partial<AxisConfigurationConfig>) => void;
   onUpdateFormatters: (updates: Partial<FormatterConfig>) => void;
+  validationErrors?: {
+    xAxisLabel: boolean;
+    yAxisLabel: boolean;
+  };
 }
 
 export const AxisConfigurationSection: React.FC<AxisConfigurationProps> = ({
@@ -1613,35 +1455,15 @@ export const AxisConfigurationSection: React.FC<AxisConfigurationProps> = ({
             </Label>
             <div className="space-y-2 mt-2">
               <select
-                value={typeof config.xAxisStart === 'number' ? 'custom' : config.xAxisStart}
+                value={typeof config.xAxisStart === 'number' ? 'auto' : config.xAxisStart}
                 onChange={e => {
-                  if (e.target.value === 'custom') {
-                    onUpdateConfig({ xAxisStart: 0 });
-                  } else {
-                    onUpdateConfig({ xAxisStart: e.target.value as 'auto' | 'zero' });
-                  }
+                  onUpdateConfig({ xAxisStart: e.target.value as 'auto' | 'zero' });
                 }}
                 className="w-full h-9 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
               >
                 <option value="auto">{t('lineChart_editor_axisAutoFromMin')}</option>
                 <option value="zero">{t('lineChart_editor_axisZeroStart')}</option>
-                <option value="custom">{t('lineChart_editor_axisCustomValue')}</option>
               </select>
-
-              {typeof config.xAxisStart === 'number' && (
-                <Input
-                  type="number"
-                  value={config.xAxisStart}
-                  onChange={e => {
-                    const value = parseFloat(e.target.value);
-                    if (!isNaN(value)) {
-                      onUpdateConfig({ xAxisStart: value });
-                    }
-                  }}
-                  placeholder={t('lineChart_editor_enterStartValue')}
-                  className="h-9 text-sm"
-                />
-              )}
             </div>
           </div>
 
@@ -1652,35 +1474,15 @@ export const AxisConfigurationSection: React.FC<AxisConfigurationProps> = ({
             </Label>
             <div className="space-y-2 mt-2">
               <select
-                value={typeof config.yAxisStart === 'number' ? 'custom' : config.yAxisStart}
+                value={typeof config.yAxisStart === 'number' ? 'auto' : config.yAxisStart}
                 onChange={e => {
-                  if (e.target.value === 'custom') {
-                    onUpdateConfig({ yAxisStart: 0 });
-                  } else {
-                    onUpdateConfig({ yAxisStart: e.target.value as 'auto' | 'zero' });
-                  }
+                  onUpdateConfig({ yAxisStart: e.target.value as 'auto' | 'zero' });
                 }}
                 className="w-full h-9 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
               >
                 <option value="auto">{t('lineChart_editor_axisAutoFromMin')}</option>
                 <option value="zero">{t('lineChart_editor_axisZeroStart')}</option>
-                <option value="custom">{t('lineChart_editor_axisCustomValue')}</option>
               </select>
-
-              {typeof config.yAxisStart === 'number' && (
-                <Input
-                  type="number"
-                  value={config.yAxisStart}
-                  onChange={e => {
-                    const value = parseFloat(e.target.value);
-                    if (!isNaN(value)) {
-                      onUpdateConfig({ yAxisStart: value });
-                    }
-                  }}
-                  placeholder={t('lineChart_editor_enterStartValue')}
-                  className="h-9 text-sm"
-                />
-              )}
             </div>
           </div>
 

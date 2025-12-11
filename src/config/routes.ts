@@ -21,10 +21,12 @@ export const Permission = {
   VIEW_PROFILE: 'view_profile',
   EDIT_PROFILE: 'edit_profile',
   CHANGE_PASSWORD: 'change_password',
+  VIEW_OWN_TRANSACTIONS: 'view_own_transactions',
 
   // Admin permissions
   ADMIN_ACCESS: 'admin_access',
   MANAGE_USERS: 'manage_users',
+  VIEW_SUBSCRIPTION_PLANS: 'view_subscription_plans',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -37,6 +39,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     Permission.VIEW_PROFILE,
     Permission.EDIT_PROFILE,
     Permission.CHANGE_PASSWORD,
+    Permission.VIEW_OWN_TRANSACTIONS,
   ],
   [UserRole.ADMIN]: [
     Permission.VIEW_PUBLIC,
@@ -159,6 +162,32 @@ export const publicRoutes: RouteConfig[] = [
     },
   },
 
+  //terms of service and privacy policy
+
+  {
+    path: Routers.TERMS_OF_SERVICE,
+    name: 'terms-of-service',
+    component: 'TermsOfServicePage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Terms of Service',
+      description: 'Terms of Service',
+    },
+  },
+  {
+    path: Routers.PRIVACY_POLICY,
+    name: 'privacy-policy',
+    component: 'PrivacyPolicyPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Privacy Policy',
+      description: 'Privacy Policy',
+    },
+  },
   {
     path: Routers.CHART_GALLERY,
     name: 'chartgallery',
@@ -169,6 +198,43 @@ export const publicRoutes: RouteConfig[] = [
     meta: {
       title: 'Dashboard',
       description: 'Dashboard',
+    },
+  },
+  {
+    path: Routers.PRICING,
+    name: 'pricing',
+    component: 'PricingPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_SUBSCRIPTION_PLANS],
+    meta: {
+      title: 'Pricing',
+      description: 'View subscription plans and subscribe',
+    },
+  },
+  {
+    path: Routers.PAYMENT_SUCCESS,
+    name: 'payment-success',
+    component: 'PaymentSuccessPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Payment Success',
+      description: 'Confirm payment status',
+      hideFromNav: true,
+    },
+  },
+  {
+    path: Routers.TRANSACTION_HISTORY,
+    name: 'transaction-history',
+    component: 'TransactionHistoryPage',
+    layout: 'USER',
+    isProtected: true,
+    permissions: [Permission.VIEW_OWN_TRANSACTIONS],
+    meta: {
+      title: 'Transaction History',
+      description: 'View your payment and subscription history',
     },
   },
   {
@@ -184,6 +250,30 @@ export const publicRoutes: RouteConfig[] = [
     },
   },
   {
+    path: Routers.FREQUENT_QUESTIONS,
+    name: 'frequent-questions',
+    component: 'FrequentQuestionPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Câu hỏi thường gặp',
+      description: 'Tìm câu trả lời cho những câu hỏi phổ biến nhất về dịch vụ của chúng tôi',
+    },
+  },
+  {
+    path: Routers.ACADEMIC_DOCS,
+    name: 'academic-docs',
+    component: 'AcademicUsingChart',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Documentation',
+      description: 'Learn how to use DataVis - comprehensive documentation and guides',
+    },
+  },
+  {
     path: Routers.CHART_EDITOR,
     name: 'chart-editor',
     component: 'ChartEditorPage',
@@ -193,6 +283,19 @@ export const publicRoutes: RouteConfig[] = [
     meta: {
       title: 'Chart Editor',
       description: 'Interactive chart editor with customizable settings and data management',
+    },
+  },
+  {
+    path: Routers.CHART_HISTORY_VIEW,
+    name: 'chart-history-view',
+    component: 'ChartHistoryViewPage',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Chart History View',
+      description: 'View historical chart versions in read-only mode',
+      hideFromNav: true,
     },
   },
 ];
@@ -344,31 +447,74 @@ export const protectedRoutes: RouteConfig[] = [
       description: 'Upload and create a new dataset from Excel or CSV files',
     },
   },
-  // Chart routes
   {
-    path: Routers.CREATE_CHART,
-    name: 'create-chart',
-    component: 'CreateChartPage',
+    path: Routers.CREATE_DATASET_UPLOAD,
+    name: 'create-dataset-upload',
+    component: 'CreateDatasetPage',
     layout: 'USER',
     isProtected: true,
     roles: [UserRole.USER],
     permissions: [Permission.VIEW_PROFILE],
     meta: {
-      title: 'Create Chart',
-      description: 'Create beautiful charts from your datasets with step-by-step wizard',
+      title: 'Create Dataset - Upload File',
+      description: 'Upload and create a new dataset from Excel or CSV files',
+      hideFromNav: true,
     },
   },
   {
-    path: Routers.DATASETS,
-    name: 'datasets-list',
-    component: 'DatasetListPage',
+    path: Routers.CREATE_DATASET_TEXT,
+    name: 'create-dataset-text',
+    component: 'CreateDatasetPage',
     layout: 'USER',
     isProtected: true,
     roles: [UserRole.USER],
     permissions: [Permission.VIEW_PROFILE],
     meta: {
-      title: 'My Datasets',
-      description: 'View and manage your datasets',
+      title: 'Create Dataset - Paste Text',
+      description: 'Create a new dataset by pasting text data',
+      hideFromNav: true,
+    },
+  },
+  {
+    path: Routers.CREATE_DATASET_SAMPLE,
+    name: 'create-dataset-sample',
+    component: 'CreateDatasetPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Create Dataset - Sample Data',
+      description: 'Create a new dataset using sample data',
+      hideFromNav: true,
+    },
+  },
+  {
+    path: Routers.CREATE_DATASET_VIEW,
+    name: 'create-dataset-view',
+    component: 'CreateDatasetPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Create Dataset - Preview',
+      description: 'Preview and configure dataset before creation',
+      hideFromNav: true,
+    },
+  },
+  // Chart routes
+  {
+    path: Routers.CHART_GALLERY,
+    name: 'chart-gallery',
+    component: 'ChartGalleryPickerPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Chart Gallery',
+      description: 'Browse chart templates and create new charts',
     },
   },
   {
@@ -384,69 +530,30 @@ export const protectedRoutes: RouteConfig[] = [
       description: 'View dataset details and data',
     },
   },
-  {
-    path: Routers.EDIT_DATASET,
-    name: 'edit-dataset',
-    component: 'EditDatasetPage',
-    layout: 'USER',
-    isProtected: true,
-    roles: [UserRole.USER],
-    permissions: [Permission.EDIT_PROFILE],
-    meta: {
-      title: 'Edit Dataset',
-      description: 'Edit dataset information and data',
-    },
-  },
-  {
-    path: Routers.EDIT_DATASET_LEGACY,
-    name: 'edit-dataset-legacy',
-    component: 'EditDatasetPage',
-    layout: 'USER',
-    isProtected: true,
-    roles: [UserRole.USER],
-    permissions: [Permission.EDIT_PROFILE],
-    meta: {
-      title: 'Edit Dataset (Legacy)',
-      hideFromNav: true,
-    },
-  },
   // Workspace routes
-  {
-    path: Routers.WORKSPACE,
-    name: 'workspace',
-    component: 'WorkspacePage',
-    layout: 'USER',
-    isProtected: true,
-    roles: [UserRole.USER],
-    permissions: [Permission.VIEW_PROFILE],
-    meta: {
-      title: 'Workspace',
-      description: 'Manage your datasets and charts',
-    },
-  },
   {
     path: Routers.WORKSPACE_DATASETS,
     name: 'workspace-datasets',
-    component: 'WorkspacePage',
+    component: 'DatasetListPage',
     layout: 'USER',
     isProtected: true,
     roles: [UserRole.USER],
     permissions: [Permission.VIEW_PROFILE],
     meta: {
-      title: 'Workspace - Datasets',
+      title: 'My Datasets',
       description: 'Manage your datasets',
     },
   },
   {
     path: Routers.WORKSPACE_CHARTS,
     name: 'workspace-charts',
-    component: 'WorkspacePage',
+    component: 'ChartListPage',
     layout: 'USER',
     isProtected: true,
     roles: [UserRole.USER],
     permissions: [Permission.VIEW_PROFILE],
     meta: {
-      title: 'Workspace - Charts',
+      title: 'My Charts',
       description: 'Manage your charts',
     },
   },
@@ -465,7 +572,7 @@ export const protectedRoutes: RouteConfig[] = [
   },
   // Chart Editor routes with ID parameter
   {
-    path: Routers.LINE_CHART_EDITOR,
+    path: Routers.LINE_CHART_EDITOR_DEMO,
     name: 'line-chart-editor',
     component: 'LineChartEditorPage',
     layout: 'USER',
@@ -478,7 +585,7 @@ export const protectedRoutes: RouteConfig[] = [
     },
   },
   {
-    path: Routers.BAR_CHART_EDITOR,
+    path: Routers.BAR_CHART_EDITOR_DEMO,
     name: 'bar-chart-editor',
     component: 'BarChartEditorPage',
     layout: 'USER',
@@ -491,7 +598,7 @@ export const protectedRoutes: RouteConfig[] = [
     },
   },
   {
-    path: Routers.AREA_CHART_EDITOR,
+    path: Routers.AREA_CHART_EDITOR_DEMO,
     name: 'area-chart-editor',
     component: 'AreaChartEditorPage',
     layout: 'USER',
@@ -501,6 +608,19 @@ export const protectedRoutes: RouteConfig[] = [
     meta: {
       title: 'Area Chart Editor',
       description: 'Edit area charts with advanced customization options',
+    },
+  },
+  {
+    path: Routers.PIE_CHART_EDITOR_DEMO,
+    name: 'pie-chart-editor',
+    component: 'PieChartEditorDemo',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Pie Chart Editor',
+      description: 'Edit pie charts with advanced customization options',
     },
   },
 ];

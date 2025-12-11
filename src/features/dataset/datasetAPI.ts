@@ -8,6 +8,9 @@ export interface Dataset {
   description?: string;
   rowCount: number;
   columnCount: number;
+  thousandsSeparator?: string;
+  decimalSeparator?: string;
+  dateFormat?: string;
   createdAt: string;
   updatedAt: string;
   userId: string;
@@ -22,7 +25,8 @@ export interface CreateDatasetRequest {
     name: string;
     type: string;
     index: number;
-    data: any[];
+    data: (string | number | boolean | null)[];
+    dateFormat?: string;
   }[];
 }
 
@@ -33,7 +37,8 @@ export interface UpdateDatasetRequest {
     name: string;
     type: string;
     index: number;
-    data: any[];
+    data: (string | number | boolean | null)[];
+    dateFormat?: string;
   }[];
 }
 

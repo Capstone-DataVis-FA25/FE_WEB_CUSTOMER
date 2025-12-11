@@ -1,22 +1,34 @@
+import { memo, useCallback, useMemo } from 'react';
 import CustomExcel from '../excel/CustomExcel';
-// Local column type (mirrors the spreadsheet component's definition)
-type Column = { name: string; type: 'string' | 'number' | 'decimal' };
+import type { DataHeader, ParsedDataResult } from '@/utils/dataProcessors';
 import { useDataset } from '@/contexts/DatasetContext';
 
-function DataViewerContent() {
-  const { parsedData, setParsedData, setOriginalHeaders } = useDataset();
+const DataViewerContent = memo(function DataViewerContent() {
+  const { currentParsedData, setCurrentParsedData } = useDataset();
 
-  const handleDataChange = (data: string[][], columns: Column[]) => {
-    const newHeaders = columns.map(c => c.name);
-    const newData = [newHeaders, ...data];
-    setParsedData(newData);
-    setOriginalHeaders(newHeaders);
-  };
+  const handleDataChange = useCallback(
+    (data: string[][], columns: DataHeader[]) => {
+      // Update the current working data with user modifications
+      const updatedData: ParsedDataResult = {
+        headers: columns,
+        data: data,
+      };
+      setCurrentParsedData(updatedData);
+    },
+    [setCurrentParsedData]
+  );
 
-  const initialData = parsedData ? parsedData.slice(1) : [];
-  const initialColumns = parsedData
-    ? parsedData[0].map(name => ({ name, type: 'string' as const }))
-    : [];
+  // Memoize initial data to prevent unnecessary re-renders
+  // Use deep comparison to prevent re-renders when data is identical
+  const initialData = useMemo(
+    () => (currentParsedData ? currentParsedData.data : []),
+    [currentParsedData?.data, currentParsedData?.headers] // More specific dependencies
+  );
+
+  const initialColumns = useMemo(
+    () => (currentParsedData ? currentParsedData.headers : []),
+    [currentParsedData?.headers] // Only depend on headers, not the whole object
+  );
 
   return (
     <CustomExcel
@@ -26,6 +38,6 @@ function DataViewerContent() {
       mode="edit" // can be toggled to 'view' where needed
     />
   );
-}
+});
 
 export default DataViewerContent;
