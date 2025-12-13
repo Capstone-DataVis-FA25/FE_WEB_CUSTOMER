@@ -46,10 +46,11 @@ function CleanDatasetWithAI({
     // Cleaning rules checkboxes (default enabled)
     removeDuplicates: true,
     fixDataTypes: true,
-    handleMissingValues: true,
+    fillMissing: true,
+    removeMissing: false,
+    capOutliers: true,
     removeOutliers: false,
     standardizeFormats: true,
-    validateDomain: false,
     standardizeUnits: false,
   });
 
@@ -57,10 +58,23 @@ function CleanDatasetWithAI({
   const { showSuccess } = useToastContext();
 
   const handleOptionChange = (key: keyof typeof cleaningOptions, value: string | boolean) => {
-    setCleaningOptions(prev => ({
-      ...prev,
-      [key]: value,
-    }));
+    setCleaningOptions(prev => {
+      // Only allow one of fillMissing/removeMissing
+      if (key === 'fillMissing' && value) {
+        return { ...prev, fillMissing: true, removeMissing: false };
+      }
+      if (key === 'removeMissing' && value) {
+        return { ...prev, fillMissing: false, removeMissing: true };
+      }
+      // Only allow one of capOutliers/removeOutliers
+      if (key === 'capOutliers' && value) {
+        return { ...prev, capOutliers: true, removeOutliers: false };
+      }
+      if (key === 'removeOutliers' && value) {
+        return { ...prev, capOutliers: false, removeOutliers: true };
+      }
+      return { ...prev, [key]: value };
+    });
   };
 
   // Handle CSV text cleaning (ASYNC)
@@ -301,16 +315,50 @@ function CleanDatasetWithAI({
                     <label className="flex items-start gap-2 cursor-pointer group">
                       <input
                         type="checkbox"
-                        checked={cleaningOptions.handleMissingValues}
-                        onChange={e => handleOptionChange('handleMissingValues', e.target.checked)}
+                        checked={cleaningOptions.fillMissing}
+                        onChange={e => handleOptionChange('fillMissing', e.target.checked)}
                         className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Handle missing values
+                          Auto-fill missing values
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Fill or remove empty cells
+                          Fill missing cells with mean, mode, or most common date/category
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={cleaningOptions.removeMissing}
+                        onChange={e => handleOptionChange('removeMissing', e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          Remove rows with missing values
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Completely remove rows that have any empty cell
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={cleaningOptions.capOutliers}
+                        onChange={e => handleOptionChange('capOutliers', e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          Auto-cap outliers
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Detect outliers and cap them to reasonable bounds
                         </p>
                       </div>
                     </label>
@@ -324,10 +372,10 @@ function CleanDatasetWithAI({
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Remove or cap outliers
+                          Remove rows with outliers
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Detect and handle anomalies
+                          Completely remove rows that contain outlier values
                         </p>
                       </div>
                     </label>
@@ -345,23 +393,6 @@ function CleanDatasetWithAI({
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           Normalize dates, phones, etc.
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-2 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={cleaningOptions.validateDomain}
-                        onChange={e => handleOptionChange('validateDomain', e.target.checked)}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Validate domain constraints
-                        </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Check value ranges and formats
                         </p>
                       </div>
                     </label>
@@ -402,7 +433,7 @@ function CleanDatasetWithAI({
                       type="text"
                       value={cleaningOptions.thousandsSeparator}
                       onChange={e => handleOptionChange('thousandsSeparator', e.target.value)}
-                      placeholder="Default: , (comma)"
+                      placeholder="None (default)"
                       maxLength={1}
                       className="bg-background"
                     />
@@ -556,10 +587,12 @@ function CleanDatasetWithAI({
                     <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                       {cleaningOptions.removeDuplicates && <li>• Remove duplicate rows</li>}
                       {cleaningOptions.fixDataTypes && <li>• Fix data types</li>}
-                      {cleaningOptions.handleMissingValues && <li>• Handle missing values</li>}
-                      {cleaningOptions.removeOutliers && <li>• Remove or cap outliers</li>}
+                      {cleaningOptions.fillMissing && <li>• Fill all missing field</li>}
+                      {cleaningOptions.removeMissing && <li>• Remove all missing field</li>}
+                      {cleaningOptions.capOutliers && <li>• Auto-cap outliers</li>}
+                      {cleaningOptions.removeOutliers && <li>• Remove rows with outliers</li>}
                       {cleaningOptions.standardizeFormats && <li>• Standardize formats</li>}
-                      {cleaningOptions.validateDomain && <li>• Validate domain constraints</li>}
+
                       {cleaningOptions.standardizeUnits && <li>• Standardize units</li>}
                     </ul>
                   </div>
@@ -608,10 +641,11 @@ function CleanDatasetWithAI({
                     <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                       {cleaningOptions.removeDuplicates && <li>• Remove duplicate rows</li>}
                       {cleaningOptions.fixDataTypes && <li>• Fix data types</li>}
-                      {cleaningOptions.handleMissingValues && <li>• Handle missing values</li>}
+                      {cleaningOptions.fillMissing && <li>• Auto-fill missing values</li>}
+                      {cleaningOptions.removeMissing && <li>• Remove rows with missing values</li>}
                       {cleaningOptions.removeOutliers && <li>• Remove or cap outliers</li>}
                       {cleaningOptions.standardizeFormats && <li>• Standardize formats</li>}
-                      {cleaningOptions.validateDomain && <li>• Validate domain constraints</li>}
+
                       {cleaningOptions.standardizeUnits && <li>• Standardize units</li>}
                     </ul>
                   </div>
