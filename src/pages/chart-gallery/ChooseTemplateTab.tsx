@@ -27,6 +27,7 @@ import {
   ArrowRight,
   Info,
   Database,
+  HelpCircle,
 } from 'lucide-react';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import Routers from '@/router/routers';
@@ -91,6 +92,17 @@ export default function ChooseTemplateTab() {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showDatasetModal, setShowDatasetModal] = useState(false);
 
+  // Function to manually start tour
+  const startTour = () => {
+    const driverObj = driver({
+      showProgress: true,
+      steps: chartGallerySteps,
+      popoverClass: 'driverjs-theme',
+      overlayOpacity: 0,
+    });
+    driverObj.drive();
+  };
+
   // Handle dataset selection from modal
   const handleSelectDataset = async (selectedDatasetId: string, selectedDatasetName: string) => {
     try {
@@ -127,10 +139,10 @@ export default function ChooseTemplateTab() {
       }
 
       setShowDatasetModal(false);
-      showSuccess(`Selected datasset successfully`);
+      showSuccess(t('dataset_selection_success'));
     } catch (error) {
       console.error('Failed to load dataset:', error);
-      showError('Failed to load selected dataset');
+      showError(t('dataset_selection_error'));
     } finally {
       setIsLoadingDataset(false);
     }
@@ -141,10 +153,7 @@ export default function ChooseTemplateTab() {
     try {
       // Only allow chart types supported by CreateChartRequest
       if (!isSupportedChartType(template.type)) {
-        showError(
-          t('chart_create_error', 'Error'),
-          t('chart_create_unsupported_type', 'This chart type is not supported for creation.')
-        );
+        showError(t('chart_create_error'), t('chart_create_unsupported_type'));
         return;
       }
 
@@ -167,10 +176,7 @@ export default function ChooseTemplateTab() {
     } catch (error: unknown) {
       console.error('ChooseTemplateTab - Failed to navigate:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      showError(
-        t('chart_create_error', 'Navigation Failed'),
-        errorMessage || t('chart_create_error_message', 'Failed to navigate to chart editor')
-      );
+      showError(t('chart_create_error'), errorMessage || t('chart_create_error_message'));
     }
   };
 
@@ -178,10 +184,7 @@ export default function ChooseTemplateTab() {
   const handleContinueWithTemplate = (template: ChartTemplate) => {
     // clearChartEditor();
     if (!template) {
-      showError(
-        t('chart_create_error', 'Error'),
-        t('chart_create_missing_data', 'Missing template')
-      );
+      showError(t('chart_create_error'), t('chart_create_missing_data'));
       return;
     }
 
@@ -336,8 +339,10 @@ export default function ChooseTemplateTab() {
         <div id="dataset-section" className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-blue-500" />
-              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Dataset</span>
+              <Database className="w-4 h-4 text-accent" />
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                {t('chart_card_dataset')}
+              </span>
             </div>
             <Button
               size="sm"
@@ -346,19 +351,23 @@ export default function ChooseTemplateTab() {
               disabled={isLoadingDataset}
               className="text-xs"
             >
-              {isLoadingDataset ? 'Loading...' : datasetId ? 'Change' : 'Select'}
+              {isLoadingDataset
+                ? t('dataset_loading')
+                : datasetId
+                  ? t('common.change')
+                  : t('chart_gallery_select')}
             </Button>
           </div>
 
           {datasetId ? (
-            <div className="text-xs text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded mt-2">
-              <div className="font-medium text-blue-800 dark:text-blue-200">
-                Dataset name: {currentDatasetName || 'Selected Dataset'}
+            <div className="text-xs text-gray-600 dark:text-gray-400 bg-accent/10 dark:bg-accent/20 p-2 rounded mt-2">
+              <div className="font-medium text-accent dark:text-accent-foreground">
+                {t('dataset_name_label')} {currentDatasetName || t('dataset_selected')}
               </div>
             </div>
           ) : (
-            <div className="text-xs text-gray-600 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 p-2 rounded mt-2">
-              No dataset selected - will use sample data
+            <div className="text-xs text-gray-600 dark:text-gray-300 bg-accent/10 dark:bg-accent/20 p-2 rounded mt-2">
+              {t('chart_gallery_no_dataset_selected')}
             </div>
           )}
         </div>
@@ -376,6 +385,18 @@ export default function ChooseTemplateTab() {
               className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
             />
           </div>
+        </div>
+
+        {/* Start Tour Button */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <Button
+            onClick={startTour}
+            variant="outline"
+            className="w-full justify-start gap-2 border-accent/30 hover:border-accent hover:bg-accent/10 dark:hover:bg-accent/20 text-accent dark:text-accent-foreground"
+          >
+            <HelpCircle className="w-4 h-4" />
+            {t('chart_list_start_tour')}
+          </Button>
         </div>
 
         {/* Filters Section */}
@@ -406,7 +427,7 @@ export default function ChooseTemplateTab() {
             {/* Category Filter */}
             <div id="category-filter" className="space-y-3">
               <div className="flex items-center gap-2">
-                <Grid3X3 className="w-4 h-4 text-blue-500" />
+                <Grid3X3 className="w-4 h-4 text-accent" />
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
                   {t('chart_gallery_category')}
                 </span>
@@ -532,10 +553,10 @@ export default function ChooseTemplateTab() {
                     </svg>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-blue-700 dark:text-blue-300 truncate">
+                    <p className="text-sm font-medium text-accent dark:text-accent-foreground truncate">
                       {selectedTemplate.name}
                     </p>
-                    <p className="text-xs text-blue-600 dark:text-blue-400 capitalize">
+                    <p className="text-xs text-accent/80 dark:text-accent-foreground/80 capitalize">
                       {selectedTemplate.type} • {selectedTemplate.category}
                     </p>
                   </div>
@@ -549,14 +570,14 @@ export default function ChooseTemplateTab() {
                       }
                     }}
                   >
-                    <span className="text-xs">{t('chart_gallery_continue', 'Continue')}</span>
+                    <span className="text-xs">{t('chart_gallery_continue')}</span>
                     <ArrowRight className="w-3 h-3" />
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => setSelectedTemplate(null)}
-                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-1"
+                    className="text-accent hover:text-accent/80 dark:text-accent-foreground dark:hover:text-accent-foreground/80 p-1"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
@@ -584,7 +605,7 @@ export default function ChooseTemplateTab() {
                       <div className="p-4">
                         {/* Header */}
                         <div className="flex items-start gap-3 mb-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <div className="w-12 h-12 bg-gradient-to-br from-accent to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
                             <svg
                               className="w-6 h-6 text-white"
                               fill="currentColor"
@@ -618,20 +639,20 @@ export default function ChooseTemplateTab() {
                         {/* Features */}
                         <div className="mb-4">
                           <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                            {t('chart_gallery_features', 'Features')}
+                            {t('chart_gallery_features')}
                           </h4>
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                               <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                              {t('chart_gallery_responsive', 'Responsive design')}
+                              {t('chart_gallery_responsive')}
                             </div>
                             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                               <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                              {t('chart_gallery_interactive', 'Interactive elements')}
+                              {t('chart_gallery_interactive')}
                             </div>
                             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                               <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                              {t('chart_gallery_customizable', 'Customizable styling')}
+                              {t('chart_gallery_customizable')}
                             </div>
                           </div>
                         </div>
@@ -648,7 +669,7 @@ export default function ChooseTemplateTab() {
                               }
                             }}
                           >
-                            <span>{t('chart_gallery_continue', 'Continue')}</span>
+                            <span>{t('chart_gallery_continue')}</span>
                             <ArrowRight className="w-4 h-4" />
                           </Button>
                           <Button
@@ -656,7 +677,7 @@ export default function ChooseTemplateTab() {
                             variant="outline"
                             onClick={() => setShowTemplateModal(false)}
                           >
-                            {t('chart_gallery_close', 'Close')}
+                            {t('chart_gallery_close')}
                           </Button>
                         </div>
                       </div>
@@ -697,63 +718,6 @@ export default function ChooseTemplateTab() {
                   showInfo={true}
                   size="md"
                 />
-              </div>
-            )}
-
-            {/* Continue Button - Show when template is selected */}
-            {selectedTemplate && (
-              <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-6">
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    {t('chart_gallery_template_selected', 'Template Selected')}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                    {t('chart_gallery_template_selected_desc', 'Ready to create chart with')}{' '}
-                    <strong>{selectedTemplate.name}</strong>
-                    {datasetId ? (
-                      <div>Dataset name: {currentDatasetName || 'Selected Dataset'}</div>
-                    ) : (
-                      <div>No dataset selected - will use sample data</div>
-                    )}
-                  </p>
-                  <div className="flex gap-3 justify-center">
-                    <Button
-                      onClick={() => handleContinueWithTemplate(selectedTemplate)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
-                      size="lg"
-                    >
-                      <ArrowRight className="w-4 h-4 mr-2" />
-                      {t('chart_gallery_continue', 'Continue')}
-                    </Button>
-                    {!datasetId && (
-                      <Button
-                        onClick={() => {
-                          setSelectedTemplate(selectedTemplate);
-                          setShowDatasetModal(true);
-                        }}
-                        variant="outline"
-                        size="lg"
-                        className="px-6 py-2"
-                      >
-                        <Database className="w-4 h-4 mr-2" />
-                        Select Dataset
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* No Results */}
-            {filteredTemplates.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-gray-400 text-6xl mb-4">🔍</div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  {t('chart_gallery_no_templates')}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  {t('chart_gallery_no_templates_desc')}
-                </p>
               </div>
             )}
           </div>

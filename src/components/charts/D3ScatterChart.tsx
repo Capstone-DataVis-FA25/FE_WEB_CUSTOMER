@@ -397,7 +397,20 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
         const containerWidth = containerRef.current.offsetWidth;
         const dataSize = processedData?.length || 0;
 
-        // Calculate size multiplier based on data density
+        // Calculate unique X values for proper width expansion (similar to line/bar charts)
+        const uniqueXValues = processedData
+          ? Array.from(new Set(processedData.map(d => d[xAxisKey]))).filter(
+              v => v !== undefined && v !== null && !isNaN(Number(v))
+            )
+          : [];
+        const xDataLength = uniqueXValues.length;
+
+        // Calculate width based on X-axis data points (similar to line/bar charts)
+        // Use rotation to determine minimum width per point
+        const minWidthPerPoint = xAxisRotation === 0 ? 60 : 30;
+        const calculatedWidth = xDataLength * minWidthPerPoint;
+
+        // Calculate size multiplier based on data density (for point size optimization)
         let sizeMultiplier = 1;
         if (dataSize > 5000) {
           sizeMultiplier = 2.5; // Significantly larger for very dense data
@@ -421,8 +434,13 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
           aspectRatio = Math.min(aspectRatio, 0.5);
         }
 
-        // Apply size multiplier to both dimensions for large datasets
-        const baseWidth = Math.min(containerWidth - 16, width);
+        // Use the larger of: calculated width based on X data points OR container width
+        const baseWidth = Math.max(
+          Math.min(containerWidth - 16, width),
+          Math.min(calculatedWidth, width * 3) // Cap at 3x default width
+        );
+
+        // Apply size multiplier only for very dense datasets
         const newWidth = baseWidth * Math.min(sizeMultiplier, 2); // Cap at 2x to avoid too large
         let newHeight = newWidth * aspectRatio * Math.min(sizeMultiplier, 2);
 
@@ -468,6 +486,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     yAxisLabel,
     xAxisKey,
     yAxisKey,
+    xAxisRotation,
     processedData,
   ]);
   // Helper: Calculate linear regression

@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Database, Trash2, Plus, Clock, Edit3 } from 'lucide-react';
+import { Database, Trash2, Clock, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Routers from '@/router/routers';
-// import { useDataset } from '@/features/dataset/useDataset';
 
 import type { Dataset } from '@/features/dataset/datasetAPI';
 import Utils from '@/utils/Utils';
@@ -109,13 +108,13 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
       <CardContent className="space-y-4 relative z-10">
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
-            <p className="text-xs text-muted-foreground font-medium">Rows</p>
+            <p className="text-xs text-muted-foreground font-medium">{t('dataset_rows')}</p>
             <p className="font-bold text-blue-600 dark:text-blue-400">
               {dataset.rowCount?.toLocaleString() || 0}
             </p>
           </div>
           <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800">
-            <p className="text-xs text-muted-foreground font-medium">Columns</p>
+            <p className="text-xs text-muted-foreground font-medium">{t('dataset_columns')}</p>
             <p className="font-bold text-emerald-600 dark:text-emerald-400">
               {dataset.columnCount || 0}
             </p>
@@ -125,7 +124,7 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
             <Clock className="w-3 h-3 text-gray-700 dark:text-gray-300" />
-            <span className="font-medium">{t('chart_updated', 'Updated')}:</span>
+            <span className="font-medium">{t('chart_gallery_updated')}:</span>
             <span className="text-gray-700 dark:text-gray-300">
               {Utils.getDate(dataset.updatedAt, 18)}
             </span>
@@ -140,8 +139,7 @@ const DatasetCard: React.FC<DatasetCardProps> = ({
             onClick={handleCreateChart}
             className="flex-1 group-hover:border-blue-500 group-hover:text-blue-600 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 transition-all duration-200"
           >
-            <Plus className="h-3 w-3" />
-            Create Chart
+            {t('chart_create_save')}
           </Button>
           <Button
             id={`dataset-card-${index}-edit`}

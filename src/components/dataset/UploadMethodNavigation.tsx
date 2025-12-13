@@ -1,41 +1,44 @@
 import React from 'react';
-import { FileSpreadsheet, FileUp, FileText, Database, Sparkles } from 'lucide-react';
+import { FileSpreadsheet, FileUp, FileText, Database, Sparkles, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { t } from 'i18next';
 
 type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view' | 'cleanDataset';
 
 interface UploadMethodNavigationProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
+  onStartTour?: () => void;
 }
 
 const UploadMethodNavigation: React.FC<UploadMethodNavigationProps> = ({
   viewMode,
   onViewModeChange,
+  onStartTour,
 }) => {
   const navigationItems = [
     {
       mode: 'upload' as ViewMode,
       icon: FileUp,
-      label: 'Upload your data',
+      label: t('upload_method_upload'),
       id: 'nav-btn-upload',
     },
     {
       mode: 'textUpload' as ViewMode,
       icon: FileText,
-      label: 'Paste your data',
+      label: t('upload_method_paste'),
       id: 'nav-btn-textUpload',
     },
     {
       mode: 'sampleData' as ViewMode,
       icon: Database,
-      label: 'Try sample data',
+      label: t('upload_method_sampleData'),
       id: 'nav-btn-sampleData',
     },
     {
       mode: 'cleanDataset' as ViewMode,
       icon: Sparkles,
-      label: 'Clean with AI',
+      label: t('upload_method_cleanDataset'),
       id: 'nav-btn-cleanDataset',
     },
   ];
@@ -45,7 +48,7 @@ const UploadMethodNavigation: React.FC<UploadMethodNavigationProps> = ({
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
         <h3 className="font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
           <FileSpreadsheet className="h-5 w-5 text-blue-600" />
-          Upload Method
+          {t('upload_method')}
         </h3>
         <div className="space-y-3">
           {navigationItems.map(({ mode, icon: Icon, label, id }) => (
@@ -65,6 +68,19 @@ const UploadMethodNavigation: React.FC<UploadMethodNavigationProps> = ({
             </Button>
           ))}
         </div>
+
+        {onStartTour && (
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <Button
+              onClick={onStartTour}
+              variant="outline"
+              className="w-full justify-start gap-3 h-12 text-left border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+            >
+              <HelpCircle className="h-5 w-5" />
+              <span>{t('chart_list_start_tour')}</span>
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

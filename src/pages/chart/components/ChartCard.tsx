@@ -4,7 +4,6 @@ import {
   LineChart,
   AreaChart,
   Database,
-  Eye,
   Trash2,
   Clock,
   RefreshCcw,
@@ -40,6 +39,7 @@ type Chart = BaseChart & {
 };
 
 interface ChartCardProps {
+  id?: string;
   chart: Chart;
   onEdit: (chartId: string) => void;
   onDelete: (chart: Chart) => void;
@@ -69,24 +69,28 @@ const getChartIcon = (type: string) => {
   }
 };
 
-const getChartTypeLabel = (type: string) => {
+const getChartTypeLabel = (type: string, t: any) => {
   switch (type) {
     case ChartType.Line:
-      return 'Line Chart';
+      return t('chart_type_line');
     case ChartType.Bar:
-      return 'Bar Chart';
+      return t('chart_type_bar');
     case ChartType.Area:
-      return 'Area Chart';
+      return t('chart_type_area');
     case ChartType.Pie:
-      return 'Pie Chart';
+      return t('chart_type_pie');
     case ChartType.Scatter:
-      return 'Scatter Plot';
+      return t('chart_type_scatter');
     case ChartType.Donut:
-      return 'Donut Chart';
+      return t('chart_gallery_donut_basic');
     case ChartType.CyclePlot:
-      return 'Cycle Plot';
+      return t('chart_type_cycleplot');
+    case ChartType.Histogram:
+      return t('chart_type_histogram');
+    case ChartType.Heatmap:
+      return t('chart_type_heatmap');
     default:
-      return 'Unknown Chart';
+      return t('chart_type_unknown');
   }
 };
 
@@ -107,6 +111,8 @@ const getChartColor = (type: string) => {
       return 'from-yellow-500 to-amber-500';
     case ChartType.CyclePlot:
       return 'from-green-500 to-lime-500';
+    case ChartType.Heatmap:
+      return 'from-red-500 to-yellow-500';
     default:
       return 'from-gray-500 to-gray-600';
   }
@@ -115,6 +121,7 @@ const getChartColor = (type: string) => {
 // Removed unused formatDate helper
 
 const ChartCard: React.FC<ChartCardProps> = ({
+  id,
   chart,
   onEdit,
   onDelete,
@@ -149,6 +156,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
 
   return (
     <Card
+      id={id}
       className="group relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 overflow-hidden cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -169,7 +177,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
           <div className="flex flex-col space-y-1 items-end">
             <Badge variant="secondary" className="flex items-center gap-1 text-xs">
               <BarChart3 className="w-3 h-3" />
-              {getChartTypeLabel(chart.type)}
+              {getChartTypeLabel(chart.type, t)}
             </Badge>
           </div>
         </div>
@@ -179,7 +187,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
             {chart.name}
           </CardTitle>
           <CardDescription className="text-sm line-clamp-2 min-h-[2.5rem] text-gray-700 dark:text-gray-300 truncate">
-            {chart.description || 'No description available'}
+            {chart.description || t('chart_card_no_description')}
           </CardDescription>
         </div>
       </CardHeader>
@@ -188,7 +196,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center space-x-1 text-muted-foreground">
             <Database className="h-3 w-3" />
-            <span className="font-medium">{t('chart_dataset', 'Dataset')}:</span>
+            <span className="font-medium">{t('chart_card_dataset')}:</span>
             <span className="text-gray-700 dark:text-gray-300 truncate max-w-[10rem]">
               {chart.dataset?.name || chart.datasetName || `Dataset ${chart.datasetId}`}
             </span>
@@ -198,7 +206,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
             <Clock className="w-3 h-3 text-gray-700 dark:text-gray-300" />
-            <span className="font-medium">{t('chart_updated', 'Updated')}:</span>
+            <span className="font-medium">{t('chart_card_updated')}:</span>
             <span className="text-gray-700 dark:text-gray-300">
               {Utils.getDate(chart.updatedAt, 18)}
             </span>
@@ -213,8 +221,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
             onClick={handleView}
             className="flex-1 group-hover:border-emerald-500 group-hover:text-emerald-600 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-900/20 transition-all duration-200"
           >
-            <Eye className="h-3 w-3" />
-            View Chart
+            {t('chart_card_view')}
           </Button>
           <Button
             variant="ghost"

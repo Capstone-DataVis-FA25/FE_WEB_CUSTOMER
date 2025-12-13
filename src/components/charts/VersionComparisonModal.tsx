@@ -62,6 +62,69 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
     return result;
   };
 
+  // Helper to convert technical key names to user-friendly labels
+  const getFieldLabel = (key: string): string => {
+    // Remove 'config.' prefix if present
+    const cleanKey = key.replace(/^config\./, '');
+
+    // Mapping for common technical terms to friendly labels
+    const labelMap: Record<string, string> = {
+      // Chart config
+      disabledLines: 'Disabled Lines',
+      showPoints: 'Show Points',
+      showPointValues: 'Show Point Values',
+      curve: 'Curve Style',
+      lineWidth: 'Line Width',
+      pointRadius: 'Point Radius',
+      showGrid: 'Show Grid',
+      showLegend: 'Show Legend',
+      legendPosition: 'Legend Position',
+      showTooltip: 'Show Tooltip',
+      tooltipMode: 'Tooltip Mode',
+      yAxisKeys: 'Y-Axis Keys',
+      xAxisKey: 'X-Axis Key',
+      xAxisLabel: 'X-Axis Label',
+      yAxisLabel: 'Y-Axis Label',
+      chartTitle: 'Chart Title',
+      chartSubtitle: 'Chart Subtitle',
+      strokeWidth: 'Stroke Width',
+      fillOpacity: 'Fill Opacity',
+      gradientFill: 'Gradient Fill',
+      stackMode: 'Stack Mode',
+      showDataLabels: 'Show Data Labels',
+      dataLabelPosition: 'Data Label Position',
+      barPadding: 'Bar Padding',
+      categoryGap: 'Category Gap',
+      cornerRadius: 'Corner Radius',
+      innerRadius: 'Inner Radius',
+      outerRadius: 'Outer Radius',
+      startAngle: 'Start Angle',
+      endAngle: 'End Angle',
+      paddingAngle: 'Padding Angle',
+      labelType: 'Label Type',
+      showPercent: 'Show Percent',
+      colorScheme: 'Color Scheme',
+      customColors: 'Custom Colors',
+      // Dataset config
+      'datasetConfig.sort': 'Sort Configuration',
+      'datasetConfig.filters': 'Filters',
+      'datasetConfig.aggregation': 'Aggregation',
+      'datasetConfig.pivot': 'Pivot Table',
+    };
+
+    // Check if there's a direct mapping
+    if (labelMap[cleanKey]) {
+      return labelMap[cleanKey];
+    }
+
+    // Otherwise, convert camelCase to Title Case
+    // e.g., "showPoints" -> "Show Points"
+    return cleanKey
+      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+      .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+      .trim();
+  };
+
   const [showChart, setShowChart] = useState(true);
   const [showCurrentHistory, setShowCurrentHistory] = useState(false);
   const [showDiffs, setShowDiffs] = useState(false);
@@ -296,7 +359,7 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
     // Helper to render a single diff item
     const renderDiffItem = (key: string) => (
       <li key={key} className="text-gray-700 dark:text-gray-300">
-        <strong>{key.replace(/^config\./, '')}:</strong>
+        <strong>{getFieldLabel(key)}:</strong>
         <div className="ml-4 mt-1 grid grid-cols-2 gap-2">
           <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded">
             <div className="text-gray-600 dark:text-gray-400 mb-1">Current:</div>
@@ -411,7 +474,33 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
                   <li className="text-gray-700 dark:text-gray-300">
                     <strong>Config:</strong>
                     <ul className="list-disc list-inside ml-6 space-y-2">
-                      {configDiffs.map(key => renderDiffItem(key))}
+                      {configDiffs.map(key => {
+                        // Pass the key without 'config.' prefix to avoid duplication
+                        const keyWithoutPrefix = key.replace('config.', '');
+                        return (
+                          <li key={key} className="text-gray-700 dark:text-gray-300">
+                            <strong>{getFieldLabel(keyWithoutPrefix)}:</strong>
+                            <div className="ml-4 mt-1 grid grid-cols-2 gap-2">
+                              <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded">
+                                <div className="text-gray-600 dark:text-gray-400 mb-1">
+                                  Current:
+                                </div>
+                                <pre className="text-xs whitespace-pre-wrap break-words">
+                                  {JSON.stringify(flatDiffs[key].current, null, 2)}
+                                </pre>
+                              </div>
+                              <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded">
+                                <div className="text-gray-600 dark:text-gray-400 mb-1">
+                                  Historical:
+                                </div>
+                                <pre className="text-xs whitespace-pre-wrap break-words">
+                                  {JSON.stringify(flatDiffs[key].historical, null, 2)}
+                                </pre>
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </li>
                 )}

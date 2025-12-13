@@ -1,20 +1,20 @@
 import type { DriveStep } from 'driver.js';
 import { Icons } from './icons';
+import { t } from './i18n-helper';
 
 export const pricingSteps: DriveStep[] = [
   {
     popover: {
-      title: `${Icons.CreditCard} Pricing Plans`,
-      description: 'Choose the perfect plan for your needs. Upgrade anytime as you grow.',
+      title: `${Icons.CreditCard} ${t('tour_pricing_welcome_title')}`,
+      description: t('tour_pricing_welcome_desc'),
       align: 'center',
     },
   },
   {
     element: '#pricing-plans-grid',
     popover: {
-      title: `${Icons.LayoutDashboard} Compare Options`,
-      description:
-        'Browse our tiers. From free starter plans to enterprise solutions, we have you covered.',
+      title: `${Icons.LayoutDashboard} ${t('tour_pricing_compare_title')}`,
+      description: t('tour_pricing_compare_desc'),
       side: 'top',
       align: 'center',
     },
@@ -22,8 +22,8 @@ export const pricingSteps: DriveStep[] = [
   {
     element: '.pricing-plan-features:first-child',
     popover: {
-      title: `${Icons.Sparkles} What's Included`,
-      description: 'Check the features list to see exactly what you get with each plan.',
+      title: `${Icons.Sparkles} ${t('tour_pricing_features_title')}`,
+      description: t('tour_pricing_features_desc'),
       side: 'left',
       align: 'start',
     },
@@ -31,8 +31,8 @@ export const pricingSteps: DriveStep[] = [
   {
     element: '.pricing-subscribe-button:first-child',
     popover: {
-      title: `${Icons.Rocket} Get Started`,
-      description: 'Ready to upgrade? Click to subscribe and unlock premium features instantly.',
+      title: `${Icons.Rocket} ${t('tour_pricing_subscribe_title')}`,
+      description: t('tour_pricing_subscribe_desc'),
       side: 'top',
       align: 'center',
     },

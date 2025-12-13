@@ -16,6 +16,7 @@ export const SUPPORTED_CHART_TYPES = [
   'donut',
   'cycleplot',
   'heatmap',
+  'histogram',
 ] as const;
 
 /**

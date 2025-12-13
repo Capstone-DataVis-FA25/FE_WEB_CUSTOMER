@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { FilterIcon, X } from 'lucide-react';
 import { FilterModal } from './FilterModal';
@@ -23,6 +24,7 @@ export const FilterSummaryButton: React.FC<FilterSummaryButtonProps> = ({
   numberFormat,
   uniqueValuesByColumn,
 }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [filters, setFilters] = useState<DatasetFilterColumn[]>(initialColumns);
@@ -76,7 +78,7 @@ export const FilterSummaryButton: React.FC<FilterSummaryButtonProps> = ({
         isOpen={showClearConfirm}
         onClose={() => setShowClearConfirm(false)}
         onConfirm={handleClearFilters}
-        title="Clear Filters"
+        title={t('operations.clearFilters', 'Clear Filters')}
         message="Are you sure you want to clear all filter settings? This action cannot be undone."
         confirmText="Clear"
         cancelText="Cancel"

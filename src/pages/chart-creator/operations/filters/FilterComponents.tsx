@@ -22,6 +22,7 @@ import {
   validateTextCondition,
 } from '@/utils/filterUtils';
 import type { DatasetColumnType, DatasetFilterCondition, DatasetFilterColumn } from '@/types/chart';
+import { t } from 'i18next';
 
 export type DateGranularity = 'year' | 'year_month' | 'date' | 'datetime';
 
@@ -172,7 +173,7 @@ const UniqueValuePicker: React.FC<{
           <Input
             value={search}
             onChange={event => setSearch(event.target.value)}
-            placeholder="Search values..."
+            placeholder={t('filter.searchValues', 'Search values...')}
             className={`h-9 text-xs flex-1 min-w-0 ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
             onKeyDown={e => {
               // Allow typing to filter, but don't prevent default behavior
@@ -540,7 +541,7 @@ export const ConditionRow: React.FC<{
                       <div className="relative flex-1 min-w-0">
                         <Input
                           type="number"
-                          placeholder="From year"
+                          placeholder={t('common.fromYear', 'From year')}
                           min={0}
                           step={1}
                           required
@@ -555,7 +556,7 @@ export const ConditionRow: React.FC<{
                       <div className="relative flex-1 min-w-0">
                         <Input
                           type="number"
-                          placeholder="To year"
+                          placeholder={t('common.toYear', 'To year')}
                           min={0}
                           step={1}
                           required
@@ -701,7 +702,7 @@ export const ConditionRow: React.FC<{
                       <div className="relative flex-1 min-w-0">
                         <Input
                           type="number"
-                          placeholder="Year"
+                          placeholder={t('common.year', 'Year')}
                           min={0}
                           step={1}
                           required
@@ -942,7 +943,7 @@ export const ConditionRow: React.FC<{
                     <Input
                       type="text"
                       required
-                      placeholder="From"
+                      placeholder={t('common.from', 'From')}
                       value={toInputValue(
                         Array.isArray(condition.value) ? condition.value[0] : condition.value
                       )}
@@ -955,7 +956,7 @@ export const ConditionRow: React.FC<{
                     <Input
                       type="text"
                       required
-                      placeholder="To"
+                      placeholder={t('common.to', 'To')}
                       value={String(condition.valueEnd ?? '')}
                       onChange={e => onUpdate({ ...condition, valueEnd: e.target.value })}
                       className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}
@@ -1010,7 +1011,7 @@ export const ConditionRow: React.FC<{
                   <Input
                     type="text"
                     required
-                    placeholder="Value"
+                    placeholder={t('common.value', 'Value')}
                     value={toInputValue(singleValueForInputs)}
                     onChange={e => onUpdate({ ...condition, value: e.target.value })}
                     className={`flex-1 min-w-0 h-9 text-xs ${errorMsg ? '!border-red-500 !ring-1 !ring-red-500 focus:!border-red-500 focus:!ring-1 focus:!ring-red-500 pr-8' : ''}`}

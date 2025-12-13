@@ -8,6 +8,7 @@ import {
   Settings,
   UserCircle,
   Search,
+  Receipt,
   ChevronDown,
   Globe,
   Palette,
@@ -69,7 +70,7 @@ const Header: React.FC<HeaderProps> = ({
     { name: 'FAQ', href: '/resources/frequent-questions' },
     { name: 'Changelog', href: '/resources/changelog' },
     { name: 'Blog', href: '/resources/blog' },
-    { name: 'Docs', href: '/resources/docs' },
+    { name: 'Docs', href: Routers.ACADEMIC_DOCS },
     { name: 'Community', href: '/resources/community' },
     { name: 'Forum', href: '/resources/forum' },
     { name: 'Careers', href: '/resources/careers' },
@@ -329,6 +330,13 @@ const Header: React.FC<HeaderProps> = ({
                           >
                             <Settings className="w-4 h-4 mr-3 text-purple-500 group-hover:rotate-90 transition-transform duration-200" />
                             <span className="font-medium">{t('navigation_settings')}</span>
+                          </Link>
+                          <Link
+                            to="/transaction-history"
+                            className="flex items-center px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 transition-all duration-200 rounded-xl group"
+                          >
+                            <Receipt className="w-4 h-4 mr-3 text-green-500 group-hover:scale-110 transition-transform duration-200" />
+                            <span className="font-medium">Transaction History</span>
                           </Link>
                         </div>
 

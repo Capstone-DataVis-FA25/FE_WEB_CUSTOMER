@@ -26,14 +26,12 @@ const HeatmapAdvancedOptions: React.FC = () => {
   const colorScheme = cfg.colorScheme ?? 'viridis';
   const cellBorderWidth = cfg.cellBorderWidth ?? 1;
   const legendSteps = cfg.legendSteps ?? 5;
-  const minValue = cfg.minValue ?? 'auto';
-  const maxValue = cfg.maxValue ?? 'auto';
 
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6, delay: 0.2 }}
+      transition={{ duration: 0.6, delay: 0.15 }}
     >
       <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl overflow-hidden rounded-lg">
         <CardHeader
@@ -42,7 +40,7 @@ const HeatmapAdvancedOptions: React.FC = () => {
         >
           <div className="flex items-center justify-between w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Eye className="h-5 w-5" />
+              <Eye className="h-5 w-5 text-blue-500" />
               {t('heatmap_advanced_options', 'Advanced Options')}
             </h3>
             {isCollapsed ? (
@@ -70,7 +68,22 @@ const HeatmapAdvancedOptions: React.FC = () => {
                     onValueChange={v => handleConfigChange({ config: { colorScheme: v } as any })}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue
+                        options={[
+                          { value: 'viridis', label: 'Viridis (Colorful)' },
+                          { value: 'plasma', label: 'Plasma (Purple-Orange)' },
+                          { value: 'inferno', label: 'Inferno (Dark-Warm)' },
+                          { value: 'magma', label: 'Magma (Dark-Purple)' },
+                          { value: 'turbo', label: 'Turbo (Rainbow)' },
+                          { value: 'cividis', label: 'Cividis (Colorblind-Friendly)' },
+                          { value: 'blues', label: 'Blues (Sequential)' },
+                          { value: 'reds', label: 'Reds (Sequential)' },
+                          { value: 'greens', label: 'Greens (Sequential)' },
+                          { value: 'purples', label: 'Purples (Sequential)' },
+                          { value: 'oranges', label: 'Oranges (Sequential)' },
+                          { value: 'greys', label: 'Greys (Monochrome)' },
+                        ]}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="viridis">Viridis (Colorful)</SelectItem>
@@ -93,36 +106,6 @@ const HeatmapAdvancedOptions: React.FC = () => {
                       'Choose a color palette that best represents your data'
                     )}
                   </p>
-                </div>
-
-                {/* Value Range */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">{t('min_value', 'Min Value')}</Label>
-                    <Input
-                      type="text"
-                      value={minValue}
-                      onChange={e => {
-                        const val =
-                          e.target.value === 'auto' ? 'auto' : parseFloat(e.target.value) || 'auto';
-                        handleConfigChange({ config: { minValue: val } as any });
-                      }}
-                      placeholder="auto"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">{t('max_value', 'Max Value')}</Label>
-                    <Input
-                      type="text"
-                      value={maxValue}
-                      onChange={e => {
-                        const val =
-                          e.target.value === 'auto' ? 'auto' : parseFloat(e.target.value) || 'auto';
-                        handleConfigChange({ config: { maxValue: val } as any });
-                      }}
-                      placeholder="auto"
-                    />
-                  </div>
                 </div>
 
                 {/* Display Options */}

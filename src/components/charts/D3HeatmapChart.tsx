@@ -134,7 +134,7 @@ const D3HeatmapChart: React.FC<D3HeatmapChartProps> = ({
   maxValue = 'auto',
   nullColor = '#cccccc',
   legendSteps = 5,
-  xAxisRotation = -45,
+  xAxisRotation = 0,
   yAxisRotation = 0,
   showAxisLabels = true,
   theme = 'auto',
@@ -303,8 +303,8 @@ const D3HeatmapChart: React.FC<D3HeatmapChartProps> = ({
         .attr('transform', `translate(0, ${chartHeight})`)
         .call(xAxis)
         .selectAll('text')
-        .style('text-anchor', xAxisRotation !== 0 ? 'end' : 'middle')
-        .attr('transform', `rotate(${xAxisRotation})`)
+        .style('text-anchor', 'middle')
+        .attr('transform', 'rotate(0)')
         .attr('fill', textColor)
         .style('font-size', `${labelFontSize}px`);
       g.selectAll('.x-axis path, .x-axis line').attr('stroke', gridColor);
@@ -348,7 +348,7 @@ const D3HeatmapChart: React.FC<D3HeatmapChartProps> = ({
     if (showLegend) {
       const legendWidth = Math.min(chartWidth * 0.6, 400);
       const legendHeight = 20;
-      const legendY = chartHeight + 65;
+      const legendY = chartHeight + 85; // Increased margin between chart and legend
       const legendX = (chartWidth - legendWidth) / 2;
       const legendScale = d3.scaleLinear().domain([minVal, maxVal]).range([0, legendWidth]);
       const legendAxis = d3.axisBottom(legendScale).ticks(legendSteps);

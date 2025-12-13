@@ -24,6 +24,9 @@ const componentMap = {
   GeneralSettingsPage: lazy(() => import('../pages/profile/GeneralSettingsPage')),
   AboutPage: lazy(() => import('../pages/about-us/AboutUsPage')),
   FrequentQuestionPage: lazy(() => import('../pages/resources/FrequentQuestionPage')),
+  AcademicUsingChart: lazy(() =>
+    import('../pages/academic/AcademicUsingChart').then(m => ({ default: m.AcademicUsingChart }))
+  ),
   VerifyEmailErrorPage: lazy(() => import('../pages/verify/VerifyEmailErrorPage')),
   ResendEmailPage: lazy(() => import('../pages/verify/ResendEmailPage')),
   LineChartPage: lazy(() => import('../components/charts/page.example/LineChartPage')),
@@ -31,6 +34,7 @@ const componentMap = {
   AreaChartPage: lazy(() => import('../components/charts/page.example/AreaChartPage')),
   PricingPage: lazy(() => import('../pages/subscription/PricingPage')),
   PaymentSuccessPage: lazy(() => import('../pages/subscription/PaymentSuccessPage')),
+  TransactionHistoryPage: lazy(() => import('../pages/subscription/TransactionHistoryPage')),
   LineChartEditorDemo: lazy(() => import('../components/charts/page.example/LineChartEditorDemo')),
   BarChartEditorDemo: lazy(() => import('../components/charts/page.example/BarChartEditorDemo')),
   AreaChartEditorDemo: lazy(() => import('../components/charts/page.example/AreaChartEditorDemo')),

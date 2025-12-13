@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { SubPieDonutChartConfig } from '@/types/chart';
 import { Card, CardHeader, CardContent } from '../ui/card';
-import { ChevronDown, ChevronUp, Sliders } from 'lucide-react';
+import { ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
 import { Label } from '../ui/label';
 import { useChartEditor, useChartEditorActions } from '@/features/chartEditor';
 import { useAppSelector } from '@/store/hooks';
@@ -81,7 +81,7 @@ const ChartSettingsPieSection: React.FC<ChartSettingsPieSectionProps> = ({ proce
         >
           <div className="flex items-center justify-between w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Sliders className="h-5 w-5" />
+              <TrendingUp className="h-5 w-5 text-blue-500" />
               {'Chart Settings'}
             </h3>
             {isCollapsed ? (

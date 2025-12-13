@@ -27,7 +27,13 @@ export type DateFormat =
   | 'YYYY-MM-DD HH:mm:ss'
   | 'YYYY-MM-DDTHH:mm:ss'
   | 'YYYY-MM-DD HH:mm'
-  | 'YYYY-[Q]Q';
+  | 'YYYY-[Q]Q'
+  | 'MMMM'
+  | 'MMM'
+  | 'MMMM YYYY'
+  | 'MMM YYYY'
+  | 'MMMM DD'
+  | 'MMM DD';
 
 export const DATE_FORMATS: DateFormat[] = [
   'YYYY-MM-DD',
@@ -46,6 +52,12 @@ export const DATE_FORMATS: DateFormat[] = [
   'YYYY-MM-DD HH:mm',
   'YYYY-[Q]Q',
   'YYYY-MM-DDTHH:mm:ss',
+  'MMMM',
+  'MMM',
+  'MMMM YYYY',
+  'MMM YYYY',
+  'MMMM DD',
+  'MMM DD',
 ];
 
 interface ValidationErrors {
@@ -441,6 +453,12 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
           'YYYY-MM-DDTHH:mm:ss': 'YYYY-MM-DDTHH:mm:ss',
           'YYYY-MM-DD HH:mm': 'YYYY-MM-DD HH:mm',
           'YYYY-[Q]Q': 'YYYY-[Q]Q', // For quarter format like 2024-Q1
+          MMMM: 'MMMM', // Full month name like "February"
+          MMM: 'MMM', // Short month name like "Feb"
+          'MMMM YYYY': 'MMMM YYYY', // Full month with year like "February 2024"
+          'MMM YYYY': 'MMM YYYY', // Short month with year like "Feb 2024"
+          'MMMM DD': 'MMMM DD', // Full month with day like "February 25"
+          'MMM DD': 'MMM DD', // Short month with day like "Feb 25"
         };
         const djFormat = formatMap[fmt] || 'YYYY-MM-DD';
 
@@ -458,6 +476,34 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
           } else {
             d = dayjs(v, djFormat, true);
           }
+        } else if (fmt === 'MMMM') {
+          // Full month name only: parse with current year, first day of month
+          const currentYear = new Date().getFullYear();
+          d = dayjs(`${v} ${currentYear}`, 'MMMM YYYY', true);
+          if (!d.isValid()) {
+            d = dayjs(`${currentYear}-${v}`, 'YYYY-MMMM', true);
+          }
+          if (d.isValid()) {
+            d = d.date(1); // Set to first day of month
+          }
+        } else if (fmt === 'MMM') {
+          // Short month name only: parse with current year, first day of month
+          const currentYear = new Date().getFullYear();
+          d = dayjs(`${v} ${currentYear}`, 'MMM YYYY', true);
+          if (!d.isValid()) {
+            d = dayjs(`${currentYear}-${v}`, 'YYYY-MMM', true);
+          }
+          if (d.isValid()) {
+            d = d.date(1); // Set to first day of month
+          }
+        } else if (fmt === 'MMMM DD') {
+          // Full month with day: parse with current year
+          const currentYear = new Date().getFullYear();
+          d = dayjs(`${v} ${currentYear}`, 'MMMM DD YYYY', true);
+        } else if (fmt === 'MMM DD') {
+          // Short month with day: parse with current year
+          const currentYear = new Date().getFullYear();
+          d = dayjs(`${v} ${currentYear}`, 'MMM DD YYYY', true);
         } else {
           d = dayjs(v, djFormat, true);
         }
@@ -473,6 +519,12 @@ export const DatasetProvider: React.FC<DatasetProviderProps> = ({ children }) =>
           iso = d.format('YYYY-MM-DD[T]HH:mm:00');
         } else if (fmt === 'YYYY-[Q]Q') {
           // For quarter, use the first day of the quarter (already set in d)
+          iso = d.format('YYYY-MM-DD[T]00:00:00');
+        } else if (fmt === 'MMMM' || fmt === 'MMM') {
+          // Month-only: use first day of the month, current year
+          iso = d.format('YYYY-MM-DD[T]00:00:00');
+        } else if (fmt === 'MMMM DD' || fmt === 'MMM DD') {
+          // Month with day: use current year
           iso = d.format('YYYY-MM-DD[T]00:00:00');
         } else {
           const datePart = d.format('YYYY-MM-DD');

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { BarChart3, X } from 'lucide-react';
 import { GroupByAggregationModal } from './GroupByAggregationModal';
@@ -20,6 +21,7 @@ export const AggregationSummaryButton: React.FC<AggregationSummaryButtonProps> =
   initialGroupBy = [],
   initialMetrics = [],
 }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupByColumn[]>(initialGroupBy);
@@ -77,7 +79,7 @@ export const AggregationSummaryButton: React.FC<AggregationSummaryButtonProps> =
         isOpen={showClearConfirm}
         onClose={() => setShowClearConfirm(false)}
         onConfirm={handleClearAggregation}
-        title="Clear Aggregation"
+        title={t('operations.clearAggregation', 'Clear Aggregation')}
         message="Are you sure you want to clear all aggregation settings? This action cannot be undone."
         confirmText="Clear"
         cancelText="Cancel"

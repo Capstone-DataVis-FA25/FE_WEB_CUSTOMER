@@ -3,11 +3,16 @@ import type { DataHeader } from '@/utils/dataProcessors';
 
 /**
  * Checks if a column ID exists in the current headers
+ * Also checks valueId for pivot table headers
  */
 const columnExists = (columnId: string | undefined, headers: DataHeader[]): boolean => {
   if (!columnId) return false;
   return headers.some(
-    h => (h as any).id === columnId || (h as any).headerId === columnId || h.name === columnId
+    h =>
+      (h as any).id === columnId ||
+      (h as any).headerId === columnId ||
+      h.name === columnId ||
+      (h as any).valueId === columnId // Support pivot table valueId matching
   );
 };
 

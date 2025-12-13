@@ -1,20 +1,20 @@
 import type { DriveStep } from 'driver.js';
 import { Icons } from './icons';
+import { t } from './i18n-helper';
 
 export const chartGallerySteps: DriveStep[] = [
   {
     popover: {
-      title: `${Icons.Palette} Chart Gallery`,
-      description:
-        'Choose from dozens of beautiful chart templates. Find the perfect one for your data.',
+      title: `${Icons.Palette} ${t('tour_gallery_welcome_title')}`,
+      description: t('tour_gallery_welcome_desc'),
       align: 'center',
     },
   },
   {
     element: '#dataset-section',
     popover: {
-      title: `${Icons.Database} Select Dataset`,
-      description: 'Choose a dataset to work with, or skip to use sample data.',
+      title: `${Icons.Database} ${t('tour_gallery_dataset_title')}`,
+      description: t('tour_gallery_dataset_desc'),
       side: 'right',
       align: 'start',
     },
@@ -22,9 +22,8 @@ export const chartGallerySteps: DriveStep[] = [
   {
     element: '#category-filter',
     popover: {
-      title: `${Icons.Sliders} Filter Options`,
-      description:
-        'Narrow down your choices by category, type, or purpose to find exactly what you need.',
+      title: `${Icons.Sliders} ${t('tour_gallery_filter_title')}`,
+      description: t('tour_gallery_filter_desc'),
       side: 'right',
       align: 'center',
     },
@@ -32,8 +31,8 @@ export const chartGallerySteps: DriveStep[] = [
   {
     element: '#templates-grid',
     popover: {
-      title: `${Icons.LayoutDashboard} Template Gallery`,
-      description: 'Browse our collection. Click any template to preview and start creating.',
+      title: `${Icons.LayoutDashboard} ${t('tour_gallery_templates_title')}`,
+      description: t('tour_gallery_templates_desc'),
       side: 'left',
       align: 'start',
     },

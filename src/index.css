@@ -80,6 +80,19 @@
   }
 }
 
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    transform: translateY(0);
+  }
+}
+
 /* Animation classes */
 .toast-enter {
   transform: translateX(100%);
@@ -149,15 +162,15 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+  --background: oklch(0.97 0 0); /* Softer off-white/gray */
   --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
+  --card: oklch(1 0 0); /* Keep cards white for contrast */
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  /* Primary color: #ffffff */
-  --primary: oklch(1 0 0);
-  --primary-foreground: oklch(0.145 0 0);
+  /* Primary color: Dark Blue (Brand) */
+  --primary: oklch(0.35 0.12 250);
+  --primary-foreground: oklch(1 0 0);
   /* Secondary color: #f97d32 */
   --secondary: oklch(0.72 0.15 45);
   --secondary-foreground: oklch(0.985 0 0);
@@ -183,7 +196,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  --gradient-main: linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f5f3ff 100%);
+  --gradient-main: linear-gradient(
+    135deg,
+    #e2e8f0 0%,
+    #f8fafc 50%,
+    #e0e7ff 100%
+  ); /* Softer gradient */
 }
 
 .dark {
@@ -193,7 +211,7 @@
   --card-foreground: #f3f4f6;
   --popover: #23232a;
   --popover-foreground: #f3f4f6;
-  --primary: #204188; /* Blue hoặc màu brand */
+  --primary: oklch(0.35 0.12 250); /* Blue hoặc màu brand */
   --primary-foreground: #ffffff;
   --secondary: #f97d32; /* Orange nổi bật */
   --secondary-foreground: #18181b;
@@ -231,103 +249,4 @@
   h6 {
     font-family: 'ShopeeDisplay', system-ui, sans-serif;
   }
-}
-
-/* Driver.js Custom Theme */
-.driverjs-theme .driver-popover {
-  background-color: var(--card);
-  color: var(--card-foreground);
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05),
-    0 0 0 1px rgba(0, 0, 0, 0.05);
-  border: none;
-  max-width: 350px;
-}
-
-.driverjs-theme .driver-popover-title {
-  font-family: 'ShopeeDisplay', system-ui, sans-serif;
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  color: var(--foreground);
-}
-
-.driverjs-theme .driver-popover-description {
-  font-family: system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--muted-foreground);
-  margin-bottom: 16px;
-}
-
-.driverjs-theme .driver-popover-footer {
-  margin-top: 0;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.driverjs-theme .driver-popover-btn {
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.2s;
-  text-shadow: none;
-  border: 1px solid transparent;
-  cursor: pointer;
-}
-
-/* Next / Done Button */
-.driverjs-theme .driver-popover-next-btn,
-.driverjs-theme .driver-popover-done-btn {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  border: none;
-}
-
-.driverjs-theme .driver-popover-next-btn:hover,
-.driverjs-theme .driver-popover-done-btn:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
-}
-
-/* Previous Button */
-.driverjs-theme .driver-popover-prev-btn {
-  background-color: transparent;
-  color: var(--muted-foreground);
-  border: 1px solid var(--border);
-}
-
-.driverjs-theme .driver-popover-prev-btn:hover {
-  background-color: var(--muted);
-  color: var(--foreground);
-}
-
-/* Close Button */
-.driverjs-theme .driver-popover-close-btn {
-  color: var(--muted-foreground);
-  transition: color 0.2s;
-}
-
-.driverjs-theme .driver-popover-close-btn:hover {
-  color: var(--destructive);
-}
-
-/* Progress Text */
-.driverjs-theme .driver-popover-progress-text {
-  color: var(--muted-foreground);
-  font-size: 12px;
-}
-
-/* Dark Mode Overrides if needed */
-.dark .driverjs-theme .driver-popover {
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.5),
-    0 4px 6px -2px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
 }

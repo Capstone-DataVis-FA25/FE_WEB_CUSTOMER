@@ -21,6 +21,7 @@ export const Permission = {
   VIEW_PROFILE: 'view_profile',
   EDIT_PROFILE: 'edit_profile',
   CHANGE_PASSWORD: 'change_password',
+  VIEW_OWN_TRANSACTIONS: 'view_own_transactions',
 
   // Admin permissions
   ADMIN_ACCESS: 'admin_access',
@@ -38,6 +39,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     Permission.VIEW_PROFILE,
     Permission.EDIT_PROFILE,
     Permission.CHANGE_PASSWORD,
+    Permission.VIEW_OWN_TRANSACTIONS,
   ],
   [UserRole.ADMIN]: [
     Permission.VIEW_PUBLIC,
@@ -224,6 +226,18 @@ export const publicRoutes: RouteConfig[] = [
     },
   },
   {
+    path: Routers.TRANSACTION_HISTORY,
+    name: 'transaction-history',
+    component: 'TransactionHistoryPage',
+    layout: 'USER',
+    isProtected: true,
+    permissions: [Permission.VIEW_OWN_TRANSACTIONS],
+    meta: {
+      title: 'Transaction History',
+      description: 'View your payment and subscription history',
+    },
+  },
+  {
     path: Routers.ABOUT_US,
     name: 'about-us',
     component: 'AboutPage',
@@ -245,6 +259,18 @@ export const publicRoutes: RouteConfig[] = [
     meta: {
       title: 'Câu hỏi thường gặp',
       description: 'Tìm câu trả lời cho những câu hỏi phổ biến nhất về dịch vụ của chúng tôi',
+    },
+  },
+  {
+    path: Routers.ACADEMIC_DOCS,
+    name: 'academic-docs',
+    component: 'AcademicUsingChart',
+    layout: 'USER',
+    isProtected: false,
+    permissions: [Permission.VIEW_PUBLIC],
+    meta: {
+      title: 'Documentation',
+      description: 'Learn how to use DataVis - comprehensive documentation and guides',
     },
   },
   {

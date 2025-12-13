@@ -1,19 +1,20 @@
 import type { DriveStep } from 'driver.js';
 import { Icons } from './icons';
+import { t } from './i18n-helper';
 
 export const datasetListSteps: DriveStep[] = [
   {
     popover: {
-      title: `${Icons.Database} Welcome to Datasets`,
-      description: 'Manage your data efficiently. This is your central hub for all your datasets.',
+      title: `${Icons.Database} ${t('tour_dataset_welcome_title')}`,
+      description: t('tour_dataset_welcome_desc'),
       align: 'center',
     },
   },
   {
     element: '#btn-new-dataset',
     popover: {
-      title: `${Icons.Upload} Create New Dataset`,
-      description: 'Upload files, paste data, or use AI to clean messy data. Get started here.',
+      title: `${Icons.Upload} ${t('tour_dataset_create_title')}`,
+      description: t('tour_dataset_create_desc'),
       side: 'bottom',
       align: 'end',
     },
@@ -21,8 +22,8 @@ export const datasetListSteps: DriveStep[] = [
   {
     element: '#search-dataset',
     popover: {
-      title: `${Icons.Sparkles} Find & Organize`,
-      description: 'Quickly search and sort your datasets to find exactly what you need.',
+      title: `${Icons.Sparkles} ${t('tour_dataset_search_title')}`,
+      description: t('tour_dataset_search_desc'),
       side: 'bottom',
       align: 'start',
     },
@@ -30,8 +31,8 @@ export const datasetListSteps: DriveStep[] = [
   {
     element: '#dataset-card-0',
     popover: {
-      title: `${Icons.LayoutDashboard} Dataset Actions`,
-      description: 'View details, edit, or create charts directly from your dataset card.',
+      title: `${Icons.LayoutDashboard} ${t('tour_dataset_actions_title')}`,
+      description: t('tour_dataset_actions_desc'),
       side: 'right',
       align: 'center',
     },
@@ -41,17 +42,16 @@ export const datasetListSteps: DriveStep[] = [
 export const createDatasetSteps: DriveStep[] = [
   {
     popover: {
-      title: `${Icons.Upload} Import Your Data`,
-      description:
-        'Choose how you want to bring your data in. We support multiple formats and methods.',
+      title: `${Icons.Upload} ${t('tour_dataset_import_title')}`,
+      description: t('tour_dataset_import_desc'),
       align: 'center',
     },
   },
   {
     element: '#upload-method-nav',
     popover: {
-      title: `${Icons.Settings} Choose Method`,
-      description: 'Upload files, paste text, use sample data, or let AI clean your data for you.',
+      title: `${Icons.Settings} ${t('tour_dataset_method_title')}`,
+      description: t('tour_dataset_method_desc'),
       side: 'right',
       align: 'start',
     },
@@ -59,8 +59,8 @@ export const createDatasetSteps: DriveStep[] = [
   {
     element: '#nav-btn-cleanDataset',
     popover: {
-      title: `${Icons.Wand2} AI Data Cleaning`,
-      description: 'Got messy data? Let our AI assistant clean and format it automatically.',
+      title: `${Icons.Wand2} ${t('tour_dataset_ai_title')}`,
+      description: t('tour_dataset_ai_desc'),
       side: 'right',
       align: 'center',
     },

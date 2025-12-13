@@ -36,4 +36,8 @@ export const API_ENDPOINTS = {
     GET_BY_ID: (id: string) => `/payments/${id}`,
     WEBHOOK: '/payments/webhook',
   },
+  AI: {
+    EVALUATE_CHART: '/ai/evaluate-chart',
+    CHAT: '/ai/chat',
+  },
 } as const;

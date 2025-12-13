@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Settings,
   LineChart,
   BarChart3,
   AreaChart,
@@ -10,6 +9,7 @@ import {
   Donut,
   RefreshCcw,
   Grid3x3,
+  ChartColumn,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
@@ -37,14 +37,7 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
   className = '',
 }) => {
   const { t } = useTranslation();
-  const {
-    currentChartType,
-    setCurrentChartType,
-    chartConfig,
-    setChartConfig,
-    cachedConfigs,
-    cacheCurrentConfig,
-  } = useChartEditor();
+  const { currentChartType, setCurrentChartType, chartConfig, setChartConfig } = useChartEditor();
 
   const chartTypeOptions: ChartTypeOption[] = useMemo(
     () => [
@@ -88,6 +81,11 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
         label: t('chart_type_heatmap', 'Heatmap'),
         icon: Grid3x3,
       },
+      {
+        value: ChartType.Histogram,
+        label: t('chart_type_histogram', 'Histogram'),
+        icon: BarChart3,
+      },
     ],
     [t]
   );
@@ -126,16 +124,20 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
         newValue !== null &&
         !Array.isArray(newValue)
       ) {
-        // Special handling for datasetConfig: preserve it if it has content
+        // Special handling for datasetConfig: always preserve entire datasetConfig if it has content
         if (key === 'datasetConfig') {
           const hasCurrentContent = Object.keys(currentValue).length > 0;
           const hasNewContent = Object.keys(newValue).length > 0;
           if (hasCurrentContent && !hasNewContent) {
-            // Preserve current datasetConfig if new default is empty
+            // Preserve entire current datasetConfig if new default is empty
+            result[key] = currentValue;
+          } else if (hasCurrentContent) {
+            // Merge normally, but always preserve entire datasetConfig from current if it has content
+            // This ensures pivot, filters, sort, aggregation, etc. are all preserved
             result[key] = currentValue;
           } else {
-            // Otherwise merge normally
-            result[key] = deepMergeConfigs(currentValue, newValue);
+            // No current content, use new value
+            result[key] = newValue;
           }
         } else {
           result[key] = deepMergeConfigs(currentValue, newValue);
@@ -145,6 +147,12 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
       } else {
         result[key] = newValue;
       }
+    }
+
+    // After merging, always preserve datasetConfig from current if it exists and has content
+    // This handles cases where newDefaultConfig doesn't have datasetConfig key at all
+    if (currentConfig.datasetConfig && Object.keys(currentConfig.datasetConfig).length > 0) {
+      result.datasetConfig = currentConfig.datasetConfig;
     }
 
     return result;
@@ -164,33 +172,14 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
   const handleChartTypeChange = (value: string) => {
     const newChartType = value as ChartType;
 
-    // 1. Cache the current config before switching
-    if (currentChartType && chartConfig) {
-      cacheCurrentConfig();
-    }
-
-    // 2. Check if we have a cached config for the target type
-    if (cachedConfigs && cachedConfigs[newChartType]) {
-      const cached = cachedConfigs[newChartType];
-      // Merge cached with default to ensure all fields are present (in case of schema updates)
-      // We use deepMergeConfigs here to ensure we respect the structure of the new type
-      const mergedCached = deepMergeConfigs(cached, getDefaultChartConfig(newChartType));
-
-      setChartConfig({ ...mergedCached, chartType: newChartType } as MainChartConfig);
-      setCurrentChartType(newChartType);
-      return;
-    }
-
-    // 3. If no cache, use existing logic (merge current with new defaults)
-    // If we have an existing config, merge it with the new chart type defaults
+    // Always merge current config with new chart type defaults
+    // This preserves common fields and removes old chart-specific fields
     if (chartConfig) {
       const mergedConfig = mergeConfigs(chartConfig, newChartType);
-      // Ensure chartType reflects the new selection and drop old-type-only keys
+      // Ensure chartType reflects the new selection
       setChartConfig({ ...mergedConfig, chartType: newChartType } as MainChartConfig);
     } else {
-      // If there's no existing config (e.g. fresh create flow), immediately set a
-      // sensible default config for the selected chart type so downstream UI does
-      // not observe a transient null `chartConfig` value.
+      // If there's no existing config (e.g. fresh create flow), use defaults
       const defaultConfig = getDefaultChartConfig(newChartType);
       setChartConfig({ ...defaultConfig, chartType: newChartType } as MainChartConfig);
     }
@@ -226,7 +215,7 @@ const ChartTypeSelector: React.FC<ChartTypeSelectorProps> = ({
       <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl rounded-lg">
         <CardHeader className="pb-3">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Settings className="h-5 w-5" />
+            <ChartColumn className="h-5 w-5 text-blue-500" />
             {t('chart_editor_chartType', 'Chart Type')}
           </h3>
         </CardHeader>

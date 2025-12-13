@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import ChartPreview from '@/components/charts/gallery-chart-preview/ChartPreview';
@@ -11,6 +12,7 @@ interface ChartTemplateCardProps {
 }
 
 const ChartTemplateCard: React.FC<ChartTemplateCardProps> = ({ template, isSelected, onClick }) => {
+  const { t } = useTranslation();
   return (
     <motion.div
       key={template.id}
@@ -40,7 +42,7 @@ const ChartTemplateCard: React.FC<ChartTemplateCardProps> = ({ template, isSelec
           {/* Selected Indicator */}
           {isSelected && (
             <div className="absolute top-2 left-2 z-10">
-              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
+              <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center shadow-lg">
                 <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
@@ -59,7 +61,9 @@ const ChartTemplateCard: React.FC<ChartTemplateCardProps> = ({ template, isSelec
             <h3
               className={
                 'font-medium line-clamp-1 ' +
-                (isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white')
+                (isSelected
+                  ? 'text-accent dark:text-accent-foreground'
+                  : 'text-gray-900 dark:text-white')
               }
             >
               {template.name}
@@ -69,7 +73,7 @@ const ChartTemplateCard: React.FC<ChartTemplateCardProps> = ({ template, isSelec
               className={
                 'text-xs shrink-0 capitalize ' +
                 (isSelected
-                  ? 'border-gray-400 text-gray-700 dark:border-gray-500 dark:text-gray-300'
+                  ? 'border-accent text-accent dark:border-accent dark:text-accent-foreground'
                   : '')
               }
             >
@@ -86,11 +90,11 @@ const ChartTemplateCard: React.FC<ChartTemplateCardProps> = ({ template, isSelec
             className={
               'w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ' +
               (isSelected
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-accent text-accent-foreground hover:bg-accent/90'
                 : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800')
             }
           >
-            {isSelected ? 'Selected' : 'Select'}
+            {isSelected ? t('chart_gallery_selected') : t('chart_gallery_select')}
           </button>
         </div>
       </div>

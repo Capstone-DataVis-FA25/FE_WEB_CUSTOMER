@@ -34,7 +34,7 @@ const BasicChartSettingsSection: React.FC = () => {
         >
           <div className="flex items-center justify-between w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+              <TrendingUp className="h-5 w-5 text-blue-500" />
               {t('chart_editor_chart_settings', 'Chart Settings')}
             </h3>
             <motion.div

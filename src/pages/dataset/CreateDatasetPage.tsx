@@ -54,21 +54,25 @@ function CreateDatasetPageContent() {
   // AI Cleaning Progress tracking
   const { activeJobs, addJob, removeJob, handleJobClick } = useAiCleaningProgress(user?.id);
 
+  // Tour function
+  const startTour = () => {
+    const driverObj = driver({
+      showProgress: true,
+      steps: createDatasetSteps,
+      popoverClass: 'driverjs-theme driver-theme-datasets',
+      overlayOpacity: 0,
+    });
+    driverObj.drive();
+  };
+
   useEffect(() => {
     if (isAuthenticated && user?.id) {
       const storageKey = `hasShownCreateDatasetTour_${user.id}`;
       const hasShownTour = localStorage.getItem(storageKey);
 
       if (hasShownTour !== 'true') {
-        const driverObj = driver({
-          showProgress: true,
-          steps: createDatasetSteps,
-          popoverClass: 'driverjs-theme',
-          overlayOpacity: 0.2,
-        });
-
         setTimeout(() => {
-          driverObj.drive();
+          startTour();
           localStorage.setItem(storageKey, 'true');
         }, 1000);
       }
@@ -499,8 +503,11 @@ function CreateDatasetPageContent() {
       {isProcessing ? (
         <LoadingSpinner
           fullScreen={true}
-          title="Processing your file..."
-          subtitle="Please wait while we analyze and parse your data"
+          title={t('dataset.processingTitle', 'Processing your file...')}
+          subtitle={t(
+            'dataset.processingSubtitle',
+            'Please wait while we analyze and parse your data'
+          )}
         />
       ) : viewMode === 'view' ? (
         // Data Viewer - Full Width
@@ -514,7 +521,11 @@ function CreateDatasetPageContent() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex gap-6 items-start">
             {/* Left Navigation Component */}
-            <UploadMethodNavigation viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+            <UploadMethodNavigation
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+              onStartTour={startTour}
+            />
 
             {/* Main Content */}
             <div className="flex-1">

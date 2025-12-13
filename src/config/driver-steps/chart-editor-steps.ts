@@ -1,21 +1,29 @@
 import type { DriveStep } from 'driver.js';
 import { Icons } from './icons';
+import { t } from './i18n-helper';
 
 export const chartEditorSteps: DriveStep[] = [
   {
     popover: {
-      title: `${Icons.Rocket} Welcome to Chart Editor`,
-      description:
-        "Create stunning visualizations with our powerful editor. Let's take a quick tour of the main features to get you started.",
+      title: `${Icons.Rocket} ${t('tour_editor_welcome_title')}`,
+      description: t('tour_editor_welcome_desc'),
       align: 'center',
     },
   },
   {
     element: '#chart-type-selector',
     popover: {
-      title: `${Icons.BarChart3} Choose Your Chart`,
-      description:
-        'Start by selecting the perfect chart type for your data. From simple lines to complex heatmaps, we have it all.',
+      title: `${Icons.BarChart3} ${t('tour_editor_type_title')}`,
+      description: t('tour_editor_type_desc'),
+      side: 'right',
+      align: 'start',
+    },
+  },
+  {
+    element: '#basic-settings-section',
+    popover: {
+      title: `${Icons.Settings} ${t('tour_editor_basic_title')}`,
+      description: t('tour_editor_basic_desc'),
       side: 'right',
       align: 'start',
     },
@@ -23,9 +31,8 @@ export const chartEditorSteps: DriveStep[] = [
   {
     element: '#series-management-section',
     popover: {
-      title: `${Icons.Database} Manage Data Series`,
-      description:
-        'Add, remove, and customize your data series here. Control exactly what data appears on your chart.',
+      title: `${Icons.Database} ${t('tour_editor_series_title')}`,
+      description: t('tour_editor_series_desc'),
       side: 'right',
       align: 'start',
     },
@@ -33,19 +40,26 @@ export const chartEditorSteps: DriveStep[] = [
   {
     element: '#chart-settings-section',
     popover: {
-      title: `${Icons.Settings} Customize Appearance`,
-      description:
-        'Fine-tune every detail. Adjust colors, axes, legends, and animations to match your style perfectly.',
+      title: `${Icons.Settings} ${t('tour_editor_settings_title')}`,
+      description: t('tour_editor_settings_desc'),
       side: 'right',
       align: 'start',
     },
   },
   {
-    element: '#save-chart-button',
+    element: '#chart-preview-container',
     popover: {
-      title: `${Icons.Save} Save & Share`,
-      description:
-        'Ready to go? Save your masterpiece to your workspace or export it to share with your team.',
+      title: `${Icons.Eye} ${t('tour_editor_preview_title')}`,
+      description: t('tour_editor_preview_desc'),
+      side: 'left',
+      align: 'center',
+    },
+  },
+  {
+    element: '#btn-save-chart',
+    popover: {
+      title: `${Icons.Save} ${t('tour_editor_save_title')}`,
+      description: t('tour_editor_save_desc'),
       side: 'bottom',
       align: 'end',
     },

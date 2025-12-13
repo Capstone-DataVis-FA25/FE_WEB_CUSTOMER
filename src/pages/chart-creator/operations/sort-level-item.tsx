@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
@@ -21,6 +22,7 @@ export const SortLevelItem: React.FC<SortLevelItemProps> = ({
   onUpdate,
   onRemove,
 }) => {
+  const { t } = useTranslation();
   const columnName = availableColumns.find(c => c.id === level.columnId)?.name || level.columnId;
 
   return (
@@ -70,7 +72,7 @@ export const SortLevelItem: React.FC<SortLevelItemProps> = ({
         size="sm"
         className="h-8 w-8 p-0 flex-shrink-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus-visible:ring-1 focus-visible:ring-red-500"
         onClick={() => onRemove(levelIndex)}
-        title="Remove sort level"
+        title={t('operations.removeSortLevel', 'Remove sort level')}
       >
         <Trash2 className="w-4 h-4" />
       </Button>

@@ -29,6 +29,7 @@ import { useChartEditor } from '@/features/chartEditor';
 import type { SortLevel, DatasetConfig } from '@/types/chart';
 import { buildColumnIndexMap, applyMultiLevelSort, applyDatasetFilters } from '@/utils/datasetOps';
 import { applyAggregation } from '@/utils/aggregationUtils';
+import { applyPivot } from '@/utils/pivotUtils';
 import { useChartHistory } from '@/features/chartHistory/useChartHistory';
 import Routers from '@/router/routers';
 import RestoreConfirmDialog from '@/components/charts/RestoreConfirmDialog';
@@ -80,7 +81,7 @@ const ChartHistoryViewPage: React.FC = () => {
   // ============================================================
   useEffect(() => {
     if (!historyId) {
-      showError(t('chartHistory.noHistoryId', 'No history ID provided'));
+      showError(t('chartHistory.noHistoryId'));
       navigate(Routers.WORKSPACE_CHARTS);
       return;
     }
@@ -102,10 +103,10 @@ const ChartHistoryViewPage: React.FC = () => {
             await getDatasetById(history.datasetId);
           }
         } else {
-          showError(t('chartHistory.loadFailed', 'Failed to load history version'));
+          showError(t('chartHistory.loadFailed'));
         }
       } catch (e: any) {
-        const msg = e?.message || 'Error loading history version';
+        const msg = e?.message || t('chartHistory.errorLoading');
         showError(msg);
       }
     })();
@@ -274,15 +275,13 @@ const ChartHistoryViewPage: React.FC = () => {
       }).unwrap();
 
       setRestoreDialogOpen(false);
-      showSuccess(t('chartHistory.restoreSuccess', 'Chart restored successfully'));
-
-      // Refresh and navigate back to editor
+      showSuccess(t('chartHistory.restoreSuccess'));
       await getChartById(chartId);
       await getChartHistory(chartId);
-      navigate(`${Routers.CHART_EDITOR}?chartId=${chartId}`);
+      window.location.href = `${Routers.CHART_EDITOR}?chartId=${chartId}`;
     } catch (error) {
       console.error('[ChartHistoryViewPage] Failed to restore:', error);
-      showError(t('chartHistory.restoreFailed', 'Failed to restore chart'));
+      showError(t('chartHistory.restoreFailed'));
     }
   };
 
@@ -326,8 +325,12 @@ const ChartHistoryViewPage: React.FC = () => {
     return JSON.stringify(datasetConfig?.aggregation || {});
   }, [datasetConfig]);
 
-  // Compute processedData với filter → sort → aggregation
+  const pivotKey = useMemo(() => JSON.stringify(datasetConfig?.pivot || {}), [datasetConfig]);
+
+  // Compute processedData (filter → sort → aggregation/pivot) - Same as ChartEditorPage
   const processedData = useMemo(() => {
+    // Always use original dataset for operations (filter/sort/aggregation/pivot)
+    // working.data/headers might be aggregated/pivoted, so use originalDataset
     const dataToProcess = originalDataset.data || working?.data;
     const headersToUse = originalDataset.headers || working?.headers;
 
@@ -335,33 +338,63 @@ const ChartHistoryViewPage: React.FC = () => {
       return { data: undefined, headers: undefined };
     }
 
+    // Get current filters, aggregation, and pivot from datasetConfig (read fresh each time)
     const currentFilters = (datasetConfig as any)?.filters;
     const currentAggregation = datasetConfig?.aggregation;
+    const currentPivot = datasetConfig?.pivot;
 
     try {
-      // Build column index map
+      // Build column index map from ORIGINAL headers (not aggregated/pivoted)
       const colIndexMap = buildColumnIndexMap(headersToUse as unknown as DataHeader[]);
 
-      // Filter
+      // Filter using original data and original headers
       const filtered =
         applyDatasetFilters(dataToProcess, currentFilters, colIndexMap) || dataToProcess;
 
-      // Sort
+      // Sort using filtered data
       const multiSorted = applyMultiLevelSort(filtered, sortLevels, colIndexMap) || filtered;
 
-      // Aggregation
-      const aggregationResult = applyAggregation(
-        multiSorted,
-        headersToUse as unknown as DataHeader[],
-        currentAggregation,
-        colIndexMap
-      );
+      // Check if pivot is active (pivot takes precedence over aggregation)
+      const hasPivot =
+        currentPivot &&
+        ((currentPivot.rows?.length ?? 0) > 0 ||
+          (currentPivot.columns?.length ?? 0) > 0 ||
+          (currentPivot.values?.length ?? 0) > 0);
 
-      // Use aggregated data/headers if aggregation is active
-      const finalHeaders = aggregationResult
-        ? aggregationResult.headers
-        : (headersToUse as unknown as DataHeader[]);
-      const finalData = aggregationResult ? aggregationResult.data : multiSorted;
+      let finalHeaders: DataHeader[];
+      let finalData: string[][];
+
+      if (hasPivot) {
+        // Apply pivot transformation - use FILTERED AND SORTED data (multiSorted)
+        // Note: Number formatting is NOT applied here - it will be applied by preformatDataToFormats in DataTab
+        const pivotResult = applyPivot(
+          multiSorted, // This is the filtered + sorted data
+          headersToUse as unknown as DataHeader[],
+          currentPivot,
+          colIndexMap
+        );
+
+        // Use pivoted data/headers if pivot is active, otherwise use sorted data
+        finalHeaders = pivotResult
+          ? pivotResult.headers
+          : (headersToUse as unknown as DataHeader[]);
+        finalData = pivotResult ? pivotResult.data : multiSorted;
+      } else {
+        // Apply aggregation if configured - use FILTERED AND SORTED data (multiSorted)
+        // Note: Number formatting is NOT applied here - it will be applied by preformatDataToFormats in DataTab
+        const aggregationResult = applyAggregation(
+          multiSorted, // This is the filtered + sorted data
+          headersToUse as unknown as DataHeader[],
+          currentAggregation,
+          colIndexMap
+        );
+
+        // Use aggregated data/headers if aggregation is active, otherwise use sorted data
+        finalHeaders = aggregationResult
+          ? aggregationResult.headers
+          : (headersToUse as unknown as DataHeader[]);
+        finalData = aggregationResult ? aggregationResult.data : multiSorted;
+      }
 
       return { data: finalData, headers: finalHeaders };
     } catch (e) {
@@ -373,23 +406,31 @@ const ChartHistoryViewPage: React.FC = () => {
     originalDataset.headers,
     working?.data,
     working?.headers,
-    filtersKey,
+    filtersKey, // Use serialized filters key to detect changes
     sortLevels,
-    aggregationKey,
-    datasetConfig,
+    aggregationKey, // Use serialized aggregation key to detect changes
+    pivotKey, // Use serialized pivot key to detect changes
+    datasetConfig, // Also depend on datasetConfig to ensure we read fresh values
   ]);
 
   // ============================================================
-  // EFFECT: Update working dataset with aggregated headers when aggregation changes
+  // EFFECT: Update working dataset with aggregated/pivoted headers when aggregation/pivot changes
   // ============================================================
   useEffect(() => {
     if (!processedData.headers || !processedData.data) return;
 
-    // Only update if aggregation is active and headers changed
-    if (
+    // Check if aggregation or pivot is active
+    const hasAggregation =
       datasetConfig?.aggregation &&
-      (datasetConfig.aggregation.groupBy?.length || datasetConfig.aggregation.metrics?.length)
-    ) {
+      (datasetConfig.aggregation.groupBy?.length || datasetConfig.aggregation.metrics?.length);
+    const hasPivot =
+      datasetConfig?.pivot &&
+      ((datasetConfig.pivot.rows?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.columns?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.values?.length ?? 0) > 0);
+
+    // Only update if aggregation or pivot is active and headers changed
+    if (hasAggregation || hasPivot) {
       const headersChanged =
         processedData.headers.length !== working?.headers.length ||
         processedData.headers.some((h, idx) => {
@@ -407,7 +448,14 @@ const ChartHistoryViewPage: React.FC = () => {
         );
       }
     }
-  }, [processedData.headers, processedData.data, datasetConfig?.aggregation, working, dispatch]);
+  }, [
+    processedData.headers,
+    processedData.data,
+    datasetConfig?.aggregation,
+    datasetConfig?.pivot,
+    working,
+    dispatch,
+  ]);
 
   // ============================================================
   // EFFECT: Sync chart data from processed data
@@ -440,49 +488,49 @@ const ChartHistoryViewPage: React.FC = () => {
     switch (chartType) {
       case ChartType.Line:
         return {
-          name: t('chart_type_line', 'Line Chart'),
+          name: t('chart_type_line'),
           icon: '📈',
           color: 'bg-blue-500',
         };
       case ChartType.Bar:
         return {
-          name: t('chart_type_bar', 'Bar Chart'),
+          name: t('chart_type_bar'),
           icon: '📊',
           color: 'bg-green-500',
         };
       case ChartType.Area:
         return {
-          name: t('chart_type_area', 'Area Chart'),
+          name: t('chart_type_area'),
           icon: '📉',
           color: 'bg-purple-500',
         };
       case ChartType.Scatter:
         return {
-          name: t('chart_type_scatter', 'Scatter Chart'),
+          name: t('chart_type_scatter'),
           icon: '⚪️',
           color: 'bg-indigo-500',
         };
       case ChartType.Pie:
         return {
-          name: t('chart_type_pie', 'Pie Chart'),
+          name: t('chart_type_pie'),
           icon: '🥧',
           color: 'bg-pink-500',
         };
       case ChartType.Donut:
         return {
-          name: t('chart_type_donut', 'Donut Chart'),
+          name: t('chart_type_donut'),
           icon: '🍩',
           color: 'bg-yellow-500',
         };
       case ChartType.CyclePlot:
         return {
-          name: t('chart_type_cycle_plot', 'Cycle Plot'),
+          name: t('chart_type_cycle_plot'),
           icon: '🔄',
           color: 'bg-teal-500',
         };
       default:
         return {
-          name: t('chart_type_default', 'Chart'),
+          name: t('chart_type_default'),
           icon: '📊',
           color: 'bg-gray-500',
         };
@@ -496,8 +544,8 @@ const ChartHistoryViewPage: React.FC = () => {
     return (
       <div className="h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900 flex items-center justify-center">
         <LoadingSpinner
-          title="Loading chart history..."
-          subtitle="Please wait while we load the historical version"
+          title={t('chartHistory.loadingTitle')}
+          subtitle={t('chartHistory.loadingSubtitle')}
         />
       </div>
     );
@@ -530,7 +578,7 @@ const ChartHistoryViewPage: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <div className="flex items-center gap-2">
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                      {selectedHistory.name || t('chartHistory.viewTitle', 'Chart History View')}
+                      {selectedHistory.name || t('chartHistory.viewTitle')}
                     </h1>
                   </div>
                   <div className="flex items-center gap-2">
@@ -553,7 +601,7 @@ const ChartHistoryViewPage: React.FC = () => {
                       className="flex items-center gap-1 text-xs border-orange-300 text-orange-600 bg-orange-50 dark:border-orange-600 dark:text-orange-400 dark:bg-orange-900/20"
                     >
                       <Eye className="w-3 h-3" />
-                      {t('viewOnly', 'View Only')}
+                      {t('viewOnly')}
                     </Badge>
                   </div>
                 </div>
@@ -562,7 +610,7 @@ const ChartHistoryViewPage: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <Database className="w-3 h-3" />
                       <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                        {t('description', 'Description')}:
+                        {t('description')}:
                       </span>
                       <span
                         className="text-xs text-gray-700 dark:text-gray-300"
@@ -577,7 +625,7 @@ const ChartHistoryViewPage: React.FC = () => {
                     {selectedHistory.createdAt && (
                       <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                         <Calendar className="w-3 h-3 text-gray-700 dark:text-gray-300" />
-                        <span className="font-medium">{t('chart_created', 'Created')}:</span>
+                        <span className="font-medium">{t('chart_created')}:</span>
                         <span className="text-gray-700 dark:text-gray-300">
                           {Utils.getDate(selectedHistory.createdAt, 18)}
                         </span>
@@ -587,7 +635,7 @@ const ChartHistoryViewPage: React.FC = () => {
                     {selectedHistory.updatedBy && (
                       <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                         <Clock className="w-3 h-3 text-gray-700 dark:text-gray-300" />
-                        <span className="font-medium">{t('updatedBy', 'By')}:</span>
+                        <span className="font-medium">{t('updatedBy')}:</span>
                         <span className="text-gray-700 dark:text-gray-300">
                           {selectedHistory.updatedBy}
                         </span>
@@ -606,7 +654,7 @@ const ChartHistoryViewPage: React.FC = () => {
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" />
-                {t('common_back', 'Back')}
+                {t('common_back')}
               </Button>
               <Button
                 size="sm"
@@ -617,12 +665,12 @@ const ChartHistoryViewPage: React.FC = () => {
                 {restoring ? (
                   <>
                     <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    {t('restoring', 'Restoring...')}
+                    {t('restoring')}
                   </>
                 ) : (
                   <>
                     <RotateCcw className="w-4 h-4" />
-                    {t('restore', 'Restore')}
+                    {t('restore')}
                   </>
                 )}
               </Button>
@@ -646,7 +694,7 @@ const ChartHistoryViewPage: React.FC = () => {
                 >
                   <span className="inline-flex items-center gap-2">
                     <BarChart3 className="w-4 h-4" />
-                    {t('tab_chart', 'Chart')}
+                    {t('tab_chart')}
                   </span>
                   {activeTab === 'chart' && (
                     <motion.div
@@ -667,7 +715,7 @@ const ChartHistoryViewPage: React.FC = () => {
                 >
                   <span className="inline-flex items-center gap-2">
                     <Database className="w-4 h-4" />
-                    {t('tab_data', 'Data')}
+                    {t('tab_data')}
                   </span>
                   {activeTab === 'data' && (
                     <motion.div

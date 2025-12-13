@@ -12,6 +12,7 @@ import DisplayOptionsPieSection from './DisplayOptionsPieSection';
 import CyclePlotSettingsSection from './CyclePlotSettingsSection';
 import HeatmapAxisConfigSection from './HeatmapAxisConfigSection';
 import HeatmapAdvancedOptions from './HeatmapAdvancedOptions';
+import HistogramChartEditor from './HistogramChartEditor';
 import ChartFormatterSettings from './ChartFormatterSettingSection';
 import DatasetOperationSection from './DatasetOperationSection';
 import ImportExportSection from './ImportExportSection';
@@ -106,22 +107,26 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
                     <BasicChartSettingsSection />
 
                     {/* Cycle Plot Specific Settings */}
-                    <CyclePlotSettingsSection />
+                    <CyclePlotSettingsSection processedHeaders={processedHeaders} />
                   </>
                 )}
 
                 {chartType == ChartType.Heatmap && (
                   <>
                     {/* Heatmap Axis Configuration */}
-                    <HeatmapAxisConfigSection />
+                    <HeatmapAxisConfigSection processedHeaders={processedHeaders} />
 
                     {/* Heatmap Advanced Options */}
                     <HeatmapAdvancedOptions />
                   </>
                 )}
 
+                {chartType == ChartType.Histogram && (
+                  <HistogramChartEditor processedHeaders={processedHeaders} />
+                )}
+
                 <div id="chart-formatter-section">
-                  <ChartFormatterSettings />
+                  <ChartFormatterSettings processedHeaders={processedHeaders} />
                 </div>
                 <div id="import-export-section">
                   <ImportExportSection setDataId={setDataId} datasetId={datasetId} />

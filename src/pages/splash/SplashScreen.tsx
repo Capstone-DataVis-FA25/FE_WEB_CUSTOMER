@@ -9,7 +9,10 @@ interface SplashScreenProps {
   onDone?: () => void;
 }
 
+import { useTranslation } from 'react-i18next';
+
 export default function SplashScreen({ onDone }: SplashScreenProps) {
+  const { t } = useTranslation();
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -75,7 +78,7 @@ export default function SplashScreen({ onDone }: SplashScreenProps) {
         {/* Brand name */}
         <div className="text-center mb-12 animate-fade-in" style={{ animationDelay: '0.3s' }}>
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">DataVis</h1>
-          <p className="text-lg text-primary font-semibold">Data Visualization</p>
+          <p className="text-lg text-primary font-semibold">{t('splash.brand_tagline')}</p>
         </div>
 
         {/* Loading indicator */}
@@ -90,9 +93,7 @@ export default function SplashScreen({ onDone }: SplashScreenProps) {
 
           {/* Loading text */}
           <div className="text-center">
-            <p className="text-sm text-muted-foreground font-medium">
-              Welcome to Nexora Production
-            </p>
+            <p className="text-sm text-muted-foreground font-medium">{t('splash.welcome')}</p>
             <p className="text-xs text-muted-foreground mt-1">{Math.round(progress)}%</p>
           </div>
         </div>
@@ -120,7 +121,7 @@ export default function SplashScreen({ onDone }: SplashScreenProps) {
         style={{ animationDelay: '1.2s' }}
       >
         <div className="flex items-center gap-3 text-center text-xs text-slate-500">
-          <div className="text-[11px]">from</div>
+          <div className="text-[11px]">{t('splash.from')}</div>
           {/* Simple inline Meta-style logo (infinite loop glyph) */}
           <div className="flex items-center gap-3">
             <img

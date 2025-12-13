@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardHeader, CardContent } from '../ui/card';
-import { ChevronDown, Settings } from 'lucide-react';
+import { ChevronDown, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
 import { useAppSelector } from '@/store/hooks';
@@ -9,6 +9,7 @@ import FormatterSection from './FormatterSection';
 import type { FormatterType } from '@/utils/formatValue';
 import type { FormatterConfig } from '@/types/chart';
 import { ChartType } from '@/features/charts/chartTypes';
+import type { DataHeader } from '@/utils/dataProcessors';
 
 const SUPPORTED_CHART_TYPES = [
   ChartType.Line,
@@ -18,7 +19,11 @@ const SUPPORTED_CHART_TYPES = [
   ChartType.CyclePlot,
 ];
 
-const ChartFormatterSettings: React.FC = () => {
+interface ChartFormatterSettingsProps {
+  processedHeaders?: DataHeader[];
+}
+
+const ChartFormatterSettings: React.FC<ChartFormatterSettingsProps> = ({ processedHeaders }) => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { chartConfig, currentChartType } = useChartEditorRead();
@@ -26,12 +31,28 @@ const ChartFormatterSettings: React.FC = () => {
   // Only subscribe to currentDataset to avoid re-renders when datasets list is refreshed
   const currentDataset = useAppSelector(state => state.dataset.currentDataset);
 
+  // Use processedHeaders (pivoted) if available, otherwise fallback to original dataset headers
+  const headersToSearch = (processedHeaders as any[]) || currentDataset?.headers || [];
+
+  // Helper: Find header by ID or valueId (for pivot tables)
+  const findHeader = (dataColumn: string) => {
+    if (!headersToSearch || headersToSearch.length === 0) return null;
+    return (
+      headersToSearch.find(
+        h =>
+          (h as any).id === dataColumn ||
+          (h as any).headerId === dataColumn ||
+          (h as any).valueId === dataColumn // Support pivot table valueId matching
+      ) || null
+    );
+  };
+
   // Get axis configuration to find selected columns (MUST be before any early returns)
   const axisConfigs = chartConfig && 'axisConfigs' in chartConfig ? chartConfig.axisConfigs : null;
 
   // Detect data types for X and Y axis columns (MUST be before any early returns)
   const { xAxisDataType, yAxisDataTypes, xAxisColumnName, yAxisColumnNames } = useMemo(() => {
-    if (!axisConfigs || !currentDataset?.headers) {
+    if (!axisConfigs || headersToSearch.length === 0) {
       return {
         xAxisDataType: null,
         yAxisDataTypes: [],
@@ -46,7 +67,7 @@ const ChartFormatterSettings: React.FC = () => {
       : axisConfigs.xAxisKey;
 
     // Find X-axis header
-    const xAxisHeader = currentDataset.headers.find(h => h.id === xAxisKeyId);
+    const xAxisHeader = findHeader(xAxisKeyId);
     const xAxisDataType = xAxisHeader?.type || null;
     const xAxisColumnName = xAxisHeader?.name || null;
 
@@ -54,7 +75,7 @@ const ChartFormatterSettings: React.FC = () => {
     const seriesConfigs = axisConfigs.seriesConfigs || [];
     const yAxisHeaders = seriesConfigs
       .map((series: any) => {
-        const header = currentDataset.headers.find(h => h.id === series.dataColumn);
+        const header = findHeader(series.dataColumn);
         return header;
       })
       .filter(Boolean);
@@ -68,7 +89,7 @@ const ChartFormatterSettings: React.FC = () => {
       xAxisColumnName,
       yAxisColumnNames,
     };
-  }, [axisConfigs, currentDataset?.headers]);
+  }, [axisConfigs, headersToSearch]);
 
   // Only show for charts that support X/Y axis formatters
   // IMPORTANT: This early return MUST be AFTER all hooks
@@ -278,7 +299,7 @@ const ChartFormatterSettings: React.FC = () => {
         >
           <div className="flex items-center justify-between w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+              <Eye className="h-5 w-5 text-blue-500" />
               Axis Formatter
             </h3>
             <div className="flex items-center gap-2">

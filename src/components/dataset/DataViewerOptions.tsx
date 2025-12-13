@@ -9,10 +9,11 @@ import { selectDuplicateColumns, selectEmptyColumns } from '@/features/excelUI';
 import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
 import { Settings, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-// import { useToastContext } from '../providers/ToastProvider';
+import { useToastContext } from '@/components/providers/ToastProvider';
 import { NumberFormatSelector } from './NumberFormatSelector';
 import './scrollbar.css';
 import DelimiterSelector from './DelimiterSelector';
+import { parseTabularContent } from '@/utils/dataProcessors';
 
 interface DataViewerOptionsProps {
   onUpload?: () => void;
@@ -24,6 +25,7 @@ const DataViewerOptions = memo(function DataViewerOptions({
   onChangeData,
 }: DataViewerOptionsProps) {
   const { t } = useTranslation();
+  const { showError } = useToastContext();
   const { creating: isUploading } = useAppSelector(state => state.dataset);
   const duplicateColumns = useAppSelector(selectDuplicateColumns);
   const emptyColumns = useAppSelector(selectEmptyColumns);
@@ -41,12 +43,15 @@ const DataViewerOptions = memo(function DataViewerOptions({
 
   // Get dataset states from DatasetContext
   const {
+    originalTextContent,
     numberFormat,
     setNumberFormat,
     hasValidationErrors: hasDatasetValidationErrors,
     isJsonFormat,
     selectedDelimiter,
     setSelectedDelimiter,
+    setOriginalParsedData,
+    setCurrentParsedData,
   } = useDataset();
 
   // Initialize dataset name error on mount and when name changes (centralized)
@@ -55,12 +60,25 @@ const DataViewerOptions = memo(function DataViewerOptions({
     setFormValidationError('datasetName', 'empty', isEmpty);
   }, [datasetName, setFormValidationError]);
 
-  // Handle delimiter change - reparse the original content with new delimiter
+  // Handle delimiter change - reparse the original content with the new delimiter
   const handleDelimiterChange = (delimiter: string) => {
-    // Update the delimiter in the dataset context
-    setSelectedDelimiter(delimiter);
-    // The actual reparsing logic would be handled by the parent component or context
-    // For now, just update the selected delimiter state
+    // If same delimiter or no raw content, just sync the state and exit
+    if (delimiter === selectedDelimiter || !originalTextContent) {
+      setSelectedDelimiter(delimiter);
+      return;
+    }
+
+    try {
+      const result = parseTabularContent(originalTextContent, { delimiter });
+      // Update Layer 2: Original parsed data
+      setOriginalParsedData(result);
+      // Update Layer 3: Current working data (starts as copy of original)
+      setCurrentParsedData(result);
+      // Persist the selected delimiter
+      setSelectedDelimiter(delimiter);
+    } catch (error) {
+      showError('Parse Error', 'Failed to parse with the selected delimiter');
+    }
   };
 
   const handleNumberFormatChange = (format: NumberFormat) => {
@@ -111,7 +129,11 @@ const DataViewerOptions = memo(function DataViewerOptions({
                 </p>
               )}
               <p
-                className={`text-xs ml-auto ${datasetName.length > DATASET_NAME_MAX_LENGTH * 0.8 ? 'text-orange-500' : 'text-gray-400'}`}
+                className={`text-xs ml-auto ${
+                  datasetName.length > DATASET_NAME_MAX_LENGTH * 0.8
+                    ? 'text-orange-500'
+                    : 'text-gray-400'
+                }`}
               >
                 {datasetName.length}/{DATASET_NAME_MAX_LENGTH}
               </p>
@@ -136,7 +158,11 @@ const DataViewerOptions = memo(function DataViewerOptions({
               disabled={isUploading}
             />
             <p
-              className={`text-xs text-right mt-1 ${description.length > DATASET_DESCRIPTION_MAX_LENGTH * 0.8 ? 'text-orange-500' : 'text-gray-400'}`}
+              className={`text-xs text-right mt-1 ${
+                description.length > DATASET_DESCRIPTION_MAX_LENGTH * 0.8
+                  ? 'text-orange-500'
+                  : 'text-gray-400'
+              }`}
             >
               {description.length}/{DATASET_DESCRIPTION_MAX_LENGTH}
             </p>

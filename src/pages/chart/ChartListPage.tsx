@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useTranslation } from 'react-i18next';
-import { Plus, BarChart3, RotateCcw } from 'lucide-react';
+import { Plus, BarChart3, RotateCcw, HelpCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,7 +23,6 @@ import ToastContainer from '@/components/ui/toast-container';
 import useToast from '@/hooks/useToast';
 import { usePagination } from '@/hooks/usePagination';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { ChartType } from '@/features/charts';
 
 // Minimal BaseChart type to avoid dependency on missing '@/features/charts/chartTypes'
 type BaseChart = {
@@ -374,6 +373,17 @@ const ChartListPage: React.FC = () => {
     navigate('?page=1', { replace: true });
   };
 
+  // Function to manually start tour
+  const startTour = () => {
+    const driverObj = driver({
+      showProgress: true,
+      steps: chartListSteps,
+      popoverClass: 'driverjs-theme driver-theme-charts',
+      overlayOpacity: 0,
+    });
+    driverObj.drive();
+  };
+
   // While initial fetch is in-flight and no items yet, show only header + a scoped spinner
   const isInitialLoading = chartsLoading && allFilteredCharts.length === 0;
 
@@ -389,27 +399,36 @@ const ChartListPage: React.FC = () => {
                 <BarChart3 className="h-6 w-6 text-white" />
               </div>
               <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                My Charts
+                {t('chart_list_title')}
               </h1>
             </div>
-            <p className="text-lg text-muted-foreground max-w-2xl">
-              Create and manage your data visualizations with powerful chart tools
-            </p>
+            <p className="text-lg text-muted-foreground max-w-2xl">{t('chart_list_description')}</p>
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
               <div className="flex items-center space-x-1">
                 <BarChart3 className="h-4 w-4 text-emerald-500" />
-                <span>{allFilteredCharts.length} charts</span>
+                <span>
+                  {allFilteredCharts.length} {t('chart_list_count')}
+                </span>
               </div>
             </div>
           </div>
           <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
             <button
+              onClick={startTour}
+              type="button"
+              className="h-11 px-6 border-2 border-blue-300 hover:border-blue-500 rounded-2xl backdrop-blur-sm text-left flex items-center justify-center shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-900 dark:to-gray-800 font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-100"
+            >
+              <HelpCircle className="h-4 w-4 mr-2" />
+              {t('chart_list_start_tour')}
+            </button>
+            <button
+              id="btn-new-chart"
               onClick={() => handleCreateChart()}
               type="button"
               className="h-11 px-6 border-2 border-emerald-300 hover:border-emerald-500 rounded-2xl backdrop-blur-sm text-left flex items-center justify-center shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800 font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100"
             >
               <Plus className="h-4 w-4 mr-2" />
-              New Chart
+              {t('chart_list_new_chart')}
             </button>
           </div>
         </div>
@@ -427,12 +446,12 @@ const ChartListPage: React.FC = () => {
                   {/* Search */}
                   <div className="flex-1">
                     <Label htmlFor="search-chart" className="mb-1 block">
-                      Search
+                      {t('common_search')}
                     </Label>
                     <div className="w-full relative">
                       <Input
                         id="search-chart"
-                        placeholder="Search charts by name or description..."
+                        placeholder={t('chart_list_search_placeholder')}
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         className="w-full h-11 px-4 pr-10 text-base font-semibold !border-emerald-300 !border-2 focus:!border-emerald-500 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-emerald-500 hover:bg-emerald-100"
@@ -462,7 +481,7 @@ const ChartListPage: React.FC = () => {
                   <div className="flex flex-col md:flex-row md:items-end md:space-x-3">
                     <div>
                       <Label htmlFor="sortOrder" className="mb-1 block ">
-                        Sort by
+                        {t('chart_list_sort_by')}
                       </Label>
                       <div className="w-40">
                         <Select
@@ -473,38 +492,10 @@ const ChartListPage: React.FC = () => {
                           }}
                         >
                           <SelectTrigger className="w-full h-11 px-4 pr-10 text-base font-semibold !border-emerald-300 !border-2 focus:!border-emerald-500 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:!border-emerald-500 hover:bg-emerald-100 focus:outline-none focus:ring-0">
-                            <span className="flex items-center gap-2">
-                              {sortOrder === 'newest' ? (
-                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                                  <circle cx="12" cy="12" r="10" stroke="#10b981" strokeWidth="2" />
-                                  <path
-                                    d="M12 6v6l4 2"
-                                    stroke="#10b981"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                              ) : (
-                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-                                  <rect
-                                    x="4"
-                                    y="4"
-                                    width="16"
-                                    height="16"
-                                    rx="4"
-                                    stroke="#14b8a6"
-                                    strokeWidth="2"
-                                  />
-                                  <path
-                                    d="M8 12h8M8 16h8"
-                                    stroke="#14b8a6"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                  />
-                                </svg>
-                              )}
-                              {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
+                            <span className="flex items-center gap-1">
+                              {sortOrder === 'newest'
+                                ? t('chart_list_sort_newest')
+                                : t('chart_list_sort_oldest')}
                             </span>
                           </SelectTrigger>
                           <SelectContent>
@@ -520,7 +511,7 @@ const ChartListPage: React.FC = () => {
                                     strokeLinejoin="round"
                                   />
                                 </svg>
-                                Newest
+                                {t('chart_list_sort_newest')}
                               </span>
                             </SelectItem>
                             <SelectItem value="oldest">
@@ -542,7 +533,7 @@ const ChartListPage: React.FC = () => {
                                     strokeLinecap="round"
                                   />
                                 </svg>
-                                Oldest
+                                {t('chart_list_sort_oldest')}
                               </span>
                             </SelectItem>
                           </SelectContent>
@@ -551,7 +542,7 @@ const ChartListPage: React.FC = () => {
                     </div>
                     <div className="w-40">
                       <Label htmlFor="updatedAtFrom" className="mb-1 block">
-                        From date
+                        {t('chart_list_from_date')}
                       </Label>
                       <div className="relative">
                         <DatePicker
@@ -569,7 +560,7 @@ const ChartListPage: React.FC = () => {
                           }}
                           maxDate={new Date()}
                           dateFormat="dd/MM/yyyy"
-                          placeholderText="Select date"
+                          placeholderText={t('common.selectDate')}
                           withPortal
                           portalId="root-portal"
                           className="w-full h-11 px-4 pr-10 text-base font-semibold border border-emerald-300 focus:border-emerald-500 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:border-emerald-500 hover:bg-emerald-100"
@@ -582,7 +573,7 @@ const ChartListPage: React.FC = () => {
                                 }
                                 readOnly
                                 className="bg-transparent outline-none w-full cursor-pointer"
-                                placeholder="Select date"
+                                placeholder={t('common.selectDate')}
                               />
                               <span className="absolute right-3 pointer-events-none text-emerald-400">
                                 <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
@@ -610,7 +601,7 @@ const ChartListPage: React.FC = () => {
                     </div>
                     <div className="w-40">
                       <Label htmlFor="updatedAtTo" className="mb-1 block">
-                        To date
+                        {t('chart_list_to_date')}
                       </Label>
                       <div className="relative">
                         <DatePicker
@@ -624,7 +615,7 @@ const ChartListPage: React.FC = () => {
                           minDate={updatedAtFrom || undefined}
                           maxDate={new Date()}
                           dateFormat="dd/MM/yyyy"
-                          placeholderText="Select date"
+                          placeholderText={t('common.selectDate')}
                           withPortal
                           portalId="root-portal"
                           className="w-full h-11 px-4 pr-10 text-base font-semibold border border-teal-300 focus:border-teal-500 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800 shadow-md transition-all duration-150 hover:border-teal-500 hover:bg-teal-100"
@@ -635,7 +626,7 @@ const ChartListPage: React.FC = () => {
                                 value={updatedAtTo ? updatedAtTo.toLocaleDateString('en-GB') : ''}
                                 readOnly
                                 className="bg-transparent outline-none w-full cursor-pointer"
-                                placeholder="Select date"
+                                placeholder={t('common.selectDate')}
                               />
                               <span className="absolute right-3 pointer-events-none text-teal-400">
                                 <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
@@ -663,7 +654,7 @@ const ChartListPage: React.FC = () => {
                     </div>
                     <div>
                       <Label htmlFor="chartTypeFilter" className="mb-1 block">
-                        Chart Type
+                        {t('chart_list_filter_type')}
                       </Label>
                       <div className="w-40">
                         <DropdownMenu>
@@ -675,18 +666,12 @@ const ChartListPage: React.FC = () => {
                             >
                               <span className="truncate font-semibold">
                                 {(() => {
-                                  const labels: Record<string, string> = {
-                                    all: 'All types',
-                                    line: ChartType.Line,
-                                    bar: ChartType.Bar,
-                                    area: ChartType.Area,
-                                    scatter: ChartType.Scatter,
-                                    pie: ChartType.Pie,
-                                    donut: ChartType.Donut,
-                                    cycleplot: ChartType.CyclePlot,
-                                    heatmap: ChartType.Heatmap,
-                                  };
-                                  return labels[chartTypeFilter] || 'Filter by type';
+                                  if (chartTypeFilter === 'all') return t('chart_filter_all_types');
+                                  if (chartTypeFilter === 'cycleplot')
+                                    return t('chart_filter_cycleplot');
+                                  const capitalize = (str: string) =>
+                                    str.charAt(0).toUpperCase() + str.slice(1);
+                                  return capitalize(chartTypeFilter);
                                 })()}
                               </span>
                               <svg
@@ -714,7 +699,7 @@ const ChartListPage: React.FC = () => {
                                 updateURL({ type: 'all', page: 1 });
                               }}
                             >
-                              All types
+                              {t('chart_list_filter_type_all')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
@@ -724,7 +709,7 @@ const ChartListPage: React.FC = () => {
                                 updateURL({ type: 'line', page: 1 });
                               }}
                             >
-                              Line
+                              {t('chart_type_line')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
@@ -734,7 +719,7 @@ const ChartListPage: React.FC = () => {
                                 updateURL({ type: 'bar', page: 1 });
                               }}
                             >
-                              Bar
+                              {t('chart_type_bar')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
@@ -744,7 +729,7 @@ const ChartListPage: React.FC = () => {
                                 updateURL({ type: 'area', page: 1 });
                               }}
                             >
-                              Area
+                              {t('chart_type_area')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
@@ -754,7 +739,7 @@ const ChartListPage: React.FC = () => {
                                 updateURL({ type: 'scatter', page: 1 });
                               }}
                             >
-                              Scatter
+                              {t('chart_type_scatter')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
@@ -764,7 +749,7 @@ const ChartListPage: React.FC = () => {
                                 updateURL({ type: 'pie', page: 1 });
                               }}
                             >
-                              Pie
+                              {t('chart_type_pie')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
@@ -774,7 +759,7 @@ const ChartListPage: React.FC = () => {
                                 updateURL({ type: 'donut', page: 1 });
                               }}
                             >
-                              Donut
+                              {t('chart_gallery_donut_basic')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
@@ -784,7 +769,17 @@ const ChartListPage: React.FC = () => {
                                 updateURL({ type: 'cycleplot', page: 1 });
                               }}
                             >
-                              Cycle Plot
+                              {t('chart_type_cycleplot')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                              onClick={() => {
+                                setChartTypeFilter('heatmap');
+                                chartPagination.setPage(1);
+                                updateURL({ type: 'heatmap', page: 1 });
+                              }}
+                            >
+                              {t('chart_type_heatmap')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -792,7 +787,7 @@ const ChartListPage: React.FC = () => {
                     </div>
                     <div>
                       <Label htmlFor="datasetFilter" className="mb-1 block">
-                        Dataset
+                        {t('chart_card_dataset')}
                       </Label>
                       <div className="w-48">
                         <DropdownMenu>
@@ -804,11 +799,11 @@ const ChartListPage: React.FC = () => {
                             >
                               <span className="truncate font-semibold">
                                 {(() => {
-                                  if (datasetFilter === 'all') return 'All datasets';
+                                  if (datasetFilter === 'all') return t('dataset_list_filter_all');
                                   const selectedDataset = datasets?.find(
                                     d => d.id === datasetFilter
                                   );
-                                  return selectedDataset?.name || 'Select dataset';
+                                  return selectedDataset?.name || t('dataset_selection_title');
                                 })()}
                               </span>
                               <svg
@@ -836,7 +831,7 @@ const ChartListPage: React.FC = () => {
                                 updateURL({ dataset: 'all', page: 1 });
                               }}
                             >
-                              All datasets
+                              {t('dataset_list_filter_all')}
                             </DropdownMenuItem>
                             {Array.isArray(datasets) &&
                               datasets.map(dataset => (
@@ -864,7 +859,7 @@ const ChartListPage: React.FC = () => {
                         className="w-full h-11 border border-emerald-300 hover:border-emerald-500 rounded-2xl backdrop-blur-sm px-4 text-left flex items-center justify-between shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800"
                       >
                         <RotateCcw className="h-4 w-4 mr-3" />
-                        Reset
+                        {t('common_reset')}
                       </button>
                     </div>
                   </div>
