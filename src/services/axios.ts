@@ -12,7 +12,7 @@ const API_BASE_URL = getApiBackendUrl();
 // Tạo axios instance public (không cần authentication)
 export const axiosPublic: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,7 +21,7 @@ export const axiosPublic: AxiosInstance = axios.create({
 // Tạo axios instance private (cần authentication)
 export const axiosPrivate: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
   },

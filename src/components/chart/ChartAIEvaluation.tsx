@@ -8,6 +8,7 @@ import useLanguage from '@/hooks/useLanguage';
 interface ChartAIEvaluationProps {
   chartId: string;
   chartContainerId: string;
+  chartConfig?: any; // Chart configuration to extract selected columns
   onClose?: () => void;
   language?: string;
 }
@@ -15,6 +16,7 @@ interface ChartAIEvaluationProps {
 export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
   chartId,
   chartContainerId,
+  chartConfig,
   onClose,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -77,9 +79,7 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
   const handleEvaluate = async () => {
     // Block evaluation if error image is detected
     if (isErrorImage) {
-      setError(
-        'Không tìm thấy biểu đồ để đánh giá. Vui lòng tạo biểu đồ trước khi sử dụng chức năng AI.'
-      );
+      setError('No chart found to evaluate. Please create a chart before using the AI feature.');
       return;
     }
 
@@ -94,12 +94,43 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
         chartImage = await chartEvaluationService.captureChartScreenshot(chartContainerId);
       }
 
+      // Extract selected columns from chart config
+      const selectedColumns: string[] = [];
+      if (chartConfig) {
+        const chartType = chartConfig.type?.toLowerCase();
+
+        if (chartType === 'pie' || chartType === 'donut') {
+          // For pie/donut: labelKey and valueKey
+          if (chartConfig.config?.labelKey) selectedColumns.push(chartConfig.config.labelKey);
+          if (chartConfig.config?.valueKey) selectedColumns.push(chartConfig.config.valueKey);
+        } else if (chartConfig.axisConfigs) {
+          // For other charts: extract from axisConfigs
+          if (chartConfig.axisConfigs.xAxisKey)
+            selectedColumns.push(chartConfig.axisConfigs.xAxisKey);
+          if (
+            chartConfig.axisConfigs.yAxisKeys &&
+            Array.isArray(chartConfig.axisConfigs.yAxisKeys)
+          ) {
+            selectedColumns.push(...chartConfig.axisConfigs.yAxisKeys);
+          }
+          if (chartConfig.axisConfigs.cycleKey)
+            selectedColumns.push(chartConfig.axisConfigs.cycleKey);
+          if (chartConfig.axisConfigs.periodKey)
+            selectedColumns.push(chartConfig.axisConfigs.periodKey);
+          if (chartConfig.axisConfigs.valueKey)
+            selectedColumns.push(chartConfig.axisConfigs.valueKey);
+          if (chartConfig.axisConfigs.yAxisKey)
+            selectedColumns.push(chartConfig.axisConfigs.yAxisKey);
+        }
+      }
+
       // Call API
       const request: EvaluateChartRequest = {
         chartId,
         chartImage,
         questions: [],
         language: currentLanguage,
+        selectedColumns: selectedColumns.length > 0 ? selectedColumns : undefined,
       };
 
       const result: any = await chartEvaluationService.evaluateChart(request);
@@ -108,15 +139,17 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
       if (result?.data?.evaluation) {
         setEvaluation(result.data.evaluation);
       } else {
-        setError('Không nhận được kết quả đánh giá từ AI. Vui lòng thử lại.');
+        setError('No evaluation result received from AI. Please try again.');
       }
     } catch (err: any) {
       console.error('Evaluation error:', err);
-      const errorMessage = err.message || 'Có lỗi xảy ra khi đánh giá biểu đồ.';
+      const errorMessage = err.message || 'An error occurred while evaluating the chart.';
 
       // Check if it's a backend error
       if (errorMessage.includes('not available') || errorMessage.includes('404')) {
-        setError('Dịch vụ AI đánh giá chưa sẵn sàng. Vui lòng liên hệ quản trị viên để kích hoạt.');
+        setError(
+          'AI evaluation service is not ready. Please contact the administrator to activate it.'
+        );
       } else {
         setError(errorMessage);
       }
@@ -141,7 +174,7 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
           className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl"
         >
           <Sparkles className="w-5 h-5" />
-          <span className="font-medium">Đánh giá bằng AI</span>
+          <span className="font-medium">Evaluate with AI</span>
         </button>
       )}
 
@@ -153,7 +186,7 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-600 to-blue-600">
               <div className="flex items-center gap-3">
                 <Sparkles className="w-6 h-6 text-white" />
-                <h2 className="text-xl font-bold text-white">Đánh giá biểu đồ bằng AI</h2>
+                <h2 className="text-xl font-bold text-white">AI Chart Evaluation</h2>
               </div>
               <button
                 onClick={handleToggle}
@@ -169,15 +202,12 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
               <div>
                 {/* Chart image preview (shown before starting evaluation) */}
                 <div className="space-y-2 mb-4">
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                    Ảnh sẽ gửi cho AI
-                  </div>
                   <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3 min-h-[300px] flex items-center justify-center">
                     {isCapturing && (
                       <div className="flex flex-col items-center gap-3">
                         <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Đang chụp ảnh chart...
+                          Capturing chart image...
                         </p>
                       </div>
                     )}
@@ -201,12 +231,12 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
                 {isLoading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Đang phân tích...</span>
+                    <span>Analyzing...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    <span className="font-medium">Bắt đầu đánh giá</span>
+                    <span className="font-medium">Start Evaluation</span>
                   </>
                 )}
               </button>
@@ -216,7 +246,7 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
                 <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                   <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-red-800 dark:text-red-200">Lỗi</p>
+                    <p className="text-sm font-medium text-red-800 dark:text-red-200">Error</p>
                     <p className="text-sm text-red-600 dark:text-red-300 mt-1">{error}</p>
                   </div>
                 </div>
@@ -227,7 +257,7 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                     <CheckCircle className="w-5 h-5" />
-                    <span className="font-medium">Kết quả đánh giá</span>
+                    <span className="font-medium">Evaluation Result</span>
                   </div>
                   <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
                     <div
@@ -246,12 +276,12 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
               {!evaluation && !error && !isLoading && (
                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    💡 <strong>Gợi ý:</strong> AI sẽ phân tích biểu đồ của bạn dựa trên:
+                    💡 <strong>Tip:</strong> AI will analyze your chart based on:
                   </p>
                   <ul className="mt-2 text-sm text-blue-700 dark:text-blue-300 space-y-1 ml-6 list-disc">
-                    <li>Hình ảnh biểu đồ</li>
-                    <li>Cấu hình biểu đồ</li>
-                    <li>Các nguyên tắc trực quan hóa dữ liệu tốt nhất</li>
+                    <li>Chart image</li>
+                    <li>Chart configuration</li>
+                    <li>Best data visualization practices</li>
                   </ul>
                 </div>
               )}
