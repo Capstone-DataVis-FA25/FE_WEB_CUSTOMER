@@ -1,7 +1,7 @@
 import React, { useCallback, /* useMemo, */ useRef, useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
-import { Filter, Columns3, Rows3, Sigma, ChevronDown, Info } from 'lucide-react';
+import { Columns3, Rows3, Sigma, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PivotSummaryButton } from '@/pages/chart-creator/operations/pivot/PivotSummaryButton';
 import type { PivotDimension, PivotValue, DatasetColumnType } from '@/types/chart';

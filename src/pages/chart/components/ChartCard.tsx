@@ -4,7 +4,6 @@ import {
   LineChart,
   AreaChart,
   Database,
-  Eye,
   Trash2,
   Clock,
   RefreshCcw,

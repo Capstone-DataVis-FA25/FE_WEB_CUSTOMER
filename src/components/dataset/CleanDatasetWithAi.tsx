@@ -1,4 +1,5 @@
 import type React from 'react';
+
 import { useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -6,9 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Upload, AlertCircle, Sparkles, FileText, ChevronDown, ChevronUp } from 'lucide-react';
-import { cleanExcelAsync, cleanCsvAsync, getCleanResult } from '@/features/ai/aiAPI';
-import { io } from 'socket.io-client';
-import { cleanExcelUpload, cleanCsv } from '@/features/ai/aiAPI';
+import { cleanExcelAsync, cleanCsvAsync } from '@/features/ai/aiAPI';
 import type { CleanCsvRequest } from '@/features/ai/aiTypes';
 import { useTranslation } from 'react-i18next';
 import { useToastContext } from '@/components/providers/ToastProvider';
@@ -47,10 +46,11 @@ function CleanDatasetWithAI({
     // Cleaning rules checkboxes (default enabled)
     removeDuplicates: true,
     fixDataTypes: true,
-    handleMissingValues: true,
+    fillMissing: true,
+    removeMissing: false,
+    capOutliers: true,
     removeOutliers: false,
     standardizeFormats: true,
-    validateDomain: false,
     standardizeUnits: false,
   });
 
@@ -58,16 +58,29 @@ function CleanDatasetWithAI({
   const { showSuccess } = useToastContext();
 
   const handleOptionChange = (key: keyof typeof cleaningOptions, value: string | boolean) => {
-    setCleaningOptions(prev => ({
-      ...prev,
-      [key]: value,
-    }));
+    setCleaningOptions(prev => {
+      // Only allow one of fillMissing/removeMissing
+      if (key === 'fillMissing' && value) {
+        return { ...prev, fillMissing: true, removeMissing: false };
+      }
+      if (key === 'removeMissing' && value) {
+        return { ...prev, fillMissing: false, removeMissing: true };
+      }
+      // Only allow one of capOutliers/removeOutliers
+      if (key === 'capOutliers' && value) {
+        return { ...prev, capOutliers: true, removeOutliers: false };
+      }
+      if (key === 'removeOutliers' && value) {
+        return { ...prev, capOutliers: false, removeOutliers: true };
+      }
+      return { ...prev, [key]: value };
+    });
   };
 
   // Handle CSV text cleaning (ASYNC)
   const handleCleanCsv = async () => {
     if (!csvText.trim()) {
-      setError(t('ai_clean_error_enter_csv'));
+      setError('Please enter CSV data');
       return;
     }
     setError(null);
@@ -98,10 +111,11 @@ function CleanDatasetWithAI({
       if (resp.jobId) {
         onJobSubmit?.(resp.jobId, 'CSV Data', 'csv');
       } else {
-        setError(t('ai_clean_no_jobid'));
+        setError('Không nhận được jobId từ server');
       }
     } catch (err) {
-      setError(t('ai_clean_send_failed'));
+      console.error('Gửi job thất bại:', err);
+      setError('Gửi job thất bại');
     } finally {
       setIsLoading(false);
       onProcessingChange?.(false);
@@ -113,7 +127,7 @@ function CleanDatasetWithAI({
     const isExcel = file.name.match(/\.(xlsx?|xls)$/i);
     const isCsv = file.name.match(/\.csv$/i);
     if (!isExcel && !isCsv) {
-      setError(t('ai_clean_error_select_file'));
+      setError('Please select a valid Excel or CSV file (.xlsx, .xls, .csv)');
       return;
     }
     setError(null);
@@ -224,10 +238,11 @@ function CleanDatasetWithAI({
         <CardHeader className="pb-6">
           <CardTitle className="text-2xl text-gray-900 dark:text-white flex items-center gap-3">
             <Sparkles className="w-6 h-6 text-blue-600" />
-            {t('ai_clean_title')}
+            Clean Dataset with AI
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
-            {t('ai_clean_description')}
+            Use AI to automatically clean and standardize your data. Choose between Excel files or
+            CSV text.
           </CardDescription>
         </CardHeader>
 
@@ -246,7 +261,7 @@ function CleanDatasetWithAI({
             >
               <span className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <Sparkles className="w-4 h-4" />
-                {t('ai_clean_options_title')}
+                Cleaning Options
               </span>
               {showAdvancedOptions ? (
                 <ChevronUp className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -260,7 +275,7 @@ function CleanDatasetWithAI({
                 {/* Cleaning Rules Checkboxes */}
                 <div className="space-y-3">
                   <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {t('ai_clean_rules_title')}
+                    Cleaning Rules
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <label className="flex items-start gap-2 cursor-pointer group">
@@ -272,10 +287,10 @@ function CleanDatasetWithAI({
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          {t('ai_clean_rule_remove_duplicates')}
+                          Remove duplicates
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {t('ai_clean_rule_remove_duplicates_desc')}
+                          Remove exact duplicate rows
                         </p>
                       </div>
                     </label>
@@ -289,10 +304,10 @@ function CleanDatasetWithAI({
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          {t('ai_clean_rule_fix_types')}
+                          Fix data types
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {t('ai_clean_rule_fix_types_desc')}
+                          Convert strings to numbers
                         </p>
                       </div>
                     </label>
@@ -300,16 +315,50 @@ function CleanDatasetWithAI({
                     <label className="flex items-start gap-2 cursor-pointer group">
                       <input
                         type="checkbox"
-                        checked={cleaningOptions.handleMissingValues}
-                        onChange={e => handleOptionChange('handleMissingValues', e.target.checked)}
+                        checked={cleaningOptions.fillMissing}
+                        onChange={e => handleOptionChange('fillMissing', e.target.checked)}
                         className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          {t('ai_clean_rule_handle_missing')}
+                          Auto-fill missing values
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {t('ai_clean_rule_handle_missing_desc')}
+                          Fill missing cells with mean, mode, or most common date/category
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={cleaningOptions.removeMissing}
+                        onChange={e => handleOptionChange('removeMissing', e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          Remove rows with missing values
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Completely remove rows that have any empty cell
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={cleaningOptions.capOutliers}
+                        onChange={e => handleOptionChange('capOutliers', e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                          Auto-cap outliers
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Detect outliers and cap them to reasonable bounds
                         </p>
                       </div>
                     </label>
@@ -323,10 +372,10 @@ function CleanDatasetWithAI({
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          {t('ai_clean_rule_remove_outliers')}
+                          Remove rows with outliers
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {t('ai_clean_rule_remove_outliers_desc')}
+                          Completely remove rows that contain outlier values
                         </p>
                       </div>
                     </label>
@@ -340,27 +389,10 @@ function CleanDatasetWithAI({
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          {t('ai_clean_rule_standardize_formats')}
+                          Standardize formats
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {t('ai_clean_rule_standardize_formats_desc')}
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-2 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={cleaningOptions.validateDomain}
-                        onChange={e => handleOptionChange('validateDomain', e.target.checked)}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          {t('ai_clean_rule_validate_domain')}
-                        </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {t('ai_clean_rule_validate_domain_desc')}
+                          Normalize dates, phones, etc.
                         </p>
                       </div>
                     </label>
@@ -374,10 +406,10 @@ function CleanDatasetWithAI({
                       />
                       <div>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          {t('ai_clean_rule_standardize_units')}
+                          Standardize units
                         </span>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {t('ai_clean_rule_standardize_units_desc')}
+                          Convert to consistent units
                         </p>
                       </div>
                     </label>
@@ -394,19 +426,19 @@ function CleanDatasetWithAI({
                       htmlFor="thousandsSeparator"
                       className="text-sm font-medium text-gray-700 dark:text-gray-300"
                     >
-                      {t('ai_clean_thousands_separator')}
+                      Thousands Separator
                     </Label>
                     <Input
                       id="thousandsSeparator"
                       type="text"
                       value={cleaningOptions.thousandsSeparator}
                       onChange={e => handleOptionChange('thousandsSeparator', e.target.value)}
-                      placeholder={t('ai_clean_thousands_placeholder')}
+                      placeholder="None (default)"
                       maxLength={1}
                       className="bg-background"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {t('ai_clean_thousands_hint')}
+                      e.g., comma (,) or space ( )
                     </p>
                   </div>
 
@@ -415,19 +447,19 @@ function CleanDatasetWithAI({
                       htmlFor="decimalSeparator"
                       className="text-sm font-medium text-gray-700 dark:text-gray-300"
                     >
-                      {t('ai_clean_decimal_separator')}
+                      Decimal Separator
                     </Label>
                     <Input
                       id="decimalSeparator"
                       type="text"
                       value={cleaningOptions.decimalSeparator}
                       onChange={e => handleOptionChange('decimalSeparator', e.target.value)}
-                      placeholder={t('ai_clean_decimal_placeholder')}
+                      placeholder="Default: . (dot)"
                       maxLength={1}
                       className="bg-background"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {t('ai_clean_decimal_hint')}
+                      e.g., period (.) or comma (,)
                     </p>
                   </div>
 
@@ -436,29 +468,19 @@ function CleanDatasetWithAI({
                       htmlFor="notes"
                       className="text-sm font-medium text-gray-700 dark:text-gray-300"
                     >
-                      {t('ai_clean_notes')}
+                      Additional Notes
                     </Label>
                     <textarea
                       id="notes"
                       value={cleaningOptions.notes}
                       onChange={e => handleOptionChange('notes', e.target.value)}
-                      placeholder={t('ai_clean_notes_placeholder')}
-                      className="w-full min-h-[80px] p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y"
+                      placeholder="Optional: Add custom cleaning instructions..."
+                      className="w-full min-h-[60px] p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {t('ai_clean_notes_hint')}
+                      Provide any specific cleaning requirements
                     </p>
                   </div>
-                </div>
-
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
-                  <p className="text-xs text-blue-800 dark:text-blue-200">
-                    <strong>{t('ai_clean_preview')}</strong>{' '}
-                    {t('ai_clean_preview_text', {
-                      thousands: cleaningOptions.thousandsSeparator || ',',
-                      decimal: cleaningOptions.decimalSeparator || '.',
-                    })}
-                  </p>
                 </div>
               </div>
             )}
@@ -552,7 +574,7 @@ function CleanDatasetWithAI({
                 className="w-full px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
-                {isLoading ? t('ai_clean_button_cleaning') : t('ai_clean_button_clean_file')}
+                {isLoading ? 'Cleaning with AI...' : 'Clean File with AI'}
               </Button>
 
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
@@ -565,10 +587,12 @@ function CleanDatasetWithAI({
                     <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                       {cleaningOptions.removeDuplicates && <li>• Remove duplicate rows</li>}
                       {cleaningOptions.fixDataTypes && <li>• Fix data types</li>}
-                      {cleaningOptions.handleMissingValues && <li>• Handle missing values</li>}
-                      {cleaningOptions.removeOutliers && <li>• Remove or cap outliers</li>}
+                      {cleaningOptions.fillMissing && <li>• Fill all missing field</li>}
+                      {cleaningOptions.removeMissing && <li>• Remove all missing field</li>}
+                      {cleaningOptions.capOutliers && <li>• Auto-cap outliers</li>}
+                      {cleaningOptions.removeOutliers && <li>• Remove rows with outliers</li>}
                       {cleaningOptions.standardizeFormats && <li>• Standardize formats</li>}
-                      {cleaningOptions.validateDomain && <li>• Validate domain constraints</li>}
+
                       {cleaningOptions.standardizeUnits && <li>• Standardize units</li>}
                     </ul>
                   </div>
@@ -583,17 +607,19 @@ function CleanDatasetWithAI({
                   htmlFor="csvInput"
                   className="text-lg font-semibold text-gray-900 dark:text-white"
                 >
-                  {t('ai_clean_paste_csv')}
+                  Paste your CSV data
                 </Label>
                 <textarea
                   id="csvInput"
                   value={csvText}
                   onChange={e => setCsvText(e.target.value)}
-                  placeholder={t('ai_clean_csv_placeholder')}
+                  placeholder="ID,Name,Age,Salary&#10;1,John Doe,28,1234.56&#10;2,Jane Smith,34,2890.75"
                   className="w-full min-h-[300px] p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl font-mono text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y focus:border-blue-200 dark:focus:border-blue-800 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isLoading || isProcessing}
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('ai_clean_csv_hint')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Paste your CSV data with headers in the first row
+                </p>
               </div>
 
               <Button
@@ -602,7 +628,7 @@ function CleanDatasetWithAI({
                 className="w-full px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
-                {isLoading ? t('ai_clean_button_cleaning') : t('ai_clean_button_clean')}
+                {isLoading ? 'Cleaning with AI...' : 'Clean CSV with AI'}
               </Button>
 
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
@@ -615,10 +641,11 @@ function CleanDatasetWithAI({
                     <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                       {cleaningOptions.removeDuplicates && <li>• Remove duplicate rows</li>}
                       {cleaningOptions.fixDataTypes && <li>• Fix data types</li>}
-                      {cleaningOptions.handleMissingValues && <li>• Handle missing values</li>}
+                      {cleaningOptions.fillMissing && <li>• Auto-fill missing values</li>}
+                      {cleaningOptions.removeMissing && <li>• Remove rows with missing values</li>}
                       {cleaningOptions.removeOutliers && <li>• Remove or cap outliers</li>}
                       {cleaningOptions.standardizeFormats && <li>• Standardize formats</li>}
-                      {cleaningOptions.validateDomain && <li>• Validate domain constraints</li>}
+
                       {cleaningOptions.standardizeUnits && <li>• Standardize units</li>}
                     </ul>
                   </div>
