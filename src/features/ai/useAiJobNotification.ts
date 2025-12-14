@@ -8,6 +8,8 @@ const SOCKET_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 interface AiJob {
   jobId: string;
   time: string;
+  type?: 'clean-dataset' | 'forecast-creation' | 'forecast-analysis';
+  forecastId?: string;
 }
 
 export function useAiJobNotification(userId?: string | number) {
@@ -32,20 +34,59 @@ export function useAiJobNotification(userId?: string | number) {
     socket.on('notification:created', noti => {
       console.log('[Socket][Bell] notification:created', noti);
 
-      // Only handle DONE notification - show toast
+      // Only handle DONE notifications - add to bell notifications
       if (noti.type === 'clean-dataset-done' && noti.userId === String(userId)) {
-        console.log('[Socket][Bell] ✅ Job completed, adding to pending jobs:', noti.jobId);
+        console.log(
+          '[Socket][Bell] ✅ Dataset cleaning completed, adding to pending jobs:',
+          noti.jobId
+        );
         setPendingJobs(jobs => [
           ...jobs,
-          { jobId: noti.jobId, time: noti.time || new Date().toISOString() },
+          { jobId: noti.jobId, time: noti.time || new Date().toISOString(), type: 'clean-dataset' },
         ]);
       }
 
-      // Ignore progress notifications here - handled by useAiCleaningProgress
-      if (noti.type === 'clean-dataset-progress') {
+      // Handle forecast creation completion
+      if (noti.type === 'forecast-creation-done' && noti.userId === String(userId)) {
         console.log(
-          '[Socket][Bell] ⏩ Ignoring progress notification (handled by useAiCleaningProgress)'
+          '[Socket][Bell] ✅ Forecast creation completed, adding to pending jobs:',
+          noti.jobId
         );
+        setPendingJobs(jobs => [
+          ...jobs,
+          {
+            jobId: noti.jobId,
+            time: noti.time || new Date().toISOString(),
+            type: 'forecast-creation',
+            forecastId: noti.forecastId,
+          },
+        ]);
+      }
+
+      // Handle forecast analysis completion
+      if (noti.type === 'forecast-analysis-done' && noti.userId === String(userId)) {
+        console.log(
+          '[Socket][Bell] ✅ Forecast analysis completed, adding to pending jobs:',
+          noti.jobId
+        );
+        setPendingJobs(jobs => [
+          ...jobs,
+          {
+            jobId: noti.jobId,
+            time: noti.time || new Date().toISOString(),
+            type: 'forecast-analysis',
+            forecastId: noti.forecastId,
+          },
+        ]);
+      }
+
+      // Ignore progress notifications here - handled by progress hooks
+      if (
+        noti.type === 'clean-dataset-progress' ||
+        noti.type === 'forecast-creation-started' ||
+        noti.type === 'forecast-analysis-started'
+      ) {
+        console.log('[Socket][Bell] ⏩ Ignoring progress notification (handled by progress hooks)');
       }
     });
     socket.on('disconnect', () => {

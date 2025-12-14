@@ -486,7 +486,7 @@ const DatasetDetailPage: React.FC = () => {
           t('dataset_deleteSuccess', 'Dataset Deleted'),
           t(
             'dataset_deleteSuccessMessage',
-            `Dataset "${currentDataset.name}" has been deleted successfully`
+            `Dataset "${currentDataset.name}" and all associated forecasts have been deleted successfully`
           )
         );
       } catch (error: unknown) {

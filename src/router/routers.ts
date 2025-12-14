@@ -56,6 +56,8 @@ const Routers = {
   CHART_CREATOR: '/chart-creator',
   CHART_EDITOR: '/chart-editor',
   CHART_HISTORY_VIEW: '/chart-history/view',
+  FORECAST: '/forecast',
+  FORECAST_DETAIL: '/forecast/:id',
 
   // Privacy and Terms
   TERMS_OF_SERVICE: '/terms-of-service',
