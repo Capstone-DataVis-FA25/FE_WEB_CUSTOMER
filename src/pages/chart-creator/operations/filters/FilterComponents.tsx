@@ -22,6 +22,7 @@ import {
   validateTextCondition,
 } from '@/utils/filterUtils';
 import type { DatasetColumnType, DatasetFilterCondition, DatasetFilterColumn } from '@/types/chart';
+import { t } from 'i18next';
 
 export type DateGranularity = 'year' | 'year_month' | 'date' | 'datetime';
 

@@ -1210,6 +1210,7 @@ const ChartEditorPage: React.FC = () => {
           <ChartAIEvaluation
             chartId={chartIdFromUrl}
             chartContainerId="chart-display-section"
+            chartConfig={chartConfig}
             language={t('language_code', 'vi')}
           />
         </div>

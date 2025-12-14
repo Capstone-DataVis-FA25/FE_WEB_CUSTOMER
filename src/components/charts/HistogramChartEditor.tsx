@@ -17,7 +17,7 @@ interface HistogramChartEditorProps {
 const HistogramChartEditor: React.FC<HistogramChartEditorProps> = ({ processedHeaders }) => {
   const { t } = useTranslation();
   const { currentChartType } = useChartEditorRead();
-  const [isDataColumnCollapsed, setIsDataColumnCollapsed] = useState(false);
+  const [isDataColumnCollapsed] = useState(false);
   const [isBinConfigCollapsed, setIsBinConfigCollapsed] = useState(true);
   const [isAdvancedCollapsed, setIsAdvancedCollapsed] = useState(true);
 

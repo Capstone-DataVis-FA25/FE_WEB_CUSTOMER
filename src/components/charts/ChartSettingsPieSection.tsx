@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { SubPieDonutChartConfig } from '@/types/chart';
 import { Card, CardHeader, CardContent } from '../ui/card';
-import { ChevronDown, ChevronUp, Sliders, TrendingUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
 import { Label } from '../ui/label';
 import { useChartEditor, useChartEditorActions } from '@/features/chartEditor';
 import { useAppSelector } from '@/store/hooks';

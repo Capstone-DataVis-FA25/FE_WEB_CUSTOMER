@@ -52,6 +52,10 @@ export const defaultSubHistogramConfig: SubHistogramChartConfig = {
   normalize: false,
   barColor: '#3b82f6',
   showTooltip: true,
+  showLegend: false,
+  enableZoom: false,
+  enablePan: false,
+  zoomExtent: 0,
 };
 const defaultBaseChartConfig: BaseChartConfig = {
   width: 800,

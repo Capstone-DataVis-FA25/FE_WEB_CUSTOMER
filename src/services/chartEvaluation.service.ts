@@ -6,6 +6,7 @@ export interface EvaluateChartRequest {
   chartImage: string; // base64 encoded image
   questions?: string[];
   language?: string;
+  selectedColumns?: string[];
 }
 
 export interface EvaluateChartResponse {
