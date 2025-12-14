@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Globe,
   Palette,
+  Clock,
 } from 'lucide-react';
 import { FadeIn, SlideInDown, AnimatedButton, ScaleIn } from '../../theme/animation';
 import useNavigation from '@/hooks/useNavigation';
@@ -21,6 +22,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { User } from '@/features/auth/authType';
 import Routers from '@/router/routers';
 import { useAiJobNotification } from '@/features/ai/useAiJobNotification';
+import { useForecastCreationProgress } from '@/features/forecast/useForecastCreationProgress';
+import { useForecastAnalysisProgress } from '@/features/forecast/useForecastAnalysisProgress';
+import { useAiCleaningProgress } from '@/features/ai/useAiCleaningProgress';
 
 interface HeaderProps {
   isAuthenticated?: boolean;
@@ -46,12 +50,18 @@ const Header: React.FC<HeaderProps> = ({
   const resourcesCloseTimerRef = useRef<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const resourcesDropdownRef = useRef<HTMLDivElement>(null);
+  const aiDropdownRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
   const navigate = useNavigate();
 
   const { goToAuth } = useNavigation();
   const userId = user?.id;
-  const { pendingJobs, loadingJobId, handleJobClick } = useAiJobNotification(userId);
+  const { pendingJobs, loadingJobId, handleJobClick, setPendingJobs } =
+    useAiJobNotification(userId);
+  // Get progress hooks to get names for notifications
+  const { activeJobs: creationJobs } = useForecastCreationProgress(userId);
+  const { activeJobs: analysisJobs } = useForecastAnalysisProgress(userId);
+  const { activeJobs: cleaningJobs } = useAiCleaningProgress(userId);
 
   const navItems = [
     { name: t('navigation_home'), href: '/' },
@@ -59,6 +69,7 @@ const Header: React.FC<HeaderProps> = ({
       ? [
           { name: 'Datasets', href: `${Routers.WORKSPACE_DATASETS}` },
           { name: 'Charts', href: `${Routers.WORKSPACE_CHARTS}` },
+          { name: 'Forecast', href: `${Routers.FORECAST}` },
         ]
       : []),
     { name: t('navigation_pricing'), href: '/pricing' },
@@ -87,6 +98,9 @@ const Header: React.FC<HeaderProps> = ({
         !resourcesDropdownRef.current.contains(event.target as Node)
       ) {
         setIsResourcesDropdownOpen(false);
+      }
+      if (aiDropdownRef.current && !aiDropdownRef.current.contains(event.target as Node)) {
+        setShowAiDropdown(false);
       }
     };
 
@@ -213,9 +227,9 @@ const Header: React.FC<HeaderProps> = ({
               {isAuthenticated ? (
                 <FadeIn delay={0.3} className="flex items-center space-x-3">
                   {/* AI Cleaning Notification Bell */}
-                  <div className="relative">
+                  <div className="relative" ref={aiDropdownRef}>
                     <AnimatedButton
-                      className="relative p-2.5 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 ring-1 ring-gray-200/50 dark:ring-gray-700/50 bg-white/50 dark:bg-gray-800/50 shadow-sm"
+                      className="relative p-2.5 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 ring-1 ring-gray-200/50 dark:ring-gray-700/50 bg-white/50 dark:bg-gray-800/50 shadow-sm cursor-pointer"
                       onClick={() => setShowAiDropdown(v => !v)}
                       aria-label="AI Job Notifications"
                     >
@@ -227,49 +241,129 @@ const Header: React.FC<HeaderProps> = ({
                       )}
                     </AnimatedButton>
                     {showAiDropdown && (
-                      <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 shadow-lg rounded-xl z-50 border border-gray-200 dark:border-gray-700">
-                        {pendingJobs.length === 0 ? (
-                          <div className="p-4 text-center text-gray-400 text-sm">
-                            {t('notification_empty', 'Không có thông báo nào')}
-                          </div>
-                        ) : (
-                          <>
+                      <SlideInDown className="absolute right-0 mt-2 w-96 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-2xl rounded-2xl z-50 border border-gray-200/50 dark:border-gray-700/50 ring-1 ring-black/5 dark:ring-white/5 overflow-hidden">
+                        {/* Header */}
+                        <div className="px-5 pt-4 pb-3 border-b border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-900/20 dark:to-purple-900/20">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                              <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                              {t('notification_new', 'Thông báo mới')}
+                            </h3>
                             {pendingJobs.length > 0 && (
-                              <>
-                                <div className="px-4 pt-3 pb-1 text-xs font-semibold text-blue-500">
-                                  {t('notification_new', 'Thông báo mới')}
-                                </div>
-                                <ul>
-                                  {pendingJobs.map(job => (
-                                    <li
-                                      key={job.jobId}
-                                      className="p-3 border-b last:border-b-0 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm flex items-center"
-                                      onClick={async () => {
-                                        await handleJobClick(job.jobId, data => {
-                                          navigate('/datasets/create', {
-                                            state: { cleanedData: data, jobId: job.jobId },
-                                          });
-                                          setShowAiDropdown(false);
-                                        });
-                                      }}
-                                    >
-                                      {loadingJobId === job.jobId ? (
-                                        <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2" />
-                                      ) : (
-                                        <Bell className="w-4 h-4 text-blue-500 mr-2" />
-                                      )}
-                                      <span>
-                                        {t('notification_clean_ready', 'Dữ liệu đã clean sẵn sàng')}{' '}
-                                        {job.time ? `(${job.time.slice(11, 19)})` : ''}
-                                      </span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </>
+                              <span className="px-2 py-0.5 text-xs font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full">
+                                {pendingJobs.length}
+                              </span>
                             )}
-                          </>
-                        )}
-                      </div>
+                          </div>
+                        </div>
+
+                        {/* Notifications List */}
+                        <div className="max-h-96 overflow-y-auto">
+                          {pendingJobs.length === 0 ? (
+                            <div className="p-8 text-center">
+                              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700/50 mb-3">
+                                <Bell className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+                              </div>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                                {t('notification_empty', 'Không có thông báo nào')}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="p-2">
+                              {/* Reverse order: newest first */}
+                              {[...pendingJobs].reverse().map((job, index) => {
+                                const getNotificationText = () => {
+                                  if (job.type === 'forecast-creation') {
+                                    // Get forecast name from progress hook
+                                    const progressJob = creationJobs.find(
+                                      j =>
+                                        j.jobId === job.jobId ||
+                                        (job.forecastId && j.forecastId === job.forecastId)
+                                    );
+                                    const name =
+                                      progressJob?.forecastName ||
+                                      t('forecast_creation_default_name', 'New Forecast');
+                                    return `${name} - ${t('notification_forecast_ready', 'Forecast đã sẵn sàng')}`;
+                                  }
+                                  if (job.type === 'forecast-analysis') {
+                                    // Get forecast name from progress hook
+                                    const progressJob = analysisJobs.find(
+                                      j =>
+                                        j.jobId === job.jobId ||
+                                        (job.forecastId && j.forecastId === job.forecastId)
+                                    );
+                                    const name =
+                                      progressJob?.forecastName ||
+                                      t('forecast_analysis_job_title', 'Forecast Analysis');
+                                    return `${name} - ${t('notification_forecast_analysis_ready', 'Phân tích forecast đã sẵn sàng')}`;
+                                  }
+                                  // For cleaning, get file name from progress hook
+                                  const progressJob = cleaningJobs.find(j => j.jobId === job.jobId);
+                                  const fileName =
+                                    progressJob?.fileName ||
+                                    t('notification_clean_ready', 'Dữ liệu đã clean sẵn sàng');
+                                  return `${fileName} - ${t('notification_clean_ready', 'Dữ liệu đã clean sẵn sàng')}`;
+                                };
+
+                                const notificationText = getNotificationText();
+
+                                const handleClick = async () => {
+                                  if (job.type === 'forecast-creation' && job.forecastId) {
+                                    navigate(`/forecast/${job.forecastId}`);
+                                    setPendingJobs(jobs => jobs.filter(j => j.jobId !== job.jobId));
+                                    setShowAiDropdown(false);
+                                  } else if (job.type === 'forecast-analysis' && job.forecastId) {
+                                    navigate(`/forecast/${job.forecastId}`);
+                                    setPendingJobs(jobs => jobs.filter(j => j.jobId !== job.jobId));
+                                    setShowAiDropdown(false);
+                                  } else {
+                                    await handleJobClick(job.jobId, data => {
+                                      navigate('/datasets/create', {
+                                        state: { cleanedData: data, jobId: job.jobId },
+                                      });
+                                      setShowAiDropdown(false);
+                                    });
+                                  }
+                                };
+
+                                const formatTime = (timeStr?: string) => {
+                                  if (!timeStr) return '';
+                                  const time = timeStr.slice(11, 19);
+                                  return time;
+                                };
+
+                                return (
+                                  <div
+                                    key={job.jobId}
+                                    onClick={handleClick}
+                                    className="group relative mb-2 p-3 rounded-lg border border-gray-200/50 dark:border-gray-700/50 bg-white dark:bg-gray-800 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      {/* Content - No icon */}
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                          {notificationText}
+                                        </p>
+                                        {job.time && (
+                                          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                                            <Clock className="w-3 h-3" />
+                                            <span>{formatTime(job.time)}</span>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Loading indicator */}
+                                      {loadingJobId === job.jobId && (
+                                        <span className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent ml-2 flex-shrink-0" />
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </SlideInDown>
                     )}
                   </div>
 

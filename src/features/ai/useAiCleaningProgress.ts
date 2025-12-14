@@ -13,6 +13,7 @@ export interface CleaningJob {
   status: 'processing' | 'done' | 'error';
   startTime: string;
   type: 'csv' | 'excel';
+  hasReceivedUpdate?: boolean; // Track if job has received WebSocket update in this session
 }
 
 export function useAiCleaningProgress(userId?: string | number) {
@@ -20,7 +21,16 @@ export function useAiCleaningProgress(userId?: string | number) {
     const saved = localStorage.getItem('ai-cleaning-jobs');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const jobs = JSON.parse(saved);
+        // Only keep jobs that are still processing (running)
+        const runningJobs = jobs.filter((job: CleaningJob) => job.status === 'processing');
+        // Mark restored jobs as not having received update yet (progress bar will be hidden)
+        const restoredJobs = runningJobs.map(job => ({ ...job, hasReceivedUpdate: false }));
+        // Clear completed/error jobs from localStorage
+        if (runningJobs.length !== jobs.length) {
+          localStorage.setItem('ai-cleaning-jobs', JSON.stringify(restoredJobs));
+        }
+        return restoredJobs;
       } catch (err) {
         console.error('[useAiCleaningProgress] Failed to parse saved jobs:', err);
         return [];
@@ -60,7 +70,7 @@ export function useAiCleaningProgress(userId?: string | number) {
           const existing = jobs.find(j => j.jobId === jobId);
 
           if (existing) {
-            // Update existing job progress
+            // Update existing job progress - mark as having received update
             return jobs.map(j =>
               j.jobId === jobId
                 ? {
@@ -69,6 +79,7 @@ export function useAiCleaningProgress(userId?: string | number) {
                     completed,
                     total,
                     status: 'processing' as const,
+                    hasReceivedUpdate: true, // Mark as updated via WebSocket
                   }
                 : j
             );
@@ -78,13 +89,16 @@ export function useAiCleaningProgress(userId?: string | number) {
               ...jobs,
               {
                 jobId,
-                fileName: notification.fileName || 'Unknown file',
+                fileName:
+                  notification.fileName ||
+                  `File - ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`,
                 progress: progress || Math.round((completed / total) * 100),
                 completed,
                 total,
                 status: 'processing' as const,
                 startTime: new Date().toISOString(),
                 type: notification.jobType || 'csv',
+                hasReceivedUpdate: true, // New job from WebSocket, show progress
               },
             ];
           }
@@ -123,7 +137,12 @@ export function useAiCleaningProgress(userId?: string | number) {
 
   // Add a new job manually (when submitting)
   const addJob = useCallback(
-    (job: Omit<CleaningJob, 'progress' | 'completed' | 'total' | 'status' | 'startTime'>) => {
+    (
+      job: Omit<
+        CleaningJob,
+        'progress' | 'completed' | 'total' | 'status' | 'startTime' | 'hasReceivedUpdate'
+      >
+    ) => {
       setActiveJobs(jobs => [
         ...jobs,
         {
@@ -133,6 +152,7 @@ export function useAiCleaningProgress(userId?: string | number) {
           total: 100,
           status: 'processing',
           startTime: new Date().toISOString(),
+          hasReceivedUpdate: true, // Newly created job, show progress
         },
       ]);
     },

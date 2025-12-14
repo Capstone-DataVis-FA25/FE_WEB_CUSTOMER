@@ -10,6 +10,7 @@ import { PageTransition } from '../../theme/animation';
 // import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/useAuth';
 import Routers from '@/router/routers';
+import { GlobalProgressBar } from '../shared/GlobalProgressBar';
 
 interface CustomerLayoutProps {
   children?: React.ReactNode;
@@ -70,6 +71,9 @@ const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
 
       {/* Chatbox */}
       <SimpleChatBox />
+
+      {/* Global Progress Bar - Shows all jobs (cleaning, forecast creation, forecast analysis) on all pages */}
+      {isAuthenticated && <GlobalProgressBar />}
 
       {/* Footer */}
       {!isFullScreen && <Footer />}

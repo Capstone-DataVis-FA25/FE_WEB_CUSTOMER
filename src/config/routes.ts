@@ -544,6 +544,33 @@ export const protectedRoutes: RouteConfig[] = [
     },
   },
   {
+    path: Routers.FORECAST,
+    name: 'forecast',
+    component: 'ForecastPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Time Series Forecast',
+      description: 'Generate AI-powered time series predictions',
+    },
+  },
+  {
+    path: Routers.FORECAST_DETAIL,
+    name: 'forecast-detail',
+    component: 'ForecastDetailPage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Forecast Details',
+      description: 'View detailed forecast results and analysis',
+      hideFromNav: true,
+    },
+  },
+  {
     path: Routers.CHART_CREATOR,
     name: 'chart-creator',
     component: 'ChartCreatorPage',

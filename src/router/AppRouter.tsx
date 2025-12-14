@@ -47,6 +47,8 @@ const componentMap = {
   PieChartEditorDemo: lazy(() => import('../components/charts/page.example/PieChartEditorDemo')),
   TermsOfServicePage: lazy(() => import('../pages/privacy-terms/TermsOfServicePage')),
   PrivacyPolicyPage: lazy(() => import('../pages/privacy-terms/PrivacyPolicyPage')),
+  ForecastPage: lazy(() => import('../pages/forecast/ForecastPage')),
+  ForecastDetailPage: lazy(() => import('../pages/forecast/ForecastDetailPage')),
 };
 
 // ================================
