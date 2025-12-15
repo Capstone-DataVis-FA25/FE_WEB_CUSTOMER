@@ -4,33 +4,19 @@ import type { ChartNote, CreateChartNoteRequest, UpdateChartNoteRequest } from '
 const API_BASE = '/chart-notes';
 
 // Helper function to transform BE response to FE format
-const transformChartNote = (note: {
-  id: string;
-  chartId: string;
-  content: string;
-  timestamp?: string;
-  author: {
-    id: string;
-    name: string;
-    avatar?: string;
-    color?: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}): ChartNote => {
+const transformChartNote = (note: ChartNote): ChartNote => {
   return {
     id: note.id,
     chartId: note.chartId,
     content: note.content,
-    timestamp: note.timestamp || note.createdAt,
+    isCompleted: note.isCompleted,
     author: {
       id: note.author.id,
-      name: note.author.name,
-      avatar: note.author.avatar,
-      color: note.author.color,
+      email: note.author.email,
+      firstName: note.author.firstName,
+      lastName: note.author.lastName,
     },
     createdAt: note.createdAt,
-    updatedAt: note.updatedAt,
   };
 };
 
@@ -38,11 +24,7 @@ const transformChartNote = (note: {
 export const getChartNotes = async (chartId: string): Promise<ChartNote[]> => {
   const response = await axiosPrivate.get(`${API_BASE}/chart/${chartId}`);
   // Handle wrapped API response format
-  console.log('response getChartNotes: ', response);
-  const data =
-    response.data && typeof response.data === 'object' && 'data' in response.data
-      ? response.data.data.data
-      : response.data.data.data;
+  const data = response.data?.data?.data;
 
   // Transform array of notes
   return Array.isArray(data) ? data.map(transformChartNote) : [];
@@ -52,10 +34,7 @@ export const getChartNotes = async (chartId: string): Promise<ChartNote[]> => {
 export const getChartNoteById = async (id: string): Promise<ChartNote> => {
   const response = await axiosPrivate.get(`${API_BASE}/${id}`);
   // Handle wrapped API response format
-  const data =
-    response.data && typeof response.data === 'object' && 'data' in response.data
-      ? response.data.data
-      : response.data;
+  const data = response.data?.data?.data;
 
   return transformChartNote(data);
 };
@@ -64,10 +43,7 @@ export const getChartNoteById = async (id: string): Promise<ChartNote> => {
 export const createChartNote = async (data: CreateChartNoteRequest): Promise<ChartNote> => {
   const response = await axiosPrivate.post(API_BASE, data);
   // Handle wrapped API response format
-  const responseData =
-    response.data && typeof response.data === 'object' && 'data' in response.data
-      ? response.data.data.data
-      : response.data.data.data;
+  const responseData = response.data?.data?.data;
 
   return transformChartNote(responseData);
 };
@@ -79,10 +55,7 @@ export const updateChartNote = async (
 ): Promise<ChartNote> => {
   const response = await axiosPrivate.patch(`${API_BASE}/${id}`, data);
   // Handle wrapped API response format
-  const responseData =
-    response.data && typeof response.data === 'object' && 'data' in response.data
-      ? response.data.data.data
-      : response.data.data.data;
+  const responseData = response.data?.data?.data;
 
   return transformChartNote(responseData);
 };
@@ -90,4 +63,13 @@ export const updateChartNote = async (
 // Delete note
 export const deleteChartNote = async (id: string): Promise<void> => {
   await axiosPrivate.delete(`${API_BASE}/${id}`);
+};
+
+// Toggle note completed status
+export const toggleChartNoteCompleted = async (id: string): Promise<ChartNote> => {
+  const response = await axiosPrivate.patch(`${API_BASE}/${id}/toggle-completed`);
+  // Handle wrapped API response format
+  const responseData = response.data?.data?.data;
+
+  return transformChartNote(responseData);
 };

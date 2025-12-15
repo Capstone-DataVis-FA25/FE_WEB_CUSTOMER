@@ -1,9 +1,9 @@
 import { axiosPrivate } from '@/services/axios';
 import { API_ENDPOINTS } from '@/constants/endpoints';
-import type { Chart, CreateChartRequest, UpdateChartRequest } from './chartTypes';
+import type { ChartAPI, ChartRequest } from './chartTypes';
 
 // Get all charts for authenticated user
-export const getAllCharts = async (): Promise<Chart[]> => {
+export const getAllCharts = async (): Promise<ChartAPI[]> => {
   const response = await axiosPrivate.get(API_ENDPOINTS.CHARTS.GET_ALL);
   // Handle wrapped API response format
   if (response.data && typeof response.data === 'object' && 'data' in response.data) {
@@ -13,7 +13,7 @@ export const getAllCharts = async (): Promise<Chart[]> => {
 };
 
 // Get chart by ID
-export const getChartById = async (id: string): Promise<Chart> => {
+export const getChartById = async (id: string): Promise<ChartAPI> => {
   const response = await axiosPrivate.get(API_ENDPOINTS.CHARTS.GET_BY_ID(id));
   // Handle wrapped API response format
   if (response.data && typeof response.data === 'object' && 'data' in response.data) {
@@ -23,7 +23,7 @@ export const getChartById = async (id: string): Promise<Chart> => {
 };
 
 // Create new chart
-export const createChart = async (data: CreateChartRequest): Promise<Chart> => {
+export const createChart = async (data: ChartRequest): Promise<ChartAPI> => {
   const response = await axiosPrivate.post(API_ENDPOINTS.CHARTS.CREATE, data);
   // Handle wrapped API response format
   if (response.data && typeof response.data === 'object' && 'data' in response.data) {
@@ -33,7 +33,7 @@ export const createChart = async (data: CreateChartRequest): Promise<Chart> => {
 };
 
 // Update chart
-export const updateChart = async (id: string, data: UpdateChartRequest): Promise<Chart> => {
+export const updateChart = async (id: string, data: Partial<ChartRequest>): Promise<ChartAPI> => {
   const response = await axiosPrivate.patch(API_ENDPOINTS.CHARTS.UPDATE(id), data);
   // Handle wrapped API response format
   if (response.data && typeof response.data === 'object' && 'data' in response.data) {

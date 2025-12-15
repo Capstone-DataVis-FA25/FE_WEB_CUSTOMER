@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 import { SlideInRight } from '@/theme/animation';
 
@@ -14,6 +15,7 @@ export interface ToastProps {
 }
 
 const Toast: React.FC<ToastProps> = ({ id, type, title, message, duration = 5000, onClose }) => {
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(true);
 
   const handleClose = useCallback(() => {
@@ -113,7 +115,7 @@ const Toast: React.FC<ToastProps> = ({ id, type, title, message, duration = 5000
         <button
           onClick={handleClose}
           className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-all hover:rotate-90 duration-200"
-          aria-label="Close notification"
+          aria-label={t('accessibility.closeNotification', 'Close notification')}
         >
           <X className="h-4 w-4 text-gray-500 dark:text-gray-400" />
         </button>

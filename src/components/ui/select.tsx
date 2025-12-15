@@ -15,6 +15,7 @@ export interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButto
 
 export interface SelectContentProps {
   children: React.ReactNode;
+  className?: string;
 }
 
 export interface SelectItemProps {
@@ -24,6 +25,7 @@ export interface SelectItemProps {
 
 export interface SelectValueProps {
   placeholder?: string;
+  options?: Array<{ value: string; label: string }>;
 }
 
 const SelectContext = React.createContext<{
@@ -33,6 +35,11 @@ const SelectContext = React.createContext<{
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   triggerRef?: React.RefObject<HTMLButtonElement | null>;
   contentRef?: React.RefObject<HTMLDivElement | null>;
+  itemsMap?: React.MutableRefObject<Map<string, string>>;
+  registerItem?: (value: string, label: string) => void;
+  unregisterItem?: (value: string) => void;
+  itemsRef?: React.MutableRefObject<Map<string, React.RefObject<HTMLDivElement>>>;
+  registerItemRef?: (value: string, ref: React.RefObject<HTMLDivElement>) => void;
 }>({
   open: false,
   setOpen: () => {},
@@ -43,6 +50,19 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
+  const itemsMap = React.useRef(new Map<string, string>());
+  const itemsRef = React.useRef(new Map<string, React.RefObject<HTMLDivElement>>());
+
+  const registerItem = React.useCallback((v: string, label: string) => {
+    itemsMap.current.set(v, label);
+  }, []);
+  const unregisterItem = React.useCallback((v: string) => {
+    itemsMap.current.delete(v);
+    itemsRef.current.delete(v);
+  }, []);
+  const registerItemRef = React.useCallback((v: string, ref: React.RefObject<HTMLDivElement>) => {
+    itemsRef.current.set(v, ref);
+  }, []);
 
   // Close dropdown when clicking outside of the Select container or content
   React.useEffect(() => {
@@ -63,7 +83,21 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
   }, [open]);
 
   return (
-    <SelectContext.Provider value={{ value, onValueChange, open, setOpen, triggerRef, contentRef }}>
+    <SelectContext.Provider
+      value={{
+        value,
+        onValueChange,
+        open,
+        setOpen,
+        triggerRef,
+        contentRef,
+        itemsMap,
+        registerItem,
+        unregisterItem,
+        itemsRef,
+        registerItemRef,
+      }}
+    >
       <div className="relative" ref={containerRef}>
         {children}
       </div>
@@ -72,10 +106,16 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
 };
 
 const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, children, onClick, ...props }, ref) => {
     const { setOpen, open, triggerRef } = React.useContext(SelectContext);
 
     React.useImperativeHandle(ref, () => (triggerRef?.current ?? null) as HTMLButtonElement);
+
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      setOpen(prev => !prev);
+      onClick?.(e);
+    };
 
     return (
       <button
@@ -87,7 +127,8 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
           open && 'ring-2 ring-blue-500 border-blue-500',
           className
         )}
-        onClick={() => setOpen(prev => !prev)}
+        onClick={handleClick}
+        onMouseDown={e => e.stopPropagation()}
         {...props}
       >
         {children}
@@ -103,46 +144,137 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
 );
 SelectTrigger.displayName = 'SelectTrigger';
 
-const SelectContent: React.FC<SelectContentProps> = ({ children }) => {
-  const { open, triggerRef, contentRef } = React.useContext(SelectContext);
-  const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 });
+const SelectContent: React.FC<SelectContentProps> = ({ children, className }) => {
+  const { open, contentRef, triggerRef, setOpen, itemsMap, itemsRef } =
+    React.useContext(SelectContext);
+  const lastKeyRef = React.useRef<string>('');
+  const keyPressTimeRef = React.useRef<number>(0);
+  const matchIndexRef = React.useRef<number>(0);
+
+  const [pos, setPos] = React.useState<{ left: number; top: number; width: number } | null>(null);
 
   React.useEffect(() => {
-    if (open && triggerRef?.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      });
-    }
+    if (!open) return;
+    const update = () => {
+      const trg = triggerRef?.current;
+      if (!trg) return;
+      const rect = trg.getBoundingClientRect();
+      setPos({ left: rect.left, top: rect.bottom + 4, width: rect.width });
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
   }, [open, triggerRef]);
 
-  if (!open) return null;
+  React.useEffect(() => {
+    if (!open) {
+      lastKeyRef.current = '';
+      matchIndexRef.current = 0;
+      keyPressTimeRef.current = 0;
+      return;
+    }
 
-  const content = (
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        return;
+      }
+
+      // Handle letter key presses for navigation
+      if (e.key.length === 1 && /[a-zA-Z0-9]/.test(e.key)) {
+        e.preventDefault();
+        const key = e.key.toLowerCase();
+        const now = Date.now();
+
+        // Reset match index if different key or more than 500ms passed
+        if (lastKeyRef.current !== key || now - keyPressTimeRef.current > 500) {
+          matchIndexRef.current = 0;
+        } else {
+          matchIndexRef.current += 1;
+        }
+
+        lastKeyRef.current = key;
+        keyPressTimeRef.current = now;
+
+        // Find all items that start with this key (case-insensitive)
+        const matches: string[] = [];
+        itemsMap?.current.forEach((label, value) => {
+          const labelLower = label.toLowerCase();
+          if (labelLower.startsWith(key)) {
+            matches.push(value);
+          }
+        });
+
+        if (matches.length > 0) {
+          // Cycle through matches
+          const index = matchIndexRef.current % matches.length;
+          const matchedValue = matches[index];
+          const itemRef = itemsRef?.current.get(matchedValue);
+
+          if (itemRef?.current && contentRef?.current) {
+            // Scroll item into view
+            itemRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            // Highlight the item temporarily
+            itemRef.current.focus();
+          }
+        }
+      }
+    };
+
+    if (open) {
+      document.addEventListener('keydown', onKey);
+      return () => document.removeEventListener('keydown', onKey);
+    }
+  }, [open, setOpen, itemsMap, itemsRef, contentRef]);
+
+  if (!open || !pos) return null;
+
+  return ReactDOM.createPortal(
     <div
       ref={contentRef}
       data-select-content
-      className="fixed z-[99999] mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-2xl max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95"
-      style={{
-        top: position.top,
-        left: position.left,
-        width: position.width,
-        zIndex: 99999,
-      }}
+      className={cn(
+        'fixed z-[10000] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95',
+        className
+      )}
+      style={{ left: pos.left, top: pos.top, width: pos.width }}
+      onClick={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
     >
       <div className="p-1 space-y-1">{children}</div>
-    </div>
+    </div>,
+    document.body
   );
-
-  return ReactDOM.createPortal(content, document.body);
 };
 
 const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
-  const { onValueChange, setOpen, value: selectedValue } = React.useContext(SelectContext);
+  const {
+    onValueChange,
+    setOpen,
+    value: selectedValue,
+    registerItem,
+    unregisterItem,
+    registerItemRef,
+  } = React.useContext(SelectContext);
+  const itemRef = React.useRef<HTMLDivElement>(null);
 
-  const handleClick = () => {
+  React.useEffect(() => {
+    const label =
+      typeof children === 'string' ? children : itemRef.current?.textContent || String(value);
+    registerItem?.(value, label);
+    registerItemRef?.(value, itemRef as React.RefObject<HTMLDivElement>);
+    return () => {
+      unregisterItem?.(value);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, children]);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onValueChange?.(value);
     setOpen(false);
   };
@@ -151,6 +283,8 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
 
   return (
     <div
+      ref={itemRef}
+      tabIndex={-1}
       className={cn(
         'relative flex w-full cursor-pointer select-none items-center rounded-md py-2.5 px-3 text-sm outline-none transition-all duration-150',
         isSelected
@@ -159,20 +293,115 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
       )}
       data-value={value}
       onClick={handleClick}
+      onMouseDown={e => e.stopPropagation()}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
     >
       {children}
     </div>
   );
 };
 
-const SelectValue: React.FC<SelectValueProps> = ({ placeholder }) => {
-  const { value } = React.useContext(SelectContext);
+const SelectValue: React.FC<SelectValueProps> = ({ placeholder, options }) => {
+  const { value, itemsMap } = React.useContext(SelectContext);
+  const [label, setLabel] = React.useState<string>('');
+  const labelCacheRef = React.useRef<Map<string, string>>(new Map());
 
-  if (!value) {
-    return <span className="block truncate text-gray-500">{placeholder}</span>;
+  // Function to get label from itemsMap, cache, or options
+  const getLabel = React.useCallback(() => {
+    if (!value) return '';
+
+    // First try itemsMap (most up-to-date)
+    const mapLabel = itemsMap?.current.get(value);
+    if (mapLabel) {
+      // Cache it for when itemsMap is cleared
+      labelCacheRef.current.set(value, mapLabel);
+      return mapLabel;
+    }
+
+    // Try cache (for when dropdown is closed and itemsMap is cleared)
+    const cachedLabel = labelCacheRef.current.get(value);
+    if (cachedLabel) return cachedLabel;
+
+    // Fallback to options prop
+    const optionLabel = options?.find(opt => opt.value === value)?.label;
+    if (optionLabel) {
+      labelCacheRef.current.set(value, optionLabel);
+      return optionLabel;
+    }
+
+    // Last resort: use value itself
+    return value;
+  }, [value, itemsMap, options]);
+
+  React.useEffect(() => {
+    const newLabel = getLabel();
+    if (newLabel !== label) {
+      setLabel(newLabel);
+    }
+  }, [getLabel, label]);
+
+  // Poll itemsMap when value exists but label is still the value (meaning itemsMap wasn't ready)
+  React.useEffect(() => {
+    if (!value) return;
+
+    // If we have a cached label that's not the value, use it
+    const cachedLabel = labelCacheRef.current.get(value);
+    if (cachedLabel && cachedLabel !== value && label === value) {
+      setLabel(cachedLabel);
+      return;
+    }
+
+    // If label is still the raw value, try to get it from itemsMap
+    if (label === value) {
+      const mapLabel = itemsMap?.current.get(value);
+      if (mapLabel && mapLabel !== value) {
+        setLabel(mapLabel);
+        labelCacheRef.current.set(value, mapLabel);
+        return;
+      }
+
+      // Poll itemsMap periodically until we get a proper label
+      const interval = setInterval(() => {
+        const mapLabel = itemsMap?.current.get(value);
+        if (mapLabel && mapLabel !== value) {
+          setLabel(mapLabel);
+          labelCacheRef.current.set(value, mapLabel);
+          clearInterval(interval);
+        }
+      }, 50);
+
+      // Clear after 1 second to avoid infinite polling
+      const timeout = setTimeout(() => clearInterval(interval), 1000);
+
+      return () => {
+        clearInterval(interval);
+        clearTimeout(timeout);
+      };
+    }
+  }, [value, label, itemsMap]);
+
+  if (!value) return <span className="block truncate text-gray-500">{placeholder}</span>;
+
+  // Check if label contains "(number)" badge pattern and render with flex layout
+  const badgeMatch = label.match(/^(.+?)\s*\(number\)$/);
+  if (badgeMatch) {
+    const columnName = badgeMatch[1].trim();
+    return (
+      <div className="flex items-center justify-between w-full">
+        <span className="truncate">{columnName}</span>
+        <span className="ml-auto text-[10px] text-gray-500 dark:text-gray-400 flex-shrink-0">
+          (number)
+        </span>
+      </div>
+    );
   }
 
-  return <span className="block truncate">{value}</span>;
+  return <span className="block truncate">{label || placeholder}</span>;
 };
 
 export { Select, SelectTrigger, SelectContent, SelectItem, SelectValue };

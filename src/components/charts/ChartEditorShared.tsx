@@ -21,13 +21,13 @@ import {
   Upload,
   RotateCcw,
   Settings,
-  Database,
-  Edit3,
-  Table,
+  // Database,
+  // Edit3,
+  // Table,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { sizePresets } from '@/types/chart';
-import type { FormatterConfig, ChartDataPoint } from '@/types/chart';
+import type { FormatterConfig } from '@/types/chart';
 
 // Size preset buttons component
 interface SizePresetButtonsProps {
@@ -297,6 +297,7 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
   availableColumns,
   getAvailableColumnsForSeries,
 }) => {
+  // I18N setup
   const { t } = useTranslation();
 
   return (
@@ -349,7 +350,6 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
 
               {/* Action Buttons with Modern Design */}
               <div className="flex items-center gap-1 bg-background/50 rounded-lg p-1 backdrop-blur-sm">
-                {/* Visibility Toggle with Enhanced States */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -389,7 +389,7 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
                   <ArrowDown className="w-4 h-4" />
                 </Button>
 
-                {/* Remove Button with Warning Style */}
+                {/* Remove Button with Confirmation */}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -407,7 +407,8 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
               {/* Series Name Field - Read Only, synced with Data Column */}
               <div className="space-y-2">
                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {t('chart_editor_series_name')}
+                  {/* {t('chart_editor_series_name')} */}
+                  Chart Editor Series Name
                 </Label>
                 <div className="flex flex-col gap-1">
                   <Input
@@ -426,7 +427,8 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
               {/* Data Column Field */}
               <div className="space-y-2">
                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {t('chart_editor_data_column')}
+                  {/* {t('chart_editor_data_column')} */}
+                  Chart Editor Data Column
                 </Label>
                 <select
                   value={seriesItem.dataColumn}
@@ -486,7 +488,8 @@ export const SeriesManagement: React.FC<SeriesManagementProps> = ({
               <div className="p-1 rounded-full bg-primary/20 group-hover:bg-primary/30 transition-colors duration-200">
                 <Plus className="w-4 h-4 text-primary" />
               </div>
-              <span className="text-primary">{t('chart_editor_add_series')}</span>
+              {/* <span className="text-primary">{t('chart_editor_add_series')}</span> */}
+              <span className="text-primary">Chart Editor Series</span>
             </div>
           </Button>
         </motion.div>
@@ -553,139 +556,6 @@ export const ConfigManagementDropdown: React.FC<ConfigManagementDropdownProps> =
         </Button>
       </div>
     </motion.div>
-  );
-};
-
-// Data Editor Section component
-interface DataEditorSectionProps {
-  data: ChartDataPoint[];
-  xAxisKey: string;
-  yAxisKeys: string[];
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
-  onOpenModal: () => void;
-}
-
-export const DataEditorSection: React.FC<DataEditorSectionProps> = ({
-  data,
-  xAxisKey,
-  yAxisKeys,
-  isCollapsed,
-  onToggleCollapse,
-  onOpenModal,
-}) => {
-  const { t } = useTranslation();
-  return (
-    <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-xl">
-      <CardHeader
-        className="flex flex-row items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg h-20"
-        onClick={onToggleCollapse}
-      >
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          {t('lineChart_editor_dataEditor')}
-        </h3>
-        <div className="flex items-center gap-2">
-          {!isCollapsed && (
-            <Button
-              onClick={e => {
-                e.stopPropagation();
-                onOpenModal();
-              }}
-              size="sm"
-              variant="outline"
-            >
-              <Edit3 className="h-4 w-4 mr-1" />
-              {/* {t('lineChart_editor_editData')} */}
-              Chỉnh sửa dữ liệu
-            </Button>
-          )}
-          {isCollapsed ? (
-            <ChevronDown className="h-5 w-5 text-gray-500" />
-          ) : (
-            <ChevronUp className="h-5 w-5 text-gray-500" />
-          )}
-        </div>
-      </CardHeader>
-      {!isCollapsed && (
-        <CardContent>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mt-2">
-              <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
-                <Table className="h-4 w-4" />
-                <span className="text-sm font-medium">{t('lineChart_editor_dataPreview')}</span>
-              </div>
-              <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                {t('lineChart_editor_editDataDescription')}
-              </p>
-            </div>
-
-            {/* Table Preview */}
-            <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      #
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      {xAxisKey}
-                    </th>
-                    {yAxisKeys.map(key => (
-                      <th
-                        key={key}
-                        className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                      >
-                        {key}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
-                  {data.slice(0, 5).map((point, index) => {
-                    return (
-                      <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                          {index + 1}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
-                          {typeof point[xAxisKey] === 'string'
-                            ? point[xAxisKey]
-                            : Number.parseFloat(point[xAxisKey] as unknown as string) || 'N/A'}
-                        </td>
-                        {yAxisKeys.map(key => (
-                          <td
-                            key={key}
-                            className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100"
-                          >
-                            {typeof point[key] === 'string' && point[key] === 'N/A'
-                              ? 'N/A'
-                              : typeof point[key] === 'number'
-                                ? Number.parseFloat(point[key] as unknown as string).toFixed(2)
-                                : Number.parseFloat(point[key] as string) || 'N/A'}
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {data.length > 5 && (
-                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 text-center text-xs text-gray-500 dark:text-gray-400">
-                  {t('lineChart_editor_moreRows', { count: data.length - 5 })}
-                </div>
-              )}
-            </div>
-
-            <div className="text-center py-2 text-gray-500 dark:text-gray-400">
-              <p className="text-sm">
-                {t('lineChart_editor_totalDataPoints', { count: data.length })}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      )}
-    </Card>
   );
 };
 
@@ -983,7 +853,7 @@ interface ChartSettingsProps {
   pointRadius?: number;
 
   // Bar chart specific
-  barType?: 'grouped' | 'stacked';
+  barType?: 'grouped' | 'stacked' | 'diverging';
   barWidth?: number;
   barSpacing?: number;
 
@@ -1001,8 +871,6 @@ export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
   onUpdateConfig,
   onUpdateChartSpecific,
   chartType,
-  curveType,
-  curveOptions,
   showPoints,
   lineWidth,
   pointRadius,
@@ -1098,25 +966,7 @@ export const ChartSettingsSection: React.FC<ChartSettingsProps> = ({
             />
           </div>
 
-          {/* Line Chart Specific: Curve Type */}
-          {chartType === 'line' && curveOptions && (
-            <div>
-              <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                {t('chart_editor_curve_type')}
-              </Label>
-              <select
-                value={curveType}
-                onChange={e => onUpdateChartSpecific({ curve: e.target.value })}
-                className="w-full h-10 mt-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                {Object.keys(curveOptions).map(curve => (
-                  <option key={curve} value={curve}>
-                    {curve.replace('curve', '')}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Curve type setting moved to CurveTypeSetting component */}
 
           {/* Bar Chart Specific: Bar Type */}
           {chartType === 'bar' && (

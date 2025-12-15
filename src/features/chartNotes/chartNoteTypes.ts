@@ -2,15 +2,14 @@ export interface ChartNote {
   id: string;
   chartId: string;
   content: string;
-  timestamp: string;
+  isCompleted: boolean;
   author: {
     id: string;
-    name: string;
-    avatar?: string;
-    color?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
   };
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface ChartNoteState {
@@ -20,14 +19,17 @@ export interface ChartNoteState {
   creating: boolean;
   updating: boolean;
   deleting: boolean;
+  toggling: boolean;
   error: string | null;
 }
 
 export interface CreateChartNoteRequest {
   chartId: string;
   content: string;
+  isCompleted?: boolean;
 }
 
 export interface UpdateChartNoteRequest {
-  content: string;
+  content?: string;
+  isCompleted?: boolean;
 }

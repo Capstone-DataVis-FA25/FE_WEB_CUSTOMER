@@ -3,6 +3,7 @@ import { Upload, X } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
+import { useForm } from '@/contexts/FormContext';
 import FileUpload from '@/components/dataset/FileUpload';
 import TextUpload from '@/components/dataset/TextUpload';
 import SampleDataUpload from '@/components/dataset/SampleDataUpload';
@@ -29,7 +30,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { Dataset } from '@/features/dataset/datasetAPI';
 
-type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view';
+type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view' | 'cleanDataset';
 
 interface DatasetUploadModalProps {
   open: boolean;
@@ -58,12 +59,13 @@ function DatasetUploadModalContent({
     setIsJsonFormat,
     setSelectedDelimiter,
     resetState,
-    datasetName,
-    description,
     parsedValues,
     numberFormat,
     dateFormat,
   } = useDataset();
+
+  // Get form states from FormContext
+  const { datasetName, description } = useForm();
 
   // Local state management
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -416,7 +418,10 @@ function DatasetUploadModalContent({
   return (
     <>
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-7xl max-h-[90vh] bg-white dark:bg-gray-800 overflow-hidden">
+        <DialogContent
+          className="sm:max-w-7xl max-h-[90vh] bg-white dark:bg-gray-800 overflow-hidden"
+          aria-describedby={undefined}
+        >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b">
             <div className="flex items-center gap-2">

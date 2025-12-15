@@ -8,7 +8,6 @@ export const fetchChartNotes = createAsyncThunk(
   async (chartId: string, { rejectWithValue }) => {
     try {
       const notes = await chartNoteAPI.getChartNotes(chartId);
-      console.log('Fetched notes for chartId: ', notes);
       return { chartId, notes };
     } catch (error) {
       const err = error as { response?: { data?: { message?: string } } };
@@ -67,6 +66,19 @@ export const deleteChartNoteThunk = createAsyncThunk(
     } catch (error) {
       const err = error as { response?: { data?: { message?: string } } };
       return rejectWithValue(err.response?.data?.message || 'Failed to delete note');
+    }
+  }
+);
+
+// Toggle chart note completed status
+export const toggleChartNoteCompletedThunk = createAsyncThunk(
+  'chartNotes/toggleChartNoteCompleted',
+  async ({ noteId }: { noteId: string }, { rejectWithValue }) => {
+    try {
+      return await chartNoteAPI.toggleChartNoteCompleted(noteId);
+    } catch (error) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue(err.response?.data?.message || 'Failed to toggle note status');
     }
   }
 );

@@ -17,5 +17,5 @@ export const STATUS_WORK: { [key: number]: string } = {
 };
 
 // ======== Dataset Limits =====
-export const DATASET_NAME_MAX_LENGTH = 20;
-export const DATASET_DESCRIPTION_MAX_LENGTH = 100;
+export const DATASET_NAME_MAX_LENGTH = 50;
+export const DATASET_DESCRIPTION_MAX_LENGTH = 200;

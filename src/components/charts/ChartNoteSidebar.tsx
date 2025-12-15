@@ -1,33 +1,38 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, MessageSquare, ChevronRight, Trash2, Edit2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
-import type { ChartNote } from '@/features/chartNotes';
+import { useChartNotes, updateNoteLocally } from '@/features/chartNotes';
+import { useAppDispatch } from '@/store/hooks';
 import { useAuth } from '@/features/auth/useAuth';
 import Utils from '@/utils/Utils';
 
 interface ChartNoteSidebarProps {
+  chartId: string | null;
   isOpen: boolean;
   onToggle: () => void;
-  notes: ChartNote[];
-  onAddNote: (content: string) => void;
-  onDeleteNote?: (noteId: string) => void;
-  onUpdateNote?: (noteId: string, content: string) => void;
-  isLoading?: boolean;
 }
 
-const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
-  isOpen,
-  onToggle,
-  notes,
-  onAddNote,
-  onDeleteNote,
-  onUpdateNote,
-  isLoading = false,
-}) => {
+const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({ chartId, isOpen, onToggle }) => {
+  const dispatch = useAppDispatch();
   const { user } = useAuth();
   const { t } = useTranslation();
+  const {
+    notes,
+    currentChartNotes,
+    creating,
+    updating,
+    deleting,
+    toggling,
+    createNote,
+    updateNote,
+    deleteNote,
+    toggleNoteCompleted,
+    getChartNotes,
+    setCurrentNotes,
+  } = useChartNotes();
+
   const [newNote, setNewNote] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
@@ -36,14 +41,35 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
   const [saveConfirmNoteId, setSaveConfirmNoteId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const fetchedForChartRef = useRef<string | null>(null);
 
-  console.log('notes123: ', notes);
+  // Load notes only once per chart when the sidebar is first opened
+  // Do NOT fetch here; background prefetch in ChartEditorPage handles network.
+  useLayoutEffect(() => {
+    if (!chartId || !isOpen) return;
+
+    if (fetchedForChartRef.current === chartId) {
+      setCurrentNotes(chartId);
+      return;
+    }
+
+    const hasPrefetched = Array.isArray(notes[chartId]) && notes[chartId].length > 0;
+    if (hasPrefetched) {
+      setCurrentNotes(chartId);
+      fetchedForChartRef.current = chartId;
+      return;
+    }
+
+    // No prefetched notes yet; keep UI idle (loading indicator can rely on global loading)
+    fetchedForChartRef.current = chartId;
+  }, [chartId, isOpen, notes, setCurrentNotes]);
+
   // Auto scroll to bottom when new notes added
   useEffect(() => {
     if (isOpen && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [notes, isOpen]);
+  }, [currentChartNotes, isOpen]);
 
   // Focus input when sidebar opens
   useEffect(() => {
@@ -52,17 +78,20 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
     }
   }, [isOpen]);
 
-  const handleSendNote = () => {
-    if (newNote.trim()) {
-      onAddNote(newNote.trim());
+  const handleSendNote = async () => {
+    if (!chartId || !newNote.trim()) return;
+
+    try {
+      await createNote({ chartId, content: newNote.trim() }).unwrap();
       setNewNote('');
-      // reset textarea height after send
       const ta = inputRef.current;
       if (ta) ta.style.height = '40px';
+    } catch (error) {
+      console.error('[ChartNoteSidebar] Failed to create note:', error);
     }
   };
 
-  const handleStartEdit = (note: ChartNote) => {
+  const handleStartEdit = (note: (typeof currentChartNotes)[number]) => {
     setEditingNoteId(note.id);
     setEditContent(note.content);
     setOriginalEditContent(note.content);
@@ -89,13 +118,24 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
     }
   };
 
-  const handleConfirmSaveEdit = () => {
-    if (saveConfirmNoteId && editContent.trim() && onUpdateNote) {
-      onUpdateNote(saveConfirmNoteId, editContent.trim());
+  const handleConfirmSaveEdit = async () => {
+    if (!chartId || !saveConfirmNoteId || !editContent.trim()) return;
+
+    try {
+      // Optimistic update
+      dispatch(
+        updateNoteLocally({ chartId, noteId: saveConfirmNoteId, content: editContent.trim() })
+      );
+
+      await updateNote(saveConfirmNoteId, { content: editContent.trim() }).unwrap();
+
       setEditingNoteId(null);
       setEditContent('');
       setOriginalEditContent('');
       setSaveConfirmNoteId(null);
+    } catch (error) {
+      // Refresh to revert optimistic update
+      await getChartNotes(chartId);
     }
   };
 
@@ -107,10 +147,14 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
     setDeleteConfirmNoteId(noteId);
   };
 
-  const handleConfirmDelete = () => {
-    if (deleteConfirmNoteId && onDeleteNote) {
-      onDeleteNote(deleteConfirmNoteId);
+  const handleConfirmDelete = async () => {
+    if (!chartId || !deleteConfirmNoteId) return;
+
+    try {
+      await deleteNote(chartId, deleteConfirmNoteId).unwrap();
       setDeleteConfirmNoteId(null);
+    } catch (error) {
+      console.error('[ChartNoteSidebar] Failed to delete note:', error);
     }
   };
 
@@ -118,27 +162,22 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
     setDeleteConfirmNoteId(null);
   };
 
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
+  const handleToggleCompleted = async (noteId: string) => {
+    if (!chartId) return;
 
-    if (days > 0) {
-      return Utils.getDate(date, 1);
-    } else if (hours > 0) {
-      return `${hours}h ago`;
-    } else if (minutes > 0) {
-      return `${minutes}m ago`;
-    } else {
-      return 'Just now';
+    try {
+      await toggleNoteCompleted(noteId).unwrap();
+    } catch (error) {
+      console.error('[ChartNoteSidebar] Failed to toggle note:', error);
     }
   };
 
-  // Helper removed (unused)
+  const formatCreatedAt = (createdAt: string) => {
+    const date = new Date(createdAt);
+    return Utils.getDate(date, 4);
+  };
+
+  const isLoading = creating || updating || deleting || toggling;
 
   return (
     <>
@@ -159,9 +198,9 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
               className="rounded-r-none rounded-l-lg bg-white dark:bg-gray-800 border-r-0 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 pr-3 pl-2 py-6"
             >
               <MessageSquare className="w-5 h-5" />
-              {notes.length > 0 && (
+              {currentChartNotes.length > 0 && (
                 <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {notes.length}
+                  {currentChartNotes.length}
                 </span>
               )}
               <ChevronRight className="w-4 h-4" />
@@ -208,9 +247,9 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     {t('chart_notes_title', 'Chart Notes')}
                   </h3>
-                  {notes.length > 0 && (
+                  {currentChartNotes.length > 0 && (
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      ({notes.length})
+                      ({currentChartNotes.length})
                     </span>
                   )}
                 </div>
@@ -226,7 +265,7 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
 
               {/* Messages Area */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900/50">
-                {notes.length === 0 ? (
+                {currentChartNotes.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center px-8">
                     <MessageSquare className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
                     <p className="text-gray-500 dark:text-gray-400 text-sm">
@@ -238,9 +277,8 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
                   </div>
                 ) : (
                   <>
-                    {notes.map((note, index) => {
+                    {currentChartNotes.map((note, index) => {
                       const isCurrentUser = note.author.id === user?.id;
-
                       return (
                         <motion.div
                           key={note.id}
@@ -252,16 +290,16 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
                           {/* Message Content */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-baseline gap-2 mb-1">
-                              <span className="font-semibold text-sm text-gray-900 dark:text-white">
-                                {note.author.name}
-                              </span>
+                              {/* <span className="font-semibold text-sm text-gray-900 dark:text-white">
+                                {note.author.firstName} {note.author.lastName}
+                              </span> */}
                               {isCurrentUser && (
                                 <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded">
                                   {t('you', 'You')}
                                 </span>
                               )}
                               <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {formatTimestamp(note.timestamp)}
+                                {formatCreatedAt(note.createdAt)}
                               </span>
                             </div>
 
@@ -293,10 +331,29 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({
                             ) : (
                               // Display Mode
                               <div className="group relative">
-                                <div className="bg-white dark:bg-gray-800 rounded-lg px-3 py-2 shadow-sm border border-gray-200 dark:border-gray-700">
-                                  <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
-                                    {note.content}
-                                  </p>
+                                <div className="flex items-start gap-2">
+                                  {/* Checkbox for completed status */}
+                                  <input
+                                    type="checkbox"
+                                    checked={note.isCompleted}
+                                    onChange={() => handleToggleCompleted(note.id)}
+                                    className="mt-3 w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                                    title={
+                                      note.isCompleted
+                                        ? t('mark_as_incomplete', 'Mark as incomplete')
+                                        : t('mark_as_complete', 'Mark as complete')
+                                    }
+                                  />
+
+                                  <div
+                                    className={`flex-1 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 shadow-sm border border-gray-200 dark:border-gray-700 ${
+                                      note.isCompleted ? 'opacity-60 line-through' : ''
+                                    }`}
+                                  >
+                                    <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
+                                      {note.content}
+                                    </p>
+                                  </div>
                                 </div>
 
                                 {/* Edit/Delete Buttons - Only show for current user's notes (inside bubble top-right) */}

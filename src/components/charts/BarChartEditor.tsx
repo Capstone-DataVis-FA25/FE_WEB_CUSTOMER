@@ -33,7 +33,6 @@ import {
   type FormatterConfig,
 } from '@/types/chart';
 import {
-  DataEditorSection,
   BasicSettingsSection,
   ChartSettingsSection,
   AxisConfigurationSection,
@@ -94,7 +93,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
       const keysArray = Array.isArray(keys) ? keys : [keys];
       const decodedNames = keysArray.map(keyId => {
         const header = dataset.headers.find((h: DatasetHeader) => h.id === keyId);
-        return header ? header.name.toLowerCase() : keyId.toLowerCase(); // Convert to lowercase
+        return header ? header.name : keyId; // Convert to lowercase
       });
 
       return Array.isArray(keys) ? decodedNames : decodedNames[0];
@@ -108,9 +107,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
 
       const keysArray = Array.isArray(keys) ? keys : [keys];
       const encodedIds = keysArray.map(keyName => {
-        const header = dataset.headers.find(
-          (h: DatasetHeader) => h.name.toLowerCase() === keyName.toLowerCase()
-        );
+        const header = dataset.headers.find((h: DatasetHeader) => h.name === keyName);
         return header ? header.id : keyName; // Fallback to keyName if not found
       });
 
@@ -189,9 +186,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
       if (initialConfig.xAxisKey) {
         return decodeKeysToNames(initialConfig.xAxisKey) as string;
       }
-      return processedInitialData.length > 0
-        ? Object.keys(processedInitialData[0])[0].toLowerCase()
-        : 'x';
+      return processedInitialData.length > 0 ? Object.keys(processedInitialData[0])[0] : 'x';
     })(),
     yAxisKeys: (() => {
       // Decode initialConfig.yAxisKeys if provided, otherwise use remaining data columns
@@ -201,7 +196,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
       return processedInitialData.length > 0
         ? Object.keys(processedInitialData[0])
             .slice(1)
-            .map(key => key.toLowerCase())
+            .map(key => key)
         : ['y']; // Lấy tất cả columns trừ column đầu tiên (xAxisKey)
     })(),
     disabledBars: initialConfig.disabledBars
@@ -212,6 +207,8 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     yAxisLabel: t('barChart_editor_yAxisLabel') || 'Y Axis',
     showLegend: true,
     showGrid: true,
+    showPoints: false,
+    showPointValues: false,
     animationDuration: 1000,
     barType: 'grouped',
     xAxisStart: 'auto', // Default to auto
@@ -241,6 +238,8 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     titleFontSize: 16,
     labelFontSize: 12,
     legendFontSize: 11,
+
+    chartType: 'bar',
 
     ...initialConfig,
   };
@@ -295,7 +294,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
 
   // Series management state (like LineChart): each series maps to a data column
 
-  const [seriesConfigs, setSeriesConfigs] = useState<SeriesConfig[]>(() => {
+  const [axisConfigs, setaxisConfigs] = useState<SeriesConfig[]>(() => {
     const colorKeys = Object.keys(defaultColors);
     return (defaultConfig.yAxisKeys || []).map((key, index) => {
       const colorKey = colorKeys[index % colorKeys.length];
@@ -333,15 +332,13 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     }
   }, [processedInitialData, data]); // Only run when processedInitialData or data changes
 
-  // Effect to update seriesConfigs when dataset headers change
+  // Effect to update axisConfigs when dataset headers change
   useEffect(() => {
     if (dataset?.headers && config.yAxisKeys.length > 0) {
-      setSeriesConfigs(prevConfigs => {
+      setaxisConfigs(prevConfigs => {
         const newConfigs = config.yAxisKeys.map((key, index) => {
           // Find the header with matching name (case insensitive)
-          const header = dataset.headers.find(
-            (h: DatasetHeader) => h.name.toLowerCase() === key.toLowerCase()
-          );
+          const header = dataset.headers.find((h: DatasetHeader) => h.name === key);
 
           const colorKeys = Object.keys(defaultColorsChart);
           const colorIndex = index % colorKeys.length;
@@ -369,7 +366,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
         return newConfigs;
       });
     }
-  }, [dataset, config.yAxisKeys, config.disabledBars]); // seriesConfigs is not needed in dependencies as it's the state being set
+  }, [dataset, config.yAxisKeys, config.disabledBars]); // axisConfigs is not needed in dependencies as it's the state being set
 
   // Toggle section collapse
   const toggleSection = (sectionKey: string) => {
@@ -384,15 +381,15 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
   const arraysEqual = (a: any[], b: any[]) =>
     a.length === b.length && a.every((v, i) => v === b[i]);
 
-  // Keep config.yAxisKeys and disabledBars in sync with seriesConfigs
+  // Keep config.yAxisKeys and disabledBars in sync with axisConfigs
   useEffect(() => {
-    const yKeys = seriesConfigs.map(s => s.dataColumn);
-    const disabled = seriesConfigs.filter(s => !s.visible).map(s => s.dataColumn);
+    const yKeys = axisConfigs.map(s => s.dataColumn);
+    const disabled = axisConfigs.filter(s => !s.visible).map(s => s.dataColumn);
     if (!arraysEqual(yKeys, config.yAxisKeys) || !arraysEqual(disabled, config.disabledBars)) {
       updateConfig({ yAxisKeys: yKeys, disabledBars: disabled });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seriesConfigs]);
+  }, [axisConfigs]);
 
   // Effect to sync data when initialArrayData changes
   useEffect(() => {
@@ -598,19 +595,14 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
   // Apply size preset
   const applySizePreset = (presetKey: keyof typeof sizePresets) => {
     const preset = sizePresets[presetKey];
-    if (presetKey === 'responsive') {
-      const responsive = getResponsiveDefaults();
-      updateConfig({ width: responsive.width, height: responsive.height });
-    } else {
-      updateConfig({ width: preset.width, height: preset.height });
-    }
+    updateConfig({ width: preset.width, height: preset.height });
   };
 
   // Modal functions
-  const openDataModal = () => {
-    setTempData([...data]);
-    setShowDataModal(true);
-  };
+  // const openDataModal = () => {
+  //   setTempData([...data]);
+  //   setShowDataModal(true);
+  // };
 
   const closeDataModal = () => {
     setShowDataModal(false);
@@ -666,17 +658,17 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     setTempData(tempData.filter((_, i) => i !== index));
   };
 
-  // Note: Y-axis keys are managed by seriesConfigs now
+  // Note: Y-axis keys are managed by axisConfigs now
 
   // Series helpers similar to LineChart
   const getAvailableColumns = () => {
     return Object.keys(data[0] || {}).filter(
-      key => key !== config.xAxisKey && !seriesConfigs.some(s => s.dataColumn === key)
+      key => key !== config.xAxisKey && !axisConfigs.some(s => s.dataColumn === key)
     );
   };
 
   const updateSeriesConfig = (seriesId: string, updates: Partial<SeriesConfig>) => {
-    setSeriesConfigs(prev => {
+    setaxisConfigs(prev => {
       const oldSeries = prev.find(s => s.id === seriesId);
       const updated = prev.map(s => {
         if (s.id !== seriesId) return s;
@@ -712,7 +704,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     if (available.length === 0) return;
     const nextColumn = available[0];
     // pick a non-used color from defaultColors
-    const usedColors = seriesConfigs.map(s => s.color);
+    const usedColors = axisConfigs.map(s => s.color);
     const palette = Object.values(defaultColors);
     let chosen = palette[0];
     for (const c of palette) {
@@ -721,7 +713,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
         break;
       }
     }
-    setSeriesConfigs(prev => [
+    setaxisConfigs(prev => [
       ...prev,
       {
         id: `series-${prev.length}`,
@@ -737,9 +729,9 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
   };
 
   const removeSeries = (seriesId: string) => {
-    if (seriesConfigs.length <= 1) return;
-    const toRemove = seriesConfigs.find(s => s.id === seriesId);
-    setSeriesConfigs(prev => prev.filter(s => s.id !== seriesId));
+    if (axisConfigs.length <= 1) return;
+    const toRemove = axisConfigs.find(s => s.id === seriesId);
+    setaxisConfigs(prev => prev.filter(s => s.id !== seriesId));
     if (toRemove) {
       const nc = { ...colors } as ColorConfig;
       delete nc[toRemove.dataColumn];
@@ -758,7 +750,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
         config,
         colors,
         formatters,
-        seriesConfigs: seriesConfigs.map(series => ({
+        axisConfigs: axisConfigs.map(series => ({
           ...series,
           // Don't export the id since it will be regenerated on import
           id: undefined,
@@ -805,7 +797,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
       updateFormatters(defaultFormatters);
 
       // Reset series configs
-      const resetSeriesConfigs = resetConfig.yAxisKeys.map((key, index) => {
+      const resetaxisConfigs = resetConfig.yAxisKeys.map((key, index) => {
         const colorKeys = Object.keys(defaultColors);
         const colorIndex = index % colorKeys.length;
         const selectedColorKey = colorKeys[colorIndex];
@@ -820,7 +812,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
         };
       });
 
-      setSeriesConfigs(resetSeriesConfigs);
+      setaxisConfigs(resetaxisConfigs);
 
       showSuccess(t('barChart_editor_resetToDefault'));
     } catch (error) {
@@ -856,14 +848,14 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
           updateFormatters(importData.formatters);
 
           // Handle series configurations
-          if (importData.seriesConfigs && Array.isArray(importData.seriesConfigs)) {
-            const newSeriesConfigs = importData.seriesConfigs.map(
+          if (importData.axisConfigs && Array.isArray(importData.axisConfigs)) {
+            const newaxisConfigs = importData.axisConfigs.map(
               (series: SeriesConfig, index: number) => ({
                 ...series,
                 id: `series-${Date.now()}-${index}`, // Regenerate IDs
               })
             );
-            setSeriesConfigs(newSeriesConfigs);
+            setaxisConfigs(newaxisConfigs);
           }
 
           showSuccess(t('barChart_editor_configImported'));
@@ -1060,10 +1052,10 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
     }
   };
 
-  // When config is externally changed (import/reset), regenerate seriesConfigs to match
+  // When config is externally changed (import/reset), regenerate axisConfigs to match
   useEffect(() => {
-    const colsFromSeries = seriesConfigs.map(s => s.dataColumn);
-    const disabledFromSeries = seriesConfigs.filter(s => !s.visible).map(s => s.dataColumn);
+    const colsFromSeries = axisConfigs.map(s => s.dataColumn);
+    const disabledFromSeries = axisConfigs.filter(s => !s.visible).map(s => s.dataColumn);
     const yKeys = config.yAxisKeys || [];
     const disabled = config.disabledBars || [];
     const sameCols = arraysEqual(colsFromSeries, yKeys);
@@ -1082,7 +1074,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
           visible: !disabled.includes(key),
         };
       });
-      setSeriesConfigs(newSeries);
+      setaxisConfigs(newSeries);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.yAxisKeys, config.disabledBars]);
@@ -1193,16 +1185,7 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <DataEditorSection
-                data={data}
-                xAxisKey={config.xAxisKey}
-                yAxisKeys={config.yAxisKeys}
-                isCollapsed={collapsedSections.dataEditor}
-                onToggleCollapse={() => toggleSection('dataEditor')}
-                onOpenModal={openDataModal}
-              />
-            </motion.div>
+            ></motion.div>
 
             {/* Basic Settings */}
             <motion.div
@@ -1339,30 +1322,30 @@ const BarChartEditor: React.FC<BarChartEditorProps> = ({
                   <CardContent className="space-y-4">
                     {/* Series Management using shared component */}
                     <SeriesManagement
-                      series={seriesConfigs}
+                      series={axisConfigs}
                       onUpdateSeries={updateSeriesConfig}
                       onAddSeries={addSeries}
                       onRemoveSeries={removeSeries}
                       onMoveSeriesUp={(seriesId: string) => {
-                        const index = seriesConfigs.findIndex(s => s.id === seriesId);
+                        const index = axisConfigs.findIndex(s => s.id === seriesId);
                         if (index > 0) {
-                          const newSeries = [...seriesConfigs];
+                          const newSeries = [...axisConfigs];
                           [newSeries[index], newSeries[index - 1]] = [
                             newSeries[index - 1],
                             newSeries[index],
                           ];
-                          setSeriesConfigs(newSeries);
+                          setaxisConfigs(newSeries);
                         }
                       }}
                       onMoveSeriesDown={(seriesId: string) => {
-                        const index = seriesConfigs.findIndex(s => s.id === seriesId);
-                        if (index < seriesConfigs.length - 1) {
-                          const newSeries = [...seriesConfigs];
+                        const index = axisConfigs.findIndex(s => s.id === seriesId);
+                        if (index < axisConfigs.length - 1) {
+                          const newSeries = [...axisConfigs];
                           [newSeries[index], newSeries[index + 1]] = [
                             newSeries[index + 1],
                             newSeries[index],
                           ];
-                          setSeriesConfigs(newSeries);
+                          setaxisConfigs(newSeries);
                         }
                       }}
                       availableColumns={getAvailableColumns()}

@@ -1,6 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { defaultColorsChart } from '@/utils/Utils';
+import {
+  renderD3Tooltip,
+  createHeader,
+  createStatLine,
+  createPercentLine,
+  createRankLine,
+  createSeparator,
+  type TooltipLine,
+} from './ChartTooltip';
 
 function convertArrayToChartData(arrayData: (string | number)[][]): ChartDataPoint[] {
   if (!arrayData || arrayData.length === 0) return [];
@@ -13,13 +22,20 @@ function convertArrayToChartData(arrayData: (string | number)[][]): ChartDataPoi
     headers.forEach((header, index) => {
       const value = row[index];
 
+      // Skip null/undefined values
+      if (value === null || value === undefined) {
+        return;
+      }
+
       if (index === 0) {
         // First column is typically the X-axis (categories)
         dataPoint[String(header)] = String(value);
       } else {
         // Other columns are numeric values
-        dataPoint[String(header)] =
-          typeof value === 'number' ? value : parseFloat(String(value)) || 0;
+        const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+        if (!isNaN(numValue)) {
+          dataPoint[String(header)] = numValue;
+        }
       }
     });
     return dataPoint;
@@ -42,8 +58,7 @@ export interface D3BarChartProps {
   colors?: Record<string, { light: string; dark: string }>;
   seriesNames?: Record<string, string>; // Add series names mapping (match LineChart)
   xAxisNames?: Record<string, string>; // Map X-axis values from ID to display name
-  // Individual series configurations (similar to LineChart seriesConfigs)
-  seriesConfigs?: Record<
+  axisConfigs?: Record<
     string,
     {
       barWidth?: number;
@@ -86,7 +101,7 @@ export interface D3BarChartProps {
     | 'custom';
 
   // Bar-specific props
-  barType?: 'grouped' | 'stacked';
+  barType?: 'grouped' | 'stacked' | 'diverging';
   barWidth?: number;
   barSpacing?: number;
 
@@ -113,6 +128,10 @@ export interface D3BarChartProps {
   labelFontSize?: number;
   legendFontSize?: number;
   showPointValues?: boolean; // Show values on bars (similar to LineChart showPointValues)
+  // Preview variant: render without frame/background card
+  variant?: 'default' | 'preview';
+  // Show all X-axis ticks without sampling (useful for date data with compact formatting)
+  showAllXAxisTicks?: boolean;
 }
 
 const D3BarChart: React.FC<D3BarChartProps> = ({
@@ -127,13 +146,12 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   colors = defaultColorsChart,
   seriesNames = {}, // Series names mapping (match LineChart)
   xAxisNames = {}, // X-axis names mapping from ID to display name
-  seriesConfigs = {}, // Individual series configurations (match LineChart)
+  axisConfigs = {}, // Individual series configurations (match LineChart)
   title,
   yAxisLabel,
   xAxisLabel,
   showLegend = true,
   showGrid = true,
-  xAxisStart = 'auto', // X-axis start option (match LineChart)
   yAxisStart = 'zero', // Y-axis start option (match LineChart)
   animationDuration = 1000,
   yAxisFormatter, // Custom Y-axis formatter (match LineChart)
@@ -147,7 +165,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   // Bar-specific props
   barType = 'grouped',
   barWidth,
-  barSpacing = 4,
+  barSpacing = 0,
 
   // Styling props (match LineChart)
   gridOpacity = 0.5,
@@ -172,11 +190,14 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
   labelFontSize = 12,
   legendFontSize = 11,
   showPointValues = false, // Show values on bars (similar to LineChart showPointValues)
+  variant = 'default',
+  showAllXAxisTicks = false, // Default to sampling ticks
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [dimensions, setDimensions] = React.useState({ width, height });
+  const zoomBehaviorRef = useRef<d3.ZoomBehavior<Element, unknown> | null>(null);
 
   // Tooltip management refs (matching LineChart implementation)
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -210,6 +231,62 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     }
   };
 
+  // Small helper: compute responsive margins (extracted to improve readability)
+  const computeResponsiveMargin = (
+    currentWidth: number,
+    baseMargin: { top: number; right: number; bottom: number; left: number }
+  ) => {
+    // Calculate max Y value to determine if we need more space for labels
+    let maxYValue = 0;
+    if (processedData.length > 0) {
+      if (barType === 'stacked') {
+        maxYValue = Math.max(
+          ...processedData.map(d =>
+            yAxisKeys.reduce((sum, key) => sum + ((d[key] as number) || 0), 0)
+          )
+        );
+      } else {
+        maxYValue = Math.max(
+          ...processedData.map(d => Math.max(...yAxisKeys.map(key => (d[key] as number) || 0)))
+        );
+      }
+    }
+
+    // Increase left margin based on the number of digits in max value
+    const numDigits = Math.max(3, maxYValue.toString().replace(/[.,]/g, '').length);
+    const extraLeftSpace = Math.max(0, (numDigits - 3) * 8); // 8px per extra digit
+
+    const responsiveMargin = {
+      top: currentWidth < 640 ? baseMargin.top * 0.8 : baseMargin.top,
+      right: currentWidth < 640 ? baseMargin.right * 0.7 : baseMargin.right,
+      bottom: currentWidth < 640 ? baseMargin.bottom * 0.8 : baseMargin.bottom,
+      left: Math.max(
+        currentWidth < 640 ? baseMargin.left * 0.8 : baseMargin.left,
+        baseMargin.left + extraLeftSpace
+      ),
+    };
+
+    // Reserve space for legend when positioned top/bottom to avoid overlap (matching LineChart behavior)
+    if (showLegend && (legendPosition === 'top' || legendPosition === 'bottom')) {
+      const isMobile = currentWidth < 640;
+      const isTablet = currentWidth < 1024;
+      const itemHeight = isMobile ? 18 : 20;
+      const padding = isMobile ? 8 : 10;
+      const legendBlock = itemHeight + padding * 2;
+      const xLabelSpacing =
+        xAxisLabel && showAxisLabels ? (isMobile ? 30 : isTablet ? 35 : 40) : isMobile ? 15 : 20;
+
+      if (legendPosition === 'top') {
+        responsiveMargin.top += legendBlock + 10;
+      } else {
+        const minBottom = isMobile ? 100 : 110;
+        responsiveMargin.bottom = Math.max(baseMargin.bottom * 2.0, minBottom) + xLabelSpacing;
+      }
+    }
+
+    return responsiveMargin;
+  };
+
   // Helper functions for tooltip management (matching LineChart implementation)
   const clearTooltipTimeout = () => {
     if (tooltipTimeoutRef.current) {
@@ -223,9 +300,10 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       currentTooltipRef.current
         .transition()
         .duration(200) // Fast fade out transition
-        .style('opacity', 0)
-        .remove();
-      currentTooltipRef.current = null;
+        .style('opacity', 0);
+      // Don't remove - keep for reuse
+      // .remove();
+      // currentTooltipRef.current = null;
     }
   };
 
@@ -258,6 +336,40 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       const newWidth = Math.min(containerWidth - 16, width); // 16px for minimal padding
       let newHeight = newWidth * aspectRatio;
 
+      // Auto-adjust height based on Y-axis value range to prevent label overlap
+      if (processedData.length > 0) {
+        // Calculate Y-axis range
+        let maxValue: number;
+        if (barType === 'stacked') {
+          maxValue =
+            Math.max(
+              ...processedData.map(d =>
+                yAxisKeys.reduce((sum, key) => sum + ((d[key] as number) || 0), 0)
+              )
+            ) || 0;
+        } else {
+          maxValue =
+            Math.max(
+              ...processedData.map(d => Math.max(...yAxisKeys.map(key => (d[key] as number) || 0)))
+            ) || 0;
+        }
+
+        // Estimate number of Y-axis ticks (D3 usually creates ~5-10 ticks)
+        const estimatedTicks = Math.min(10, Math.max(5, Math.floor(maxValue / 100)));
+        const minSpacingPerTick = 40; // Minimum 40px between each tick label
+        const requiredHeight = estimatedTicks * minSpacingPerTick + 100; // +100 for margins
+
+        // If required height is more than current, increase height
+        if (requiredHeight > newHeight) {
+          newHeight = Math.min(requiredHeight, newHeight * 2); // Cap at 2x original
+        }
+
+        // For very large values, ensure enough space for long numbers
+        if (maxValue > 10000) {
+          newHeight = Math.max(newHeight, 500);
+        }
+      }
+
       // Add extra height for axis labels (matching LineChart exactly)
       const hasXAxisLabel = xAxisLabel && showAxisLabels;
 
@@ -279,7 +391,17 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     const ro = new ResizeObserver(updateDimensions);
     if (containerRef.current) ro.observe(containerRef.current);
     return () => ro.disconnect();
-  }, [width, height, showLegend, legendPosition, showAxisLabels, xAxisLabel]);
+  }, [
+    width,
+    height,
+    showLegend,
+    legendPosition,
+    showAxisLabels,
+    xAxisLabel,
+    processedData,
+    yAxisKeys,
+    barType,
+  ]);
 
   // Theme
   useEffect(() => {
@@ -302,14 +424,35 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     };
   }, [clearTooltipTimeout]);
 
-  // Note: Suppress unused variable warning for xAxisStart (maintained for LineChart interface consistency)
-  void xAxisStart;
-
   useEffect(() => {
     if (!svgRef.current || !processedData.length) return;
 
-    const currentWidth = dimensions.width;
+    // Minimum width per data point (adjust based on rotation)
+    const minWidthPerPoint = xAxisRotation === 0 ? 60 : 30; // More space for horizontal labels
+    const calculatedMinWidth = Math.max(dimensions.width, processedData.length * minWidthPerPoint);
+
+    const currentWidth = calculatedMinWidth;
     const currentHeight = dimensions.height;
+
+    // Auto-enable pan when chart is wider than container (due to many data points)
+    const isChartExpanded = currentWidth > dimensions.width;
+    const shouldEnablePan = enablePan || isChartExpanded;
+    const shouldEnableZoom = enableZoom; // Keep zoom as user preference
+
+    // Coerce potentially string props from editor into numbers so updates take effect
+    const effectiveBarWidthProp = typeof barWidth === 'string' ? parseFloat(barWidth) : barWidth;
+    const effectiveBarSpacingProp =
+      typeof barSpacing === 'string' ? parseFloat(barSpacing) : barSpacing;
+
+    // Dev debug: show effective width/spacing to help debugging when adjusting controls
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug(
+        'D3BarChart debug: effectiveBarWidthProp=',
+        effectiveBarWidthProp,
+        'effectiveBarSpacingProp=',
+        effectiveBarSpacingProp
+      );
+    }
 
     // Colors
     const getCurrentColors = () => {
@@ -333,15 +476,34 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     d3.select(svgRef.current).selectAll('*').remove();
     const svg = d3.select(svgRef.current);
 
-    const responsiveMargin = {
-      top: currentWidth < 640 ? margin.top * 0.8 : margin.top,
-      right: currentWidth < 640 ? margin.right * 0.7 : margin.right,
-      bottom: currentWidth < 640 ? margin.bottom * 0.8 : margin.bottom,
-      left: currentWidth < 640 ? margin.left * 0.8 : margin.left,
-    };
+    const responsiveMargin = computeResponsiveMargin(currentWidth, margin);
+
+    // Calculate legend height for top/bottom positioning
+    const isMobile = currentWidth < 640;
+    const isTablet = currentWidth < 1024;
+    let legendHeightReserved = 0;
+
+    if (showLegend && (legendPosition === 'top' || legendPosition === 'bottom')) {
+      // Estimate legend height based on items and layout
+      const enabledBarsCount = yAxisKeys.filter(key => !disabledBars.includes(key)).length;
+      const itemContainerW = isMobile ? 100 : isTablet ? 120 : 140;
+      const tempInnerWidth = currentWidth - responsiveMargin.left - responsiveMargin.right;
+      const availableWidth = tempInnerWidth - (isMobile ? 24 : 32);
+      const totalSingleWidth = itemContainerW * enabledBarsCount;
+      const useTwoRows = totalSingleWidth > availableWidth && enabledBarsCount > 1;
+
+      // Base height + padding
+      const baseHeight = isMobile ? 40 : isTablet ? 45 : 50;
+      const twoRowHeight = isMobile ? 70 : isTablet ? 80 : 90;
+      legendHeightReserved = useTwoRows ? twoRowHeight : baseHeight;
+
+      // Add spacing between legend and chart
+      legendHeightReserved += isMobile ? 15 : isTablet ? 20 : 25;
+    }
 
     const innerWidth = currentWidth - responsiveMargin.left - responsiveMargin.right;
-    const innerHeight = currentHeight - responsiveMargin.top - responsiveMargin.bottom;
+    const innerHeight =
+      currentHeight - responsiveMargin.top - responsiveMargin.bottom - legendHeightReserved;
 
     svg
       .append('rect')
@@ -361,13 +523,17 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
 
     const g = svg
       .append('g')
-      .attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top})`);
+      .attr(
+        'transform',
+        `translate(${responsiveMargin.left},${responsiveMargin.top + (legendPosition === 'top' ? legendHeightReserved : 0)})`
+      );
 
     // Scales
-    // Note: xAxisStart doesn't apply to categorical X-axis (scaleBand) - it's maintained for interface consistency with LineChart
+    const xDomain = processedData.map((_, i) => String(i));
+
     const xScale = d3
       .scaleBand()
-      .domain(processedData.map(d => String(d[xAxisKey])))
+      .domain(xDomain) // Use original order from data
       .range([0, innerWidth])
       .padding(0.1); // Reduce padding for wider bars
 
@@ -394,11 +560,13 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     // - If <= 1: treat as fraction (0..0.5)
     // - If > 1: treat as pixels and normalize by parent band width
     const normalizedPadding = (() => {
-      if (typeof barSpacing !== 'number') return 0.05; // Reduce default padding for thicker bars
-      if (barSpacing <= 1) return Math.max(0, Math.min(0.3, barSpacing)); // Cap at 30% instead of 50%
+      const spacing = typeof effectiveBarSpacingProp === 'number' ? effectiveBarSpacingProp : 0.05;
+      // If spacing is <= 1, treat as fraction of band (0..1)
+      if (spacing <= 1) return Math.max(0, Math.min(0.45, spacing)); // allow up to 45% inner padding
+      // If spacing > 1 treat as pixels and normalize by bandwidth
       const bw = xScale.bandwidth();
       if (bw <= 0) return 0.05;
-      return Math.max(0, Math.min(0.3, barSpacing / bw)); // Cap at 30% instead of 50%
+      return Math.max(0, Math.min(0.45, spacing / bw));
     })();
 
     const xSubScale = d3
@@ -438,43 +606,114 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         .attr('opacity', Math.max(0, Math.min(1, gridOpacity * 0.7)));
     }
 
-    // Axes
-    const xAxis = d3.axisBottom(xScale).tickFormat(d => {
-      if (xAxisFormatter) return xAxisFormatter(Number(d));
-      // Use xAxisNames to map ID to display name, fallback to original value
-      const displayName = xAxisNames[String(d)] || String(d);
+    // X-Axis - show all labels (chart width already adjusted to fit all)
+    const xAxis = d3.axisBottom(xScale).tickFormat((d, _) => {
+      // d is the index string, map back to actual value
+      const index = Number(d);
+      const item = processedData[index];
+      if (!item) return '';
+
+      const rawValue = String(item[xAxisKey]);
+
+      // Try to format as date if xAxisFormatter exists
+      if (xAxisFormatter) {
+        // Check if it's a date string (ISO format or timestamp)
+        const dateTest = new Date(rawValue);
+        if (!isNaN(dateTest.getTime())) {
+          // It's a valid date, format it
+          return xAxisFormatter(dateTest.getTime());
+        }
+
+        // Try as number
+        const numValue = Number(rawValue);
+        if (!isNaN(numValue)) {
+          return xAxisFormatter(numValue);
+        }
+      }
+
+      // Fallback to display name or raw value
+      const displayName = xAxisNames[rawValue] || rawValue;
       return displayName;
     });
+
     const xAxisGroup = g.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis);
-    xAxisGroup
-      .selectAll('text')
+
+    // Smart label handling: measure labels and adjust if needed
+    const xLabels = xAxisGroup.selectAll('text');
+
+    // Measure label widths to detect overlap
+    let needsRotation = false;
+    let maxLabelWidth = 0;
+
+    try {
+      // Only measure visible labels (non-empty text)
+      let visibleLabelCount = 0;
+      xLabels.each(function () {
+        const text = (this as SVGTextElement).textContent;
+        if (text && text.trim() !== '') {
+          const bbox = (this as SVGTextElement).getBBox();
+          if (bbox.width > maxLabelWidth) maxLabelWidth = bbox.width;
+          visibleLabelCount++;
+        }
+      });
+
+      // Calculate available space per visible label
+      const availableSpacePerLabel =
+        visibleLabelCount > 0 ? innerWidth / visibleLabelCount : innerWidth;
+
+      // If average label width > 80% of available space, rotate
+      if (maxLabelWidth > availableSpacePerLabel * 0.8) {
+        needsRotation = true;
+      }
+    } catch (_) {
+      needsRotation = xAxisRotation !== 0;
+    }
+
+    // Apply rotation if needed (either from prop or auto-detected)
+    const finalRotation = needsRotation ? (xAxisRotation !== 0 ? xAxisRotation : -45) : 0;
+
+    xLabels
       .attr('fill', textColor)
       .style('font-size', `${responsiveFontSize.axis}px`)
       .style('font-weight', '500')
-      .attr('transform', `rotate(${xAxisRotation})`)
-      .style('text-anchor', xAxisRotation === 0 ? 'middle' : xAxisRotation > 0 ? 'start' : 'end');
+      .attr('transform', `rotate(${finalRotation})`)
+      .style('text-anchor', finalRotation === 0 ? 'middle' : finalRotation > 0 ? 'start' : 'end')
+      .style('opacity', function () {
+        // Ensure sampled-out labels are completely hidden
+        const text = (this as SVGTextElement).textContent;
+        return text && text.trim() !== '' ? 1 : 0;
+      });
+
     xAxisGroup.select('.domain').attr('stroke', axisColor).attr('stroke-width', 2);
     if (showAxisTicks) xAxisGroup.selectAll('.tick line').attr('stroke', axisColor);
     else xAxisGroup.selectAll('.tick line').attr('opacity', 0);
 
+    // Smart Y-axis formatter to prevent label overlap
+    const formatYAxisValue = (value: number): string => {
+      if (yAxisFormatter) return yAxisFormatter(value);
+      // Fallback to simple number display if no formatter provided
+      return String(value);
+    };
+
+    // Calculate optimal number of ticks based on chart height
+    const optimalTickCount = Math.max(5, Math.min(10, Math.floor(innerHeight / 50)));
+
     const yAxis = d3
       .axisLeft(yScale)
-      .tickFormat(d => {
-        const value = d.valueOf();
-        if (yAxisFormatter) return yAxisFormatter(value);
-        return value.toLocaleString();
-      })
+      .ticks(optimalTickCount) // Limit number of ticks to prevent overlap
+      .tickFormat(d => formatYAxisValue(d.valueOf()))
       .tickSize(showAxisTicks ? -5 : 0)
-      .tickPadding(8);
+      .tickPadding(10); // Increase padding for better spacing
     const yAxisGroup = g.append('g').call(yAxis);
     yAxisGroup
       .selectAll('text')
       .attr('fill', textColor)
-      .style('font-size', `${responsiveFontSize.axis}px`)
+      .style('font-size', `${Math.max(10, responsiveFontSize.axis - 1)}px`) // Slightly smaller font
       .style('font-weight', '600')
       .style('font-family', 'system-ui, -apple-system, sans-serif')
       .attr('text-anchor', 'end')
       .attr('x', -10)
+      .attr('dy', '0.32em') // Better vertical centering
       .attr('transform', `rotate(${yAxisRotation})`);
     yAxisGroup
       .select('.domain')
@@ -495,7 +734,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     if (barType === 'grouped') {
       yAxisKeys.forEach((key, keyIndex) => {
         // Get individual series configurations (matching LineChart approach)
-        const seriesConfig = seriesConfigs[key] || {};
+        const seriesConfig = axisConfigs[key] || {};
         const seriesBarWidth = seriesConfig.barWidth ?? barWidth;
         const seriesOpacity = seriesConfig.opacity ?? 1;
 
@@ -504,12 +743,12 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .enter()
           .append('rect')
           .attr('class', `bar-${keyIndex}`)
-          .attr('x', d => {
-            const base = (xScale(String(d[xAxisKey])) || 0) + (xSubScale(key) || 0);
+          .attr('x', (_d, i) => {
+            const base = (xScale(String(i)) || 0) + (xSubScale(key) || 0);
             const subBW = xSubScale.bandwidth();
             // Use series-specific barWidth if available
             let bw = subBW;
-            if (typeof seriesBarWidth === 'number') {
+            if (typeof seriesBarWidth === 'number' && !isNaN(seriesBarWidth)) {
               if (seriesBarWidth <= 0) bw = subBW;
               else if (seriesBarWidth > 0 && seriesBarWidth <= 1) bw = subBW * seriesBarWidth;
               else bw = Math.min(seriesBarWidth, subBW);
@@ -519,7 +758,8 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .attr('y', innerHeight)
           .attr('width', () => {
             const subBW = xSubScale.bandwidth();
-            if (typeof seriesBarWidth !== 'number' || seriesBarWidth <= 0) return subBW;
+            if (typeof seriesBarWidth !== 'number' || isNaN(seriesBarWidth) || seriesBarWidth <= 0)
+              return subBW;
             if (seriesBarWidth <= 1) return subBW * seriesBarWidth; // fraction
             return Math.min(seriesBarWidth, subBW); // pixels
           })
@@ -531,73 +771,179 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))')
           .on('mouseover', function (_event, d) {
             if (!showTooltip) return;
+            // Ensure no pending hide and remove previous tooltip immediately
+            clearTooltipTimeout();
+            // hideCurrentTooltip(); // Removed to prevent flickering
+
             d3.select(this)
               .transition()
               .duration(200)
               .style('filter', 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))')
               .attr('opacity', 0.8);
 
-            const tooltip = g
-              .append('g')
-              .attr('class', 'tooltip')
-              .attr(
-                'transform',
-                `translate(${(xScale(String(d[xAxisKey])) || 0) + (xSubScale(key) || 0) + xSubScale.bandwidth() / 2}, ${yScale(d[key] as number) - 15})`
-              );
-            tooltip
-              .append('rect')
-              .attr('x', -40)
-              .attr('y', -35)
-              .attr('width', 80)
-              .attr('height', 30)
-              .attr('fill', isDarkMode ? '#1f2937' : '#ffffff')
-              .attr('stroke', currentColors[key])
-              .attr('stroke-width', 2)
-              .attr('rx', 6)
-              .style('filter', 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))')
-              .style('opacity', 0)
-              .transition()
-              .duration(200)
-              .style('opacity', 0.95);
-            const value =
-              typeof d[key] === 'number' ? (d[key] as number).toLocaleString() : (d[key] as string);
-            // Get display name for X-axis value
+            // Calculate statistics for enhanced tooltip
+            const currentValue = d[key] as number;
             const xDisplayName = xAxisNames[String(d[xAxisKey])] || String(d[xAxisKey]);
             const seriesDisplayName = seriesNames[key] || key;
 
-            tooltip
-              .append('text')
-              .attr('text-anchor', 'middle')
-              .attr('y', -20)
-              .attr('fill', textColor)
-              .style('font-size', `${responsiveFontSize.axis - 1}px`)
-              .style('font-weight', '600')
-              .style('opacity', 0)
-              .text(`${xDisplayName}`)
-              .transition()
-              .duration(200)
-              .style('opacity', 1);
+            // Calculate total for this category (all series)
+            const categoryTotal = yAxisKeys.reduce((sum, k) => sum + ((d[k] as number) || 0), 0);
+            const percentOfCategory = categoryTotal > 0 ? (currentValue / categoryTotal) * 100 : 0;
 
-            tooltip
-              .append('text')
-              .attr('text-anchor', 'middle')
-              .attr('y', -8)
-              .attr('fill', textColor)
-              .style('font-size', `${responsiveFontSize.axis}px`)
-              .style('font-weight', '700')
-              .style('opacity', 0)
-              .text(`${seriesDisplayName}: ${value}`)
-              .transition()
-              .duration(200)
-              .style('opacity', 1);
+            // Calculate average for this series across all data
+            const seriesValues = processedData
+              .map(item => item[key] as number)
+              .filter(v => !isNaN(v));
+            const seriesAverage =
+              seriesValues.length > 0
+                ? seriesValues.reduce((a, b) => a + b, 0) / seriesValues.length
+                : 0;
+            const diffFromAvg = currentValue - seriesAverage;
+            const diffPercent = seriesAverage > 0 ? (diffFromAvg / seriesAverage) * 100 : 0;
+
+            // Calculate rank (1 = highest value in this series)
+            const sortedValues = [...seriesValues].sort((a, b) => b - a);
+            const rank = sortedValues.indexOf(currentValue) + 1;
+
+            // Build tooltip content
+            const tooltipLines: Array<{
+              text: string;
+              fontSize: number;
+              fontWeight: string;
+              color?: string;
+            }> = [
+              { text: xDisplayName, fontSize: responsiveFontSize.axis + 1, fontWeight: '700' },
+              {
+                text: `${seriesDisplayName}: ${yAxisFormatter ? yAxisFormatter(currentValue) : currentValue}`,
+                fontSize: responsiveFontSize.axis + 2,
+                fontWeight: '800',
+                color: currentColors[key],
+              },
+            ];
+
+            // Add percentage if multiple series
+            if (yAxisKeys.length > 1) {
+              tooltipLines.push({
+                text: `${percentOfCategory.toFixed(1)}% of total`,
+                fontSize: responsiveFontSize.axis - 1,
+                fontWeight: '500',
+              });
+            }
+
+            // Add comparison with average
+            const diffSign = diffFromAvg >= 0 ? '+' : '';
+            const diffColor =
+              diffFromAvg >= 0
+                ? isDarkMode
+                  ? '#10b981'
+                  : '#059669'
+                : isDarkMode
+                  ? '#ef4444'
+                  : '#dc2626';
+            tooltipLines.push({
+              text: `Avg: ${yAxisFormatter ? yAxisFormatter(seriesAverage) : seriesAverage} (${diffSign}${diffPercent.toFixed(1)}%)`,
+              fontSize: responsiveFontSize.axis - 1,
+              fontWeight: '500',
+              color: diffColor,
+            });
+
+            // Add rank
+            tooltipLines.push({
+              text: `Rank: #${rank} of ${seriesValues.length}`,
+              fontSize: responsiveFontSize.axis - 1,
+              fontWeight: '500',
+            });
+
+            // Build tooltip using utility functions
+            const tooltipLinesNew: TooltipLine[] = [
+              createHeader(xDisplayName, { fontSize: responsiveFontSize.axis + 1 }),
+              createStatLine(seriesDisplayName, currentValue, {
+                fontSize: responsiveFontSize.axis + 2,
+                fontWeight: '800',
+                color: currentColors[key],
+              }),
+            ];
+
+            // Add percentage if multiple series
+            if (yAxisKeys.length > 1) {
+              tooltipLinesNew.push(
+                createStatLine('Of total', `${percentOfCategory.toFixed(1)}%`, {
+                  fontSize: responsiveFontSize.axis - 1,
+                  fontWeight: '500',
+                })
+              );
+            }
+
+            // Add comparison with average
+            tooltipLinesNew.push(
+              createStatLine('Average', seriesAverage, {
+                fontSize: responsiveFontSize.axis - 1,
+                fontWeight: '500',
+              })
+            );
+            tooltipLinesNew.push(
+              createPercentLine('vs Avg', diffPercent, {
+                isDarkMode,
+                showSign: true,
+                fontSize: responsiveFontSize.axis - 1,
+              })
+            );
+
+            // Add rank
+            tooltipLinesNew.push(
+              createRankLine(rank, seriesValues.length, { fontSize: responsiveFontSize.axis - 1 })
+            );
+
+            // Reuse existing tooltip or create new one
+            let tooltip = currentTooltipRef.current;
+            if (!tooltip || tooltip.empty()) {
+              tooltip = g.append('g').attr('class', 'tooltip').style('opacity', 0);
+              currentTooltipRef.current = tooltip;
+            }
+
+            const pointerX =
+              (xScale(String(processedData.indexOf(d))) || 0) +
+              (xSubScale(key) || 0) +
+              xSubScale.bandwidth() / 2;
+            const pointerY = yScale(d[key] as number);
+
+            renderD3Tooltip(tooltip, {
+              lines: tooltipLinesNew,
+              isDarkMode,
+              position: { x: pointerX, y: pointerY },
+              containerWidth: innerWidth,
+              containerHeight: innerHeight,
+              preferPosition: 'above',
+            });
+
+            // Smooth fade in
+            tooltip.style('opacity', 1);
+
+            // Follow mouse
+            d3.select(this).on('mousemove', function (moveEvent) {
+              const [mx, my] = d3.pointer(moveEvent, g.node());
+              renderD3Tooltip(tooltip, {
+                lines: tooltipLinesNew,
+                isDarkMode,
+                position: { x: mx, y: my },
+                containerWidth: innerWidth,
+                containerHeight: innerHeight,
+                preferPosition: 'above',
+              });
+            });
           })
           .on('mouseout', function () {
+            d3.select(this).on('mousemove', null);
             d3.select(this)
               .transition()
               .duration(200)
               .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))')
               .attr('opacity', 1);
-            g.select('.tooltip').transition().duration(100).style('opacity', 0).remove();
+
+            // Schedule tooltip hide so quick re-hovers don't cause flicker
+            tooltipTimeoutRef.current = setTimeout(() => {
+              hideCurrentTooltip();
+            }, 150);
           })
           .transition()
           .delay(keyIndex * 100)
@@ -606,44 +952,60 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .attr('y', d => yScale(d[key] as number))
           .attr('height', d => innerHeight - yScale(d[key] as number));
 
-        // Add bar values if showPointValues is enabled (matching LineChart behavior)
-        if (showPointValues) {
-          g.selectAll(`.bar-value-${keyIndex}`)
-            .data(processedData)
-            .enter()
-            .append('text')
-            .attr('class', `bar-value-${keyIndex}`)
-            .attr('x', d => {
-              const base = (xScale(String(d[xAxisKey])) || 0) + (xSubScale(key) || 0);
-              return base + xSubScale.bandwidth() / 2;
-            })
-            .attr('y', d => {
-              return yScale(d[key] as number) - 8; // Position above the bar
-            })
-            .attr('text-anchor', 'middle')
-            .attr('fill', textColor)
-            .style('font-size', `${Math.max(responsiveFontSize.axis - 2, 9)}px`)
-            .style('font-weight', '600')
-            .style('opacity', 0)
-            .style(
-              'text-shadow',
-              isDarkMode ? '1px 1px 2px rgba(0,0,0,0.8)' : '1px 1px 2px rgba(255,255,255,0.8)'
-            )
-            .text(d => {
-              const yValue = d[key] as number;
-              if (yAxisFormatter) {
-                return yAxisFormatter(yValue);
-              }
-              return yValue.toLocaleString();
-            })
-            .transition()
-            .delay(keyIndex * 100 + animationDuration)
-            .duration(300)
-            .ease(d3.easeBackOut)
-            .style('opacity', 1);
-        }
+        // Note: Bar values are now shown as category totals outside the loop
       });
-    } else {
+    }
+
+    // Add aggregated values for grouped bars if showPointValues is enabled
+    // Show one value per X-axis category (total of all series) instead of per bar
+    if (barType === 'grouped' && showPointValues) {
+      // Calculate totals for each x-axis category
+      const categoryTotals = processedData.map(d => {
+        const total = yAxisKeys
+          .filter(k => !disabledBars.includes(k))
+          .reduce((sum, key) => sum + ((d[key] as number) || 0), 0);
+        return { xValue: d[xAxisKey], total };
+      });
+
+      g.selectAll('.grouped-bar-total')
+        .data(categoryTotals)
+        .enter()
+        .append('text')
+        .attr('class', 'grouped-bar-total')
+        .attr('x', (_d, i) => (xScale(String(i)) || 0) + xScale.bandwidth() / 2)
+        .attr('y', d => {
+          // Find the highest bar in this category group
+          const maxValue = Math.max(
+            ...yAxisKeys
+              .filter(k => !disabledBars.includes(k))
+              .map(k => {
+                const dataPoint = processedData.find(p => p[xAxisKey] === d.xValue);
+                return (dataPoint?.[k] as number) || 0;
+              })
+          );
+          return yScale(maxValue) - 8;
+        })
+        .attr('text-anchor', 'middle')
+        .attr('fill', textColor)
+        .style('font-size', `${Math.max(responsiveFontSize.axis - 2, 10)}px`)
+        .style('font-weight', '600')
+        .style('opacity', 0)
+        .style('stroke', isDarkMode ? '#111827' : '#ffffff')
+        .style('stroke-width', '3px')
+        .style('paint-order', 'stroke')
+        .style('fill', textColor)
+        .text(d => {
+          return yAxisFormatter ? yAxisFormatter(d.total) : String(d.total);
+        })
+        .transition()
+        .delay(animationDuration)
+        .duration(300)
+        .ease(d3.easeBackOut)
+        .style('opacity', 1);
+    }
+
+    // Stacked bars logic
+    if (barType === 'stacked') {
       const stackedData = d3
         .stack<ChartDataPoint>()
         .keys(yAxisKeys)
@@ -654,7 +1016,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .enter()
           .append('rect')
           .attr('class', `bar-stack-${seriesIndex}`)
-          .attr('x', d => xScale(String(d.data[xAxisKey])) || 0)
+          .attr('x', (_d, i) => xScale(String(i)) || 0)
           .attr('y', innerHeight)
           .attr('width', xScale.bandwidth())
           .attr('height', 0)
@@ -664,51 +1026,121 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))')
           .on('mouseover', function (_event, d) {
             if (!showTooltip) return;
+            clearTooltipTimeout();
+            // hideCurrentTooltip(); // Removed to prevent flickering
+
             d3.select(this)
               .transition()
               .duration(200)
               .style('filter', 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))')
               .attr('opacity', 0.8);
-            const value = d[1] - d[0];
-            const tooltip = g
-              .append('g')
-              .attr('class', 'tooltip')
-              .attr(
-                'transform',
-                `translate(${(xScale(String(d.data[xAxisKey])) || 0) + xScale.bandwidth() / 2}, ${yScale(d[1]) - 10})`
-              );
-            const tooltipBg = tooltip
-              .append('rect')
-              .attr('x', -25)
-              .attr('y', -20)
-              .attr('width', 50)
-              .attr('height', 16)
-              .attr('fill', isDarkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.95)')
-              .attr('stroke', currentColors[yAxisKeys[seriesIndex]])
-              .attr('stroke-width', 1)
-              .attr('rx', 3)
-              .style('filter', 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2))')
-              .style('opacity', 0);
-            tooltip
-              .append('text')
-              .attr('text-anchor', 'middle')
-              .attr('y', -8)
-              .attr('fill', textColor)
-              .style('font-size', '11px')
-              .style('font-weight', '500')
-              .style('font-family', 'monospace')
-              .style('opacity', 0)
-              .text(value.toLocaleString());
-            tooltipBg.transition().duration(100).style('opacity', 1);
-            tooltip.selectAll('text').transition().duration(100).style('opacity', 1);
+
+            const currentKey = yAxisKeys[seriesIndex];
+            const currentValue = d[1] - d[0];
+            const xDisplayName = xAxisNames[String(d.data[xAxisKey])] || String(d.data[xAxisKey]);
+            const seriesDisplayName = seriesNames[currentKey] || currentKey;
+
+            // Calculate total for this stack (all series)
+            const stackTotal = yAxisKeys.reduce((sum, k) => sum + ((d.data[k] as number) || 0), 0);
+            const percentOfStack = stackTotal > 0 ? (currentValue / stackTotal) * 100 : 0;
+
+            // Calculate cumulative percentage up to this layer
+            let cumulativeValue = 0;
+            for (let i = 0; i <= seriesIndex; i++) {
+              cumulativeValue += (d.data[yAxisKeys[i]] as number) || 0;
+            }
+            const cumulativePercent = stackTotal > 0 ? (cumulativeValue / stackTotal) * 100 : 0;
+
+            // Calculate average for this series
+            const seriesValues = processedData
+              .map(item => item[currentKey] as number)
+              .filter(v => !isNaN(v));
+            const seriesAverage =
+              seriesValues.length > 0
+                ? seriesValues.reduce((a, b) => a + b, 0) / seriesValues.length
+                : 0;
+            const diffFromAvg = currentValue - seriesAverage;
+            const diffPercent = seriesAverage > 0 ? (diffFromAvg / seriesAverage) * 100 : 0;
+
+            // Build tooltip content for stacked bars using utility functions
+            const stackedTooltipLines: TooltipLine[] = [
+              createHeader(xDisplayName, { fontSize: responsiveFontSize.axis + 1 }),
+              createStatLine(seriesDisplayName, currentValue, {
+                fontSize: responsiveFontSize.axis + 2,
+                fontWeight: '800',
+                color: currentColors[currentKey],
+              }),
+              createStatLine('Of stack', `${percentOfStack.toFixed(1)}%`, {
+                fontSize: responsiveFontSize.axis - 1,
+                fontWeight: '500',
+              }),
+              createStatLine('Cumulative', `${cumulativePercent.toFixed(1)}%`, {
+                fontSize: responsiveFontSize.axis - 1,
+                fontWeight: '500',
+              }),
+              createStatLine('Average', seriesAverage, {
+                fontSize: responsiveFontSize.axis - 1,
+                fontWeight: '500',
+              }),
+              createPercentLine('vs Avg', diffPercent, {
+                isDarkMode,
+                showSign: true,
+                fontSize: responsiveFontSize.axis - 1,
+              }),
+              createSeparator(),
+              createStatLine('Stack total', stackTotal, {
+                fontSize: responsiveFontSize.axis - 1,
+                fontWeight: '600',
+              }),
+            ];
+
+            // Reuse existing tooltip or create new one
+            let tooltip = currentTooltipRef.current;
+            if (!tooltip || tooltip.empty()) {
+              tooltip = g.append('g').attr('class', 'tooltip').style('opacity', 0);
+              currentTooltipRef.current = tooltip;
+            }
+
+            const pointerX =
+              (xScale(String(processedData.indexOf(d.data))) || 0) + xScale.bandwidth() / 2;
+            const pointerY = yScale(d[1]);
+
+            renderD3Tooltip(tooltip, {
+              lines: stackedTooltipLines,
+              isDarkMode,
+              position: { x: pointerX, y: pointerY },
+              containerWidth: innerWidth,
+              containerHeight: innerHeight,
+              preferPosition: 'above',
+            });
+
+            // Smooth fade in
+            tooltip.style('opacity', 1);
+
+            // Follow mouse
+            d3.select(this).on('mousemove', function (moveEvent) {
+              const [mx, my] = d3.pointer(moveEvent, g.node());
+              renderD3Tooltip(tooltip, {
+                lines: stackedTooltipLines,
+                isDarkMode,
+                position: { x: mx, y: my },
+                containerWidth: innerWidth,
+                containerHeight: innerHeight,
+                preferPosition: 'above',
+              });
+            });
           })
           .on('mouseout', function () {
+            d3.select(this).on('mousemove', null);
             d3.select(this)
               .transition()
               .duration(200)
               .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))')
               .attr('opacity', 1);
-            g.select('.tooltip').transition().duration(100).style('opacity', 0).remove();
+
+            tooltipTimeoutRef.current = setTimeout(() => {
+              hideCurrentTooltip();
+            }, 150);
           })
           .transition()
           .delay(seriesIndex * 100)
@@ -717,6 +1149,40 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
           .attr('y', d => yScale(d[1]))
           .attr('height', d => yScale(d[0]) - yScale(d[1]));
       });
+
+      // Add total values on top of stacked bars if showPointValues is enabled
+      if (showPointValues) {
+        // Calculate totals for each x-axis category
+        const totals = processedData.map(d => {
+          const total = yAxisKeys.reduce((sum, key) => sum + ((d[key] as number) || 0), 0);
+          return { xValue: d[xAxisKey], total };
+        });
+
+        g.selectAll('.stacked-bar-total')
+          .data(totals)
+          .enter()
+          .append('text')
+          .attr('class', 'stacked-bar-total')
+          .attr('x', d => (xScale(String(d.xValue)) || 0) + xScale.bandwidth() / 2)
+          .attr('y', d => yScale(d.total) - 5)
+          .attr('text-anchor', 'middle')
+          .attr('fill', textColor)
+          .style('font-size', `${Math.max(responsiveFontSize.axis - 3, 9)}px`)
+          .style('font-weight', '500')
+          .style('opacity', 0)
+          .style('stroke', isDarkMode ? '#111827' : '#ffffff')
+          .style('stroke-width', '3px')
+          .style('paint-order', 'stroke')
+          .style('fill', textColor)
+          .text(d => {
+            return yAxisFormatter ? yAxisFormatter(d.total) : String(d.total);
+          })
+          .transition()
+          .delay(animationDuration)
+          .duration(300)
+          .ease(d3.easeBackOut)
+          .style('opacity', 1);
+      }
     }
 
     // Axis labels with formatter symbols (matching LineChart implementation)
@@ -750,466 +1216,377 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
         .text(yLabelText);
     }
 
-    // Add responsive legend directly in SVG (matching LineChart implementation exactly)
+    // Add legend (matching PieChart implementation exactly)
     if (showLegend) {
       const enabledBars = yAxisKeys.filter(key => !disabledBars.includes(key));
+      const isMobile = currentWidth < 640;
+      const isTablet = currentWidth < 1024;
 
-      // Responsive legend sizing based on screen width and position (matching LineChart exactly)
-      const getResponsiveLegendSizes = () => {
-        const isMobile = currentWidth < 640;
+      // Calculate legend dimensions first to reserve space
+      const legendItemHeight = isMobile ? 20 : isTablet ? 22 : 25;
+      const legendItems = enabledBars;
 
-        return {
-          itemHeight: isMobile ? 18 : 20,
-          padding: isMobile ? 8 : 10,
-          itemSpacing: isMobile ? 3 : 5,
-          fontSize: isMobile ? legendFontSize - 1 : legendFontSize,
-          iconSize: isMobile ? 12 : 16,
-          iconSpacing: isMobile ? 6 : 8,
-        };
-      };
+      // Legend dimensions depend on orientation and chart size
+      let legendWidth = isMobile ? 120 : isTablet ? 140 : 150;
+      let legendHeight = legendItems.length * legendItemHeight + (isMobile ? 15 : 20);
 
-      const legendSizes = getResponsiveLegendSizes();
-      const totalLegendHeight =
-        enabledBars.length * legendSizes.itemHeight +
-        (enabledBars.length - 1) * legendSizes.itemSpacing +
-        2 * legendSizes.padding;
+      // For horizontal legend (top/bottom)
+      if (legendPosition === 'top' || legendPosition === 'bottom') {
+        // Calculate width based on items laid out horizontally
+        const itemWidth = isMobile ? 70 : isTablet ? 85 : 100;
+        legendWidth = Math.min(innerWidth - 40, legendItems.length * itemWidth + 40);
+        legendHeight = isMobile ? 40 : isTablet ? 45 : 50; // Fixed height for horizontal legend
+      }
 
-      // Responsive legend positioning based on screen size and position
-      const getResponsiveLegendPosition = () => {
-        const isMobile = currentWidth < 640;
-        const isTablet = currentWidth < 1024;
-
-        switch (legendPosition) {
-          case 'top':
-            return {
-              x: innerWidth / 2,
-              y: isMobile ? 10 : 15,
-            };
-          case 'bottom': {
-            const xLabelSpacing =
-              xAxisLabel && showAxisLabels
-                ? isMobile
-                  ? 30
-                  : isTablet
-                    ? 35
-                    : 40
-                : isMobile
-                  ? 15
-                  : 20;
-            return {
-              x: innerWidth / 2,
-              y: innerHeight + responsiveMargin.top + xLabelSpacing + (isMobile ? 15 : 25),
-            };
-          }
-          case 'left':
-            return {
-              x: isMobile ? 10 : 15,
-              y: isMobile ? 15 : 20,
-            };
-          case 'right':
-          default: {
-            const rightOffset = isMobile ? 120 : isTablet ? 140 : 150;
-            return {
-              x: Math.max(innerWidth - rightOffset, 10),
-              y: isMobile ? 15 : 20,
-            };
-          }
-        }
-      };
-
-      const legendPos = getResponsiveLegendPosition();
-      const legendX = legendPos.x;
-      const legendY = legendPos.y;
-
-      // Create responsive legend background
       const legendGroup = g.append('g').attr('class', 'legend-group');
 
-      // Calculate responsive legend dimensions
-      const isHorizontal = legendPosition === 'top' || legendPosition === 'bottom';
+      let legendX = 0;
+      let legendY = 0;
 
-      // Calculate optimal width for horizontal legends with even spacing
-      const calculateLegendWidth = () => {
-        if (!isHorizontal) return (currentWidth < 640 ? 100 : 120) + 2 * legendSizes.padding;
+      // Device-aware extra spacing to keep legend away from chart edges
+      const extraLegendSpacing = isMobile ? 8 : isTablet ? 12 : 20;
+      const legendSpacingFromChart = isMobile ? 35 : isTablet ? 65 : 85; // Increased spacing to avoid X-axis label overlap
 
-        // Calculate total text width for all items (matching LineChart exactly)
-        const totalTextWidth = enabledBars.reduce((total, key) => {
-          const seriesName = seriesNames[key] || key;
-          const maxTextLength = currentWidth < 640 ? 8 : currentWidth < 1024 ? 10 : 12;
-          const displayName =
-            seriesName.length > maxTextLength
-              ? seriesName.substring(0, maxTextLength) + '...'
-              : seriesName;
-          return (
-            total +
-            displayName.length * (legendSizes.fontSize * 0.6) +
-            legendSizes.iconSize +
-            legendSizes.iconSpacing
-          );
-        }, 0);
+      switch (legendPosition) {
+        case 'top':
+          legendX = innerWidth / 2 - legendWidth / 2;
+          legendY = -legendHeightReserved - 10; // Position above the chart area
+          break;
+        case 'bottom':
+          legendX = innerWidth / 2 - legendWidth / 2;
+          legendY = innerHeight + legendSpacingFromChart; // Position below the chart area
+          break;
+        case 'left':
+          // push legend slightly inward so it's not too close to the chart
+          legendX = extraLegendSpacing;
+          legendY = innerHeight / 2 - legendHeight * 2;
+          break;
+        case 'right':
+        default:
+          legendX = innerWidth - legendWidth - extraLegendSpacing;
+          legendY = innerHeight / 2 - legendHeight * 2;
+          break;
+      }
 
-        // Add minimum spacing between items
-        const minSpacingBetweenItems = currentWidth < 640 ? 20 : 30;
-        const totalSpacing = (enabledBars.length - 1) * minSpacingBetweenItems;
-
-        return Math.max(totalTextWidth + totalSpacing + 2 * legendSizes.padding, 200);
-      };
-
-      const legendBgDimensions = {
-        x: isHorizontal ? legendX - calculateLegendWidth() / 2 : legendX - legendSizes.padding,
-        y: legendY - legendSizes.padding,
-        width: isHorizontal
-          ? calculateLegendWidth()
-          : (currentWidth < 640 ? 100 : 120) + 2 * legendSizes.padding,
-        height: isHorizontal ? legendSizes.itemHeight + 2 * legendSizes.padding : totalLegendHeight,
-      };
-
-      // Enhanced legend background with glass morphism effect (matching LineChart exactly)
-      legendGroup
+      // Create legend background and a contents group we'll measure
+      const legendBg = legendGroup
         .append('rect')
-        .attr('x', legendBgDimensions.x)
-        .attr('y', legendBgDimensions.y)
-        .attr('width', legendBgDimensions.width)
-        .attr('height', legendBgDimensions.height)
+        .attr('x', legendX)
+        .attr('y', legendY)
+        .attr('width', legendWidth)
+        .attr('height', legendHeight)
         .attr('fill', isDarkMode ? 'rgba(55, 65, 81, 0.8)' : 'rgba(248, 250, 252, 0.9)')
         .attr('stroke', isDarkMode ? 'rgba(107, 114, 128, 0.3)' : 'rgba(209, 213, 219, 0.3)')
         .attr('stroke-width', 1)
-        .attr('rx', currentWidth < 640 ? 8 : 12)
-        .attr('ry', currentWidth < 640 ? 8 : 12)
-        .style('filter', 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))')
-        .style('backdrop-filter', 'blur(10px)')
-        .style('transition', 'all 0.3s ease');
+        .attr('rx', 8)
+        .style('filter', 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))');
 
-      // Add subtle gradient overlay (matching LineChart exactly)
-      const gradientId = `legend-gradient-${Math.random().toString(36).substr(2, 9)}`;
-      const gradient = svg
-        .append('defs')
-        .append('linearGradient')
-        .attr('id', gradientId)
-        .attr('x1', '0%')
-        .attr('y1', '0%')
-        .attr('x2', '100%')
-        .attr('y2', '100%');
+      const legendContents = legendGroup.append('g').attr('class', 'legend-contents');
 
-      gradient
-        .append('stop')
-        .attr('offset', '0%')
-        .attr('stop-color', isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.8)')
-        .attr('stop-opacity', 1);
+      if (legendPosition === 'top' || legendPosition === 'bottom') {
+        // Horizontal legend - items laid out horizontally
+        const itemPadding = isMobile ? 6 : 8;
 
-      gradient
-        .append('stop')
-        .attr('offset', '100%')
-        .attr('stop-color', isDarkMode ? 'rgba(255, 255, 255, 0.01)' : 'rgba(255, 255, 255, 0.1)')
-        .attr('stop-opacity', 1);
+        // Build items inside legendContents and support up to 2 rows if needed
+        const localIconSize = isMobile ? 12 : isTablet ? 13 : 14;
+        const padX = isMobile ? 12 : 16;
+        const padY = isMobile ? 8 : 10;
+        const availableContentWidth = legendWidth - padX * 2;
 
-      legendGroup
-        .append('rect')
-        .attr('x', legendBgDimensions.x)
-        .attr('y', legendBgDimensions.y)
-        .attr('width', legendBgDimensions.width)
-        .attr('height', legendBgDimensions.height)
-        .attr('fill', `url(#${gradientId})`)
-        .attr('rx', currentWidth < 640 ? 8 : 12)
-        .attr('ry', currentWidth < 640 ? 8 : 12);
+        // Precompute display labels with increased character limits to show more text
+        const itemsMeta = legendItems.map(key => {
+          const label = seriesNames[key] || key;
+          const maxLabelLength = isMobile ? 12 : isTablet ? 18 : 20;
+          const displayLabel =
+            label.length > maxLabelLength ? label.substring(0, maxLabelLength) + '...' : label;
+          return { displayLabel, key };
+        });
 
-      // Enhanced legend items with modern design (matching LineChart exactly)
-      enabledBars.forEach((key, index) => {
-        const colorKey = colors[key] ? key : `bar${index + 1}`;
-        const color =
-          colors[colorKey]?.[isDarkMode ? 'dark' : 'light'] ||
-          defaultColorsChart[`color${index + 1}`][isDarkMode ? 'dark' : 'light'];
+        // Use fixed per-item container width so all items align on a grid (not centered per-item)
+        const itemContainerW = isMobile ? 100 : isTablet ? 120 : 140; // Fixed width per column slot
 
-        // Calculate responsive text truncation (matching LineChart exactly)
-        const seriesName = seriesNames[key] || key;
-        const maxTextLength = currentWidth < 640 ? 8 : currentWidth < 1024 ? 10 : 12;
-        const displayName =
-          seriesName.length > maxTextLength
-            ? seriesName.substring(0, maxTextLength) + '...'
-            : seriesName;
+        const totalSingleWidth = itemContainerW * legendItems.length;
+        const useTwoRows = totalSingleWidth > availableContentWidth && legendItems.length > 1;
 
-        let itemX = legendX;
-        let itemY = legendY;
+        if (!useTwoRows) {
+          // Single centered row - items aligned on grid
+          let currentX = 0;
+          legendItems.forEach((key, idx) => {
+            const { displayLabel } = itemsMeta[idx];
+            const legendItem = legendContents
+              .append('g')
+              .attr('class', `legend-item-${idx}`)
+              .style('cursor', 'pointer')
+              .attr('transform', `translate(${currentX}, 0)`);
 
-        if (isHorizontal) {
-          // Horizontal layout for top/bottom - distribute evenly across available width
-          const totalWidth = legendBgDimensions.width - 2 * legendSizes.padding;
-          const spaceBetweenItems = totalWidth / enabledBars.length;
-          itemX = legendBgDimensions.x + legendSizes.padding + index * spaceBetweenItems;
-          itemY = legendY;
+            legendItem
+              .append('rect')
+              .attr('x', 0)
+              .attr('y', 0)
+              .attr('width', localIconSize)
+              .attr('height', localIconSize)
+              .attr('rx', 3)
+              .attr('fill', currentColors[key])
+              .style('filter', `drop-shadow(0 2px 4px ${currentColors[key]}40)`);
+
+            legendItem
+              .append('text')
+              .attr('x', localIconSize + itemPadding)
+              .attr('y', localIconSize / 2)
+              .attr('dy', '0.35em')
+              .attr('fill', textColor)
+              .style('font-size', `${legendFontSize}px`)
+              .style('font-weight', '600')
+              .text(displayLabel);
+
+            legendItem
+              .on('mouseenter', function () {
+                d3.select(this).style('opacity', '0.8');
+              })
+              .on('mouseleave', function () {
+                d3.select(this).style('opacity', '1');
+              });
+
+            currentX += itemContainerW;
+          });
         } else {
-          // Vertical layout for left/right
-          itemX = legendX;
-          itemY = legendY + index * (legendSizes.itemHeight + legendSizes.itemSpacing);
+          // Two-row layout using uniform item container width for consistent columns
+          const firstRowCount = Math.ceil(legendItems.length / 2);
+          const rowY = localIconSize + padY; // spacing between rows
+
+          // First row
+          let x0 = 0;
+          for (let i = 0; i < firstRowCount; i++) {
+            const { displayLabel, key } = itemsMeta[i];
+            const legendItem = legendContents
+              .append('g')
+              .attr('class', `legend-item-${i}`)
+              .style('cursor', 'pointer')
+              .attr('transform', `translate(${x0}, 0)`);
+
+            legendItem
+              .append('rect')
+              .attr('x', 0)
+              .attr('y', 0)
+              .attr('width', localIconSize)
+              .attr('height', localIconSize)
+              .attr('rx', 3)
+              .attr('fill', currentColors[key])
+              .style('filter', `drop-shadow(0 2px 4px ${currentColors[key]}40)`);
+
+            legendItem
+              .append('text')
+              .attr('x', localIconSize + itemPadding)
+              .attr('y', localIconSize / 2)
+              .attr('dy', '0.35em')
+              .attr('fill', textColor)
+              .style('font-size', `${legendFontSize}px`)
+              .style('font-weight', '600')
+              .text(displayLabel);
+
+            legendItem
+              .on('mouseenter', function () {
+                d3.select(this).style('opacity', '0.8');
+              })
+              .on('mouseleave', function () {
+                d3.select(this).style('opacity', '1');
+              });
+
+            x0 += itemContainerW;
+          }
+
+          // Second row
+          let x1 = 0;
+          for (let j = firstRowCount; j < legendItems.length; j++) {
+            const { displayLabel, key } = itemsMeta[j];
+            const legendItem = legendContents
+              .append('g')
+              .attr('class', `legend-item-${j}`)
+              .style('cursor', 'pointer')
+              .attr('transform', `translate(${x1}, ${rowY})`);
+
+            legendItem
+              .append('rect')
+              .attr('x', 0)
+              .attr('y', 0)
+              .attr('width', localIconSize)
+              .attr('height', localIconSize)
+              .attr('rx', 3)
+              .attr('fill', currentColors[key])
+              .style('filter', `drop-shadow(0 2px 4px ${currentColors[key]}40)`);
+
+            legendItem
+              .append('text')
+              .attr('x', localIconSize + itemPadding)
+              .attr('y', localIconSize / 2)
+              .attr('dy', '0.35em')
+              .attr('fill', textColor)
+              .style('font-size', `${legendFontSize}px`)
+              .style('font-weight', '600')
+              .text(displayLabel);
+
+            legendItem
+              .on('mouseenter', function () {
+                d3.select(this).style('opacity', '0.8');
+              })
+              .on('mouseleave', function () {
+                d3.select(this).style('opacity', '1');
+              });
+
+            x1 += itemContainerW;
+          }
         }
 
-        // Create interactive legend item group
-        const legendItem = legendGroup
-          .append('g')
-          .attr('class', `legend-item-${index}`)
-          .style('cursor', 'pointer')
-          .style('transition', 'all 0.2s ease');
+        // Measure and center contents inside background, then resize background
+        try {
+          const bbox = (legendContents.node() as SVGGElement).getBBox();
+          const extraWidth = isMobile ? 8 : isTablet ? 12 : 16;
+          const desiredBgWidth = Math.max(
+            bbox.width + padX * 2 + extraWidth,
+            legendWidth + extraWidth
+          );
+          const desiredBgHeight = Math.max(bbox.height + padY * 2, legendHeight);
 
-        // Modern color indicator with rounded rectangle and glow effect (matching LineChart exactly)
-        const indicatorSize = currentWidth < 640 ? 12 : 16;
-        const colorIndicator = legendItem
-          .append('rect')
-          .attr('x', itemX)
-          .attr('y', itemY + (legendSizes.itemHeight - indicatorSize) / 2)
-          .attr('width', indicatorSize)
-          .attr('height', indicatorSize)
-          .attr('rx', 3)
-          .attr('ry', 3)
-          .attr('fill', color)
-          .style('filter', `drop-shadow(0 2px 4px ${color}40)`)
-          .style('transition', 'all 0.2s ease');
+          // For top/bottom: center the background by desired width so it doesn't look left-shifted
+          const bgX =
+            legendPosition === 'top' || legendPosition === 'bottom'
+              ? innerWidth / 2 - desiredBgWidth / 2
+              : legendX;
 
-        // Add subtle inner glow (matching LineChart exactly)
-        const glowId = `indicator-glow-${index}`;
-        const glowFilter = svg
-          .select('defs')
-          .append('filter')
-          .attr('id', glowId)
-          .attr('x', '-50%')
-          .attr('y', '-50%')
-          .attr('width', '200%')
-          .attr('height', '200%');
+          legendBg
+            .attr('x', bgX)
+            .attr('y', legendY)
+            .attr('width', desiredBgWidth)
+            .attr('height', desiredBgHeight);
 
-        glowFilter.append('feGaussianBlur').attr('stdDeviation', '2').attr('result', 'coloredBlur');
+          // center contents horizontally within the bg and vertically with some padding
+          const contentsX = bgX + (desiredBgWidth - bbox.width) / 2;
+          const contentsY = legendY + padY + (desiredBgHeight - (bbox.height + padY * 2)) / 2;
+          legendContents.attr('transform', `translate(${contentsX}, ${contentsY})`);
+        } catch {
+          console.warn('legend bbox measurement failed');
+        }
+      } else {
+        // Vertical legend (left/right)
+        const iconSize = isMobile ? 14 : 16;
 
-        const feMerge = glowFilter.append('feMerge');
-        feMerge.append('feMergeNode').attr('in', 'coloredBlur');
-        feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+        let currentY = 0;
+        legendItems.forEach((key, i) => {
+          const label = seriesNames[key] || key;
+          const displayLabel =
+            label.length > (isMobile ? 10 : isTablet ? 12 : 15)
+              ? label.substring(0, isMobile ? 10 : isTablet ? 12 : 15) + '...'
+              : label;
 
-        // Enhanced legend text with better typography (matching LineChart exactly)
-        const legendText = legendItem
-          .append('text')
-          .attr('x', itemX + indicatorSize + legendSizes.iconSpacing + 2)
-          .attr('y', itemY + legendSizes.itemHeight / 2)
-          .attr('dy', '0.35em')
-          .attr('fill', textColor)
-          .style('font-size', `${legendSizes.fontSize}px`)
-          .style('font-weight', '600')
-          .style('font-family', '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif')
-          .style('letter-spacing', '0.025em')
-          .style('transition', 'all 0.2s ease')
-          .text(displayName);
+          const legendItem = legendContents
+            .append('g')
+            .attr('class', `legend-item-${i}`)
+            .style('cursor', 'pointer')
+            .attr('transform', `translate(${isMobile ? 8 : 10}, ${currentY})`);
 
-        // Add interactive hover and click effects (matching LineChart exactly)
-        legendItem
-          .on('mouseenter', function () {
-            d3.select(this).style('transform', 'translateY(-1px)').style('opacity', '0.9');
+          // Color indicator
+          legendItem
+            .append('rect')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', iconSize)
+            .attr('height', iconSize)
+            .attr('rx', 3)
+            .attr('fill', currentColors[key])
+            .style('filter', `drop-shadow(0 2px 4px ${currentColors[key]}40)`);
 
-            colorIndicator
-              .style('filter', `drop-shadow(0 4px 8px ${color}60) url(#${glowId})`)
-              .attr('width', indicatorSize + 2)
-              .attr('height', indicatorSize + 2)
-              .attr('x', itemX - 1)
-              .attr('y', itemY + (legendSizes.itemHeight - indicatorSize) / 2 - 1);
+          // Label
+          legendItem
+            .append('text')
+            .attr('x', iconSize + (isMobile ? 6 : 8))
+            .attr('y', iconSize / 2)
+            .attr('dy', '0.35em')
+            .attr('fill', textColor)
+            .style('font-size', `${legendFontSize}px`)
+            .style('font-weight', '600')
+            .text(displayLabel);
 
-            legendText.style('font-weight', '700').attr('fill', color);
+          // Hover effects
+          legendItem
+            .on('mouseenter', function () {
+              d3.select(this).style('opacity', '0.8');
+            })
+            .on('mouseleave', function () {
+              d3.select(this).style('opacity', '1');
+            });
 
-            // Add hover tooltip effect (matching LineChart exactly)
-            const tooltip = legendGroup
-              .append('g')
-              .attr('class', 'legend-tooltip')
-              .style('opacity', 0);
+          currentY += legendItemHeight;
+        });
 
-            tooltip
-              .append('rect')
-              .attr('x', itemX + indicatorSize + legendSizes.iconSpacing - 5)
-              .attr('y', itemY - 25)
-              .attr('width', Math.max(seriesName.length * 6 + 16, 80))
-              .attr('height', 20)
-              .attr('rx', 4)
-              .attr('fill', isDarkMode ? '#1f2937' : '#374151')
-              .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))');
+        // Measure and position vertical contents
+        try {
+          const bbox = (legendContents.node() as SVGGElement).getBBox();
+          const padX = isMobile ? 8 : 10;
+          const padY = isMobile ? 8 : 10;
+          const contentsX = legendX + padX;
+          const contentsY = legendY + padY;
+          legendContents.attr('transform', `translate(${contentsX}, ${contentsY})`);
+          const extraWidthV = isMobile ? 6 : 10;
+          legendBg
+            .attr('x', legendX)
+            .attr('y', legendY)
+            .attr('width', Math.max(bbox.width + padX * 2 + extraWidthV, legendWidth + extraWidthV))
+            .attr('height', Math.max(bbox.height + padY * 2, legendHeight));
+        } catch {
+          console.warn('legend bbox measurement failed');
+        }
+      }
+    }
 
-            tooltip
-              .append('text')
-              .attr('x', itemX + indicatorSize + legendSizes.iconSpacing + 3)
-              .attr('y', itemY - 10)
-              .attr('fill', '#ffffff')
-              .style('font-size', '11px')
-              .style('font-weight', '500')
-              .text(seriesName);
-
-            tooltip.transition().duration(200).style('opacity', 1);
-          })
-          .on('mouseleave', function () {
-            d3.select(this).style('transform', 'translateY(0px)').style('opacity', '1');
-
-            colorIndicator
-              .style('filter', `drop-shadow(0 2px 4px ${color}40)`)
-              .attr('width', indicatorSize)
-              .attr('height', indicatorSize)
-              .attr('x', itemX)
-              .attr('y', itemY + (legendSizes.itemHeight - indicatorSize) / 2);
-
-            legendText.style('font-weight', '600').attr('fill', textColor);
-
-            // Remove tooltip
-            legendGroup.selectAll('.legend-tooltip').remove();
-          })
-          .on('click', function () {
-            // Add ripple effect on click
-            const ripple = legendGroup
-              .append('circle')
-              .attr('cx', itemX + indicatorSize / 2)
-              .attr('cy', itemY + legendSizes.itemHeight / 2)
-              .attr('r', 0)
-              .attr('fill', color)
-              .attr('opacity', 0.3);
-
-            ripple.transition().duration(600).attr('r', 30).attr('opacity', 0).remove();
-
-            // Visual feedback for the click
-            d3.select(this)
-              .transition()
-              .duration(100)
-              .style('transform', 'scale(0.95)')
-              .transition()
-              .duration(100)
-              .style('transform', 'scale(1)');
-          });
+    // Zoom behavior using d3.zoom
+    const zoom = d3
+      .zoom<Element, unknown>()
+      .scaleExtent(shouldEnableZoom ? [0.5, zoomExtent] : [1, 1])
+      .on('zoom', event => {
+        const { x, y, k } = event.transform;
+        g.attr(
+          'transform',
+          `translate(${x + responsiveMargin.left}, ${y + responsiveMargin.top}) scale(${k})`
+        );
       });
-    }
 
-    // Enhanced zoom and pan with mouse interactions
-    if (enableZoom || enablePan) {
-      let zoomLevel = 1;
-      let translateX = 0;
-      let translateY = 0;
-      let isDragging = false;
-      let dragStartX = 0;
-      let dragStartY = 0;
-      let dragStartTranslateX = 0;
-      let dragStartTranslateY = 0;
+    zoomBehaviorRef.current = zoom;
 
-      // Mouse wheel zoom
-      if (enableZoom) {
-        svg.on('wheel', function (event) {
-          event.preventDefault();
+    if (shouldEnableZoom || shouldEnablePan) {
+      svg.call(zoom as any);
 
-          // Get mouse position relative to the chart
-          const rect = svg.node()?.getBoundingClientRect();
-          if (!rect) return;
-
-          const mouseX = event.clientX - rect.left - responsiveMargin.left;
-          const mouseY = event.clientY - rect.top - responsiveMargin.top;
-
-          const delta = event.deltaY;
-          const scaleFactor = delta > 0 ? 0.9 : 1.1;
-          const newZoomLevel = zoomLevel * scaleFactor;
-
-          // Limit zoom
-          const clampedZoomLevel = Math.max(0.5, Math.min(zoomExtent, newZoomLevel));
-          const actualScaleFactor = clampedZoomLevel / zoomLevel;
-
-          // Calculate new translation to zoom at mouse position
-          const newTranslateX = translateX + (mouseX - translateX) * (1 - actualScaleFactor);
-          const newTranslateY = translateY + (mouseY - translateY) * (1 - actualScaleFactor);
-
-          // Update zoom state
-          zoomLevel = clampedZoomLevel;
-          translateX = newTranslateX;
-          translateY = newTranslateY;
-
-          // Apply zoom and pan transform
-          const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
-          g.attr('transform', transform);
-        });
+      // Disable zoom on wheel if not enabled
+      if (!shouldEnableZoom) {
+        svg.on('wheel.zoom', null);
+      }
+      // Disable pan on mousedown if not enabled
+      if (!shouldEnablePan) {
+        svg.on('mousedown.zoom', null);
+        svg.on('touchstart.zoom', null);
       }
 
-      // Mouse drag to pan
-      if (enablePan) {
-        svg.on('mousedown', function (event) {
-          if (event.button !== 0) return; // Only left mouse button
-
-          isDragging = true;
-          dragStartX = event.clientX;
-          dragStartY = event.clientY;
-          dragStartTranslateX = translateX;
-          dragStartTranslateY = translateY;
-
-          // Change cursor to grabbing
-          svg.style('cursor', 'grabbing');
-
-          // Prevent text selection during drag
-          event.preventDefault();
-        });
-
-        svg.on('mousemove', function (event) {
-          if (!isDragging) {
-            // Show grab cursor when zoomed in
-            if (zoomLevel > 1) {
-              svg.style('cursor', 'grab');
-            } else {
-              svg.style('cursor', 'default');
-            }
-            return;
-          }
-
-          const deltaX = event.clientX - dragStartX;
-          const deltaY = event.clientY - dragStartY;
-
-          // Update translation based on drag distance
-          translateX = dragStartTranslateX + deltaX;
-          translateY = dragStartTranslateY + deltaY;
-
-          // Apply pan transform
-          const transform = `translate(${responsiveMargin.left + translateX},${responsiveMargin.top + translateY}) scale(${zoomLevel})`;
-          g.attr('transform', transform);
-        });
-
-        svg.on('mouseup', function () {
-          if (isDragging) {
-            isDragging = false;
-
-            // Reset cursor
-            if (zoomLevel > 1) {
-              svg.style('cursor', 'grab');
-            } else {
-              svg.style('cursor', 'default');
-            }
-          }
-        });
-
-        // Handle mouse leave to stop dragging and hide tooltips
-        svg.on('mouseleave', function () {
-          if (isDragging) {
-            isDragging = false;
-            svg.style('cursor', 'default');
-          }
-          // Also hide any tooltips when leaving the chart area
-          clearTooltipTimeout();
-          hideCurrentTooltip();
-        });
-
-        // Double-click to reset zoom
-        svg.on('dblclick', function () {
-          zoomLevel = 1;
-          translateX = 0;
-          translateY = 0;
-
-          svg.style('cursor', 'default');
-
-          g.transition()
-            .duration(300)
-            .ease(d3.easeQuadOut)
-            .attr(
-              'transform',
-              `translate(${responsiveMargin.left},${responsiveMargin.top}) scale(1)`
-            );
-        });
-      }
-    }
-
-    // Global mouseleave handler for tooltip management (even when zoom/pan disabled)
-    if (!enableZoom && !enablePan && showTooltip) {
-      svg.on('mouseleave', function () {
+      // Handle mouse leave to hide tooltips
+      svg.on('mouseleave.tooltip', () => {
         clearTooltipTimeout();
         hideCurrentTooltip();
       });
+
+      // Double click to reset
+      svg.on('dblclick.zoom', () => {
+        svg
+          .transition()
+          .duration(300)
+          .call(zoom.transform as any, d3.zoomIdentity);
+      });
+    } else {
+      svg.on('.zoom', null);
+      // Global mouseleave if zoom disabled
+      if (showTooltip) {
+        svg.on('mouseleave.tooltip', () => {
+          clearTooltipTimeout();
+          hideCurrentTooltip();
+        });
+      }
     }
   }, [
     processedData,
@@ -1220,7 +1597,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     colors,
     seriesNames, // Add missing legend dependency
     xAxisNames, // Add missing legend dependency
-    seriesConfigs, // Add missing legend dependency
+    axisConfigs, // Add missing legend dependency
     showLegend,
     showGrid,
     animationDuration,
@@ -1257,6 +1634,7 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
     responsiveFontSize.axis,
     responsiveFontSize.label,
     responsiveFontSize.title, // Add missing title font dependency
+    showAllXAxisTicks, // Add showAllXAxisTicks dependency
   ]);
 
   return (
@@ -1271,7 +1649,13 @@ const D3BarChart: React.FC<D3BarChartProps> = ({
       )}
 
       {/* Chart Container with integrated legend */}
-      <div className="chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+      <div
+        className={
+          variant === 'preview'
+            ? 'relative overflow-hidden'
+            : 'chart-container relative bg-white dark:bg-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden'
+        }
+      >
         <svg
           ref={svgRef}
           width={dimensions.width}

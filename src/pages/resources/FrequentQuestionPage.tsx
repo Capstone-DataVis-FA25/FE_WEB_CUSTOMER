@@ -30,6 +30,7 @@ import {
   StaggerContainer,
   StaggerItem,
 } from '@/theme/animation';
+import { t } from 'i18next';
 
 const faqs = [
   {
@@ -282,27 +283,27 @@ export default function QAPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-sm font-medium">
-                  Họ và tên *
+                  {t('frequentQuestions.nameLabel', 'Full Name *')}
                 </Label>
                 <Input
                   id="name"
                   value={questionForm.name}
                   onChange={e => setQuestionForm({ ...questionForm, name: e.target.value })}
-                  placeholder="Nhập họ và tên"
+                  placeholder={t('frequentQuestions.namePlaceholder', 'Enter your full name')}
                   required
                   className="rounded-lg"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">
-                  Email *
+                  {t('frequentQuestions.emailLabel', 'Email *')}
                 </Label>
                 <Input
                   id="email"
                   type="email"
                   value={questionForm.email}
                   onChange={e => setQuestionForm({ ...questionForm, email: e.target.value })}
-                  placeholder="your@email.com"
+                  placeholder={t('frequentQuestions.emailPlaceholder', 'your@email.com')}
                   required
                   className="rounded-lg"
                 />
@@ -311,13 +312,16 @@ export default function QAPage() {
 
             <div className="space-y-2">
               <Label htmlFor="subject" className="text-sm font-medium">
-                Chủ đề *
+                {t('frequentQuestions.subjectLabel', 'Subject *')}
               </Label>
               <Input
                 id="subject"
                 value={questionForm.subject}
                 onChange={e => setQuestionForm({ ...questionForm, subject: e.target.value })}
-                placeholder="Tóm tắt ngắn gọn về câu hỏi"
+                placeholder={t(
+                  'frequentQuestions.subjectPlaceholder',
+                  'Brief summary of your question'
+                )}
                 required
                 className="rounded-lg"
               />
@@ -325,13 +329,16 @@ export default function QAPage() {
 
             <div className="space-y-2">
               <Label htmlFor="question" className="text-sm font-medium">
-                Câu hỏi chi tiết *
+                {t('frequentQuestions.questionLabel', 'Detailed Question *')}
               </Label>
               <Textarea
                 id="question"
                 value={questionForm.question}
                 onChange={e => setQuestionForm({ ...questionForm, question: e.target.value })}
-                placeholder="Mô tả chi tiết câu hỏi của bạn..."
+                placeholder={t(
+                  'frequentQuestions.questionPlaceholder',
+                  'Describe your question in detail...'
+                )}
                 rows={4}
                 required
                 className="rounded-lg resize-none"

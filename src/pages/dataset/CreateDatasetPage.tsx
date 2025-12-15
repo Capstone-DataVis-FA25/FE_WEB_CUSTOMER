@@ -1,3 +1,6 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate, useLocation } from 'react-router-dom';
 import DataViewer from '@/components/dataset/DataViewer';
 import FileUpload from '@/components/dataset/FileUpload';
 import SampleDataUpload from '@/components/dataset/SampleDataUpload';
@@ -7,10 +10,12 @@ import { useToastContext } from '@/components/providers/ToastProvider';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { DatasetProvider, useDataset } from '@/contexts/DatasetContext';
+import { FormProvider, useForm } from '@/contexts/FormContext';
 import { useAppDispatch } from '@/store/hooks';
 import { createDatasetThunk } from '@/features/dataset/datasetThunk';
 import { SlideInUp } from '@/theme/animation';
 import { DATASET_DESCRIPTION_MAX_LENGTH, DATASET_NAME_MAX_LENGTH } from '@/utils/Consts';
+import { setSelectedColumn, setSelectedRow } from '@/features/excelUI';
 import {
   getFileDelimiter,
   detectDelimiter,
@@ -23,12 +28,18 @@ import {
   processFileContent,
   readExcelAsText,
   validateFileSize,
+  buildHeadersFromParsed,
+  cleanHeadersRemoveEmptyRows,
 } from '@/utils/dataProcessors';
-import { useCallback, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import CleanDatasetWithAI from '@/components/dataset/CleanDatasetWithAi';
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
+import { createDatasetSteps } from '@/config/driver-steps/index';
+import { useAuth } from '@/features/auth/useAuth';
+import Routers from '@/router/routers';
+import { useAiCleaningProgress } from '@/features/ai/useAiCleaningProgress';
 
-type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'view';
+type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'cleanDataset' | 'view';
 
 // Inner component that uses the context
 function CreateDatasetPageContent() {
@@ -36,8 +47,41 @@ function CreateDatasetPageContent() {
   const { showSuccess, showError, showWarning } = useToastContext();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+  const location = useLocation();
 
-  // Get states from context
+  // AI Cleaning Progress tracking (for adding jobs only - display is handled globally)
+  const { addJob } = useAiCleaningProgress(user?.id);
+
+  // Tour function
+  const startTour = () => {
+    const driverObj = driver({
+      showProgress: true,
+      steps: createDatasetSteps,
+      popoverClass: 'driverjs-theme driver-theme-datasets',
+      overlayOpacity: 0,
+    });
+    driverObj.drive();
+  };
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      const storageKey = `hasShownCreateDatasetTour_${user.id}`;
+      const hasShownTour = localStorage.getItem(storageKey);
+
+      if (hasShownTour !== 'true') {
+        setTimeout(() => {
+          startTour();
+          localStorage.setItem(storageKey, 'true');
+        }, 1000);
+      }
+    }
+  }, [isAuthenticated, user]);
+
+  // Get form states from FormContext
+  const { datasetName, description, resetForm } = useForm();
+
+  // Get dataset states from DatasetContext
   const {
     originalTextContent,
     setOriginalTextContent,
@@ -47,11 +91,9 @@ function CreateDatasetPageContent() {
     setIsJsonFormat,
     setSelectedDelimiter,
     resetState,
-    datasetName,
-    description,
     parsedValues,
     numberFormat,
-    dateFormat,
+    setNumberFormat,
   } = useDataset();
 
   // Local state management (non-shareable states)
@@ -77,6 +119,41 @@ function CreateDatasetPageContent() {
     [setOriginalTextContent, setCurrentParsedData]
   );
 
+  const handleCleanDatasetComplete = useCallback(
+    (cleanedData: any) => {
+      try {
+        // Nếu là object kiểu { data: [...] } thì lấy ra .data
+        let matrix = cleanedData;
+        if (cleanedData && typeof cleanedData === 'object' && Array.isArray(cleanedData.data)) {
+          matrix = cleanedData.data;
+        }
+        // Nếu là CSV string, xử lý như text
+        if (typeof matrix === 'string') {
+          handleTextProcess(matrix);
+        } else if (Array.isArray(matrix)) {
+          // Nếu là matrix (từ Excel hoặc từ BE), chuyển đổi thành CSV format
+          const csvContent = matrix
+            .map((row: any[]) =>
+              row
+                .map((cell: any) => {
+                  const cellStr = String(cell ?? '');
+                  return cellStr.includes(',') || cellStr.includes('"')
+                    ? `"${cellStr.replace(/"/g, '""')}"`
+                    : cellStr;
+                })
+                .join(',')
+            )
+            .join('\n');
+          handleTextProcess(csvContent);
+        }
+        showSuccess('Dữ liệu đã được làm sạch', 'Dữ liệu sẵn sàng để tạo dataset');
+      } catch (error) {
+        showError('Lỗi xử lý dữ liệu', 'Không thể xử lý dữ liệu đã làm sạch');
+      }
+    },
+    [showSuccess, showError]
+  );
+
   // Process file content and switch to view mode
   const processAndViewFile = useCallback(
     async (file: File) => {
@@ -99,10 +176,21 @@ function CreateDatasetPageContent() {
         const result = await processFileContent(file, { delimiter: detectedDelimiter });
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Set up 3-layer data structure
+        // Set up 3-layer data structure - batch updates to prevent extra re-renders
+        console.log('📊 Setting originalParsedData');
         setOriginalParsedData(result); // Layer 2: Original parsed data
-        setCurrentParsedData({ ...result }); // Layer 3: Current working copy
+        console.log('📊 Setting currentParsedData');
+        setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
         console.log('Processed result:', result);
+
+        if (result.detectedNumberFormat) {
+          console.log('🎯 Auto-applying detected number format:', result.detectedNumberFormat);
+          setNumberFormat(result.detectedNumberFormat);
+          console.log('✅ Number format updated to:', result.detectedNumberFormat);
+        }
+
+        // Batch the remaining state updates
+        console.log('📊 Batching remaining state updates');
         setPreviousViewMode(viewMode);
         setViewMode('view');
       } catch (error) {
@@ -110,6 +198,7 @@ function CreateDatasetPageContent() {
           error instanceof Error ? error.message : t('dataset_fileReadErrorMessage');
         showError(t('dataset_fileReadError'), t(errorMessage));
       } finally {
+        console.log('📊 Setting isProcessing to false');
         setIsProcessing(false);
       }
     },
@@ -185,35 +274,9 @@ function CreateDatasetPageContent() {
     }
 
     try {
-      // Transform currentParsedData to headers format for the new API
-      const headers = [];
-
-      if (currentParsedData && currentParsedData.headers.length > 0) {
-        // Use the current working data (includes user modifications)
-        for (let columnIndex = 0; columnIndex < currentParsedData.headers.length; columnIndex++) {
-          const header = currentParsedData.headers[columnIndex];
-
-          // Use parsed values if available for this column, otherwise use original data
-          let columnData: (string | number | boolean | null)[];
-
-          if (parsedValues[columnIndex] && Array.isArray(parsedValues[columnIndex])) {
-            // Use parsed values from the map, converting undefined to null for API compatibility
-            columnData = parsedValues[columnIndex].map(value =>
-              value === undefined ? null : value
-            );
-          } else {
-            // Fallback to original data
-            columnData = currentParsedData.data.map(row => row[columnIndex] || null);
-          }
-
-          headers.push({
-            name: header.name,
-            type: header.type, // Use the actual column type from user's working data
-            index: columnIndex,
-            data: columnData, // This will be the parsed values or original data
-          });
-        }
-      }
+      // Build headers from current parsed state and drop fully empty rows anywhere
+      const builtHeaders = buildHeadersFromParsed(currentParsedData, parsedValues as any);
+      const headers = cleanHeadersRemoveEmptyRows(builtHeaders);
 
       // Prepare the data to send in the new format
       const requestData = {
@@ -222,7 +285,6 @@ function CreateDatasetPageContent() {
         ...(description && { description: description.trim() }),
         thousandsSeparator: numberFormat.thousandsSeparator,
         decimalSeparator: numberFormat.decimalSeparator,
-        dateFormat: dateFormat,
       };
 
       // Console log the exact request data being sent
@@ -239,7 +301,7 @@ function CreateDatasetPageContent() {
         const created = result.payload as any; // dataset object
         if (created && created.id) {
           // Use React Router navigation instead of window.location.href
-          navigate('/workspace/datasets');
+          navigate(Routers.WORKSPACE_DATASETS);
         }
 
         // Reset state after successful upload
@@ -273,7 +335,6 @@ function CreateDatasetPageContent() {
     navigate,
     t,
     setCurrentParsedData,
-    dateFormat,
     numberFormat.decimalSeparator,
     numberFormat.thousandsSeparator,
   ]);
@@ -313,8 +374,15 @@ function CreateDatasetPageContent() {
   // Handle change data (go back to previous upload method and reset shared state)
   const handleChangeData = useCallback(() => {
     const prevText = originalTextContent;
+    // Clear any row/column selection in the grid when changing data
+    dispatch(setSelectedRow(null));
+    dispatch(setSelectedColumn(null));
     // Reset all shared dataset state back to initial
     resetState();
+    // Reset form fields (name/description)
+    resetForm();
+    // Reset number format to defaults explicitly (UI display only)
+    setNumberFormat({ thousandsSeparator: ',', decimalSeparator: '.' });
     // Clear local file selection
     setSelectedFile(null);
 
@@ -324,7 +392,15 @@ function CreateDatasetPageContent() {
     }
 
     setViewMode(previousViewMode);
-  }, [originalTextContent, previousViewMode, resetState, setOriginalTextContent]);
+  }, [
+    originalTextContent,
+    previousViewMode,
+    dispatch,
+    resetState,
+    setOriginalTextContent,
+    resetForm,
+    setNumberFormat,
+  ]);
 
   // Handle text processing
   const handleTextProcess = useCallback(
@@ -343,7 +419,17 @@ function CreateDatasetPageContent() {
 
           // Set up 3-layer data structure
           setOriginalParsedData(result); // Layer 2: Original parsed data
-          setCurrentParsedData({ ...result }); // Layer 3: Current working copy
+          setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
+
+          // Auto-apply detected formats from parsing result
+          if (result.detectedNumberFormat) {
+            console.log(
+              '🎯 Auto-applying detected number format (JSON):',
+              result.detectedNumberFormat
+            );
+            setNumberFormat(result.detectedNumberFormat);
+            console.log('✅ Number format updated to:', result.detectedNumberFormat);
+          }
         } else {
           // Parse as regular CSV/text data
           const detectedDelimiter = detectDelimiter(content);
@@ -352,7 +438,17 @@ function CreateDatasetPageContent() {
 
           // Set up 3-layer data structure
           setOriginalParsedData(result); // Layer 2: Original parsed data
-          setCurrentParsedData({ ...result }); // Layer 3: Current working copy
+          setCurrentParsedData(result); // Layer 3: Current working copy (same reference initially)
+
+          // Auto-apply detected formats from parsing result
+          if (result.detectedNumberFormat) {
+            // console.log(
+            //   '🎯 Auto-applying detected number format (CSV):',
+            //   result.detectedNumberFormat
+            // );
+            setNumberFormat(result.detectedNumberFormat);
+            // console.log('✅ Number format updated to:', result.detectedNumberFormat);
+          }
         }
 
         setPreviousViewMode(viewMode);
@@ -388,13 +484,30 @@ function CreateDatasetPageContent() {
       setOriginalParsedData,
       setCurrentParsedData,
       setSelectedDelimiter,
+      setNumberFormat,
     ]
   );
+
+  // Khi vào trang, nếu có cleanedData từ location.state thì tự động xử lý
+  useEffect(() => {
+    if (location.state && location.state.cleanedData) {
+      handleCleanDatasetComplete(location.state.cleanedData);
+      setViewMode('view');
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, handleCleanDatasetComplete, navigate, location.pathname]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {isProcessing ? (
-        <LoadingSpinner />
+        <LoadingSpinner
+          fullScreen={true}
+          title={t('dataset.processingTitle', 'Processing your file...')}
+          subtitle={t(
+            'dataset.processingSubtitle',
+            'Please wait while we analyze and parse your data'
+          )}
+        />
       ) : viewMode === 'view' ? (
         // Data Viewer - Full Width
         <div className="py-8">
@@ -407,7 +520,11 @@ function CreateDatasetPageContent() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex gap-6 items-start">
             {/* Left Navigation Component */}
-            <UploadMethodNavigation viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+            <UploadMethodNavigation
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+              onStartTour={startTour}
+            />
 
             {/* Main Content */}
             <div className="flex-1">
@@ -425,9 +542,21 @@ function CreateDatasetPageContent() {
                 <SlideInUp key="text-upload" delay={0.2}>
                   <TextUpload onTextProcess={handleTextProcess} isProcessing={isProcessing} />
                 </SlideInUp>
-              ) : (
+              ) : viewMode === 'sampleData' ? (
                 <SlideInUp key="sample-data" delay={0.2}>
                   <SampleDataUpload onSampleSelect={handleTextProcess} />
+                </SlideInUp>
+              ) : (
+                <SlideInUp key="cleanDataset" delay={0.2}>
+                  <CleanDatasetWithAI
+                    onCleanComplete={handleCleanDatasetComplete}
+                    isProcessing={isProcessing}
+                    onProcessingChange={setIsProcessing}
+                    userId={user?.id}
+                    onJobSubmit={(jobId, fileName, type) => {
+                      addJob({ jobId, fileName, type });
+                    }}
+                  />
                 </SlideInUp>
               )}
             </div>
@@ -459,9 +588,11 @@ function CreateDatasetPageContent() {
 // Main component with provider wrapper
 function CreateDatasetPage() {
   return (
-    <DatasetProvider>
-      <CreateDatasetPageContent />
-    </DatasetProvider>
+    <FormProvider>
+      <DatasetProvider>
+        <CreateDatasetPageContent />
+      </DatasetProvider>
+    </FormProvider>
   );
 }
 
