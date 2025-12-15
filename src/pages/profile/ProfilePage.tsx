@@ -238,9 +238,9 @@ const ProfilePage: React.FC = () => {
   const hasValidationErrors = (): boolean => {
     return Boolean(
       focusFieldErrorFirstName ||
-      focusFieldErrorLastName ||
-      errorMessageFirstName ||
-      errorMessageLastName
+        focusFieldErrorLastName ||
+        errorMessageFirstName ||
+        errorMessageLastName
     );
   };
 
