@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SlideInUp } from '@/theme/animation';
 import { useToastContext } from '@/components/providers/ToastProvider';
@@ -12,8 +12,6 @@ import Step2ConfigureSettings from './components/Step2ConfigureSettings';
 import Step3ViewResults from './components/Step3ViewResults';
 import ForecastList from './components/ForecastList';
 import { axiosPrivate } from '@/services/axios';
-import Routers from '@/router/routers';
-import { useForecastAnalysisProgress } from '@/features/forecast/useForecastAnalysisProgress';
 import { useForecastCreationProgress } from '@/features/forecast/useForecastCreationProgress';
 import { useAuth } from '@/features/auth/useAuth';
 
@@ -22,7 +20,7 @@ const ForecastPage: React.FC = () => {
   const { showSuccess, showError } = useToastContext();
   const { datasets, loadingList, error, getDatasets } = useDataset();
   const { user } = useAuth();
-  const { activeJobs: analysisJobs } = useForecastAnalysisProgress(user?.id);
+  // const { activeJobs: analysisJobs } = useForecastAnalysisProgress(user?.id);
   const { activeJobs: creationJobs, addJob: addCreationJob } = useForecastCreationProgress(
     user?.id
   );

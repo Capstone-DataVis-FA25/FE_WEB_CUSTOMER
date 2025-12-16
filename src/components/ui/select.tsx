@@ -297,7 +297,8 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
       onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          handleClick();
+          onValueChange?.(value);
+          setOpen(false);
         }
       }}
     >

@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
-import { axiosPrivate } from '@/services/axios';
 
 const SOCKET_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
@@ -22,7 +21,7 @@ export function useForecastCreationProgress(userId?: string | number) {
         // Only keep jobs that are still processing (running)
         const runningJobs = jobs.filter((job: ForecastCreationJob) => job.status === 'processing');
         // Mark restored jobs as not having received update yet (progress bar will be hidden)
-        const restoredJobs = runningJobs.map(job => ({ ...job, hasReceivedUpdate: false }));
+        const restoredJobs = runningJobs.map((job: any) => ({ ...job, hasReceivedUpdate: false }));
         // Clear completed/error jobs from localStorage
         if (runningJobs.length !== jobs.length) {
           localStorage.setItem('forecast-creation-jobs', JSON.stringify(restoredJobs));
