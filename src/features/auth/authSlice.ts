@@ -49,13 +49,16 @@ const authSlice = createSlice({
       state.accessToken = null;
       state.refreshToken = null;
       state.isAuthenticated = false;
-      state.isLoading = false;
+      state.isLoading = false; // Changed from state.loading to state.isLoading to match initialState
       state.error = null;
 
       // Xóa localStorage
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
+      // Clear AI chat history and selected dataset on logout
+      localStorage.removeItem('datavis_ai_chat_history');
+      localStorage.removeItem('datavis_ai_selected_dataset');
     },
 
     // Clear error
@@ -215,6 +218,9 @@ const authSlice = createSlice({
           localStorage.removeItem('user');
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+          // Clear AI chat history when deleting account
+          localStorage.removeItem('datavis_ai_chat_history');
+          localStorage.removeItem('datavis_ai_selected_dataset');
         }
       })
       .addCase(deleteUserThunk.rejected, (state, action) => {

@@ -26,7 +26,6 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId, da
     setChartConfig,
     setEditableName,
     setEditableDescription,
-    // updateOriginals,
   } = useChartEditor();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -74,21 +73,16 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId, da
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          // Background
           ctx.fillStyle = '#222';
           ctx.fillRect(0, 0, width, height);
-          // Centered error text
           ctx.textAlign = 'center';
-          // Main text
           ctx.font = 'bold 32px Arial';
           ctx.fillStyle = '#fff';
-          // Calculate vertical center for both lines
           const mainText = 'Chart export failed';
           const subText = 'No chart found';
           const mainFontSize = 32;
           const subFontSize = 18;
-          // Estimate text height
-          const totalTextHeight = mainFontSize + subFontSize + 16; // 16px gap
+          const totalTextHeight = mainFontSize + subFontSize + 16;
           const startY = height / 2 - totalTextHeight / 2 + mainFontSize;
           ctx.fillText(mainText, width / 2, startY);
           ctx.font = '18px Arial';
@@ -113,12 +107,9 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId, da
         return;
       }
 
-      // ...existing code for SVG and PNG/JPEG export...
       if (format === 'svg') {
-        // Export as SVG - preserve vector format
         const svgData = new XMLSerializer().serializeToString(svgElement);
 
-        // Clean up the SVG and add proper styling
         const cleanSvgData = svgData.replace(/(\w+)?:?xlink=/g, 'xmlns:xlink=');
 
         const svgBlob = new Blob([cleanSvgData], { type: 'image/svg+xml;charset=utf-8' });
@@ -134,7 +125,6 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({ setDataId, da
 
         showSuccess(`Chart exported as SVG`);
       } else {
-        // Export as raster image (PNG/JPEG)
         try {
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');

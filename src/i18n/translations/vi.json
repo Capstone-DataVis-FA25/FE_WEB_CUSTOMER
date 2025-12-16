@@ -2061,5 +2061,19 @@
   "ai_clean_no_jobid": "Không nhận được jobId từ server",
   "ai_clean_send_failed": "Gửi job thất bại",
   "ai_clean_tab_file": "Clean File (Excel/CSV)",
-  "ai_clean_tab_csv": "Clean CSV Text"
+  "ai_clean_tab_csv": "Clean CSV Text",
+  "chat_bot_title": "DataVis AI",
+  "chat_bot_subtitle": "Phân tích dữ liệu thông minh",
+  "chat_bot_minimize": "Thu nhỏ",
+  "chat_bot_maximize": "Phóng to",
+  "chat_bot_close": "Đóng",
+  "chat_bot_open": "Mở chat",
+  "chat_welcome_greeting": "Xin chào!",
+  "chat_welcome_message": "Tôi là trợ lý AI chuyên về phân tích dữ liệu. Hãy hỏi tôi bất cứ điều gì về DataVis hoặc phân tích dữ liệu.",
+  "chat_input_placeholder": "Nhập câu hỏi...",
+  "chat_processing": "Đang xử lý...",
+  "chat_dataset_select_title": "Chọn Dataset",
+  "chat_chart_created_title": "Biểu đồ đã tạo",
+  "chat_chart_type": "Loại",
+  "chat_continue_to_editor": "Tiếp tục tới Chart Editor"
 }

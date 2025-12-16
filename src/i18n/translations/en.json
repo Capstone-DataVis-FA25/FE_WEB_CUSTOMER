@@ -2161,5 +2161,19 @@
       "desc": "By using DataVis, you agree to comply with these Terms of Service. We reserve the right to update these terms at any time, and your continued use of the service constitutes acceptance of any changes.",
       "contactPrefix": "For questions or concerns, please contact us at"
     }
-  }
+  },
+  "chat_bot_title": "DataVis AI",
+  "chat_bot_subtitle": "Intelligent Data Analysis",
+  "chat_bot_minimize": "Minimize",
+  "chat_bot_maximize": "Maximize",
+  "chat_bot_close": "Close",
+  "chat_bot_open": "Open chat",
+  "chat_welcome_greeting": "Hello!",
+  "chat_welcome_message": "I'm an AI assistant specializing in data analysis. Ask me anything about DataVis or data analysis.",
+  "chat_input_placeholder": "Type your question...",
+  "chat_processing": "Processing...",
+  "chat_dataset_select_title": "Select Dataset",
+  "chat_chart_created_title": "Chart Created",
+  "chat_chart_type": "Type",
+  "chat_continue_to_editor": "Continue to Chart Editor"
 }
