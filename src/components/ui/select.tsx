@@ -106,10 +106,16 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
 };
 
 const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, children, onClick, ...props }, ref) => {
     const { setOpen, open, triggerRef } = React.useContext(SelectContext);
 
     React.useImperativeHandle(ref, () => (triggerRef?.current ?? null) as HTMLButtonElement);
+
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      setOpen(prev => !prev);
+      onClick?.(e);
+    };
 
     return (
       <button
@@ -121,7 +127,8 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
           open && 'ring-2 ring-blue-500 border-blue-500',
           className
         )}
-        onClick={() => setOpen(prev => !prev)}
+        onClick={handleClick}
+        onMouseDown={e => e.stopPropagation()}
         {...props}
       >
         {children}
@@ -231,10 +238,12 @@ const SelectContent: React.FC<SelectContentProps> = ({ children, className }) =>
       ref={contentRef}
       data-select-content
       className={cn(
-        'fixed z-[1000] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95',
+        'fixed z-[10000] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95',
         className
       )}
       style={{ left: pos.left, top: pos.top, width: pos.width }}
+      onClick={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
     >
       <div className="p-1 space-y-1">{children}</div>
     </div>,
@@ -264,7 +273,8 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, children]);
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onValueChange?.(value);
     setOpen(false);
   };
@@ -283,6 +293,7 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
       )}
       data-value={value}
       onClick={handleClick}
+      onMouseDown={e => e.stopPropagation()}
       onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -297,12 +308,100 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
 
 const SelectValue: React.FC<SelectValueProps> = ({ placeholder, options }) => {
   const { value, itemsMap } = React.useContext(SelectContext);
+  const [label, setLabel] = React.useState<string>('');
+  const labelCacheRef = React.useRef<Map<string, string>>(new Map());
+
+  // Function to get label from itemsMap, cache, or options
+  const getLabel = React.useCallback(() => {
+    if (!value) return '';
+
+    // First try itemsMap (most up-to-date)
+    const mapLabel = itemsMap?.current.get(value);
+    if (mapLabel) {
+      // Cache it for when itemsMap is cleared
+      labelCacheRef.current.set(value, mapLabel);
+      return mapLabel;
+    }
+
+    // Try cache (for when dropdown is closed and itemsMap is cleared)
+    const cachedLabel = labelCacheRef.current.get(value);
+    if (cachedLabel) return cachedLabel;
+
+    // Fallback to options prop
+    const optionLabel = options?.find(opt => opt.value === value)?.label;
+    if (optionLabel) {
+      labelCacheRef.current.set(value, optionLabel);
+      return optionLabel;
+    }
+
+    // Last resort: use value itself
+    return value;
+  }, [value, itemsMap, options]);
+
+  React.useEffect(() => {
+    const newLabel = getLabel();
+    if (newLabel !== label) {
+      setLabel(newLabel);
+    }
+  }, [getLabel, label]);
+
+  // Poll itemsMap when value exists but label is still the value (meaning itemsMap wasn't ready)
+  React.useEffect(() => {
+    if (!value) return;
+
+    // If we have a cached label that's not the value, use it
+    const cachedLabel = labelCacheRef.current.get(value);
+    if (cachedLabel && cachedLabel !== value && label === value) {
+      setLabel(cachedLabel);
+      return;
+    }
+
+    // If label is still the raw value, try to get it from itemsMap
+    if (label === value) {
+      const mapLabel = itemsMap?.current.get(value);
+      if (mapLabel && mapLabel !== value) {
+        setLabel(mapLabel);
+        labelCacheRef.current.set(value, mapLabel);
+        return;
+      }
+
+      // Poll itemsMap periodically until we get a proper label
+      const interval = setInterval(() => {
+        const mapLabel = itemsMap?.current.get(value);
+        if (mapLabel && mapLabel !== value) {
+          setLabel(mapLabel);
+          labelCacheRef.current.set(value, mapLabel);
+          clearInterval(interval);
+        }
+      }, 50);
+
+      // Clear after 1 second to avoid infinite polling
+      const timeout = setTimeout(() => clearInterval(interval), 1000);
+
+      return () => {
+        clearInterval(interval);
+        clearTimeout(timeout);
+      };
+    }
+  }, [value, label, itemsMap]);
 
   if (!value) return <span className="block truncate text-gray-500">{placeholder}</span>;
 
-  const label =
-    itemsMap?.current.get(value) || options?.find(opt => opt.value === value)?.label || value;
-  return <span className="block truncate">{label}</span>;
+  // Check if label contains "(number)" badge pattern and render with flex layout
+  const badgeMatch = label.match(/^(.+?)\s*\(number\)$/);
+  if (badgeMatch) {
+    const columnName = badgeMatch[1].trim();
+    return (
+      <div className="flex items-center justify-between w-full">
+        <span className="truncate">{columnName}</span>
+        <span className="ml-auto text-[10px] text-gray-500 dark:text-gray-400 flex-shrink-0">
+          (number)
+        </span>
+      </div>
+    );
+  }
+
+  return <span className="block truncate">{label || placeholder}</span>;
 };
 
 export { Select, SelectTrigger, SelectContent, SelectItem, SelectValue };

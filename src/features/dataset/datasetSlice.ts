@@ -55,7 +55,10 @@ const datasetSlice = createSlice({
       })
       .addCase(fetchDatasets.rejected, (state, action) => {
         state.loadingList = false;
-        state.error = action.payload as string;
+        state.error =
+          typeof action.payload === 'string'
+            ? action.payload
+            : (action.payload as any)?.message || 'Failed to fetch datasets';
       })
       // Fetch dataset by ID
       .addCase(fetchDatasetById.pending, state => {
@@ -68,7 +71,10 @@ const datasetSlice = createSlice({
       })
       .addCase(fetchDatasetById.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error =
+          typeof action.payload === 'string'
+            ? action.payload
+            : (action.payload as any)?.message || 'Failed to fetch dataset';
       })
       // Create dataset
       .addCase(createDatasetThunk.pending, state => {
@@ -85,7 +91,10 @@ const datasetSlice = createSlice({
       })
       .addCase(createDatasetThunk.rejected, (state, action) => {
         state.creating = false;
-        state.error = action.payload as string;
+        state.error =
+          typeof action.payload === 'string'
+            ? action.payload
+            : (action.payload as any)?.message || 'Failed to create dataset';
       })
       // Update dataset
       .addCase(updateDatasetThunk.pending, state => {
@@ -104,7 +113,10 @@ const datasetSlice = createSlice({
       })
       .addCase(updateDatasetThunk.rejected, (state, action) => {
         state.updating = false;
-        state.error = action.payload as string;
+        state.error =
+          typeof action.payload === 'string'
+            ? action.payload
+            : (action.payload as any)?.message || 'Failed to update dataset';
       })
       // Delete dataset
       .addCase(deleteDatasetThunk.pending, state => {
@@ -120,7 +132,10 @@ const datasetSlice = createSlice({
       })
       .addCase(deleteDatasetThunk.rejected, (state, action) => {
         state.deleting = false;
-        state.error = action.payload as string;
+        state.error =
+          typeof action.payload === 'string'
+            ? action.payload
+            : (action.payload as any)?.message || 'Failed to delete dataset';
       });
   },
 });

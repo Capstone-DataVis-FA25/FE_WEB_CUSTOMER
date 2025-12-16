@@ -38,7 +38,6 @@ import { createDatasetSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
 import Routers from '@/router/routers';
 import { useAiCleaningProgress } from '@/features/ai/useAiCleaningProgress';
-import { AiCleaningProgressBar } from '@/components/dataset/AiCleaningProgressBar';
 
 type ViewMode = 'upload' | 'textUpload' | 'sampleData' | 'cleanDataset' | 'view';
 
@@ -51,8 +50,8 @@ function CreateDatasetPageContent() {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
 
-  // AI Cleaning Progress tracking
-  const { activeJobs, addJob, removeJob, handleJobClick } = useAiCleaningProgress(user?.id);
+  // AI Cleaning Progress tracking (for adding jobs only - display is handled globally)
+  const { addJob } = useAiCleaningProgress(user?.id);
 
   // Tour function
   const startTour = () => {
@@ -581,20 +580,6 @@ function CreateDatasetPageContent() {
         cancelText={t('cancel') || 'Cancel'}
         type="info"
         loading={isCreatingDataset}
-      />
-
-      {/* AI Cleaning Progress Bar - Fixed at bottom right */}
-      <AiCleaningProgressBar
-        jobs={activeJobs}
-        onJobClick={jobId => {
-          handleJobClick(jobId, handleCleanDatasetComplete, err => {
-            showError(
-              t('ai_clean_error_title', 'Lỗi lấy kết quả'),
-              err?.message || t('ai_clean_error_message', 'Không thể lấy kết quả làm sạch')
-            );
-          });
-        }}
-        onRemove={removeJob}
       />
     </div>
   );
