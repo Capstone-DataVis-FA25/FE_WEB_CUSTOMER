@@ -373,6 +373,51 @@ const ChartEditorPage: React.FC = () => {
   useEffect(() => {
     if (mode !== 'create') return;
 
+    // Check for AI-generated config from URL parameter
+    const configParam = searchParams.get('config');
+    if (configParam && !chartConfig) {
+      try {
+        // Decode base64url config
+        const decodedConfig = JSON.parse(atob(configParam.replace(/-/g, '+').replace(/_/g, '/')));
+
+        // Set chart configuration from AI
+        if (decodedConfig.config) {
+          setChartConfig(decodedConfig.config as MainChartConfig);
+        }
+
+        // Set chart type from AI
+        if (decodedConfig.type) {
+          setCurrentChartType(decodedConfig.type as ChartType);
+        }
+
+        // Set name and description from AI
+        if (decodedConfig.name) {
+          setEditableName(decodedConfig.name);
+        }
+        if (decodedConfig.config?.title) {
+          setEditableDescription(`AI-generated ${decodedConfig.type} chart`);
+        }
+
+        // Set datasetId from AI config
+        if (decodedConfig.datasetId && decodedConfig.datasetId !== datasetId) {
+          setDatasetId(decodedConfig.datasetId);
+
+          // Update URL to persist datasetId (remove config param to avoid re-parsing)
+          const newSearchParams = new URLSearchParams(searchParams);
+          newSearchParams.set('datasetId', decodedConfig.datasetId);
+          newSearchParams.delete('config'); // Remove config param after parsing
+          navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true });
+        }
+
+        // Update originals after setting AI config
+        updateOriginals();
+        return; // Skip default initialization
+      } catch (error) {
+        console.error('[ChartEditorPage] Failed to parse AI config from URL:', error);
+        // Fall through to default initialization on error
+      }
+    }
+
     // Set chart type from location state if available
     if (chartTypeFromState && chartTypeFromState !== currentChartType) {
       setCurrentChartType(chartTypeFromState);
