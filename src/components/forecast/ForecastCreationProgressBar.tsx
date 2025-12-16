@@ -16,6 +16,7 @@ interface ForecastCreationProgressBarProps {
   jobs: ForecastCreationJob[];
   onJobClick: (jobId: string) => void;
   onRemove: (jobId: string) => void;
+  analysisJobsCount?: number;
 }
 
 export const ForecastCreationProgressBar: React.FC<ForecastCreationProgressBarProps> = ({

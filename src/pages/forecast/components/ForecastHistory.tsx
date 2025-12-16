@@ -243,13 +243,13 @@ const ForecastHistory: React.FC = () => {
       </SlideInUp>
       <ModalConfirm
         isOpen={modalConfirm.isOpen}
-        onClose={modalConfirm.closeConfirm}
-        onConfirm={modalConfirm.onConfirm}
+        onClose={modalConfirm.close}
+        onConfirm={modalConfirm.confirm}
         title="Delete Forecast"
         description="Are you sure you want to delete this forecast? This action cannot be undone."
         confirmText="Delete"
         cancelText="Cancel"
-        variant="destructive"
+        type="danger"
       />
     </>
   );

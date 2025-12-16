@@ -25,7 +25,7 @@ export function useAiCleaningProgress(userId?: string | number) {
         // Only keep jobs that are still processing (running)
         const runningJobs = jobs.filter((job: CleaningJob) => job.status === 'processing');
         // Mark restored jobs as not having received update yet (progress bar will be hidden)
-        const restoredJobs = runningJobs.map(job => ({ ...job, hasReceivedUpdate: false }));
+        const restoredJobs = runningJobs.map((job: any) => ({ ...job, hasReceivedUpdate: false }));
         // Clear completed/error jobs from localStorage
         if (runningJobs.length !== jobs.length) {
           localStorage.setItem('ai-cleaning-jobs', JSON.stringify(restoredJobs));

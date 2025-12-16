@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { SlideInUp } from '@/theme/animation';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { BarChart3, AlertCircle, CheckCircle2, ChevronLeft, TrendingUp } from 'lucide-react';
 import type { ForecastCreationJob } from '@/features/forecast/useForecastCreationProgress';
 import { motion } from 'framer-motion';

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import * as ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -165,10 +165,6 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
   }, [selectedTimeScale, forecasts]);
 
   // Get unique values from existing forecasts (for reference)
-  const uniqueTimeScales = useMemo(() => {
-    const scales = new Set(forecasts.map(f => f.timeScale));
-    return Array.from(scales).sort();
-  }, [forecasts]);
 
   // Prepare options for SelectValue components
   const datasetOptions = useMemo(() => {
