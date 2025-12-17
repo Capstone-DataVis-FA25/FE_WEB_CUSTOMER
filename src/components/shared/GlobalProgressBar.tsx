@@ -23,7 +23,7 @@ export const GlobalProgressBar: React.FC = () => {
   const {
     activeJobs: creationJobs,
     removeJob: removeCreationJob,
-    handleJobClick: handleCreationJobClick,
+    // handleJobClick: handleCreationJobClick, // removed unused
   } = useForecastCreationProgress(user?.id);
   const {
     activeJobs: analysisJobs,

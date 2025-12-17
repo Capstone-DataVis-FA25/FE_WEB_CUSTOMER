@@ -272,7 +272,7 @@ const Header: React.FC<HeaderProps> = ({
                           ) : (
                             <div className="p-2">
                               {/* Reverse order: newest first */}
-                              {[...pendingJobs].reverse().map((job, index) => {
+                              {[...pendingJobs].reverse().map(job => {
                                 const getNotificationText = () => {
                                   if (job.type === 'forecast-creation') {
                                     // Get forecast name from progress hook

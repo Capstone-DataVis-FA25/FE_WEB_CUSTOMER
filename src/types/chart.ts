@@ -197,8 +197,6 @@ export interface LineChartConfig {
   axisConfigs?: AxisConfig;
   datasetConfig?: DatasetConfig;
   chartType: 'line';
-
-  // Flat structure properties (actual usage)
   width: number;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };

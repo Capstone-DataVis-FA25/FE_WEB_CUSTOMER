@@ -6,6 +6,8 @@ export interface AiChatRequest {
   message: string;
   messages: string; // JSON.stringify([...])
   language: string;
+  datasetId?: string; // Optional dataset context for chart generation
+  chartType?: string; // Optional specific chart type
 }
 
 export interface AiChatResponse {
@@ -17,6 +19,19 @@ export interface AiChatResponse {
     messageCount: number;
     language: string;
     success: boolean;
+    needsDatasetSelection?: boolean;
+    needsChartTypeSelection?: boolean;
+    originalMessage?: string;
+    datasets?: Array<{ id: string; name: string; description?: string }>;
+    chartGenerated?: boolean;
+    chartData?: {
+      type: string;
+      config: any;
+      explanation: string;
+      suggestedName: string;
+      chartUrl: string;
+      success: boolean;
+    };
   };
 }
 
@@ -124,6 +139,41 @@ export async function getCleanResult(
 ): Promise<{ data: any[][]; rowCount: number; columnCount: number }> {
   const res = await axiosPrivate.get<{ data: any[][]; rowCount: number; columnCount: number }>(
     `/ai/clean-result?jobId=${encodeURIComponent(jobId)}`
+  );
+  return res.data;
+}
+
+// --- Generate Chart Config ---
+export interface GenerateChartConfigRequest {
+  prompt: string;
+  datasetId: string;
+}
+
+export interface GenerateChartConfigResponse {
+  code: number;
+  message: string;
+  data: {
+    type: string;
+    config: any;
+    explanation: string;
+    suggestedName: string;
+    chartUrl: string;
+    success: boolean;
+  };
+}
+
+export async function generateChartConfig(
+  payload: GenerateChartConfigRequest
+): Promise<GenerateChartConfigResponse> {
+  const res = await axiosPrivate.post<GenerateChartConfigResponse>(
+    '/ai/generate-chart-config',
+    payload,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: '*/*',
+      },
+    }
   );
   return res.data;
 }

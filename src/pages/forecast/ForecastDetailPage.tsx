@@ -125,7 +125,6 @@ const ForecastDetailPage: React.FC = () => {
 
     // Parse sections (format: "1. Section Title\n\nContent...")
     const sections: Array<{ title: string; content: string }> = [];
-    const sectionRegex = /^(\d+)\.\s+(.+?)$/gm;
     const lines = textToParse.split('\n');
     let currentSection: { title: string; content: string } | null = null;
 
