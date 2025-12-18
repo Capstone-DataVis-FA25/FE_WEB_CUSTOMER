@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Bell,
   Menu,
@@ -54,6 +54,7 @@ const Header: React.FC<HeaderProps> = ({
   const aiDropdownRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { goToAuth } = useNavigation();
   const userId = user?.id;
@@ -108,6 +109,23 @@ const Header: React.FC<HeaderProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Auto-clear forecast notifications when user is already viewing that forecast URL
+  useEffect(() => {
+    // Expected detail route: /forecast/:id
+    if (!location.pathname.startsWith('/forecast/')) return;
+
+    const parts = location.pathname.split('/');
+    const forecastId = parts[2];
+    if (!forecastId) return;
+
+    setPendingJobs(jobs =>
+      jobs.filter(job => {
+        const isForecastJob = job.type === 'forecast-creation' || job.type === 'forecast-analysis';
+        return !(isForecastJob && job.forecastId === forecastId);
+      })
+    );
+  }, [location.pathname, setPendingJobs]);
 
   return (
     <FadeIn>
@@ -242,7 +260,7 @@ const Header: React.FC<HeaderProps> = ({
                       )}
                     </AnimatedButton>
                     {showAiDropdown && (
-                      <SlideInDown className="absolute right-0 mt-2 w-96 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-2xl rounded-2xl z-50 border border-gray-200/50 dark:border-gray-700/50 ring-1 ring-black/5 dark:ring-white/5 overflow-hidden">
+                      <SlideInDown className="absolute right-0 mt-2 w-96 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-2xl rounded-2xl z-50 border border-gray-200/50 dark:border-gray-700/50 ring-1 ring-black/5 dark:ring-white/5 overflow-hidden max-h-[600px]">
                         {/* Header */}
                         <div className="px-5 pt-4 pb-3 border-b border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-900/20 dark:to-purple-900/20">
                           <div className="flex items-center justify-between">

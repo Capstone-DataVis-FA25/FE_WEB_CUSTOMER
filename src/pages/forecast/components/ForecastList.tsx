@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Layers,
   ChevronRight,
+  Cpu,
 } from 'lucide-react';
 import { axiosPrivate } from '@/services/axios';
 import { useToastContext } from '@/components/providers/ToastProvider';
@@ -43,7 +44,6 @@ interface ForecastListItem {
   name?: string | null;
   targetColumn: string;
   featureColumns?: string[] | null;
-  timeScale: string;
   forecastWindow: number;
   modelType: string;
   createdAt: string;
@@ -71,7 +71,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDataset, setSelectedDataset] = useState<string>('all');
-  const [selectedTimeScale, setSelectedTimeScale] = useState<string>('all');
+  const [selectedModelType, setSelectedModelType] = useState<string>('all');
   const [selectedForecastWindow, setSelectedForecastWindow] = useState<string>('all');
   const [isCustomForecastWindow, setIsCustomForecastWindow] = useState(false);
   const [customForecastWindow, setCustomForecastWindow] = useState<string>('30');
@@ -98,9 +98,6 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
       const response = await axiosPrivate.get('/forecasts');
       const forecastsData = response.data?.data || response.data || [];
       setForecasts(Array.isArray(forecastsData) ? forecastsData : []);
-      if (showToast) {
-        showSuccess('Forecasts Refreshed', 'Forecast list has been updated');
-      }
     } catch (error: any) {
       console.error('Failed to fetch forecasts:', error);
       const errorMessage =
@@ -128,41 +125,34 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
     }
   }, [showFilters]);
 
-  // All available options (not just from existing forecasts)
-  const allTimeScales = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly'];
+  // All available model types
+  const allModelTypes = ['LSTM', 'SVR'];
 
-  // Get forecast window options based on selected time scale (dynamic like create page)
+  // Get forecast window options (no dependency on time scale anymore)
   const forecastWindowOptionsForTimeScale = useMemo(() => {
-    if (selectedTimeScale === 'all') {
-      // If "All Time Scales" is selected, show all options from all time scales
-      const optionsMap = new Map<string, string>(); // value -> label
-      const allOptions: Array<{ value: string; label: string }> = [];
+    const optionsMap = new Map<string, string>(); // value -> label
+    const allOptions: Array<{ value: string; label: string }> = [];
 
-      allTimeScales.forEach(scale => {
-        const options = getForecastWindowOptions(scale);
-        options.forEach(opt => {
-          if (!optionsMap.has(opt.value)) {
-            optionsMap.set(opt.value, opt.label);
-            allOptions.push({ value: opt.value, label: opt.label });
-          }
-        });
-      });
+    // Base options from utility (use a default scale just to get presets)
+    const baseOptions = getForecastWindowOptions('Daily');
+    baseOptions.forEach(opt => {
+      if (!optionsMap.has(opt.value)) {
+        optionsMap.set(opt.value, opt.label);
+        allOptions.push({ value: opt.value, label: opt.label });
+      }
+    });
 
-      // Also include any unique values from existing forecasts
-      forecasts.forEach(f => {
-        const valueStr = f.forecastWindow.toString();
-        if (!optionsMap.has(valueStr)) {
-          allOptions.push({ value: valueStr, label: `${f.forecastWindow} steps` });
-          optionsMap.set(valueStr, `${f.forecastWindow} steps`);
-        }
-      });
+    // Also include any unique values from existing forecasts
+    forecasts.forEach(f => {
+      const valueStr = f.forecastWindow.toString();
+      if (!optionsMap.has(valueStr)) {
+        allOptions.push({ value: valueStr, label: `${f.forecastWindow} steps` });
+        optionsMap.set(valueStr, `${f.forecastWindow} steps`);
+      }
+    });
 
-      return allOptions.sort((a, b) => parseInt(a.value) - parseInt(b.value));
-    } else {
-      // Show only options for the selected time scale
-      return getForecastWindowOptions(selectedTimeScale);
-    }
-  }, [selectedTimeScale, forecasts]);
+    return allOptions.sort((a, b) => parseInt(a.value) - parseInt(b.value));
+  }, [forecasts]);
 
   // Get unique values from existing forecasts (for reference)
 
@@ -174,10 +164,10 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
     ];
   }, [datasets]);
 
-  const timeScaleOptions = useMemo(() => {
+  const modelTypeOptions = useMemo(() => {
     return [
-      { value: 'all', label: 'All Time Scales' },
-      ...allTimeScales.map(scale => ({ value: scale, label: scale })),
+      { value: 'all', label: 'All Models' },
+      ...allModelTypes.map(m => ({ value: m, label: m })),
     ];
   }, []);
 
@@ -185,24 +175,15 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
     return [{ value: 'all', label: 'All Steps' }, ...forecastWindowOptionsForTimeScale];
   }, [forecastWindowOptionsForTimeScale]);
 
-  // Reset forecast window when time scale changes (if current selection is not valid)
+  // Reset forecast window when preset options change (if current selection is not valid)
   useEffect(() => {
-    if (
-      selectedTimeScale !== 'all' &&
-      selectedForecastWindow !== 'all' &&
-      !isCustomForecastWindow
-    ) {
+    if (selectedForecastWindow !== 'all' && !isCustomForecastWindow) {
       const validValues = forecastWindowOptionsForTimeScale.map(opt => opt.value);
       if (!validValues.includes(selectedForecastWindow)) {
         setSelectedForecastWindow('all');
       }
     }
-  }, [
-    selectedTimeScale,
-    forecastWindowOptionsForTimeScale,
-    selectedForecastWindow,
-    isCustomForecastWindow,
-  ]);
+  }, [forecastWindowOptionsForTimeScale, selectedForecastWindow, isCustomForecastWindow]);
 
   // Filter forecasts
   const filteredForecasts = useMemo(() => {
@@ -217,9 +198,9 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
       // Dataset filter
       const matchesDataset = selectedDataset === 'all' || forecast.dataset?.id === selectedDataset;
 
-      // Time scale filter
-      const matchesTimeScale =
-        selectedTimeScale === 'all' || forecast.timeScale === selectedTimeScale;
+      // Model type filter
+      const matchesModelType =
+        selectedModelType === 'all' || forecast.modelType === selectedModelType;
 
       // Forecast window filter
       const matchesForecastWindow =
@@ -251,14 +232,14 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
       })();
 
       return (
-        matchesSearch && matchesDataset && matchesTimeScale && matchesForecastWindow && matchesDate
+        matchesSearch && matchesDataset && matchesModelType && matchesForecastWindow && matchesDate
       );
     });
   }, [
     forecasts,
     searchTerm,
     selectedDataset,
-    selectedTimeScale,
+    selectedModelType,
     selectedForecastWindow,
     isCustomForecastWindow,
     customForecastWindow,
@@ -281,7 +262,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
   }, [
     searchTerm,
     selectedDataset,
-    selectedTimeScale,
+    selectedModelType,
     selectedForecastWindow,
     isCustomForecastWindow,
     dateFrom,
@@ -338,7 +319,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
   const resetFilters = () => {
     setSearchTerm('');
     setSelectedDataset('all');
-    setSelectedTimeScale('all');
+    setSelectedModelType('all');
     setSelectedForecastWindow('all');
     setIsCustomForecastWindow(false);
     setCustomForecastWindow('30');
@@ -349,7 +330,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
   const hasActiveFilters =
     searchTerm ||
     selectedDataset !== 'all' ||
-    selectedTimeScale !== 'all' ||
+    selectedModelType !== 'all' ||
     selectedForecastWindow !== 'all' ||
     isCustomForecastWindow ||
     dateFrom !== '' ||
@@ -475,23 +456,20 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                           </Select>
                         </div>
 
-                        {/* Time Scale and Forecast Window in Grid */}
+                        {/* Model Type and Forecast Window in Grid */}
                         <div className="grid grid-cols-2 gap-4">
-                          {/* Time Scale Filter */}
+                          {/* Model Type Filter */}
                           <div>
-                            <Label className="mb-2 block text-sm">Time Scale</Label>
-                            <Select value={selectedTimeScale} onValueChange={setSelectedTimeScale}>
+                            <Label className="mb-2 block text-sm">Model</Label>
+                            <Select value={selectedModelType} onValueChange={setSelectedModelType}>
                               <SelectTrigger>
-                                <SelectValue
-                                  placeholder="All Time Scales"
-                                  options={timeScaleOptions}
-                                />
+                                <SelectValue placeholder="All Models" options={modelTypeOptions} />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="all">All Time Scales</SelectItem>
-                                {allTimeScales.map(scale => (
-                                  <SelectItem key={scale} value={scale}>
-                                    {scale}
+                                <SelectItem value="all">All Models</SelectItem>
+                                {allModelTypes.map(m => (
+                                  <SelectItem key={m} value={m}>
+                                    {m}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -747,10 +725,10 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          <Calendar className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                          <span>{forecast.timeScale}</span>
-                        </div>
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-xs font-medium text-blue-700 dark:text-blue-300">
+                          <Cpu className="w-3 h-3" />
+                          {forecast.modelType}
+                        </span>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <span className="text-sm text-gray-600 dark:text-gray-400">

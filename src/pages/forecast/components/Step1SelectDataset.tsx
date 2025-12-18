@@ -37,17 +37,25 @@ const Step1SelectDataset: React.FC<Step1SelectDatasetProps> = ({
   return (
     <SlideInUp delay={0.2}>
       <Card className="border-0 shadow-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm mb-6">
-        <CardHeader className="pb-6">
+        <CardHeader className="pb-4">
           <CardTitle className="text-2xl text-gray-900 dark:text-white flex items-center gap-3">
             <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             Select Dataset
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
-            Choose a dataset from your workspace to use for forecasting
+            Choose a dataset from your workspace to use for forecasting.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6 overflow-visible">
+          {/* Dataset requirements helper */}
+          <div className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50/80 dark:bg-gray-900/40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl px-5 py-4">
+            For best results, use a time series dataset where each row is one time step (e.g. one
+            day, month, or year), the data is sorted by time, and you have at least one numeric
+            column you want to forecast (such as sales, traffic, or temperature). Avoid using pure
+            ID or time columns themselves as the value to forecast.
+          </div>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -55,7 +63,7 @@ const Step1SelectDataset: React.FC<Step1SelectDatasetProps> = ({
           >
             <div className="flex items-center justify-between mb-3">
               <Label className="text-lg font-semibold text-gray-900 dark:text-white">
-                Select Dataset
+                Datasets
               </Label>
               <Button
                 type="button"

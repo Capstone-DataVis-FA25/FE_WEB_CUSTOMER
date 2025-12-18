@@ -12,70 +12,84 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SlideInUp } from '@/theme/animation';
-import { Calendar, BarChart3, Settings, ChevronLeft, Play, ChevronDown, X } from 'lucide-react';
-import { getForecastWindowOptions } from '../utils/forecastWindowOptions';
+import { BarChart3, Settings, ChevronLeft, Play, ChevronDown, X, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Step2ConfigureSettingsProps {
   forecastName: string;
   setForecastName: (value: string) => void;
+  selectedDatasetName: string;
   datasetHeaders: string[];
   datasetHeadersWithTypes: Array<{ name: string; type: string }>;
   targetColumn: string;
   setTargetColumn: (value: string) => void;
   featureColumns: string[];
   setFeatureColumns: (value: string[]) => void;
-  timeScale: string;
-  setTimeScale: (value: string) => void;
+  modelType: string;
+  setModelType: (value: 'SVR' | 'LSTM') => void;
   forecastWindow: number;
   setForecastWindow: (value: number) => void;
-  isCustomForecastWindow: boolean;
-  setIsCustomForecastWindow: (value: boolean) => void;
-  customForecastWindow: string;
-  setCustomForecastWindow: (value: string) => void;
+  runAnalysisAfterForecast: boolean;
+  setRunAnalysisAfterForecast: (value: boolean) => void;
   onBack: () => void;
   onNext: () => void;
 }
 
+// Allow controlling `open` on the shadcn Select without TS friction
+const SelectWithOpen = Select as any;
+
 const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
   forecastName,
   setForecastName,
+  selectedDatasetName,
   datasetHeaders,
   datasetHeadersWithTypes,
   targetColumn,
   setTargetColumn,
   featureColumns,
   setFeatureColumns,
-  timeScale,
-  setTimeScale,
+  modelType,
+  setModelType,
   forecastWindow,
   setForecastWindow,
-  isCustomForecastWindow,
-  setIsCustomForecastWindow,
-  customForecastWindow,
-  setCustomForecastWindow,
+  runAnalysisAfterForecast,
+  setRunAnalysisAfterForecast,
   onBack,
   onNext,
 }) => {
-  const [isFeatureColumnsOpen, setIsFeatureColumnsOpen] = useState(false);
+  // Track which controls are open
+  const [isTargetOpen, setIsTargetOpen] = useState(false);
+  const [isModelOpen, setIsModelOpen] = useState(false);
+  const [isFeatureOpen, setIsFeatureOpen] = useState(false);
   const featureColumnsRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
+  // Close feature dropdown when clicking outside or when any Select elsewhere is toggled
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (featureColumnsRef.current && !featureColumnsRef.current.contains(event.target as Node)) {
-        setIsFeatureColumnsOpen(false);
+      if (
+        isFeatureOpen &&
+        featureColumnsRef.current &&
+        !featureColumnsRef.current.contains(event.target as Node)
+      ) {
+        setIsFeatureOpen(false);
       }
     };
 
-    if (isFeatureColumnsOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    const handleAnySelectToggle = () => {
+      // Whenever a global Select is toggled, close the feature dropdown
+      if (isFeatureOpen) {
+        setIsFeatureOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('app:select-toggled', handleAnySelectToggle as EventListener);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('app:select-toggled', handleAnySelectToggle as EventListener);
     };
-  }, [isFeatureColumnsOpen]);
+  }, [isFeatureOpen]);
 
   const handleTargetColumnChange = (value: string) => {
     // Allow deselecting by clicking the same value again
@@ -98,9 +112,11 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
     }
   };
 
-  // Get available feature columns (exclude target column)
+  // Get available feature columns (exclude target column, numeric-only)
   const availableFeatureColumns = React.useMemo(() => {
-    return datasetHeadersWithTypes.filter(header => header.name !== targetColumn);
+    return datasetHeadersWithTypes.filter(
+      header => header.name !== targetColumn && header.type === 'number'
+    );
   }, [datasetHeadersWithTypes, targetColumn]);
 
   // Get badge text for column type
@@ -126,16 +142,6 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
     }));
   }, [datasetHeaders]);
 
-  const handleForecastWindowChange = (value: string) => {
-    if (value === 'custom') {
-      setIsCustomForecastWindow(true);
-    } else {
-      setIsCustomForecastWindow(false);
-      setForecastWindow(parseInt(value));
-      setCustomForecastWindow(value);
-    }
-  };
-
   return (
     <SlideInUp delay={0.2}>
       <Card className="border-0 shadow-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm mb-6">
@@ -150,6 +156,22 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
         </CardHeader>
 
         <CardContent className="space-y-6">
+          {/* Selected Dataset Display */}
+          {selectedDatasetName && (
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl shadow-sm">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
+                <Database className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">
+                  Selected Dataset
+                </p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white truncate">
+                  {selectedDatasetName}
+                </p>
+              </div>
+            </div>
+          )}
           <div>
             <Label
               htmlFor="forecastName"
@@ -186,7 +208,18 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
               The target variable to be the focus of the forecast.
             </p>
             {datasetHeaders.length > 0 ? (
-              <Select value={targetColumn} onValueChange={handleTargetColumnChange}>
+              <SelectWithOpen
+                value={targetColumn}
+                onValueChange={handleTargetColumnChange}
+                open={isTargetOpen}
+                onOpenChange={(open: boolean) => {
+                  setIsTargetOpen(open);
+                  if (open) {
+                    setIsModelOpen(false);
+                    setIsFeatureOpen(false);
+                  }
+                }}
+              >
                 <SelectTrigger className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800">
                   <SelectValue placeholder="Select target column" options={targetColumnOptions} />
                 </SelectTrigger>
@@ -207,7 +240,7 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
                     </SelectItem>
                   ))}
                 </SelectContent>
-              </Select>
+              </SelectWithOpen>
             ) : (
               <Input
                 id="targetColumn"
@@ -228,16 +261,26 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
               Feature Columns (Optional)
             </Label>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              Select additional columns to use as features for the forecast.
+              Select additional <span className="font-semibold">numeric</span> columns to use as
+              features for the forecast.
             </p>
             {availableFeatureColumns.length > 0 ? (
               <div className="relative" ref={featureColumnsRef}>
                 <button
                   type="button"
-                  onClick={() => setIsFeatureColumnsOpen(!isFeatureColumnsOpen)}
+                  onClick={() => {
+                    setIsFeatureOpen(prev => {
+                      const next = !prev;
+                      if (next) {
+                        setIsTargetOpen(false);
+                        setIsModelOpen(false);
+                      }
+                      return next;
+                    });
+                  }}
                   className={cn(
                     'flex h-10 w-full items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm ring-offset-background placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer transition-all duration-200',
-                    isFeatureColumnsOpen && 'ring-2 ring-blue-500 border-blue-500'
+                    isFeatureOpen && 'ring-2 ring-blue-500 border-blue-500'
                   )}
                 >
                   <span
@@ -255,11 +298,11 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
                   <ChevronDown
                     className={cn(
                       'h-4 w-4 opacity-50 transition-transform duration-200',
-                      isFeatureColumnsOpen && 'rotate-180'
+                      isFeatureOpen && 'rotate-180'
                     )}
                   />
                 </button>
-                {isFeatureColumnsOpen && (
+                {isFeatureOpen && (
                   <div className="absolute z-[9999] mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95">
                     <div className="p-1 space-y-1">
                       {availableFeatureColumns.map(header => {
@@ -301,7 +344,7 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
             ) : (
               <Input
                 id="featureColumns"
-                placeholder="No additional columns available"
+                placeholder="No numeric columns available for features"
                 disabled
                 className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800"
               />
@@ -339,27 +382,48 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label
-                htmlFor="timeScale"
+                htmlFor="modelType"
                 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2"
               >
-                <Calendar className="w-4 h-4" />
-                <span>Time Scale</span>
+                <BarChart3 className="w-4 h-4" />
+                <span>Model</span>
               </Label>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                The time frequency between rows.
+                Choose the forecasting algorithm.
               </p>
-              <Select value={timeScale} onValueChange={setTimeScale}>
+              <SelectWithOpen
+                value={modelType}
+                onValueChange={(v: string) => setModelType(v as 'SVR' | 'LSTM')}
+                open={isModelOpen}
+                onOpenChange={(open: boolean) => {
+                  setIsModelOpen(open);
+                  if (open) {
+                    setIsTargetOpen(false);
+                    setIsFeatureOpen(false);
+                  }
+                }}
+              >
                 <SelectTrigger className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800">
-                  <SelectValue />
+                  <SelectValue placeholder="Select model" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Daily">Daily</SelectItem>
-                  <SelectItem value="Weekly">Weekly</SelectItem>
-                  <SelectItem value="Monthly">Monthly</SelectItem>
-                  <SelectItem value="Quarterly">Quarterly</SelectItem>
-                  <SelectItem value="Yearly">Yearly</SelectItem>
+                  <SelectItem value="LSTM">LSTM (neural network)</SelectItem>
+                  <SelectItem value="SVR">SVR (support vector regression)</SelectItem>
                 </SelectContent>
-              </Select>
+              </SelectWithOpen>
+              <div className="mt-2 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                {modelType === 'LSTM' ? (
+                  <>
+                    <p>• Best for complex, non-linear patterns with enough data.</p>
+                    <p>• Slower to train, but can capture richer dynamics.</p>
+                  </>
+                ) : (
+                  <>
+                    <p>• Best for small/medium datasets and smoother trends.</p>
+                    <p>• Faster and more stable when data is limited.</p>
+                  </>
+                )}
+              </div>
             </div>
 
             <div>
@@ -373,61 +437,40 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                 Number of data points to forecast into the future.
               </p>
-              {isCustomForecastWindow ? (
-                <div className="space-y-2">
-                  <Input
-                    id="forecastWindow"
-                    type="number"
-                    min="1"
-                    value={customForecastWindow}
-                    onChange={e => {
-                      setCustomForecastWindow(e.target.value);
-                      setForecastWindow(parseInt(e.target.value) || 30);
-                    }}
-                    className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800"
-                    placeholder="Enter custom value"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setIsCustomForecastWindow(false);
-                      const options = getForecastWindowOptions(timeScale);
-                      if (options.length > 0) {
-                        setForecastWindow(parseInt(options[0].value));
-                        setCustomForecastWindow(options[0].value);
-                      }
-                    }}
-                    className="w-full text-xs"
-                  >
-                    Use Preset Options
-                  </Button>
-                </div>
-              ) : (
-                <Select
-                  value={isCustomForecastWindow ? 'custom' : forecastWindow.toString()}
-                  onValueChange={handleForecastWindowChange}
-                >
-                  <SelectTrigger className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800">
-                    <SelectValue
-                      placeholder="Select forecast window"
-                      options={[
-                        ...getForecastWindowOptions(timeScale),
-                        { value: 'custom', label: `Custom (${customForecastWindow})` },
-                      ]}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getForecastWindowOptions(timeScale).map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="custom">Custom...</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
+              <Input
+                id="forecastWindow"
+                type="number"
+                min="1"
+                value={forecastWindow.toString()}
+                onChange={e => {
+                  const val = parseInt(e.target.value, 10);
+                  setForecastWindow(Number.isNaN(val) || val <= 0 ? 1 : val);
+                }}
+                className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800"
+                placeholder="e.g. 30"
+              />
+            </div>
+          </div>
+
+          {/* Analyze after forecast toggle (simple checkbox) */}
+          <div className="mt-2 flex items-start gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 px-4 py-3">
+            <Checkbox
+              id="runAnalysisAfterForecast"
+              checked={runAnalysisAfterForecast}
+              onCheckedChange={val => setRunAnalysisAfterForecast(!!val)}
+              className="mt-0.5 cursor-pointer"
+            />
+            <div className="cursor-default">
+              <Label
+                htmlFor="runAnalysisAfterForecast"
+                className="text-sm font-semibold text-gray-900 dark:text-white cursor-pointer"
+              >
+                Analyze forecast after creation
+              </Label>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                If enabled, an AI analysis will be generated for the forecast chart once it is
+                ready.
+              </p>
             </div>
           </div>
 

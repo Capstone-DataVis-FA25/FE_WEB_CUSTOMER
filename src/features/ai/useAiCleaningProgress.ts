@@ -56,6 +56,23 @@ export function useAiCleaningProgress(userId?: string | number) {
 
     socketInstance.on('connect', () => {
       console.log('[Socket][Progress] Connected:', socketInstance.id);
+
+      // Clean up stale jobs: if restored jobs don't receive updates within 2 seconds,
+      // they're likely stale (backend reset) and should be removed
+      // (2 seconds is enough - if backend is running, it will send updates immediately)
+      setTimeout(() => {
+        setActiveJobs(jobs => {
+          const staleJobs = jobs.filter(j => !j.hasReceivedUpdate);
+          if (staleJobs.length > 0) {
+            console.log(
+              '[Socket][Progress] Removing stale jobs:',
+              staleJobs.map(j => j.jobId)
+            );
+            return jobs.filter(j => j.hasReceivedUpdate);
+          }
+          return jobs;
+        });
+      }, 2000); // 2 seconds timeout - backend should send updates immediately if running
     });
 
     socketInstance.on('notification:created', notification => {

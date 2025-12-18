@@ -20,6 +20,38 @@ const ChatBot: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const { messages, isLoading, sendMessage, selectDataset, selectChartType } = useAiChat();
 
+  // Close chatbot when progress bar opens
+  useEffect(() => {
+    const handleCloseChatbot = () => {
+      if (isOpen) {
+        setIsOpen(false);
+        setIsExpanded(false);
+      }
+    };
+
+    window.addEventListener('close-chatbot', handleCloseChatbot);
+    return () => {
+      window.removeEventListener('close-chatbot', handleCloseChatbot);
+    };
+  }, [isOpen]);
+
+  // Notify other components when chatbot state changes
+  useEffect(() => {
+    if (isOpen) {
+      localStorage.setItem('chatbot-open', 'true');
+      window.dispatchEvent(new CustomEvent('close-progress-bar'));
+    } else {
+      localStorage.removeItem('chatbot-open');
+    }
+
+    // Dispatch state change event for positioning
+    window.dispatchEvent(
+      new CustomEvent('chatbot-state-change', {
+        detail: { isOpen, isExpanded },
+      })
+    );
+  }, [isOpen, isExpanded]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
