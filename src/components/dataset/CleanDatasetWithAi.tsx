@@ -46,10 +46,8 @@ function CleanDatasetWithAI({
     // Cleaning rules checkboxes (default enabled)
     removeDuplicates: true,
     fixDataTypes: true,
-    fillMissing: true,
-    removeMissing: false,
-    capOutliers: true,
-    removeOutliers: false,
+    missingStrategy: 'auto', // 'remove' | 'fill_mean' | 'fill_mode' | 'auto'
+    outlierStrategy: 'auto', // 'remove' | 'fill_mean' | 'fill_mode' | 'auto'
     standardizeFormats: true,
     standardizeUnits: false,
   });
@@ -58,23 +56,7 @@ function CleanDatasetWithAI({
   const { showSuccess } = useToastContext();
 
   const handleOptionChange = (key: keyof typeof cleaningOptions, value: string | boolean) => {
-    setCleaningOptions(prev => {
-      // Only allow one of fillMissing/removeMissing
-      if (key === 'fillMissing' && value) {
-        return { ...prev, fillMissing: true, removeMissing: false };
-      }
-      if (key === 'removeMissing' && value) {
-        return { ...prev, fillMissing: false, removeMissing: true };
-      }
-      // Only allow one of capOutliers/removeOutliers
-      if (key === 'capOutliers' && value) {
-        return { ...prev, capOutliers: true, removeOutliers: false };
-      }
-      if (key === 'removeOutliers' && value) {
-        return { ...prev, capOutliers: false, removeOutliers: true };
-      }
-      return { ...prev, [key]: value };
-    });
+    setCleaningOptions(prev => ({ ...prev, [key]: value }));
   };
 
   // Handle CSV text cleaning (ASYNC)
@@ -277,142 +259,131 @@ function CleanDatasetWithAI({
                   <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
                     Cleaning Rules
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <label className="flex items-start gap-2 cursor-pointer group">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                    <label className="flex items-start gap-2.5 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={cleaningOptions.removeDuplicates}
                         onChange={e => handleOptionChange('removeDuplicates', e.target.checked)}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
                       />
-                      <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 block">
                           Remove duplicates
                         </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           Remove exact duplicate rows
                         </p>
                       </div>
                     </label>
 
-                    <label className="flex items-start gap-2 cursor-pointer group">
+                    <label className="flex items-start gap-2.5 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={cleaningOptions.fixDataTypes}
                         onChange={e => handleOptionChange('fixDataTypes', e.target.checked)}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
                       />
-                      <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 block">
                           Fix data types
                         </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           Convert strings to numbers
                         </p>
                       </div>
                     </label>
 
-                    <label className="flex items-start gap-2 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={cleaningOptions.fillMissing}
-                        onChange={e => handleOptionChange('fillMissing', e.target.checked)}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Auto-fill missing values
-                        </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Fill missing cells with mean, mode, or most common date/category
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-2 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={cleaningOptions.removeMissing}
-                        onChange={e => handleOptionChange('removeMissing', e.target.checked)}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Remove rows with missing values
-                        </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Completely remove rows that have any empty cell
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-2 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={cleaningOptions.capOutliers}
-                        onChange={e => handleOptionChange('capOutliers', e.target.checked)}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Auto-cap outliers
-                        </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Detect outliers and cap them to reasonable bounds
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-2 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={cleaningOptions.removeOutliers}
-                        onChange={e => handleOptionChange('removeOutliers', e.target.checked)}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                          Remove rows with outliers
-                        </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Completely remove rows that contain outlier values
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-2 cursor-pointer group">
+                    <label className="flex items-start gap-2.5 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={cleaningOptions.standardizeFormats}
                         onChange={e => handleOptionChange('standardizeFormats', e.target.checked)}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
                       />
-                      <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 block">
                           Standardize formats
                         </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           Normalize dates, phones, etc.
                         </p>
                       </div>
                     </label>
 
-                    <label className="flex items-start gap-2 cursor-pointer group">
+                    <label className="flex items-start gap-2.5 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={cleaningOptions.standardizeUnits}
                         onChange={e => handleOptionChange('standardizeUnits', e.target.checked)}
-                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
                       />
-                      <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 block">
                           Standardize units
                         </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           Convert to consistent units
                         </p>
                       </div>
                     </label>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Advanced Strategies
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Missing value strategy dropdown */}
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="missingStrategy"
+                        className="text-sm font-medium text-gray-700 dark:text-gray-300 block"
+                      >
+                        Missing value strategy
+                      </label>
+                      <select
+                        id="missingStrategy"
+                        className="w-full min-w-[180px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 appearance-auto"
+                        style={{ minWidth: 180, paddingLeft: 16, paddingRight: 32 }}
+                        value={cleaningOptions.missingStrategy}
+                        onChange={e => handleOptionChange('missingStrategy', e.target.value)}
+                      >
+                        <option value="auto">Auto fill</option>
+                        <option value="remove">Remove rows with missing values</option>
+                        <option value="fill_mean">Fill with mean</option>
+                        <option value="fill_mode">Fill with mode</option>
+                      </select>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Choose how to handle missing values
+                      </p>
+                    </div>
+
+                    {/* Outlier strategy dropdown */}
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="outlierStrategy"
+                        className="text-sm font-medium text-gray-700 dark:text-gray-300 block"
+                      >
+                        Outlier strategy
+                      </label>
+                      <select
+                        id="outlierStrategy"
+                        className="w-full min-w-[180px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 appearance-auto"
+                        style={{ minWidth: 180, paddingLeft: 16, paddingRight: 32 }}
+                        value={cleaningOptions.outlierStrategy}
+                        onChange={e => handleOptionChange('outlierStrategy', e.target.value)}
+                      >
+                        <option value="auto">Auto</option>
+                        <option value="remove">Remove rows with outliers</option>
+                        <option value="fill_mean">Fill with mean</option>
+                        <option value="fill_mode">Fill with mode</option>
+                      </select>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Choose how to handle outliers
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -587,12 +558,31 @@ function CleanDatasetWithAI({
                     <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                       {cleaningOptions.removeDuplicates && <li>• Remove duplicate rows</li>}
                       {cleaningOptions.fixDataTypes && <li>• Fix data types</li>}
-                      {cleaningOptions.fillMissing && <li>• Fill all missing field</li>}
-                      {cleaningOptions.removeMissing && <li>• Remove all missing field</li>}
-                      {cleaningOptions.capOutliers && <li>• Auto-cap outliers</li>}
-                      {cleaningOptions.removeOutliers && <li>• Remove rows with outliers</li>}
+                      {cleaningOptions.missingStrategy === 'remove' && (
+                        <li>• Remove all missing values</li>
+                      )}
+                      {cleaningOptions.missingStrategy === 'fill_mean' && (
+                        <li>• Fill missing values with mean</li>
+                      )}
+                      {cleaningOptions.missingStrategy === 'fill_mode' && (
+                        <li>• Fill missing values with mode</li>
+                      )}
+                      {cleaningOptions.missingStrategy === 'auto' && (
+                        <li>• Auto fill missing values</li>
+                      )}
+                      {cleaningOptions.outlierStrategy === 'remove' && (
+                        <li>• Remove rows with outliers</li>
+                      )}
+                      {cleaningOptions.outlierStrategy === 'fill_mean' && (
+                        <li>• Fill outliers with mean</li>
+                      )}
+                      {cleaningOptions.outlierStrategy === 'fill_mode' && (
+                        <li>• Fill outliers with mode</li>
+                      )}
+                      {cleaningOptions.outlierStrategy === 'auto' && (
+                        <li>• Auto handle outliers</li>
+                      )}
                       {cleaningOptions.standardizeFormats && <li>• Standardize formats</li>}
-
                       {cleaningOptions.standardizeUnits && <li>• Standardize units</li>}
                     </ul>
                   </div>
@@ -641,11 +631,31 @@ function CleanDatasetWithAI({
                     <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
                       {cleaningOptions.removeDuplicates && <li>• Remove duplicate rows</li>}
                       {cleaningOptions.fixDataTypes && <li>• Fix data types</li>}
-                      {cleaningOptions.fillMissing && <li>• Auto-fill missing values</li>}
-                      {cleaningOptions.removeMissing && <li>• Remove rows with missing values</li>}
-                      {cleaningOptions.removeOutliers && <li>• Remove or cap outliers</li>}
+                      {cleaningOptions.missingStrategy === 'remove' && (
+                        <li>• Remove all missing values</li>
+                      )}
+                      {cleaningOptions.missingStrategy === 'fill_mean' && (
+                        <li>• Fill missing values with mean</li>
+                      )}
+                      {cleaningOptions.missingStrategy === 'fill_mode' && (
+                        <li>• Fill missing values with mode</li>
+                      )}
+                      {cleaningOptions.missingStrategy === 'auto' && (
+                        <li>• Auto fill missing values</li>
+                      )}
+                      {cleaningOptions.outlierStrategy === 'remove' && (
+                        <li>• Remove rows with outliers</li>
+                      )}
+                      {cleaningOptions.outlierStrategy === 'fill_mean' && (
+                        <li>• Fill outliers with mean</li>
+                      )}
+                      {cleaningOptions.outlierStrategy === 'fill_mode' && (
+                        <li>• Fill outliers with mode</li>
+                      )}
+                      {cleaningOptions.outlierStrategy === 'auto' && (
+                        <li>• Auto handle outliers</li>
+                      )}
                       {cleaningOptions.standardizeFormats && <li>• Standardize formats</li>}
-
                       {cleaningOptions.standardizeUnits && <li>• Standardize units</li>}
                     </ul>
                   </div>
