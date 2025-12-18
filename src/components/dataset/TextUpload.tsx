@@ -63,8 +63,7 @@ function TextUpload({ onTextProcess, isProcessing = false }: TextUploadProps) {
             {t('textUpload_title')}
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
-            Paste your tabular data directly as text. Supports CSV, TSV, JSON (2D arrays), and other
-            delimited formats.
+            {t('text_upload_description')}
           </CardDescription>
         </CardHeader>
 

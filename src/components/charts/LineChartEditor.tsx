@@ -30,13 +30,11 @@ import {
   curveOptions,
   sizePresets,
   getResponsiveDefaults,
-  type LineChartConfig as ChartConfig,
   type ColorConfig,
   type SeriesConfig,
   type FormatterConfig,
 } from '@/types/chart';
 import {
-  DataEditorSection,
   BasicSettingsSection,
   ChartSettingsSection,
   AxisConfigurationSection,
@@ -56,6 +54,44 @@ interface Dataset {
 }
 
 // Props for LineChart Editor
+// Flat editor config used by LineChartEditor only
+interface ChartConfig {
+  width: number;
+  height: number;
+  margin: { top: number; right: number; bottom: number; left: number };
+  xAxisKey: string;
+  yAxisKeys: string[];
+  disabledLines: string[];
+  title: string;
+  xAxisLabel: string;
+  yAxisLabel: string;
+  showLegend: boolean;
+  showGrid: boolean;
+  showPoints: boolean;
+  showPointValues: boolean;
+  animationDuration: number;
+  curve: keyof typeof curveOptions;
+  xAxisStart: 'auto' | 'zero';
+  yAxisStart: 'auto' | 'zero';
+  lineWidth: number;
+  pointRadius: number;
+  gridOpacity: number;
+  legendPosition: 'top' | 'bottom' | 'left' | 'right';
+  xAxisRotation: number;
+  yAxisRotation: number;
+  showAxisLabels: boolean;
+  showAxisTicks: boolean;
+  enableZoom: boolean;
+  enablePan: boolean;
+  zoomExtent: number;
+  showTooltip: boolean;
+  theme: 'light' | 'dark' | 'auto';
+  backgroundColor: string;
+  titleFontSize: number;
+  labelFontSize: number;
+  legendFontSize: number;
+}
+
 export interface LineChartEditorProps {
   initialArrayData?: (string | number)[][]; // Array data input
   initialConfig?: Partial<ChartConfig>;
@@ -110,7 +146,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       const keysArray = Array.isArray(keys) ? keys : [keys];
       const decodedNames = keysArray.map(keyId => {
         const header = dataset.headers.find((h: DatasetHeader) => h.id === keyId);
-        return header ? header.name.toLowerCase() : keyId.toLowerCase(); // Convert to lowercase
+        return header ? header.name : keyId;
       });
 
       return Array.isArray(keys) ? decodedNames : decodedNames[0];
@@ -124,9 +160,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
 
       const keysArray = Array.isArray(keys) ? keys : [keys];
       const encodedIds = keysArray.map(keyName => {
-        const header = dataset.headers.find(
-          (h: DatasetHeader) => h.name.toLowerCase() === keyName.toLowerCase()
-        );
+        const header = dataset.headers.find((h: DatasetHeader) => h.name === keyName);
         return header ? header.id : keyName; // Fallback to keyName if not found
       });
 
@@ -192,9 +226,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       if (initialConfig.xAxisKey) {
         return decodeKeysToNames(initialConfig.xAxisKey) as string;
       }
-      return processedInitialData.length > 0
-        ? Object.keys(processedInitialData[0])[0].toLowerCase()
-        : 'x';
+      return processedInitialData.length > 0 ? Object.keys(processedInitialData[0])[0] : 'x';
     })(),
     yAxisKeys: (() => {
       // Decode initialConfig.yAxisKeys if provided, otherwise use remaining data columns
@@ -204,7 +236,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       return processedInitialData.length > 0
         ? Object.keys(processedInitialData[0])
             .slice(1)
-            .map(key => key.toLowerCase())
+            .map(key => key)
         : ['y']; // Lấy tất cả columns trừ column đầu tiên (xAxisKey)
     })(),
     disabledLines: initialConfig.disabledLines
@@ -267,6 +299,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   const [showDataModal, setShowDataModal] = useState(false);
   const [tempData, setTempData] = useState<ChartDataPoint[]>(processedInitialData);
 
+  console.log('defaultConfig 123: ', defaultConfig);
   // Collapse state for sections
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     basicSettings: true,
@@ -290,15 +323,13 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     }
   }, [processedInitialData, data]); // Only run when processedInitialData or data changes
 
-  // Effect to update seriesConfigs when dataset headers change
+  // Effect to update axisConfigs when dataset headers change
   useEffect(() => {
     if (dataset?.headers && config.yAxisKeys.length > 0) {
-      setSeriesConfigs(prevConfigs => {
+      setaxisConfigs(prevConfigs => {
         const newConfigs = config.yAxisKeys.map((key, index) => {
           // Find the header with matching name (case insensitive)
-          const header = dataset.headers.find(
-            (h: DatasetHeader) => h.name.toLowerCase() === key.toLowerCase()
-          );
+          const header = dataset.headers.find((h: DatasetHeader) => h.name === key);
 
           const colorKeys = Object.keys(defaultColorsChart);
           const colorIndex = index % colorKeys.length;
@@ -326,7 +357,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         return newConfigs;
       });
     }
-  }, [dataset, config.yAxisKeys, config.disabledLines]); // seriesConfigs is not needed in dependencies as it's the state being set
+  }, [dataset, config.yAxisKeys, config.disabledLines]); // axisConfigs is not needed in dependencies as it's the state being set
 
   // Toggle section collapse
   const toggleSection = (sectionKey: string) => {
@@ -337,7 +368,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   };
 
   // Series management state
-  const [seriesConfigs, setSeriesConfigs] = useState<SeriesConfig[]>(() => {
+  const [axisConfigs, setaxisConfigs] = useState<SeriesConfig[]>(() => {
     return config.yAxisKeys.map((key, index) => {
       // Sử dụng màu từ defaultColors theo thứ tự, tránh trùng lặp
       const colorKeys = Object.keys(defaultColorsChart);
@@ -500,8 +531,8 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
           yAxisKeys: updatedConfig.yAxisKeys.filter(key => key !== newConfig.xAxisKey),
         };
 
-        // Also remove from seriesConfigs
-        setSeriesConfigs(prev => {
+        // Also remove from axisConfigs
+        setaxisConfigs(prev => {
           const newConfigs = prev.filter(series => series.dataColumn !== newConfig.xAxisKey);
           return newConfigs;
         });
@@ -528,7 +559,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
 
       onConfigChange?.(encodedConfigForParent);
     },
-    [config, onConfigChange, encodeNamesToIds, showSuccess, t, seriesConfigs]
+    [config, onConfigChange, encodeNamesToIds, showSuccess, t, axisConfigs]
   );
 
   // Effect to update config when data structure changes - using ref to prevent infinite loop
@@ -542,18 +573,15 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       // Use dataset headers instead of just data keys
       const availableHeaders = dataset.headers;
 
-      // Handle the case where config keys might be arrays
-      const currentXAxisKey = Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey;
-      const currentYAxisKeys = Array.isArray(config.yAxisKeys)
-        ? config.yAxisKeys
-        : [config.yAxisKeys];
+      // Get current keys
+      const currentXAxisKey = config.xAxisKey;
+      const currentYAxisKeys = config.yAxisKeys;
 
       // Use header names for keys (assuming headers have 'name' property)
-      const newXAxisKey =
-        availableHeaders.length > 0 ? availableHeaders[0].name.toLowerCase() : 'x';
+      const newXAxisKey = availableHeaders.length > 0 ? availableHeaders[0].name : 'x';
       const newYAxisKeys =
         availableHeaders.length > 1
-          ? availableHeaders.slice(1).map((header: DatasetHeader) => header.name.toLowerCase())
+          ? availableHeaders.slice(1).map((header: DatasetHeader) => header.name)
           : ['y'];
 
       // Only update if keys have actually changed and different from last update
@@ -581,11 +609,9 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         ? config.yAxisKeys
         : [config.yAxisKeys];
 
-      const newXAxisKey = availableKeys[0]?.toLowerCase() || 'x';
+      const newXAxisKey = availableKeys[0] || 'x';
       const newYAxisKeys =
-        availableKeys.slice(1).length > 0
-          ? availableKeys.slice(1).map(key => key.toLowerCase())
-          : ['y'];
+        availableKeys.slice(1).length > 0 ? availableKeys.slice(1).map(key => key) : ['y'];
 
       const keysChanged =
         currentXAxisKey !== newXAxisKey ||
@@ -626,7 +652,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     return Object.keys(data[0] || {}).filter(
       key =>
         key !== config.xAxisKey && // Không được là xAxisKey
-        !seriesConfigs.some(s => s.dataColumn === key) // Không được sử dụng bởi series khác
+        !axisConfigs.some(s => s.dataColumn === key) // Không được sử dụng bởi series khác
     );
   };
 
@@ -635,7 +661,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     const availableForSeries = Object.keys(data[0] || {}).filter(
       key =>
         key !== config.xAxisKey && // Không được là xAxisKey
-        !seriesConfigs.some(s => s.id !== seriesId && s.dataColumn === key) // Không được sử dụng bởi series khác (trừ series hiện tại)
+        !axisConfigs.some(s => s.id !== seriesId && s.dataColumn === key) // Không được sử dụng bởi series khác (trừ series hiện tại)
     );
     return availableForSeries;
   };
@@ -653,7 +679,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       return; // Exit early to prevent the update
     }
 
-    setSeriesConfigs(prev => {
+    setaxisConfigs(prev => {
       const oldSeries = prev.find(s => s.id === seriesId);
       const updatedSeries = prev.map(series => {
         if (series.id === seriesId) {
@@ -718,7 +744,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
 
     if (availableColumns.length > 0) {
       // Lấy danh sách màu đã được sử dụng
-      const usedColors = seriesConfigs.map(s => s.color);
+      const usedColors = axisConfigs.map(s => s.color);
 
       // Tìm màu từ defaultColors chưa được sử dụng
       const colorKeys = Object.keys(defaultColorsChart);
@@ -772,7 +798,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         },
       });
 
-      setSeriesConfigs(prev => {
+      setaxisConfigs(prev => {
         const updatedSeries = [...prev, newSeries];
         const allDataColumns = updatedSeries.map(s => s.dataColumn);
         const newDisabledLines = updatedSeries.filter(s => !s.visible).map(s => s.dataColumn);
@@ -788,14 +814,14 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   };
 
   const removeSeries = (seriesId: string) => {
-    const seriesToRemove = seriesConfigs.find(s => s.id === seriesId);
-    if (seriesToRemove && seriesConfigs.length > 1) {
+    const seriesToRemove = axisConfigs.find(s => s.id === seriesId);
+    if (seriesToRemove && axisConfigs.length > 1) {
       // Clean up color mapping
       const newColors = { ...colors };
       delete newColors[seriesToRemove.dataColumn];
       updateColors(newColors);
 
-      setSeriesConfigs(prev => {
+      setaxisConfigs(prev => {
         const updatedSeries = prev.filter(s => s.id !== seriesId);
         const allDataColumns = updatedSeries.map(s => s.dataColumn);
         const newDisabledLines = updatedSeries.filter(s => !s.visible).map(s => s.dataColumn);
@@ -811,10 +837,10 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   };
 
   // Modal functions
-  const openDataModal = () => {
-    setTempData([...data]);
-    setShowDataModal(true);
-  };
+  // const openDataModal = () => {
+  //   setTempData([...data]);
+  //   setShowDataModal(true);
+  // };
 
   const closeDataModal = () => {
     setShowDataModal(false);
@@ -863,12 +889,12 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
   };
 
   // Apply size preset
-  const applySizePreset = (presetKey: keyof typeof sizePresets) => {
-    const preset = sizePresets[presetKey];
+  const applySizePreset = (presetKey: keyof typeof sizePresets | 'responsive') => {
     if (presetKey === 'responsive') {
       const responsive = getResponsiveDefaults();
       updateConfig({ width: responsive.width, height: responsive.height });
     } else {
+      const preset = sizePresets[presetKey];
       updateConfig({ width: preset.width, height: preset.height });
     }
   };
@@ -897,7 +923,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
     updateColors(newColors);
 
     // Update series configs to reflect the new colors
-    setSeriesConfigs(prev =>
+    setaxisConfigs(prev =>
       prev.map((series, index) => ({
         ...series,
         color: colors[index % colors.length],
@@ -919,7 +945,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       const exportData = {
         config: encodedConfig, // Use encoded config with ids
         formatters,
-        seriesConfigs: seriesConfigs.map(series => ({
+        axisConfigs: axisConfigs.map(series => ({
           ...series,
           // Encode dataColumn to id for export
           dataColumn: encodeNamesToIds(series.dataColumn) as string,
@@ -960,7 +986,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
       updateFormatters(defaultFormatters);
 
       // Reset series configs
-      const resetSeriesConfigs = resetConfig.yAxisKeys.map((key, index) => {
+      const resetaxisConfigs = resetConfig.yAxisKeys.map((key, index) => {
         const colorKeys = Object.keys(defaultColorsChart);
         const colorIndex = index % colorKeys.length;
         const selectedColorKey = colorKeys[colorIndex];
@@ -975,7 +1001,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
         };
       });
 
-      setSeriesConfigs(resetSeriesConfigs);
+      setaxisConfigs(resetaxisConfigs);
 
       showSuccess(t('lineChart_editor_resetToDefault'));
     } catch (error) {
@@ -1015,13 +1041,13 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
           updateFormatters(importData.formatters);
 
           // Handle series configurations
-          if (importData.seriesConfigs && Array.isArray(importData.seriesConfigs)) {
-            const newSeriesConfigs = importData.seriesConfigs.map(
+          if (importData.axisConfigs && Array.isArray(importData.axisConfigs)) {
+            const newaxisConfigs = importData.axisConfigs.map(
               (series: SeriesConfig, index: number) => {
                 // Find the header for this series dataColumn to get the correct id
                 const decodedDataColumn = decodeKeysToNames(series.dataColumn) as string;
                 const header = dataset?.headers?.find(
-                  (h: DatasetHeader) => h.name.toLowerCase() === decodedDataColumn.toLowerCase()
+                  (h: DatasetHeader) => h.name === decodedDataColumn
                 );
 
                 return {
@@ -1031,7 +1057,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                 };
               }
             );
-            setSeriesConfigs(newSeriesConfigs);
+            setaxisConfigs(newaxisConfigs);
           }
 
           showSuccess(t('lineChart_editor_configImported'));
@@ -1239,16 +1265,7 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.15 }}
-            >
-              <DataEditorSection
-                data={data}
-                xAxisKey={config.xAxisKey}
-                yAxisKeys={config.yAxisKeys}
-                isCollapsed={collapsedSections.dataEditor}
-                onToggleCollapse={() => toggleSection('dataEditor')}
-                onOpenModal={openDataModal}
-              />
-            </motion.div>
+            ></motion.div>
 
             {/* Basic Settings */}
             <motion.div
@@ -1390,30 +1407,30 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                   <CardContent className="space-y-4">
                     {/* Series Management using shared component */}
                     <SeriesManagement
-                      series={seriesConfigs}
+                      series={axisConfigs}
                       onUpdateSeries={updateSeriesConfig}
                       onAddSeries={addSeries}
                       onRemoveSeries={removeSeries}
                       onMoveSeriesUp={(seriesId: string) => {
-                        const index = seriesConfigs.findIndex(s => s.id === seriesId);
+                        const index = axisConfigs.findIndex(s => s.id === seriesId);
                         if (index > 0) {
-                          const newSeries = [...seriesConfigs];
+                          const newSeries = [...axisConfigs];
                           [newSeries[index], newSeries[index - 1]] = [
                             newSeries[index - 1],
                             newSeries[index],
                           ];
-                          setSeriesConfigs(newSeries);
+                          setaxisConfigs(newSeries);
                         }
                       }}
                       onMoveSeriesDown={(seriesId: string) => {
-                        const index = seriesConfigs.findIndex(s => s.id === seriesId);
-                        if (index < seriesConfigs.length - 1) {
-                          const newSeries = [...seriesConfigs];
+                        const index = axisConfigs.findIndex(s => s.id === seriesId);
+                        if (index < axisConfigs.length - 1) {
+                          const newSeries = [...axisConfigs];
                           [newSeries[index], newSeries[index + 1]] = [
                             newSeries[index + 1],
                             newSeries[index],
                           ];
-                          setSeriesConfigs(newSeries);
+                          setaxisConfigs(newSeries);
                         }
                       }}
                       availableColumns={getAvailableColumns()}
@@ -1596,21 +1613,16 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                       data.length > 0
                         ? [
                             [
-                              // Ensure xAxisKey is a string, not an array
-                              Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey,
-                              // Ensure yAxisKeys are strings, not arrays
-                              ...(Array.isArray(config.yAxisKeys)
-                                ? config.yAxisKeys
-                                : [config.yAxisKeys]
-                              ).filter(key => typeof key === 'string' && key.length > 0),
+                              // xAxisKey and yAxisKeys are now strictly typed
+                              config.xAxisKey,
+                              // Filter valid yAxisKeys
+                              ...config.yAxisKeys.filter(
+                                key => typeof key === 'string' && key.length > 0
+                              ),
                             ],
                             ...data.map(point => {
-                              const xKey = Array.isArray(config.xAxisKey)
-                                ? config.xAxisKey[0]
-                                : config.xAxisKey;
-                              const yKeys = Array.isArray(config.yAxisKeys)
-                                ? config.yAxisKeys
-                                : [config.yAxisKeys];
+                              const xKey = config.xAxisKey;
+                              const yKeys = config.yAxisKeys;
 
                               return [
                                 point[xKey],
@@ -1625,19 +1637,15 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     width={config.width}
                     height={config.height}
                     margin={config.margin}
-                    xAxisKey={Array.isArray(config.xAxisKey) ? config.xAxisKey[0] : config.xAxisKey}
-                    yAxisKeys={
-                      Array.isArray(config.yAxisKeys)
-                        ? config.yAxisKeys.filter(key => typeof key === 'string')
-                        : [config.yAxisKeys].filter(key => typeof key === 'string')
-                    }
+                    xAxisKey={config.xAxisKey}
+                    yAxisKeys={config.yAxisKeys.filter(key => typeof key === 'string')}
                     disabledLines={config.disabledLines}
                     colors={colors}
                     seriesNames={Object.fromEntries(
-                      seriesConfigs.map(series => [series.dataColumn, series.name])
+                      axisConfigs.map(series => [series.dataColumn, series.name])
                     )}
-                    seriesConfigs={Object.fromEntries(
-                      seriesConfigs.map(series => [
+                    axisConfigs={Object.fromEntries(
+                      axisConfigs.map(series => [
                         series.dataColumn,
                         {
                           lineWidth: series.lineWidth,
@@ -1686,10 +1694,20 @@ const LineChartEditor: React.FC<LineChartEditorProps> = ({
                     legendFontSize={config.legendFontSize}
                     // Formatter type props for axis labels
                     yFormatterType={
-                      formatters.useYFormatter ? formatters.yFormatterType : undefined
+                      formatters.useYFormatter &&
+                      formatters.yFormatterType !== 'none' &&
+                      formatters.yFormatterType !== 'compact' &&
+                      formatters.yFormatterType !== 'ordinal'
+                        ? formatters.yFormatterType
+                        : undefined
                     }
                     xFormatterType={
-                      formatters.useXFormatter ? formatters.xFormatterType : undefined
+                      formatters.useXFormatter &&
+                      formatters.xFormatterType !== 'none' &&
+                      formatters.xFormatterType !== 'compact' &&
+                      formatters.xFormatterType !== 'ordinal'
+                        ? formatters.xFormatterType
+                        : undefined
                     }
                   />
                 </CardContent>

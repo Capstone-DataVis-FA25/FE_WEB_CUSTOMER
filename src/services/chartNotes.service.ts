@@ -1,3 +1,4 @@
+import type { ApiResponse } from '@/types/common';
 import { axiosPrivate } from './axios';
 import type { AxiosResponse } from 'axios';
 
@@ -14,10 +15,7 @@ export interface ChartNote {
   content: string;
   chartId: string;
   authorId: string;
-  timestamp: string;
   createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
   author: ChartNoteAuthor;
 }
 
@@ -28,12 +26,6 @@ export interface CreateChartNoteDto {
 
 export interface UpdateChartNoteDto {
   content: string;
-}
-
-export interface ApiResponse<T> {
-  statusCode: number;
-  message: string;
-  data: T;
 }
 
 // Chart Notes Service

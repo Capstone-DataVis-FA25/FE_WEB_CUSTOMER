@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchDatasets,
@@ -12,15 +12,15 @@ import type { CreateDatasetRequest, UpdateDatasetRequest } from './datasetAPI';
 
 export const useDataset = () => {
   const dispatch = useAppDispatch();
-  const {
-    datasets,
-    currentDataset,
-    loading,
-    creating,
-    updating,
-    deleting,
-    error,
-  } = useAppSelector((state) => state.dataset);
+  // Use separate selectors to prevent re-renders when only the list is being fetched
+  const datasets = useAppSelector(state => state.dataset.datasets);
+  const currentDataset = useAppSelector(state => state.dataset.currentDataset);
+  const loading = useAppSelector(state => state.dataset.loading);
+  const loadingList = useAppSelector(state => state.dataset.loadingList);
+  const creating = useAppSelector(state => state.dataset.creating);
+  const updating = useAppSelector(state => state.dataset.updating);
+  const deleting = useAppSelector(state => state.dataset.deleting);
+  const error = useAppSelector(state => state.dataset.error);
 
   // Get all datasets
   const getDatasets = useCallback(() => {
@@ -28,24 +28,36 @@ export const useDataset = () => {
   }, [dispatch]);
 
   // Get dataset by ID
-  const getDatasetById = useCallback((id: string) => {
-    return dispatch(fetchDatasetById(id));
-  }, [dispatch]);
+  const getDatasetById = useCallback(
+    (id: string) => {
+      return dispatch(fetchDatasetById(id));
+    },
+    [dispatch]
+  );
 
   // Create dataset
-  const createDataset = useCallback((data: CreateDatasetRequest) => {
-    return dispatch(createDatasetThunk(data));
-  }, [dispatch]);
+  const createDataset = useCallback(
+    (data: CreateDatasetRequest) => {
+      return dispatch(createDatasetThunk(data));
+    },
+    [dispatch]
+  );
 
   // Update dataset
-  const updateDataset = useCallback((id: string, data: UpdateDatasetRequest) => {
-    return dispatch(updateDatasetThunk({ id, data }));
-  }, [dispatch]);
+  const updateDataset = useCallback(
+    (id: string, data: UpdateDatasetRequest) => {
+      return dispatch(updateDatasetThunk({ id, data }));
+    },
+    [dispatch]
+  );
 
   // Delete dataset
-  const deleteDataset = useCallback((id: string) => {
-    return dispatch(deleteDatasetThunk(id));
-  }, [dispatch]);
+  const deleteDataset = useCallback(
+    (id: string) => {
+      return dispatch(deleteDatasetThunk(id));
+    },
+    [dispatch]
+  );
 
   // Clear error
   const clearDatasetError = useCallback(() => {
@@ -57,22 +69,44 @@ export const useDataset = () => {
     dispatch(clearCurrentDataset());
   }, [dispatch]);
 
-  return {
-    // State
-    datasets,
-    currentDataset,
-    loading,
-    creating,
-    updating,
-    deleting,
-    error,
-    // Actions
-    getDatasets,
-    getDatasetById,
-    createDataset,
-    updateDataset,
-    deleteDataset,
-    clearDatasetError,
-    clearCurrent,
-  };
+  // Memoize the return value to prevent unnecessary re-renders
+  // Only recreate the object when actual values change
+  return useMemo(
+    () => ({
+      // State
+      datasets,
+      currentDataset,
+      loading,
+      loadingList,
+      creating,
+      updating,
+      deleting,
+      error,
+      // Actions
+      getDatasets,
+      getDatasetById,
+      createDataset,
+      updateDataset,
+      deleteDataset,
+      clearDatasetError,
+      clearCurrent,
+    }),
+    [
+      datasets,
+      currentDataset,
+      loading,
+      loadingList,
+      creating,
+      updating,
+      deleting,
+      error,
+      getDatasets,
+      getDatasetById,
+      createDataset,
+      updateDataset,
+      deleteDataset,
+      clearDatasetError,
+      clearCurrent,
+    ]
+  );
 };

@@ -8,6 +8,7 @@ const Routers = {
 
   // Resources routes
   FREQUENT_QUESTIONS: '/resources/frequent-questions',
+  ACADEMIC_DOCS: '/resources/docs',
 
   // Profile routes
   PROFILE: '/profile',
@@ -17,6 +18,9 @@ const Routers = {
 
   // Chart Gallery
   CHART_GALLERY: '/chart-gallery',
+  PRICING: '/pricing',
+  PAYMENT_SUCCESS: '/subscription/success',
+  TRANSACTION_HISTORY: '/transaction-history',
 
   // For state-based navigation, use location.state.datasetId (recommended)
   DATASET_DETAIL: '/datasets/detail', // state-based route, do not use slug param
@@ -43,13 +47,17 @@ const Routers = {
   BAR_CHART_EDITOR_DEMO: '/demo/bar-chart-editor',
   AREA_CHART_DEMO: '/chart/area-chart',
   AREA_CHART_EDITOR_DEMO: '/demo/area-chart-editor',
+  PIE_CHART_DEMO: '/chart/pie-chart',
+  PIE_CHART_EDITOR_DEMO: '/demo/pie-chart-editor',
 
   //Workspace routes
-  WORKSPACE: '/workspace',
   WORKSPACE_DATASETS: '/workspace/datasets',
   WORKSPACE_CHARTS: '/workspace/charts',
   CHART_CREATOR: '/chart-creator',
   CHART_EDITOR: '/chart-editor',
+  CHART_HISTORY_VIEW: '/chart-history/view',
+  FORECAST: '/forecast',
+  FORECAST_DETAIL: '/forecast/:id',
 
   // Privacy and Terms
   TERMS_OF_SERVICE: '/terms-of-service',

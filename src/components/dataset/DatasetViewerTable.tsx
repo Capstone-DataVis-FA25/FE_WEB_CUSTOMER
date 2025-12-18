@@ -1,5 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { FileText, FileDigit, Calendar } from 'lucide-react';
+// removed DropdownMenu imports — replaced with simple toggle button for showing type
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -11,6 +12,8 @@ import { Button } from '@/components/ui/button';
 interface ColumnMeta {
   name: string;
   type?: 'text' | 'number' | 'date';
+  /** Optional per-column date format for date-type columns */
+  dateFormat?: string;
 }
 interface DatasetViewerTableProps {
   // Can pass simple array of names or array of objects with name + type
@@ -33,7 +36,9 @@ interface DatasetViewerTableProps {
 // Helper to normalize columns
 const normalizeColumns = (cols: (string | ColumnMeta)[]): Required<ColumnMeta>[] =>
   cols.map(c =>
-    typeof c === 'string' ? { name: c, type: 'text' } : { name: c.name, type: c.type || 'text' }
+    typeof c === 'string'
+      ? { name: c, type: 'text', dateFormat: '' }
+      : { name: c.name, type: c.type || 'text', dateFormat: c.dateFormat || '' }
   );
 
 const typeIcon = (type: ColumnMeta['type']) => {
@@ -46,12 +51,6 @@ const typeIcon = (type: ColumnMeta['type']) => {
       return <FileText size={14} />;
   }
 };
-
-const COLUMN_TYPES = [
-  { label: 'Text', value: 'text', icon: <FileText size={14} /> },
-  { label: 'Number', value: 'number', icon: <FileDigit size={14} /> },
-  { label: 'Date', value: 'date', icon: <Calendar size={14} /> },
-];
 
 /**
  * Lightweight read‑only dataset viewer (no context, no editing).
@@ -83,17 +82,40 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
     [useVirtual]
   );
 
-  const viewportHeight = useMemo(() => {
-    if (!useVirtual) return totalRows * rowHeight;
-    if (!scrollRef.current) return 0;
-    return scrollRef.current.clientHeight;
-  }, [useVirtual, totalRows, rowHeight]);
+  // Measure viewport height for virtualization. Use state + effect so we update after mount
+  const [viewportHeight, setViewportHeight] = useState<number>(() =>
+    useVirtual ? 0 : totalRows * rowHeight
+  );
 
-  const startIndex = useVirtual ? Math.max(0, Math.floor(scrollTop / rowHeight) - overscan) : 0;
-  const visibleCount = useVirtual
-    ? Math.ceil(viewportHeight / rowHeight) + overscan * 2
+  // effectiveUseVirtual is disabled until we can measure the viewport to avoid 0-sized calculations
+  const effectiveUseVirtual = useVirtual && viewportHeight > 0;
+
+  useEffect(() => {
+    if (!useVirtual) {
+      setViewportHeight(totalRows * rowHeight);
+      return;
+    }
+
+    const el = scrollRef.current;
+    const update = () => {
+      if (el) setViewportHeight(el.clientHeight || 0);
+    };
+
+    // measure initially
+    update();
+
+    // listen to resize to update measurement
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [useVirtual, totalRows, rowHeight, height]);
+
+  const startIndex = effectiveUseVirtual
+    ? Math.max(0, Math.floor(scrollTop / rowHeight) - overscan)
+    : 0;
+  const visibleCount = effectiveUseVirtual
+    ? Math.min(totalRows, Math.ceil(viewportHeight / rowHeight) + overscan * 2)
     : totalRows;
-  const endIndex = useVirtual ? Math.min(totalRows, startIndex + visibleCount) : totalRows;
+  const endIndex = effectiveUseVirtual ? Math.min(totalRows, startIndex + visibleCount) : totalRows;
   const slice = rows.slice(startIndex, endIndex);
   const topSpacer = useVirtual ? startIndex * rowHeight : 0;
   const bottomSpacer = useVirtual ? (totalRows - endIndex) * rowHeight : 0;
@@ -154,19 +176,18 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
                               {typeIcon(col.type)}
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            {COLUMN_TYPES.map(t => {
-                              return (
-                                <DropdownMenuItem
-                                  key={t.value}
-                                  // make it non-interactive but styleable
-                                  onSelect={(e: Event) => e.preventDefault()}
-                                  className={`gap-2 cursor-default text-gray-700 dark:text-gray-200 pointer-events-none`}
-                                >
-                                  {t.icon} {t.label}
-                                </DropdownMenuItem>
-                              );
-                            })}
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem
+                              onSelect={(e: Event) => e.preventDefault()}
+                              className={`gap-2 cursor-default text-gray-700 dark:text-gray-200 pointer-events-none`}
+                            >
+                              {typeIcon(col.type)}{' '}
+                              {col.type === 'number'
+                                ? 'Number'
+                                : col.type === 'date'
+                                  ? `Date${col.dateFormat ? ` — ${col.dateFormat}` : ''}`
+                                  : 'Text'}
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
@@ -205,6 +226,13 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
                     ? 'bg-white dark:bg-gray-800'
                     : 'bg-gray-50 dark:bg-gray-900/40'
                   : 'bg-white dark:bg-gray-800';
+                // Use a solid background for the sticky index cell to avoid translucent overlap
+                const stickyBg = striped
+                  ? even
+                    ? 'bg-white dark:bg-gray-800'
+                    : 'bg-gray-50 dark:bg-gray-900'
+                  : 'bg-white dark:bg-gray-800';
+
                 return (
                   <tr
                     key={realIndex}
@@ -212,7 +240,7 @@ const DatasetViewerTable: React.FC<DatasetViewerTableProps> = ({
                     style={useVirtual ? { height: rowHeight } : undefined}
                   >
                     <td
-                      className={`sticky left-0 z-10 border-r border-b border-gray-200 dark:border-gray-600 text-center text-gray-500 dark:text-gray-400 px-2 text-xs ${rowBg}`}
+                      className={`sticky left-0 z-10 border-r border-b border-gray-200 dark:border-gray-600 text-center text-gray-500 dark:text-gray-400 px-2 text-xs ${stickyBg} hover:bg-gray-100 dark:hover:bg-gray-700`}
                     >
                       {realIndex + 1}
                     </td>

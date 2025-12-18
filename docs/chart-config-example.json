@@ -62,7 +62,7 @@
     "customYFormatter": "",
     "customXFormatter": ""
   },
-  "seriesConfigs": [
+  "axisConfigs": [
     {
       "name": "E-commerce Sales",
       "dataColumn": "ecommerce",

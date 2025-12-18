@@ -12,7 +12,7 @@ const API_BASE_URL = getApiBackendUrl();
 // Tạo axios instance public (không cần authentication)
 export const axiosPublic: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,7 +21,7 @@ export const axiosPublic: AxiosInstance = axios.create({
 // Tạo axios instance private (cần authentication)
 export const axiosPrivate: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -140,14 +140,14 @@ axiosPublic.interceptors.request.use(
 [axiosPublic, axiosPrivate].forEach(instance => {
   instance.interceptors.response.use(
     (response: AxiosResponse) => {
-      console.log(`✅ [API Response] ${response.status} ${response.config.url}`);
+      // console.log(`✅ [API Response] ${response.status} ${response.config.url}`);
       return response;
     },
     (error: AxiosError) => {
-      console.log(
-        `❌ [API Error] ${error.response?.status} ${error.config?.url}`,
-        error.response?.data
-      );
+      // console.log(
+      //   `❌ [API Error] ${error.response?.status} ${error.config?.url}`,
+      //   error.response?.data
+      // );
 
       // Xử lý lỗi chung
       if (error.response?.status === 500) {

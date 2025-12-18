@@ -7,12 +7,6 @@ export interface BackendDataHeader {
   name: string;
   type: string;
   index: number;
-  // Encrypted fields from database
-  encryptedData?: string;
-  iv?: string;
-  authTag?: string;
-  encryptedDataKey?: string;
-  // Decrypted data (populated after decryption)
   data?: any[];
 }
 
@@ -22,8 +16,9 @@ export interface BackendDatasetResponse {
 }
 
 /**
- * Convert array data to ChartDataPoint format
- * @param arrayData Array format: [headers, ...dataRows]
+ * Universal data converter to ChartDataPoint format
+ * Supports both array format [headers, ...rows] and backend format with header objects
+ * @param data Array format or Backend dataset response
  * @param options Configuration options for conversion
  * @returns ChartDataPoint array
  */
@@ -38,27 +33,47 @@ export interface ConversionOptions {
   validateTypes?: boolean;
 }
 
-export const convertArrayToChartData = (
-  arrayData: (string | number)[][],
+export const convertToChartData = (
+  data: (string | number)[][] | BackendDatasetResponse | BackendDataHeader[],
   options: ConversionOptions = {}
 ): ChartDataPoint[] => {
+  if (!data) {
+    return [];
+  }
+
+  // Check if it's array format [headers, ...rows]
+  if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0])) {
+    return convertArrayFormat(data as (string | number)[][], options);
+  }
+
+  // Check if it's backend format (headers with data arrays)
+  const headers = Array.isArray(data) ? data : (data as BackendDatasetResponse).headers;
+  if (headers && headers.length > 0 && typeof headers[0] === 'object' && 'name' in headers[0]) {
+    return convertBackendFormat(headers as BackendDataHeader[], options);
+  }
+
+  return [];
+};
+
+// Helper function for array format
+const convertArrayFormat = (
+  arrayData: (string | number)[][],
+  options: ConversionOptions
+): ChartDataPoint[] => {
   const {
-    headerTransform = (header: string) => header.toLowerCase(),
+    // headerTransform = HeaderTransforms.clean,
+    headerTransform = HeaderTransforms.original,
     skipEmptyRows = true,
-    defaultValue = 0,
+    defaultValue = '',
     validateTypes = false,
   } = options;
 
-  if (!arrayData || arrayData.length === 0) {
-    return [];
-  }
+  if (arrayData.length === 0) return [];
 
   const headers = arrayData[0] as string[];
   const dataRows = arrayData.slice(1);
 
-  if (headers.length === 0) {
-    return [];
-  }
+  if (headers.length === 0) return [];
 
   return dataRows
     .filter(row => {
@@ -88,6 +103,71 @@ export const convertArrayToChartData = (
       return point;
     });
 };
+
+// Helper function for backend format
+const convertBackendFormat = (
+  headers: BackendDataHeader[],
+  options: ConversionOptions
+): ChartDataPoint[] => {
+  const {
+    headerTransform = HeaderTransforms.original,
+    skipEmptyRows = true,
+    defaultValue = '',
+    validateTypes = false,
+  } = options;
+
+  if (!headers || headers.length === 0) return [];
+
+  // Sort headers by index to ensure correct order
+  const sortedHeaders = [...headers].sort((a, b) => a.index - b.index);
+
+  // Determine the number of rows from the first header's data length
+  const rowCount = sortedHeaders[0]?.data?.length || 0;
+  if (rowCount === 0) return [];
+
+  // Create chart data points by iterating through rows
+  const chartData: ChartDataPoint[] = [];
+
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+    const point: ChartDataPoint = {};
+    let isEmpty = true;
+
+    sortedHeaders.forEach(header => {
+      const key = headerTransform(header.name);
+      let value = header.data?.[rowIndex];
+
+      // Handle missing values
+      if (value === null || value === undefined || value === '') {
+        value = defaultValue;
+      } else {
+        isEmpty = false;
+      }
+
+      // Type validation and conversion based on header type
+      if (
+        header.type === 'number' ||
+        (validateTypes && typeof value === 'string' && !isNaN(Number(value)))
+      ) {
+        value = Number(value);
+      }
+
+      point[key] = value;
+    });
+
+    // Skip empty rows if requested
+    if (!skipEmptyRows || !isEmpty) {
+      chartData.push(point);
+    }
+  }
+
+  return chartData;
+};
+
+// Backward compatibility - keep old function name
+export const convertArrayToChartData = (
+  arrayData: (string | number)[][],
+  options: ConversionOptions = {}
+): ChartDataPoint[] => convertToChartData(arrayData, options);
 
 /**
  * Convert ChartDataPoint array back to array format
@@ -249,99 +329,44 @@ export const HeaderTransforms = {
 };
 
 /**
- * Quick conversion with default options
+ * Quick conversion with default options - works with both array and backend format
  */
-export const quickConvert = (arrayData: (string | number)[][]) =>
-  convertArrayToChartData(arrayData);
+export const quickConvert = (
+  data: (string | number)[][] | BackendDatasetResponse | BackendDataHeader[]
+) => convertToChartData(data);
 
 /**
- * Conversion with validation
+ * Conversion with validation - works with both array and backend format
  */
-export const safeConvert = (arrayData: (string | number)[][]) => {
-  const validation = validateArrayData(arrayData);
+export const safeConvert = (
+  data: (string | number)[][] | BackendDatasetResponse | BackendDataHeader[]
+) => {
+  // Validate based on data format
+  let validation: ValidationResult;
+  if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0])) {
+    validation = validateArrayData(data as (string | number)[][]);
+  } else {
+    validation = validateBackendData(data as BackendDatasetResponse | BackendDataHeader[]);
+  }
+
   if (!validation.isValid) {
     throw new Error(`Invalid data: ${validation.errors.join(', ')}`);
   }
 
   return {
-    data: convertArrayToChartData(arrayData, { validateTypes: true }),
+    data: convertToChartData(data, { validateTypes: true }),
     warnings: validation.warnings,
-    statistics: getDataStatistics(convertArrayToChartData(arrayData)),
+    statistics: getDataStatistics(convertToChartData(data)),
   };
 };
 
 // === BACKEND FORMAT CONVERTERS ===
 
-/**
- * Convert backend dataset response (with headers containing data arrays) to ChartDataPoint format
- * @param backendData Backend dataset response with headers containing data arrays
- * @param options Configuration options for conversion
- * @returns ChartDataPoint array
- */
+// Backward compatibility - keep old function name
 export const convertBackendDataToChartData = (
   backendData: BackendDatasetResponse | BackendDataHeader[],
   options: ConversionOptions = {}
-): ChartDataPoint[] => {
-  const {
-    headerTransform = (header: string) => header.toLowerCase(),
-    skipEmptyRows = true,
-    defaultValue = 0,
-    validateTypes = false,
-  } = options;
-
-  // Handle both formats: full response or just headers array
-  const headers = Array.isArray(backendData) ? backendData : backendData.headers;
-
-  if (!headers || headers.length === 0) {
-    return [];
-  }
-
-  // Sort headers by index to ensure correct order
-  const sortedHeaders = [...headers].sort((a, b) => a.index - b.index);
-
-  // Determine the number of rows from the first header's data length
-  const rowCount = sortedHeaders[0]?.data?.length || 0;
-  if (rowCount === 0) {
-    return [];
-  }
-
-  // Create chart data points by iterating through rows
-  const chartData: ChartDataPoint[] = [];
-
-  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-    const point: ChartDataPoint = {};
-    let isEmpty = true;
-
-    sortedHeaders.forEach(header => {
-      const key = headerTransform(header.name);
-      let value = header.data?.[rowIndex];
-
-      // Handle missing values
-      if (value === null || value === undefined || value === '') {
-        value = defaultValue;
-      } else {
-        isEmpty = false;
-      }
-
-      // Type validation and conversion based on header type
-      if (
-        header.type === 'number' ||
-        (validateTypes && typeof value === 'string' && !isNaN(Number(value)))
-      ) {
-        value = Number(value);
-      }
-
-      point[key] = value;
-    });
-
-    // Skip empty rows if requested
-    if (!skipEmptyRows || !isEmpty) {
-      chartData.push(point);
-    }
-  }
-
-  return chartData;
-};
+): ChartDataPoint[] => convertToChartData(backendData, options);
 
 /**
  * Convert backend dataset response to legacy array format for backward compatibility
@@ -410,9 +435,9 @@ export const validateBackendData = (
   }
 
   // Check for required fields in headers
-  headers.forEach((header, index) => {
+  headers.forEach((header, idx) => {
     if (!header.name) {
-      result.errors.push(`Header at index ${index} is missing name`);
+      result.errors.push(`Header at index ${idx} is missing name`);
     }
     if (!header.type) {
       result.warnings.push(`Header "${header.name}" is missing type`);
@@ -462,7 +487,7 @@ export const validateBackendData = (
  * Quick conversion from backend format with default options
  */
 export const quickConvertBackend = (backendData: BackendDatasetResponse | BackendDataHeader[]) =>
-  convertBackendDataToChartData(backendData);
+  convertToChartData(backendData);
 
 /**
  * Safe conversion from backend format with validation
@@ -474,8 +499,8 @@ export const safeConvertBackend = (backendData: BackendDatasetResponse | Backend
   }
 
   return {
-    data: convertBackendDataToChartData(backendData, { validateTypes: true }),
+    data: convertToChartData(backendData, { validateTypes: true }),
     warnings: validation.warnings,
-    statistics: getDataStatistics(convertBackendDataToChartData(backendData)),
+    statistics: getDataStatistics(convertToChartData(backendData)),
   };
 };

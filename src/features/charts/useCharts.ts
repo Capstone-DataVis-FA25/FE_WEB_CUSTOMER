@@ -7,8 +7,8 @@ import {
   fetchCharts,
   updateChartThunk,
 } from './chartThunk';
-import type { CreateChartRequest, UpdateChartRequest } from './chartTypes';
 import { clearCurrentChart, clearError } from './chartSlice';
+import type { ChartRequest } from './chartTypes';
 
 export const useCharts = () => {
   const dispatch = useAppDispatch();
@@ -29,13 +29,13 @@ export const useCharts = () => {
     [dispatch]
   );
 
-  const createChart = (data: CreateChartRequest) => {
+  const createChart = (data: ChartRequest) => {
     return dispatch(createChartThunk(data));
   };
 
   // Update chart
   const updateChart = useCallback(
-    (id: string, data: UpdateChartRequest) => {
+    (id: string, data: Partial<ChartRequest>) => {
       return dispatch(updateChartThunk({ id, data }));
     },
     [dispatch]

@@ -7,6 +7,7 @@ import {
   createChartNoteThunk,
   updateChartNoteThunk,
   deleteChartNoteThunk,
+  toggleChartNoteCompletedThunk,
 } from './chartNoteThunk';
 
 const initialState: ChartNoteState = {
@@ -16,6 +17,7 @@ const initialState: ChartNoteState = {
   creating: false,
   updating: false,
   deleting: false,
+  toggling: false,
   error: null,
 };
 
@@ -34,15 +36,15 @@ const chartNoteSlice = createSlice({
       state,
       action: PayloadAction<{
         chartId: string;
-        note: Omit<ChartNote, 'id' | 'createdAt' | 'updatedAt'>;
+        note: Omit<ChartNote, 'id' | 'createdAt'>;
       }>
     ) => {
       const { chartId, note } = action.payload;
       const tempNote: ChartNote = {
         ...note,
         id: `temp-${Date.now()}`,
+        isCompleted: false,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       };
 
       if (!state.notes[chartId]) {
@@ -71,20 +73,38 @@ const chartNoteSlice = createSlice({
       action: PayloadAction<{ chartId: string; noteId: string; content: string }>
     ) => {
       const { chartId, noteId, content } = action.payload;
-      const updatedAt = new Date().toISOString();
 
       if (state.notes[chartId]) {
         const noteIndex = state.notes[chartId].findIndex(note => note.id === noteId);
         if (noteIndex !== -1) {
           state.notes[chartId][noteIndex].content = content;
-          state.notes[chartId][noteIndex].updatedAt = updatedAt;
         }
       }
 
       const currentNoteIndex = state.currentChartNotes.findIndex(note => note.id === noteId);
       if (currentNoteIndex !== -1) {
         state.currentChartNotes[currentNoteIndex].content = content;
-        state.currentChartNotes[currentNoteIndex].updatedAt = updatedAt;
+      }
+    },
+    // Toggle note completed status locally
+    toggleNoteCompletedLocally: (
+      state,
+      action: PayloadAction<{ chartId: string; noteId: string }>
+    ) => {
+      const { chartId, noteId } = action.payload;
+
+      if (state.notes[chartId]) {
+        const noteIndex = state.notes[chartId].findIndex(note => note.id === noteId);
+        if (noteIndex !== -1) {
+          state.notes[chartId][noteIndex].isCompleted =
+            !state.notes[chartId][noteIndex].isCompleted;
+        }
+      }
+
+      const currentNoteIndex = state.currentChartNotes.findIndex(note => note.id === noteId);
+      if (currentNoteIndex !== -1) {
+        state.currentChartNotes[currentNoteIndex].isCompleted =
+          !state.currentChartNotes[currentNoteIndex].isCompleted;
       }
     },
   },
@@ -212,6 +232,35 @@ const chartNoteSlice = createSlice({
       .addCase(deleteChartNoteThunk.rejected, (state, action) => {
         state.deleting = false;
         state.error = action.payload as string;
+      })
+      // Toggle note completed
+      .addCase(toggleChartNoteCompletedThunk.pending, state => {
+        state.toggling = true;
+        state.error = null;
+      })
+      .addCase(
+        toggleChartNoteCompletedThunk.fulfilled,
+        (state, action: PayloadAction<ChartNote>) => {
+          state.toggling = false;
+          const note = action.payload;
+          const chartId = note.chartId;
+
+          if (state.notes[chartId]) {
+            const index = state.notes[chartId].findIndex(n => n.id === note.id);
+            if (index !== -1) {
+              state.notes[chartId][index] = note;
+            }
+          }
+
+          const currentIndex = state.currentChartNotes.findIndex(n => n.id === note.id);
+          if (currentIndex !== -1) {
+            state.currentChartNotes[currentIndex] = note;
+          }
+        }
+      )
+      .addCase(toggleChartNoteCompletedThunk.rejected, (state, action) => {
+        state.toggling = false;
+        state.error = action.payload as string;
       });
   },
 });
@@ -222,5 +271,6 @@ export const {
   addNoteLocally,
   setCurrentChartNotes,
   updateNoteLocally,
+  toggleNoteCompletedLocally,
 } = chartNoteSlice.actions;
 export default chartNoteSlice.reducer;

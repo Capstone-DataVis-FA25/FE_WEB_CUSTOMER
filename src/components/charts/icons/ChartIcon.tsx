@@ -358,6 +358,102 @@ const ChartIcon: React.FC<ChartIconProps> = ({ type, className = '', size = 120 
           </svg>
         );
 
+      case 'cycleplot':
+        return (
+          <svg viewBox="0 0 120 80" className={`w-full h-full ${className}`}>
+            {/* Grid lines */}
+            <defs>
+              <pattern id="cyclePlotGrid" width="20" height="16" patternUnits="userSpaceOnUse">
+                <path
+                  d="M 20 0 L 0 0 0 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="0.5"
+                  opacity="0.2"
+                />
+              </pattern>
+            </defs>
+            <rect width="120" height="80" fill="url(#cyclePlotGrid)" />
+
+            {/* Axes */}
+            <line
+              x1="15"
+              y1="65"
+              x2="105"
+              y2="65"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              opacity="0.6"
+            />
+            <line
+              x1="15"
+              y1="65"
+              x2="15"
+              y2="15"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              opacity="0.6"
+            />
+
+            {/* Multiple cycle lines (3 cycles showing pattern comparison) */}
+            {/* Cycle 1 - 2021 */}
+            <path
+              d="M 20 50 L 30 48 L 40 45 L 50 42 L 60 40 L 70 38 L 80 35 L 90 33 L 100 30"
+              fill="none"
+              stroke="#3b82f6"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.8"
+            />
+            {[20, 30, 40, 50, 60, 70, 80, 90, 100].map((x, i) => (
+              <circle key={`c1-${i}`} cx={x} cy={50 - i * 2.5} r="2" fill="#3b82f6" opacity="0.8" />
+            ))}
+
+            {/* Cycle 2 - 2022 */}
+            <path
+              d="M 20 55 L 30 52 L 40 48 L 50 44 L 60 38 L 70 34 L 80 30 L 90 28 L 100 25"
+              fill="none"
+              stroke="#10b981"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.8"
+            />
+            {[20, 30, 40, 50, 60, 70, 80, 90, 100].map((x, i) => (
+              <circle key={`c2-${i}`} cx={x} cy={55 - i * 3.3} r="2" fill="#10b981" opacity="0.8" />
+            ))}
+
+            {/* Cycle 3 - 2023 */}
+            <path
+              d="M 20 58 L 30 54 L 40 49 L 50 43 L 60 36 L 70 30 L 80 26 L 90 23 L 100 20"
+              fill="none"
+              stroke="#f59e0b"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.8"
+            />
+            {[20, 30, 40, 50, 60, 70, 80, 90, 100].map((x, i) => (
+              <circle key={`c3-${i}`} cx={x} cy={58 - i * 4.2} r="2" fill="#f59e0b" opacity="0.8" />
+            ))}
+
+            {/* Period markers (representing months/quarters on X-axis) */}
+            {[20, 30, 40, 50, 60, 70, 80, 90, 100].map((x, i) => (
+              <line
+                key={`marker-${i}`}
+                x1={x}
+                y1="65"
+                x2={x}
+                y2="67"
+                stroke="currentColor"
+                strokeWidth="1"
+                opacity="0.4"
+              />
+            ))}
+          </svg>
+        );
+
       case 'heatmap':
         return (
           <svg viewBox="0 0 120 80" className={`w-full h-full ${className}`}>
@@ -775,6 +871,80 @@ const ChartIcon: React.FC<ChartIconProps> = ({ type, className = '', size = 120 
           </svg>
         );
 
+      case 'histogram':
+        return (
+          <svg viewBox="0 0 120 80" className={`w-full h-full ${className}`}>
+            {/* Grid lines */}
+            <defs>
+              <pattern id="histogramGrid" width="20" height="16" patternUnits="userSpaceOnUse">
+                <path
+                  d="M 20 0 L 0 0 0 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="0.5"
+                  opacity="0.2"
+                />
+              </pattern>
+            </defs>
+            <rect width="120" height="80" fill="url(#histogramGrid)" />
+
+            {/* Axes */}
+            <line
+              x1="15"
+              y1="65"
+              x2="105"
+              y2="65"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              opacity="0.6"
+            />
+            <line
+              x1="15"
+              y1="65"
+              x2="15"
+              y2="15"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              opacity="0.6"
+            />
+
+            {/* Histogram bars - bell curve distribution */}
+            {[
+              { x: 20, height: 15, color: '#60a5fa' },
+              { x: 28, height: 25, color: '#60a5fa' },
+              { x: 36, height: 35, color: '#3b82f6' },
+              { x: 44, height: 45, color: '#3b82f6' },
+              { x: 52, height: 50, color: '#2563eb' },
+              { x: 60, height: 45, color: '#3b82f6' },
+              { x: 68, height: 35, color: '#3b82f6' },
+              { x: 76, height: 25, color: '#60a5fa' },
+              { x: 84, height: 15, color: '#60a5fa' },
+            ].map((bar, index) => (
+              <rect
+                key={index}
+                x={bar.x}
+                y={65 - bar.height}
+                width="6"
+                height={bar.height}
+                fill={bar.color}
+                rx="0.5"
+              />
+            ))}
+
+            {/* Mean line */}
+            <line
+              x1="56"
+              y1="15"
+              x2="56"
+              y2="65"
+              stroke="#f59e0b"
+              strokeWidth="1.5"
+              strokeDasharray="3,3"
+              opacity="0.8"
+            />
+          </svg>
+        );
+
       case 'map':
         return (
           <svg viewBox="0 0 120 80" className={`w-full h-full ${className}`}>
@@ -808,6 +978,75 @@ const ChartIcon: React.FC<ChartIconProps> = ({ type, className = '', size = 120 
             <circle cx="60" cy="37" r="2" fill="#dc2626" />
             <circle cx="40" cy="52" r="2" fill="#dc2626" />
             <circle cx="82" cy="42" r="2" fill="#dc2626" />
+          </svg>
+        );
+
+      case 'table':
+        return (
+          <svg viewBox="0 0 120 80" className={`w-full h-full ${className}`}>
+            {/* Table Header */}
+            <rect x="10" y="10" width="100" height="15" fill="#3b82f6" rx="2" opacity="0.9" />
+
+            {/* Table Rows */}
+            <rect x="10" y="28" width="100" height="10" fill="#f3f4f6" rx="1" opacity="0.8" />
+            <rect x="10" y="41" width="100" height="10" fill="#e5e7eb" rx="1" opacity="0.8" />
+            <rect x="10" y="54" width="100" height="10" fill="#f3f4f6" rx="1" opacity="0.8" />
+
+            {/* Columns lines */}
+            <line x1="40" y1="10" x2="40" y2="64" stroke="#fff" strokeWidth="1" opacity="0.5" />
+            <line x1="70" y1="10" x2="70" y2="64" stroke="#fff" strokeWidth="1" opacity="0.5" />
+
+            {/* Header Text Lines */}
+            <line x1="15" y1="17.5" x2="35" y2="17.5" stroke="#fff" strokeWidth="2" opacity="0.8" />
+            <line x1="45" y1="17.5" x2="65" y2="17.5" stroke="#fff" strokeWidth="2" opacity="0.8" />
+            <line x1="75" y1="17.5" x2="95" y2="17.5" stroke="#fff" strokeWidth="2" opacity="0.8" />
+          </svg>
+        );
+
+      case 'trend':
+        return (
+          <svg viewBox="0 0 120 80" className={`w-full h-full ${className}`}>
+            {/* Grid */}
+            <defs>
+              <linearGradient id="trendGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#ec4899" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="#ec4899" stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+
+            {/* Trend Area */}
+            <path
+              d="M 10 60 L 30 50 L 50 55 L 70 35 L 90 40 L 110 15 L 110 70 L 10 70 Z"
+              fill="url(#trendGradient)"
+            />
+
+            {/* Trend Line */}
+            <path
+              d="M 10 60 L 30 50 L 50 55 L 70 35 L 90 40 L 110 15"
+              fill="none"
+              stroke="#ec4899"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {/* Points */}
+            <circle cx="10" cy="60" r="3" fill="#ec4899" />
+            <circle cx="30" cy="50" r="3" fill="#ec4899" />
+            <circle cx="50" cy="55" r="3" fill="#ec4899" />
+            <circle cx="70" cy="35" r="3" fill="#ec4899" />
+            <circle cx="90" cy="40" r="3" fill="#ec4899" />
+            <circle cx="110" cy="15" r="3" fill="#ec4899" />
+
+            {/* Trend Arrow */}
+            <path
+              d="M 95 15 L 110 15 L 110 30"
+              fill="none"
+              stroke="#ec4899"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         );
 

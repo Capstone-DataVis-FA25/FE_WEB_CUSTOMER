@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { X, AlertTriangle, Info, CheckCircle, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { t } from 'i18next';
 
 interface ModalProps {
   isOpen: boolean;
@@ -18,7 +20,8 @@ interface ModalConfirmProps {
   onClose: () => void;
   onConfirm: () => void;
   title?: string;
-  message: string;
+  message?: string;
+  description?: string;
   confirmText?: string;
   cancelText?: string;
   type?: 'danger' | 'warning' | 'info' | 'success';
@@ -74,17 +77,18 @@ const Modal: React.FC<ModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
       {/* Backdrop - Mờ nhẹ để làm nổi bật modal */}
       <div className="absolute inset-0 bg-black/70" onClick={handleOverlayClick} />
 
       {/* Modal */}
       <div
-        className={`relative bg-white dark:bg-gray-900 rounded-lg shadow-xl dark:shadow-black/40 w-full ${sizeClasses[size]} animate-in fade-in-0 zoom-in-95 duration-200`}
+        className={`relative z-10 bg-white dark:bg-gray-900 rounded-lg shadow-xl dark:shadow-black/40 w-full ${sizeClasses[size]} animate-in fade-in-0 zoom-in-95 duration-200`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
+        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         {(title || showCloseButton) && (
@@ -99,9 +103,12 @@ const Modal: React.FC<ModalProps> = ({
             )}
             {showCloseButton && (
               <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white transition-colors"
-                aria-label="Close modal"
+                onClick={e => {
+                  e.stopPropagation();
+                  onClose();
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white transition-colors cursor-pointer"
+                aria-label={t('accessibility.closeModal', 'Close modal')}
               >
                 <X size={24} />
               </button>
@@ -112,7 +119,8 @@ const Modal: React.FC<ModalProps> = ({
         {/* Content */}
         <div className="p-6 text-gray-700 dark:text-gray-300">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -135,28 +143,28 @@ const ModalConfirm: React.FC<ModalConfirmProps> = ({
 
   const typeStyles = {
     danger: {
-      icon: '⚠️',
+      icon: AlertTriangle,
       confirmButton: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
       iconBg: 'bg-red-100 dark:bg-red-900/20',
-      iconColor: 'text-red-600',
+      iconColor: 'text-red-600 dark:text-red-400',
     },
     warning: {
-      icon: '⚠️',
+      icon: AlertCircle,
       confirmButton: 'bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500',
       iconBg: 'bg-yellow-100 dark:bg-yellow-900/20',
-      iconColor: 'text-yellow-600',
+      iconColor: 'text-yellow-600 dark:text-yellow-400',
     },
     info: {
-      icon: 'ℹ️',
+      icon: Info,
       confirmButton: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500',
       iconBg: 'bg-blue-100 dark:bg-blue-900/20',
-      iconColor: 'text-blue-600',
+      iconColor: 'text-blue-600 dark:text-blue-400',
     },
     success: {
-      icon: '✅',
+      icon: CheckCircle,
       confirmButton: 'bg-green-600 hover:bg-green-700 focus:ring-green-500',
       iconBg: 'bg-green-100 dark:bg-green-900/20',
-      iconColor: 'text-green-600',
+      iconColor: 'text-green-600 dark:text-green-400',
     },
   } as const;
 
@@ -176,44 +184,55 @@ const ModalConfirm: React.FC<ModalConfirmProps> = ({
       closeOnOverlay={!loading}
       showCloseButton={!loading}
     >
-      <div className="text-center">
+      <div className="text-center py-2">
         {/* Icon */}
         <div
-          className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full ${currentStyle.iconBg} mb-4`}
+          className={`mx-auto flex items-center justify-center h-16 w-16 rounded-full ${currentStyle.iconBg} mb-4`}
         >
-          <span className="text-6xl" role="img" aria-label={type}>
-            {currentStyle.icon}
-          </span>
+          {React.createElement(currentStyle.icon, {
+            className: `h-8 w-8 ${currentStyle.iconColor}`,
+            'aria-label': type,
+          })}
         </div>
 
         {/* Title */}
         {title && (
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">{title}</h3>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">{title}</h3>
         )}
 
         {/* Message */}
-        <p className="text-sm text-gray-500 dark:text-gray-300 mb-6">{message}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 px-2 leading-relaxed">
+          {message}
+        </p>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-3 pointer-events-auto">
+        <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
           <button
             type="button"
-            onClick={onClose}
+            onClick={e => {
+              e.stopPropagation();
+              onClose();
+            }}
             disabled={loading}
-            className="w-full inline-flex justify-center rounded-md border border-gray-300 bg-white dark:bg-gray-800 px-4 py-2 text-base font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors duration-200"
+            style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
           >
             {finalCancelText}
           </button>
           <button
             type="button"
-            onClick={handleConfirm}
+            onClick={e => {
+              e.stopPropagation();
+              handleConfirm();
+            }}
             disabled={loading}
-            className={`w-full inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${currentStyle.confirmButton}`}
+            className={`w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-transparent px-5 py-2.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors duration-200 ${currentStyle.confirmButton}`}
+            style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
           >
             {loading ? (
               <>
                 <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
