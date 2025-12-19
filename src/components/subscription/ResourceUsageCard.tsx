@@ -88,7 +88,7 @@ const ResourceUsageCard: React.FC<ResourceUsageCardProps> = ({ className = '', o
       icon: Sparkles,
       label: 'AI Requests',
       current: data.usage.aiRequestsCount,
-      limit: data.limits.maxAIRequests,
+      limit: data.limits.maxAiRequests,
       percentage: data.percentage.aiRequests,
       key: 'aiRequests',
     },

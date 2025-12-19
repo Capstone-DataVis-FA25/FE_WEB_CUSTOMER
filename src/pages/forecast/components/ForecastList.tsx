@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   TrendingUp,
-  Calendar,
+  // Calendar,
   Target,
   Clock,
   Trash2,
@@ -394,7 +394,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                     <span className="ml-1 px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">
                       {[
                         selectedDataset !== 'all' ? 1 : 0,
-                        selectedTimeScale !== 'all' ? 1 : 0,
+                        // selectedTimeScale !== 'all' ? 1 : 0,
                         selectedForecastWindow !== 'all' || isCustomForecastWindow ? 1 : 0,
                         dateFrom !== '' || dateTo !== '' ? 1 : 0,
                       ].reduce((a, b) => a + b, 0)}

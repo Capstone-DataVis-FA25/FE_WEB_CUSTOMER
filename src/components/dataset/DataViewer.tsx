@@ -1,10 +1,10 @@
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import DataViewerOptions from './DataViewerOptions';
 import DataViewerContent from './DataViewerContent';
-import CorrelationAnalysis from './CorrelationAnalysis';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TrendingUp } from 'lucide-react';
-import { useDataset } from '@/contexts/DatasetContext';
+// import CorrelationAnalysis from './CorrelationAnalysis';
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+// import { Table, TrendingUp } from 'lucide-react';
+// import { useDataset } from '@/contexts/DatasetContext';
 
 interface DataViewerProps {
   onUpload?: () => void;
@@ -12,8 +12,8 @@ interface DataViewerProps {
 }
 
 const DataViewer = memo(function DataViewer({ onUpload, onChangeData }: DataViewerProps) {
-  const [activeTab, setActiveTab] = useState('data');
-  const { currentParsedData } = useDataset();
+  // const [activeTab, setActiveTab] = useState('data');
+  // const { currentParsedData } = useDataset();
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 p-4 sm:p-6 relative">
@@ -24,7 +24,8 @@ const DataViewer = memo(function DataViewer({ onUpload, onChangeData }: DataView
 
       {/* Main Content - Takes remaining width */}
       <div className="flex-1 min-w-0 relative z-10">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <DataViewerContent />
+        {/* <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="data" className="flex items-center gap-2">
               <Table className="w-4 h-4" />
@@ -48,7 +49,7 @@ const DataViewer = memo(function DataViewer({ onUpload, onChangeData }: DataView
               />
             )}
           </TabsContent>
-        </Tabs>
+        </Tabs> */}
       </div>
     </div>
   );
