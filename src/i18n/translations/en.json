@@ -48,6 +48,7 @@
   "home_story_brennan_case": "Policy Impact Studies",
   "home_help_title": "Need help creating DataVis charts?",
   "home_help_desc": "We're here for you.",
+  "chart_list_no_charts_desc": "You don't have any charts.",
   "home_help_academy_title": "Visit our Academy",
   "home_help_academy_desc": "Over 250+ Academy articles explain how to create each chart type, step by step. Plus: how to upload data, embed charts, and more.",
   "home_help_academy_btn": "Browse Academy",
@@ -73,8 +74,10 @@
   "navigation_settings": "Settings",
   "navigation_about": "About Us",
   "navigation_pricing": "Pricing",
+  "common_reset": "Reset",
   "home_title": "Demo Components Homepage",
   "home_subtitle": "Explore interactive UI components built with React & TypeScript",
+  "common_search": "Search",
   "common_searchPlaceholder": "Search...",
   "common_platform": "Data Visualization",
   "forbidden_title": "Access Forbidden",
@@ -1374,7 +1377,6 @@
   "lineChart_editor_preview": "Chart Preview",
   "lineChart_editor_backConfiguration": "Back to Configuration",
   "lineChart_editor_continuePreview": "Continue to Preview",
-
   "chart_gallery_bar_basic": "Basic Bar Chart",
   "chart_gallery_bar_basic_desc": "Simple bar chart for comparing values",
   "chart_gallery_line_basic": "Basic Line Chart",
@@ -1501,7 +1503,6 @@
   "lineChart_editor_resetToTransparent": "Reset to transparent",
   "x_axis_start": "X-Axis Start",
   "y_axis_start": "Y-Axis Start",
-
   "size_preset_tiny": "Tiny (300×200)",
   "size_preset_small": "Small (400×250)",
   "size_preset_medium": "Medium (600×375)",
@@ -1821,7 +1822,6 @@
   "filter": {
     "searchValues": "Search values..."
   },
-
   "dataset_selection_refresh_button": "Refresh",
   "dataset_selection_desc_current": "Choose a dataset for your chart. Your current dataset is marked with a \"Current\" badge.",
   "dataset_selection_warning": "Warning: Changing dataset will replace your current chart data.",

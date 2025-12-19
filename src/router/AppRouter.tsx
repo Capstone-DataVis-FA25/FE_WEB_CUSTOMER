@@ -49,6 +49,7 @@ const componentMap = {
   TermsOfServicePage: lazy(() => import('../pages/privacy-terms/TermsOfServicePage')),
   PrivacyPolicyPage: lazy(() => import('../pages/privacy-terms/PrivacyPolicyPage')),
   ForecastPage: lazy(() => import('../pages/forecast/ForecastPage')),
+  ForecastCreatePage: lazy(() => import('../pages/forecast/ForecastCreatePage')),
   ForecastDetailPage: lazy(() => import('../pages/forecast/ForecastDetailPage')),
 };
 

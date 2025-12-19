@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { axiosPrivate } from '@/services/axios';
 
 const SOCKET_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
@@ -13,6 +14,7 @@ export interface ForecastAnalysisJob {
 }
 
 export function useForecastAnalysisProgress(userId?: string | number) {
+  const activeJobsRef = useRef<ForecastAnalysisJob[]>([]);
   const [activeJobs, setActiveJobs] = useState<ForecastAnalysisJob[]>(() => {
     const saved = localStorage.getItem('forecast-analysis-jobs');
     if (saved) {
@@ -37,6 +39,7 @@ export function useForecastAnalysisProgress(userId?: string | number) {
 
   // Save jobs to localStorage whenever they change
   useEffect(() => {
+    activeJobsRef.current = activeJobs;
     localStorage.setItem('forecast-analysis-jobs', JSON.stringify(activeJobs));
   }, [activeJobs]);
 
@@ -50,8 +53,49 @@ export function useForecastAnalysisProgress(userId?: string | number) {
 
     console.log('[Socket][ForecastAnalysis] Connecting to', `${SOCKET_URL}/user-notification`);
 
-    socketInstance.on('connect', () => {
+    socketInstance.on('connect', async () => {
       console.log('[Socket][ForecastAnalysis] Connected:', socketInstance.id);
+
+      // Check restored jobs against backend - if forecast already has analysis or doesn't exist, remove job
+      const currentJobsSnapshot = activeJobsRef.current;
+      const restoredJobs = currentJobsSnapshot.filter(j => !j.hasReceivedUpdate);
+      if (restoredJobs.length === 0) return;
+
+      const staleJobIds: string[] = [];
+
+      // Check each restored job against backend
+      await Promise.all(
+        restoredJobs.map(async job => {
+          try {
+            const response = await axiosPrivate.get(`/forecasts/${job.forecastId}`);
+            const forecast = response.data?.data || response.data;
+
+            // If forecast already has analysis, job is done (stale)
+            if (forecast?.analyze) {
+              console.log(
+                '[Socket][ForecastAnalysis] Forecast already has analysis, marking stale job:',
+                job.jobId
+              );
+              staleJobIds.push(job.jobId);
+            }
+            // If forecast exists but no analysis yet, job might still be running - keep it
+          } catch (error: any) {
+            // Forecast doesn't exist (404) or other error - job is stale
+            console.log(
+              '[Socket][ForecastAnalysis] Forecast not found or error, marking stale job:',
+              job.jobId,
+              error.response?.status
+            );
+            staleJobIds.push(job.jobId);
+          }
+        })
+      );
+
+      // Remove all stale jobs in one batch
+      if (staleJobIds.length > 0) {
+        console.log('[Socket][ForecastAnalysis] Removing stale jobs:', staleJobIds);
+        setActiveJobs(jobs => jobs.filter(j => !staleJobIds.includes(j.jobId)));
+      }
     });
 
     socketInstance.on('notification:created', notification => {

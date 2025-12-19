@@ -571,6 +571,20 @@ export const protectedRoutes: RouteConfig[] = [
     },
   },
   {
+    path: Routers.FORECAST_NEW,
+    name: 'forecast-new',
+    component: 'ForecastCreatePage',
+    layout: 'USER',
+    isProtected: true,
+    roles: [UserRole.USER],
+    permissions: [Permission.VIEW_PROFILE],
+    meta: {
+      title: 'Create New Forecast',
+      description: 'Create a new time series forecast',
+      hideFromNav: true,
+    },
+  },
+  {
     path: Routers.FORECAST_DETAIL,
     name: 'forecast-detail',
     component: 'ForecastDetailPage',

@@ -30,7 +30,6 @@ interface ForecastResult {
   } | null;
   modelType?: string | null;
   forecastWindow?: number | null;
-  timeScale?: string | null;
   stdout: string[];
   stderr: string[];
   output: string;
@@ -169,7 +168,7 @@ const Step3ViewResults: React.FC<Step3ViewResultsProps> = ({
               )}
 
               {/* Forecast Summary Info */}
-              {(result.modelType || result.forecastWindow || result.timeScale) && (
+              {(result.modelType || result.forecastWindow) && (
                 <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 p-4 rounded-xl border border-gray-200 dark:border-gray-600">
                   <Label className="mb-3 block text-sm font-semibold text-gray-900 dark:text-white">
                     Forecast Summary
@@ -183,19 +182,11 @@ const Step3ViewResults: React.FC<Step3ViewResultsProps> = ({
                         </div>
                       </div>
                     )}
-                    {result.timeScale && (
-                      <div>
-                        <div className="text-gray-500 dark:text-gray-400">Time Scale</div>
-                        <div className="font-semibold text-gray-900 dark:text-white mt-1">
-                          {result.timeScale}
-                        </div>
-                      </div>
-                    )}
                     {result.forecastWindow && (
                       <div>
                         <div className="text-gray-500 dark:text-gray-400">Forecast Window</div>
                         <div className="font-semibold text-gray-900 dark:text-white mt-1">
-                          {result.forecastWindow} {result.timeScale?.toLowerCase() || 'steps'}
+                          {result.forecastWindow} steps
                         </div>
                       </div>
                     )}
@@ -329,11 +320,6 @@ const Step3ViewResults: React.FC<Step3ViewResultsProps> = ({
                   <ChevronLeft className="w-4 h-4 mr-2" />
                   Back
                 </Button>
-                {result && !result.success && (
-                  <Button onClick={onRetry} variant="default" className="px-6 py-3">
-                    Retry
-                  </Button>
-                )}
               </div>
               <Button
                 onClick={onStartOver}

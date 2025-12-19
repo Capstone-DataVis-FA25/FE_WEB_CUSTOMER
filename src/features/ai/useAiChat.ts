@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { AiChatRequest, AiChatResponse } from './aiAPI';
 import { chatWithAi } from './aiAPI';
 import type { DatasetInfo, ChartGenerationResponse } from './aiTypes';
@@ -13,69 +13,11 @@ interface ChatMessage {
   chartData?: ChartGenerationResponse;
 }
 
-const CHAT_STORAGE_KEY = 'datavis_ai_chat_history';
-const DATASET_STORAGE_KEY = 'datavis_ai_selected_dataset';
-
-// Load messages from localStorage
-const loadCachedMessages = (): ChatMessage[] => {
-  try {
-    const cached = localStorage.getItem(CHAT_STORAGE_KEY);
-    return cached ? JSON.parse(cached) : [];
-  } catch (error) {
-    console.error('Failed to load chat history:', error);
-    return [];
-  }
-};
-
-// Save messages to localStorage
-const saveChatMessages = (messages: ChatMessage[]) => {
-  try {
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
-  } catch (error) {
-    console.error('Failed to save chat history:', error);
-  }
-};
-
-// Load selected dataset from localStorage
-const loadSelectedDataset = (): string | null => {
-  try {
-    return localStorage.getItem(DATASET_STORAGE_KEY);
-  } catch (error) {
-    console.error('Failed to load selected dataset:', error);
-    return null;
-  }
-};
-
-// Save selected dataset to localStorage
-const saveSelectedDataset = (datasetId: string | null) => {
-  try {
-    if (datasetId) {
-      localStorage.setItem(DATASET_STORAGE_KEY, datasetId);
-    } else {
-      localStorage.removeItem(DATASET_STORAGE_KEY);
-    }
-  } catch (error) {
-    console.error('Failed to save selected dataset:', error);
-  }
-};
-
 export function useAiChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => loadCachedMessages());
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(() =>
-    loadSelectedDataset()
-  );
-
-  // Save messages to localStorage whenever they change
-  useEffect(() => {
-    saveChatMessages(messages);
-  }, [messages]);
-
-  // Save selected dataset to localStorage whenever it changes
-  useEffect(() => {
-    saveSelectedDataset(selectedDatasetId);
-  }, [selectedDatasetId]);
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null);
 
   const sendMessage = async (
     message: string,
@@ -171,8 +113,6 @@ export function useAiChat() {
   const clearChat = () => {
     setMessages([]);
     setSelectedDatasetId(null);
-    localStorage.removeItem(CHAT_STORAGE_KEY);
-    localStorage.removeItem(DATASET_STORAGE_KEY);
   };
 
   return {

@@ -29,12 +29,59 @@ export const AiCleaningProgressBar: React.FC<AiCleaningProgressBarProps> = ({
     const saved = localStorage.getItem('ai-progress-minimized');
     return saved === 'true';
   });
+  const [chatbotOpen, setChatbotOpen] = useState(false);
+  const [chatbotExpanded, setChatbotExpanded] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('ai-progress-minimized', String(isMinimized));
   }, [isMinimized]);
 
+  // Listen for chatbot open/close and expanded state
+  useEffect(() => {
+    const handleChatbotStateChange = (e: CustomEvent) => {
+      setChatbotOpen(e.detail.isOpen);
+      setChatbotExpanded(e.detail.isExpanded || false);
+    };
+
+    window.addEventListener('chatbot-state-change', handleChatbotStateChange as EventListener);
+
+    // Check initial state from localStorage
+    const chatbotState = localStorage.getItem('chatbot-open');
+    setChatbotOpen(chatbotState === 'true');
+
+    return () => {
+      window.removeEventListener('chatbot-state-change', handleChatbotStateChange as EventListener);
+    };
+  }, []);
+
+  // Close chatbot when progress bar opens
+  useEffect(() => {
+    if (!isMinimized) {
+      localStorage.setItem('progress-bar-open', 'true');
+      window.dispatchEvent(new CustomEvent('close-chatbot'));
+    } else {
+      localStorage.removeItem('progress-bar-open');
+    }
+  }, [isMinimized]);
+
+  // Close progress bar when chatbot opens
+  useEffect(() => {
+    const handleCloseProgressBar = () => {
+      if (!isMinimized) {
+        setIsMinimized(true);
+      }
+    };
+
+    window.addEventListener('close-progress-bar', handleCloseProgressBar);
+    return () => {
+      window.removeEventListener('close-progress-bar', handleCloseProgressBar);
+    };
+  }, [isMinimized]);
+
   if (jobs.length === 0) return null;
+
+  // Hide completely when chatbot is in fullscreen/expanded mode
+  if (chatbotExpanded) return null;
 
   // Minimized view
   if (isMinimized) {
@@ -46,7 +93,8 @@ export const AiCleaningProgressBar: React.FC<AiCleaningProgressBarProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed bottom-6 right-40 z-50"
+        className="fixed bottom-6 z-50"
+        style={{ right: chatbotOpen ? 'calc(24px + 384px + 12px)' : 'calc(24px + 120px + 12px)' }}
       >
         <button
           onClick={() => setIsMinimized(false)}
@@ -84,8 +132,11 @@ export const AiCleaningProgressBar: React.FC<AiCleaningProgressBarProps> = ({
     );
   }
 
+  // Calculate position based on chatbot state
+  const rightPosition = chatbotOpen ? 'calc(24px + 384px + 12px)' : 'calc(24px + 120px + 12px)';
+
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-96 space-y-2">
+    <div className="fixed bottom-6 z-50 w-96 space-y-2" style={{ right: rightPosition }}>
       {/* Minimize button */}
       <div className="flex justify-end mb-2">
         <button

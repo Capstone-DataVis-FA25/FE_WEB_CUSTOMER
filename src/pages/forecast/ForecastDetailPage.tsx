@@ -10,7 +10,6 @@ import {
   AlertCircle,
   ArrowLeft,
   TrendingUp,
-  Calendar,
   Target,
   HelpCircle,
   Sparkles,
@@ -55,7 +54,6 @@ interface ForecastData {
   name?: string;
   targetColumn: string;
   featureColumns?: string[] | null;
-  timeScale: string;
   forecastWindow: number;
   modelType: string;
   predictions: ForecastPrediction[];
@@ -271,6 +269,9 @@ const ForecastDetailPage: React.FC = () => {
       const response = await axiosPrivate.get(`/forecasts/${id}`);
       const forecastData = response.data?.data || response.data;
       setForecast(forecastData);
+
+      // Mark any pending notifications for this forecast as read
+      // This will be handled by useEffect below to ensure it runs after jobs are loaded
     } catch (error: any) {
       console.error('Failed to fetch forecast:', error);
       const errorMessage =
@@ -340,16 +341,16 @@ const ForecastDetailPage: React.FC = () => {
 
   // Listen for analysis completion and refresh forecast
   useEffect(() => {
-    if (!id || !forecast) return;
+    if (!id) return;
 
     // Check if there's a completed job for this forecast
     const completedJob = activeJobs.find(job => job.forecastId === id && job.status === 'done');
 
     if (completedJob) {
-      // Refresh forecast to get updated analysis
+      // Refresh forecast to get updated analysis (once per job completion)
       fetchForecast();
     }
-  }, [activeJobs, id, forecast]);
+  }, [activeJobs, id]);
 
   if (isLoading) {
     return (
@@ -502,26 +503,17 @@ const ForecastDetailPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                      <div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Time Scale</div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
-                          {forecast.timeScale}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                       <TrendingUp className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                       <div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           Forecast Window
                         </div>
                         <div className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
-                          {forecast.forecastWindow} {forecast.timeScale.toLowerCase()}
+                          {forecast.forecastWindow} steps
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 col-span-2 md:col-span-4">
+                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                       <Cpu className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                       <div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">Model Type</div>
@@ -654,7 +646,7 @@ const ForecastDetailPage: React.FC = () => {
                     {forecast.chartImageUrl ? (
                       <div className="p-4">
                         <img
-                          src={`${getApiBackendUrl()}${forecast.chartImageUrl}`}
+                          src={`${getApiBackendUrl().replace(/\/$/, '')}${forecast.chartImageUrl}`}
                           alt="Forecast Comparison Chart"
                           className="w-full h-auto rounded"
                           onError={e => {
