@@ -149,14 +149,14 @@ const Header: React.FC<HeaderProps> = ({
                   <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent group-hover:opacity-90">
                     DataVis
                   </span>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
                     {t('common_platform')}
                   </p>
                 </div>
               </Link>
             </SlideInDown>
 
-            <nav className="hidden lg:flex items-center space-x-8">
+            <nav className="hidden lg:flex items-center space-x-6">
               {navItems.map((item, index) => (
                 <FadeIn key={item.name} delay={index * 0.1}>
                   <Link
