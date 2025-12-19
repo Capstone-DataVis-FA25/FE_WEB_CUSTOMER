@@ -4,6 +4,15 @@ import chartEvaluationService, {
   type EvaluateChartRequest,
 } from '@/services/chartEvaluation.service';
 import useLanguage from '@/hooks/useLanguage';
+import useBeforeUnload from '@/hooks/useBeforeUnload';
+
+type EvalJobStatus = 'processing' | 'done' | 'error';
+
+interface EvalJob {
+  status: EvalJobStatus;
+  startedAt: string;
+  message?: string;
+}
 
 interface ChartAIEvaluationProps {
   chartId: string;
@@ -26,6 +35,7 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
   const [chartImagePreview, setChartImagePreview] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isErrorImage, setIsErrorImage] = useState(false);
+  const [jobCard, setJobCard] = useState<EvalJob | null>(null);
   const { currentLanguage } = useLanguage();
 
   // Capture preview when panel opens
@@ -86,6 +96,7 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
     setIsLoading(true);
     setError(null);
     setEvaluation(null);
+    setJobCard({ status: 'processing', startedAt: new Date().toISOString() });
 
     try {
       // Use captured preview if available, otherwise capture now
@@ -128,7 +139,6 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
       const request: EvaluateChartRequest = {
         chartId,
         chartImage,
-        questions: [],
         language: currentLanguage,
         selectedColumns: selectedColumns.length > 0 ? selectedColumns : undefined,
       };
@@ -138,8 +148,12 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
       // Backend always returns success: true with evaluation text
       if (result?.data?.evaluation) {
         setEvaluation(result.data.evaluation);
+        setJobCard(prev => (prev ? { ...prev, status: 'done', message: 'Completed' } : prev));
       } else {
         setError('No evaluation result received from AI. Please try again.');
+        setJobCard(prev =>
+          prev ? { ...prev, status: 'error', message: 'No evaluation result received.' } : prev
+        );
       }
     } catch (err: any) {
       console.error('Evaluation error:', err);
@@ -150,13 +164,40 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
         setError(
           'AI evaluation service is not ready. Please contact the administrator to activate it.'
         );
+        setJobCard(prev =>
+          prev
+            ? {
+                ...prev,
+                status: 'error',
+                message: 'AI evaluation service is not ready.',
+              }
+            : prev
+        );
       } else {
         setError(errorMessage);
+        setJobCard(prev =>
+          prev
+            ? {
+                ...prev,
+                status: 'error',
+                message: errorMessage,
+              }
+            : prev
+        );
       }
     } finally {
       setIsLoading(false);
     }
   };
+
+  const formatStartTime = (iso?: string) =>
+    iso
+      ? new Date(iso).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
+      : '';
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
@@ -164,6 +205,33 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
       onClose();
     }
   };
+
+  const handleJobCardClick = () => {
+    if (jobCard?.status !== 'done') return;
+    setIsOpen(true);
+  };
+
+  // Block page/tab close or back navigation while evaluation is running
+  useBeforeUnload({
+    hasUnsavedChanges: isLoading || jobCard?.status === 'processing',
+    message: 'AI evaluation is running. Please wait for completion before leaving.',
+  });
+
+  useEffect(() => {
+    if (!(isLoading || jobCard?.status === 'processing')) return;
+
+    const handlePopState = (event: PopStateEvent) => {
+      event.preventDefault();
+      window.history.pushState(null, '', window.location.href);
+    };
+
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isLoading, jobCard?.status]);
 
   return (
     <div className="relative">
@@ -284,6 +352,82 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
                     <li>Best data visualization practices</li>
                   </ul>
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {jobCard && (
+        <div className="fixed bottom-6 right-6 z-50 w-80">
+          <div
+            onClick={handleJobCardClick}
+            className={`bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden transition ${
+              jobCard.status === 'done'
+                ? 'cursor-pointer hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)]'
+                : 'cursor-default'
+            }`}
+          >
+            <div className="p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    Chart evaluation
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {jobCard.status === 'processing' && (
+                      <>Evaluating... {formatStartTime(jobCard.startedAt)}</>
+                    )}
+                    {jobCard.status === 'done' && 'Completed'}
+                    {jobCard.status === 'error' && (jobCard.message || 'Failed')}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 ml-2">
+                  {jobCard.status === 'processing' && (
+                    <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
+                  )}
+                  {jobCard.status === 'done' && (
+                    <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  )}
+                  {jobCard.status === 'error' && (
+                    <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                  )}
+
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      setJobCard(null);
+                    }}
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                    aria-label="Hide progress"
+                  >
+                    <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  </button>
+                </div>
+              </div>
+
+              {jobCard.status === 'processing' && (
+                <div className="mt-2">
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-full w-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse" />
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    This may take a few seconds...
+                  </p>
+                </div>
+              )}
+
+              {jobCard.status === 'done' && (
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                  Evaluation ready above.
+                </p>
+              )}
+
+              {jobCard.status === 'error' && (
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                  {jobCard.message || 'Unable to evaluate chart.'}
+                </p>
               )}
             </div>
           </div>
