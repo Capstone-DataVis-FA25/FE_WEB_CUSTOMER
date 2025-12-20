@@ -70,8 +70,8 @@ const Header: React.FC<HeaderProps> = ({
     ...(isAuthenticated
       ? [
           { name: 'Datasets', href: `${Routers.WORKSPACE_DATASETS}` },
-          { name: 'Charts', href: `${Routers.WORKSPACE_CHARTS}` },
-          { name: 'Forecast', href: `${Routers.FORECAST}` },
+          { name: t('navigation_charts'), href: `${Routers.WORKSPACE_CHARTS}` },
+          { name: t('navigation_forecast'), href: `${Routers.FORECAST}` },
         ]
       : []),
     { name: t('navigation_pricing'), href: '/pricing' },
@@ -79,15 +79,15 @@ const Header: React.FC<HeaderProps> = ({
   ];
 
   const resourcesItems = [
-    { name: 'FAQ', href: '/resources/frequent-questions' },
-    { name: 'Changelog', href: '/resources/changelog' },
-    { name: 'Blog', href: '/resources/blog' },
-    { name: 'Docs', href: Routers.ACADEMIC_DOCS },
-    { name: 'Community', href: '/resources/community' },
-    { name: 'Forum', href: '/resources/forum' },
-    { name: 'Careers', href: '/resources/careers' },
-    { name: 'Privacy Policy', href: '/privacy-policy' },
-    { name: 'Terms Service', href: '/terms-of-service' },
+    { name: t('resources_faq'), href: '/resources/frequent-questions' },
+    { name: t('resources_changelog'), href: '/resources/changelog' },
+    { name: t('resources_blog'), href: '/resources/blog' },
+    { name: t('resources_docs'), href: Routers.ACADEMIC_DOCS },
+    { name: t('resources_community'), href: '/resources/community' },
+    { name: t('resources_forum'), href: '/resources/forum' },
+    { name: t('resources_careers'), href: '/resources/careers' },
+    { name: t('resources_privacy'), href: '/privacy-policy' },
+    { name: t('resources_terms'), href: '/terms-of-service' },
   ];
 
   useEffect(() => {
@@ -158,7 +158,7 @@ const Header: React.FC<HeaderProps> = ({
 
             <nav className="hidden lg:flex items-center space-x-6">
               {navItems.map((item, index) => (
-                <FadeIn key={item.name} delay={index * 0.1}>
+                <FadeIn key={item.href} delay={index * 0.1}>
                   <Link
                     to={item.href}
                     className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 font-medium relative group px-3 py-2 rounded-lg hover:bg-blue-50/50 dark:hover:bg-blue-900/20"
@@ -197,7 +197,7 @@ const Header: React.FC<HeaderProps> = ({
                     aria-expanded={isResourcesDropdownOpen}
                     aria-haspopup="menu"
                   >
-                    <span>Resources</span>
+                    <span>{t('navigation_resources')}</span>
                     <ChevronDown
                       className={`w-4 h-4 transition-transform duration-200 ${isResourcesDropdownOpen ? 'rotate-180' : ''}`}
                     />
@@ -225,7 +225,7 @@ const Header: React.FC<HeaderProps> = ({
                         }}
                       >
                         {resourcesItems.map((item, index) => (
-                          <FadeIn key={item.name} delay={index * 0.05}>
+                          <FadeIn key={item.href} delay={index * 0.05}>
                             <Link
                               to={item.href}
                               className="block px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 rounded-xl font-medium"
@@ -266,7 +266,7 @@ const Header: React.FC<HeaderProps> = ({
                           <div className="flex items-center justify-between">
                             <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                               <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                              {t('notification_new', 'Thông báo mới')}
+                              {t('notification_new')}
                             </h3>
                             {pendingJobs.length > 0 && (
                               <span className="px-2 py-0.5 text-xs font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full">
@@ -284,7 +284,7 @@ const Header: React.FC<HeaderProps> = ({
                                 <Bell className="w-8 h-8 text-gray-400 dark:text-gray-500" />
                               </div>
                               <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                                {t('notification_empty', 'Không có thông báo nào')}
+                                {t('notification_empty')}
                               </p>
                             </div>
                           ) : (
@@ -301,8 +301,8 @@ const Header: React.FC<HeaderProps> = ({
                                     );
                                     const name =
                                       progressJob?.forecastName ||
-                                      t('forecast_creation_default_name', 'New Forecast');
-                                    return `${name} - ${t('notification_forecast_ready', 'Forecast đã sẵn sàng')}`;
+                                      t('forecast_creation_default_name');
+                                    return `${name} - ${t('notification_forecast_ready')}`;
                                   }
                                   if (job.type === 'forecast-analysis') {
                                     // Get forecast name from progress hook
@@ -312,16 +312,14 @@ const Header: React.FC<HeaderProps> = ({
                                         (job.forecastId && j.forecastId === job.forecastId)
                                     );
                                     const name =
-                                      progressJob?.forecastName ||
-                                      t('forecast_analysis_job_title', 'Forecast Analysis');
-                                    return `${name} - ${t('notification_forecast_analysis_ready', 'Phân tích forecast đã sẵn sàng')}`;
+                                      progressJob?.forecastName || t('forecast_analysis_job_title');
+                                    return `${name} - ${t('notification_forecast_analysis_ready')}`;
                                   }
                                   // For cleaning, get file name from progress hook
                                   const progressJob = cleaningJobs.find(j => j.jobId === job.jobId);
                                   const fileName =
-                                    progressJob?.fileName ||
-                                    t('notification_clean_ready', 'Dữ liệu đã clean sẵn sàng');
-                                  return `${fileName} - ${t('notification_clean_ready', 'Dữ liệu đã clean sẵn sàng')}`;
+                                    progressJob?.fileName || t('notification_clean_ready');
+                                  return `${fileName} - ${t('notification_clean_ready')}`;
                                 };
 
                                 const notificationText = getNotificationText();
@@ -448,7 +446,9 @@ const Header: React.FC<HeaderProps> = ({
                             className="flex items-center px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 transition-all duration-200 rounded-xl group"
                           >
                             <Receipt className="w-4 h-4 mr-3 text-green-500 group-hover:scale-110 transition-transform duration-200" />
-                            <span className="font-medium">Transaction History</span>
+                            <span className="font-medium">
+                              {t('navigation_transaction_history')}
+                            </span>
                           </Link>
                         </div>
 
@@ -529,7 +529,7 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 {navItems.map((item, index) => (
-                  <FadeIn key={item.name} delay={index * 0.05}>
+                  <FadeIn key={item.href} delay={index * 0.05}>
                     <Link
                       to={item.href}
                       className="block px-3 py-3 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 font-medium"
@@ -542,11 +542,11 @@ const Header: React.FC<HeaderProps> = ({
                 <FadeIn delay={0.3}>
                   <div className="pt-2">
                     <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Resources
+                      {t('navigation_resources')}
                     </div>
                     <div className="grid grid-cols-2 gap-1">
                       {resourcesItems.map((item, index) => (
-                        <FadeIn key={item.name} delay={index * 0.05}>
+                        <FadeIn key={item.href} delay={index * 0.05}>
                           <Link
                             to={item.href}
                             className="block px-3 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200 font-medium"
