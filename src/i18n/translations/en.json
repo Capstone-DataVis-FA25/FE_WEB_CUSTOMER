@@ -54,6 +54,28 @@
   "home_help_support_title": "Contact Support",
   "home_help_support_desc": "If you still have questions after consulting our Academy, do write us! Our customer happiness team will be back in touch as quickly as possible.",
   "home_help_support_btn": "Get Support",
+  "resource_usage": {
+    "title": "Resource Usage",
+    "warning_title": "Resource Warning",
+    "warning_description": "You're nearing your usage limits. Consider upgrading your plan.",
+    "warning_badge": "Warning",
+    "warnings": {
+      "datasets": "Datasets usage is above 80%",
+      "charts": "Charts usage is above 80%",
+      "aiRequests": "AI requests usage is above 80%",
+      "generic": "{{key}} usage is above 80%"
+    },
+    "labels": {
+      "datasets": "Datasets",
+      "charts": "Charts",
+      "aiRequests": "AI Requests"
+    },
+    "percent_used": "{{percent}}% used",
+    "unlimited": "Unlimited",
+    "refresh": "Refresh Usage",
+    "error_title": "Error",
+    "failed_load": "Failed to load resource usage"
+  },
   "home_cta_title": "Try it for yourself, without signing up",
   "home_cta_desc": "No data? You can use our sample data.",
   "home_cta_btn": "Create a Chart",
@@ -91,6 +113,8 @@
   "loading": "Loading...",
   "confirm": "Confirm",
   "cancel": "Cancel",
+  "next_button": "Next",
+  "prev_button": "Prev",
   "auth_login": "Login",
   "auth_register": "Register",
   "auth_logout": "Logout",
@@ -1922,6 +1946,18 @@
       "webhook_error": "Webhook error",
       "update_status_failed": "Failed to update status."
     },
+    "transaction_history": {
+      "title": "Transaction History",
+      "subtitle": "View your payment and subscription transactions",
+      "no_transactions": "No transactions found",
+      "unknown_plan": "Unknown Plan",
+      "transaction_id": "Transaction ID",
+      "provider_id": "Provider ID",
+      "via": "via {{provider}}",
+      "page_info": "Page {{page}} of {{totalPages}} ({{total}} total)",
+      "failed_load_title": "Error",
+      "failed_load": "Failed to load transaction history"
+    },
     "pricing": {
       "title": "Pricing",
       "subtitle": "Choose a plan that fits your needs.",
@@ -1943,7 +1979,10 @@
       "checkout_url_missing": "checkoutUrl not returned by server.",
       "payment_failed": "Payment failed",
       "create_session_failed": "Unable to create payment session.",
-      "fetch_plans_failed": "Failed to fetch plans"
+      "fetch_plans_failed": "Failed to fetch plans",
+      "transaction_history": "Transaction History",
+      "disabled_lower_reason": "You're on a higher plan — downgrades are restricted from here.",
+      "downgrade_not_allowed": "Downgrade not allowed"
     }
   },
   "privacy": {
@@ -2175,5 +2214,10 @@
   "chat_dataset_select_title": "Select Dataset",
   "chat_chart_created_title": "Chart Created",
   "chat_chart_type": "Type",
-  "chat_continue_to_editor": "Continue to Chart Editor"
+  "chat_continue_to_editor": "Continue to Chart Editor",
+  "transaction_status": {
+    "pending": "Pending",
+    "completed": "Completed",
+    "failed": "Failed"
+  }
 }

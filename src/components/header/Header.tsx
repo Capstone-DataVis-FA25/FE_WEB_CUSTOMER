@@ -430,7 +430,9 @@ const Header: React.FC<HeaderProps> = ({
                             className="flex items-center px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 transition-all duration-200 rounded-xl group"
                           >
                             <Receipt className="w-4 h-4 mr-3 text-green-500 group-hover:scale-110 transition-transform duration-200" />
-                            <span className="font-medium">Transaction History</span>
+                            <span className="font-medium">
+                              {t('subscription.pricing.transaction_history')}
+                            </span>
                           </Link>
                         </div>
 

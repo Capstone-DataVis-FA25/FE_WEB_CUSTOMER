@@ -30,6 +30,8 @@
   "loading": "Đang tải...",
   "confirm": "Xác nhận",
   "cancel": "Hủy bỏ",
+  "next_button": "Tiếp",
+  "prev_button": "Trước",
   "auth_login": "Đăng Nhập",
   "auth_register": "Đăng Ký",
   "auth_logout": "Đăng xuất",
@@ -116,6 +118,28 @@
   "home_help_desc": "Tìm hiểu cách sử dụng nền tảng và nhận hỗ trợ khi cần thiết.",
   "home_help_academy_title": "Học viện DataVis",
   "home_help_academy_desc": "Khóa học trực tuyến giúp bạn làm chủ trực quan hóa dữ liệu.",
+  "resource_usage": {
+    "title": "Sử dụng tài nguyên",
+    "warning_title": "Cảnh báo tài nguyên",
+    "warning_description": "Bạn đang gần chạm giới hạn sử dụng. Hãy cân nhắc nâng cấp gói.",
+    "warning_badge": "Cảnh báo",
+    "warnings": {
+      "datasets": "Sử dụng Datasets vượt 80%",
+      "charts": "Sử dụng Charts vượt 80%",
+      "aiRequests": "Sử dụng AI Requests vượt 80%",
+      "generic": "Sử dụng {{key}} vượt 80%"
+    },
+    "labels": {
+      "datasets": "Datasets",
+      "charts": "Charts",
+      "aiRequests": "Yêu cầu AI"
+    },
+    "percent_used": "{{percent}}% đã dùng",
+    "unlimited": "Không giới hạn",
+    "refresh": "Làm mới sử dụng",
+    "error_title": "Lỗi",
+    "failed_load": "Tải thông tin sử dụng thất bại"
+  },
   "home_help_academy_btn": "Xem học viện",
   "home_help_support_title": "Hỗ trợ khách hàng",
   "home_help_support_desc": "Đội ngũ hỗ trợ luôn sẵn sàng giải đáp mọi thắc mắc.",
@@ -1805,6 +1829,18 @@
       "webhook_error": "Lỗi Webhook",
       "update_status_failed": "Không thể cập nhật trạng thái."
     },
+    "transaction_history": {
+      "title": "Lịch sử giao dịch",
+      "subtitle": "Xem các giao dịch thanh toán và gói của bạn",
+      "no_transactions": "Không tìm thấy giao dịch",
+      "unknown_plan": "Gói không xác định",
+      "transaction_id": "Mã giao dịch",
+      "provider_id": "Mã nhà cung cấp",
+      "via": "qua {{provider}}",
+      "page_info": "Trang {{page}} trên {{totalPages}} (tổng {{total}})",
+      "failed_load_title": "Lỗi",
+      "failed_load": "Tải lịch sử giao dịch thất bại"
+    },
     "pricing": {
       "title": "Bảng giá",
       "subtitle": "Chọn gói phù hợp với nhu cầu của bạn.",
@@ -1826,7 +1862,10 @@
       "checkout_url_missing": "Server không trả về checkoutUrl.",
       "payment_failed": "Thanh toán thất bại",
       "create_session_failed": "Không thể tạo phiên thanh toán.",
-      "fetch_plans_failed": "Không thể tải danh sách gói"
+      "fetch_plans_failed": "Không thể tải danh sách gói",
+      "transaction_history": "Lịch sử giao dịch",
+      "disabled_lower_reason": "Bạn đang ở gói cao hơn — không thể hạ cấp từ đây.",
+      "downgrade_not_allowed": "Không thể hạ cấp"
     }
   },
   "privacy": {
@@ -2075,5 +2114,10 @@
   "chat_dataset_select_title": "Chọn Dataset",
   "chat_chart_created_title": "Biểu đồ đã tạo",
   "chat_chart_type": "Loại",
-  "chat_continue_to_editor": "Tiếp tục tới Chart Editor"
+  "chat_continue_to_editor": "Tiếp tục tới Chart Editor",
+  "transaction_status": {
+    "pending": "Đang chờ",
+    "completed": "Hoàn thành",
+    "failed": "Thất bại"
+  }
 }

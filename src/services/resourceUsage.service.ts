@@ -9,7 +9,7 @@ export interface ResourceUsage {
 export interface ResourceLimits {
   maxDatasets: number | null;
   maxCharts: number | null;
-  maxAIRequests: number | null;
+  maxAiRequests: number | null;
 }
 
 export interface ResourcePercentage {
