@@ -223,11 +223,35 @@ export const applyPivot = (
     const originalColIdx = colIndex.get(rowDim.columnId);
     if (originalColIdx != null) {
       const originalHeader = headers[originalColIdx];
+
+      // If date column has timeUnit applied, set the appropriate dateFormat
+      let dateFormat = (originalHeader as any).dateFormat;
+      if (originalHeader.type === 'date' && rowDim.timeUnit) {
+        // Map time unit to the corresponding date format
+        switch (rowDim.timeUnit) {
+          case 'year':
+            dateFormat = 'YYYY';
+            break;
+          case 'quarter':
+            dateFormat = 'YYYY-[Q]Q';
+            break;
+          case 'month':
+            dateFormat = 'YYYY-MM';
+            break;
+          case 'day':
+            dateFormat = 'YYYY-MM-DD';
+            break;
+          default:
+            // Keep original format if time unit not recognized
+            dateFormat = (originalHeader as any).dateFormat;
+        }
+      }
+
       pivotedHeaders.push({
         id: rowDim.id,
         name: rowDim.name,
-        type: originalHeader.type,
-        dateFormat: (originalHeader as any).dateFormat,
+        type: originalHeader.type, // Keep as 'date' type
+        dateFormat: dateFormat,
         index: headerIndex++,
       } as any);
     }
@@ -236,10 +260,10 @@ export const applyPivot = (
   // Add column headers (combination of column dimensions + value names, or just column dimensions if no values)
   // Only add column headers if there are columns or values
   if (columns.length > 0 || values.length > 0) {
-    // Sort column keys for consistent ordering
-    const sortedColKeys = Array.from(colKeysSet).sort();
+    // Preserve column order as they appear in the data (first-seen order)
+    const colKeysInOrder = Array.from(colKeysSet);
 
-    for (const colKey of sortedColKeys) {
+    for (const colKey of colKeysInOrder) {
       if (values.length > 0) {
         // Extract value ID from colKey (last part after |)
         const parts = colKey.split('|');
@@ -307,9 +331,12 @@ export const applyPivot = (
 
   // Step 4: Build pivoted data
   const pivotedData: string[][] = [];
-  const sortedRowKeys = Array.from(rowKeysSet).sort();
 
-  for (const rowKey of sortedRowKeys) {
+  // Preserve the order rows appear in the data (respects user's pre-pivot sorting)
+  // Use insertion order from rowKeysSet (which maintains first-seen order)
+  const rowKeysInOrder = Array.from(rowKeysSet);
+
+  for (const rowKey of rowKeysInOrder) {
     const pivotedRow: string[] = [];
 
     // Add row dimension values
@@ -322,9 +349,10 @@ export const applyPivot = (
 
     // Add cell values for each column (only if there are columns or values)
     if (columns.length > 0 || values.length > 0) {
-      const sortedColKeys = Array.from(colKeysSet).sort();
+      // Preserve column order as they appear in the data (first-seen order)
+      const colKeysInOrder = Array.from(colKeysSet);
       const rowMap = pivotMap.get(rowKey);
-      for (const colKey of sortedColKeys) {
+      for (const colKey of colKeysInOrder) {
         const valueArray = rowMap?.get(colKey);
 
         if (values.length > 0) {

@@ -151,7 +151,7 @@ const DataTab: React.FC<DataTabProps> = ({
   // Stable key to remount grid when headers, filters, sort, or aggregation change
   const excelKey = React.useMemo(() => {
     const colsSig = (displayHeaders || [])
-      .map(c => `${c.id ?? ''}|${c.name ?? ''}|${c.type ?? 'text'}`)
+      .map(c => `${c.id ?? ''}|${c.name ?? ''}|${c.type ?? 'text'}|${(c as any).dateFormat ?? ''}`)
       .join('||');
     const hlSig = `${(highlightHeaderIds || []).join(',')}`;
     const sortSig = (datasetConfig?.sort || []).map(l => `${l.columnId}:${l.direction}`).join('|');
@@ -161,13 +161,17 @@ const DataTab: React.FC<DataTabProps> = ({
     const aggSig = datasetConfig?.aggregation
       ? `agg_${(datasetConfig.aggregation.groupBy || []).map(g => g.id).join(',')}_${(datasetConfig.aggregation.metrics || []).map(m => m.id).join(',')}`
       : 'noagg';
-    return `${colsSig}__${hlSig}__${sortSig}__${filterSig}__${aggSig}`;
+    const pivotSig = datasetConfig?.pivot
+      ? `pivot_${(datasetConfig.pivot.rows || []).map((r: any) => `${r.columnId}_${r.timeUnit ?? ''}`).join(',')}_${(datasetConfig.pivot.columns || []).map((c: any) => `${c.columnId}_${c.timeUnit ?? ''}`).join(',')}`
+      : 'nopivot';
+    return `${colsSig}__${hlSig}__${sortSig}__${filterSig}__${aggSig}__${pivotSig}`;
   }, [
     displayHeaders,
     highlightHeaderIds,
     datasetConfig?.sort,
     datasetConfig?.filters,
     datasetConfig?.aggregation,
+    datasetConfig?.pivot,
   ]);
 
   // React.useEffect(() => {
