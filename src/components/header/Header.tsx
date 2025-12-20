@@ -447,7 +447,7 @@ const Header: React.FC<HeaderProps> = ({
                           >
                             <Receipt className="w-4 h-4 mr-3 text-green-500 group-hover:scale-110 transition-transform duration-200" />
                             <span className="font-medium">
-                              {t('navigation_transaction_history')}
+                              {t('subscription.pricing.transaction_history')}
                             </span>
                           </Link>
                         </div>

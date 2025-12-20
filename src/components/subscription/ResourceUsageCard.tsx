@@ -6,6 +6,7 @@ import useToast from '@/hooks/useToast';
 import resourceUsageService, { type ResourceUsageResponse } from '@/services/resourceUsage.service';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { Database, BarChart3, Sparkles, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ResourceUsageCardProps {
   className?: string;
@@ -13,6 +14,7 @@ interface ResourceUsageCardProps {
 }
 
 const ResourceUsageCard: React.FC<ResourceUsageCardProps> = ({ className = '', onWarning }) => {
+  const { t } = useTranslation();
   const [data, setData] = useState<ResourceUsageResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const { showError, showWarning } = useToast();
@@ -27,16 +29,16 @@ const ResourceUsageCard: React.FC<ResourceUsageCardProps> = ({ className = '', o
       const warningMessages = data.warnings.map(w => {
         switch (w) {
           case 'datasets':
-            return 'Datasets usage is above 80%';
+            return t('resource_usage.warnings.datasets');
           case 'charts':
-            return 'Charts usage is above 80%';
+            return t('resource_usage.warnings.charts');
           case 'aiRequests':
-            return 'AI requests usage is above 80%';
+            return t('resource_usage.warnings.aiRequests');
           default:
-            return `${w} usage is above 80%`;
+            return t('resource_usage.warnings.generic', { key: w });
         }
       });
-      showWarning('Resource Warning', warningMessages.join(', '));
+      showWarning(t('resource_usage.warning_title'), warningMessages.join(', '));
     }
   }, [data]);
 
@@ -47,7 +49,7 @@ const ResourceUsageCard: React.FC<ResourceUsageCardProps> = ({ className = '', o
       setData(response);
     } catch (err: any) {
       console.error(err);
-      showError('Error', err?.message || 'Failed to load resource usage');
+      showError(t('resource_usage.error_title'), err?.message || t('resource_usage.failed_load'));
     } finally {
       setLoading(false);
     }
@@ -70,7 +72,7 @@ const ResourceUsageCard: React.FC<ResourceUsageCardProps> = ({ className = '', o
   const resources = [
     {
       icon: Database,
-      label: 'Datasets',
+      label: t('resource_usage.labels.datasets'),
       current: data.usage.datasetsCount,
       limit: data.limits.maxDatasets,
       percentage: data.percentage.datasets,
@@ -78,7 +80,7 @@ const ResourceUsageCard: React.FC<ResourceUsageCardProps> = ({ className = '', o
     },
     {
       icon: BarChart3,
-      label: 'Charts',
+      label: t('resource_usage.labels.charts'),
       current: data.usage.chartsCount,
       limit: data.limits.maxCharts,
       percentage: data.percentage.charts,
@@ -86,7 +88,7 @@ const ResourceUsageCard: React.FC<ResourceUsageCardProps> = ({ className = '', o
     },
     {
       icon: Sparkles,
-      label: 'AI Requests',
+      label: t('resource_usage.labels.aiRequests'),
       current: data.usage.aiRequestsCount,
       limit: data.limits.maxAiRequests,
       percentage: data.percentage.aiRequests,
@@ -97,7 +99,9 @@ const ResourceUsageCard: React.FC<ResourceUsageCardProps> = ({ className = '', o
   return (
     <Card className={`p-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md ${className}`}>
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Resource Usage</h3>
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+          {t('resource_usage.title')}
+        </h3>
         {data.subscriptionPlan && (
           <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
             {data.subscriptionPlan.name}
@@ -110,10 +114,10 @@ const ResourceUsageCard: React.FC<ResourceUsageCardProps> = ({ className = '', o
           <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
           <div>
             <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-              Resource Warning
+              {t('resource_usage.warning_title')}
             </p>
             <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-              You're nearing your usage limits. Consider upgrading your plan.
+              {t('resource_usage.warning_description')}
             </p>
           </div>
         </div>
@@ -139,7 +143,7 @@ const ResourceUsageCard: React.FC<ResourceUsageCardProps> = ({ className = '', o
                   {!isUnlimited && ` / ${resource.limit}`}
                   {isUnlimited && (
                     <span className="ml-2 text-xs text-green-600 dark:text-green-400">
-                      Unlimited
+                      {t('resource_usage.unlimited')}
                     </span>
                   )}
                 </div>
@@ -148,10 +152,12 @@ const ResourceUsageCard: React.FC<ResourceUsageCardProps> = ({ className = '', o
                 <>
                   <Progress value={resource.percentage} className="h-2" />
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{resource.percentage}% used</span>
+                    <span>
+                      {t('resource_usage.percent_used', { percent: resource.percentage })}
+                    </span>
                     {isWarning && (
                       <Badge variant="outline" className="text-yellow-600 border-yellow-600">
-                        Warning
+                        {t('resource_usage.warning_badge')}
                       </Badge>
                     )}
                   </div>
@@ -166,7 +172,7 @@ const ResourceUsageCard: React.FC<ResourceUsageCardProps> = ({ className = '', o
         onClick={fetchUsage}
         className="mt-6 w-full text-sm text-blue-600 dark:text-blue-400 hover:underline"
       >
-        Refresh Usage
+        {t('resource_usage.refresh')}
       </button>
     </Card>
   );
