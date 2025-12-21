@@ -189,7 +189,7 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({ chartId, isOpen, on
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
             transition={{ duration: 0.2 }}
-            className="fixed right-0 top-1/2 -translate-y-1/2 z-40"
+            className="fixed right-0 top-1/2 -translate-y-1/2 z-[55]"
           >
             <Button
               onClick={onToggle}
@@ -219,7 +219,7 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({ chartId, isOpen, on
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[60] lg:hidden"
               onClick={onToggle}
             />
 
@@ -229,13 +229,13 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({ chartId, isOpen, on
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 h-full w-96 bg-white dark:bg-gray-800 shadow-2xl z-50 flex flex-col border-l border-gray-200 dark:border-gray-700"
+              className="fixed right-0 top-0 h-full w-96 bg-white dark:bg-gray-800 shadow-2xl z-[65] flex flex-col border-l border-gray-200 dark:border-gray-700"
             >
               {/* Left-edge collapse handle (visible when sidebar is open) */}
               <button
                 onClick={onToggle}
                 aria-label={t('collapse_notes', 'Collapse notes')}
-                className="absolute -left-4 top-1/2 -translate-y-1/2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:shadow-xl"
+                className="absolute -left-4 top-1/2 -translate-y-1/2 z-[70] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:shadow-xl"
                 style={{ cursor: 'pointer' }}
               >
                 <ChevronRight className="w-4 h-4 text-gray-700 dark:text-gray-200" />
