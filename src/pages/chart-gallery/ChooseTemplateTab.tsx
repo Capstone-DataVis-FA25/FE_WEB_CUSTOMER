@@ -64,22 +64,9 @@ export default function ChooseTemplateTab() {
   const [currentDatasetName, setCurrentDatasetName] = useState(initialDatasetName || '');
   const [isLoadingDataset, setIsLoadingDataset] = useState(false);
 
-  // Use local state instead of location state
   const datasetId = currentDatasetId;
 
-  // Dataset hook - keep selection in global store so it persists across navigation
-  // const { currentDataset, getDatasetById } = useDataset();
   const { getDatasetById } = useDataset();
-
-  // Sync local display state from global currentDataset so selection persists when navigating back
-  // useEffect(() => {
-  //   if (currentDataset && currentDataset.id) {
-  //     // Only update if local state differs to avoid overwriting selection in dialog flows
-  //     if (currentDatasetId !== currentDataset.id) setCurrentDatasetId(currentDataset.id);
-  //     if (currentDatasetName !== currentDataset.name)
-  //       setCurrentDatasetName(currentDataset.name || '');
-  //   }
-  // }, [currentDataset, currentDatasetId, currentDatasetName]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<ChartCategory[]>([]);
@@ -98,7 +85,7 @@ export default function ChooseTemplateTab() {
       showProgress: true,
       steps: chartGallerySteps,
       popoverClass: 'driverjs-theme',
-      overlayOpacity: 0,
+      overlayOpacity: 0.6,
     });
     driverObj.drive();
   };
@@ -148,26 +135,20 @@ export default function ChooseTemplateTab() {
     }
   };
 
-  // Navigation function for continuing with selected template
   const continueWithTemplate = (template: ChartTemplate, datasetIdParam?: string) => {
     try {
-      // Only allow chart types supported by CreateChartRequest
       if (!isSupportedChartType(template.type)) {
         showError(t('chart_create_error'), t('chart_create_unsupported_type'));
         return;
       }
 
-      // Use passed parameters or existing datasetId
       const finalDatasetId = datasetIdParam !== undefined ? datasetIdParam : datasetId;
 
-      // Build URL parameters - only include datasetId if it exists
       const params = new URLSearchParams();
       if (finalDatasetId) {
-        params.set('datasetId', finalDatasetId); // Only pass datasetId if not empty
+        params.set('datasetId', finalDatasetId);
       }
 
-      // Navigate to chart editor with datasetId in URL and type in state
-      // ChartEditorPage will fetch dataset and setup default config, name, description
       navigate(`${Routers.CHART_EDITOR}${finalDatasetId ? `?${params.toString()}` : ''}`, {
         state: {
           type: template.type,
@@ -180,9 +161,7 @@ export default function ChooseTemplateTab() {
     }
   };
 
-  // Check if user has datasetId or needs to select one
   const handleContinueWithTemplate = (template: ChartTemplate) => {
-    // clearChartEditor();
     if (!template) {
       showError(t('chart_create_error'), t('chart_create_missing_data'));
       return;
@@ -255,7 +234,7 @@ export default function ChooseTemplateTab() {
           showProgress: true,
           steps: chartGallerySteps,
           popoverClass: 'driverjs-theme',
-          overlayOpacity: 0.2,
+          overlayOpacity: 0.6,
         });
 
         setTimeout(() => {
@@ -354,7 +333,7 @@ export default function ChooseTemplateTab() {
               {isLoadingDataset
                 ? t('dataset_loading')
                 : datasetId
-                  ? t('common.change')
+                  ? t('dataset_changeData')
                   : t('chart_gallery_select')}
             </Button>
           </div>

@@ -66,7 +66,7 @@ const Header: React.FC<HeaderProps> = ({
   const { activeJobs: cleaningJobs } = useAiCleaningProgress(userId);
 
   const navItems = [
-    { name: t('navigation_home'), href: '/' },
+    { name: t('navigation_home'), href: `${Routers.HOME}` },
     ...(isAuthenticated
       ? [
           { name: 'Datasets', href: `${Routers.WORKSPACE_DATASETS}` },
@@ -74,8 +74,8 @@ const Header: React.FC<HeaderProps> = ({
           { name: 'Forecast', href: `${Routers.FORECAST}` },
         ]
       : []),
-    { name: t('navigation_pricing'), href: '/pricing' },
-    { name: t('navigation_about'), href: '/about-us' },
+    { name: t('navigation_pricing'), href: `${Routers.PRICING}` },
+    { name: t('navigation_about'), href: `${Routers.ABOUT_US}` },
   ];
 
   const resourcesItems = [
@@ -181,7 +181,6 @@ const Header: React.FC<HeaderProps> = ({
                     setIsResourcesDropdownOpen(true);
                   }}
                   onMouseLeave={() => {
-                    // Delay close slightly to allow moving into submenu area
                     if (resourcesCloseTimerRef.current) {
                       window.clearTimeout(resourcesCloseTimerRef.current);
                     }
@@ -448,7 +447,7 @@ const Header: React.FC<HeaderProps> = ({
                             className="flex items-center px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 transition-all duration-200 rounded-xl group"
                           >
                             <Receipt className="w-4 h-4 mr-3 text-green-500 group-hover:scale-110 transition-transform duration-200" />
-                            <span className="font-medium">Transaction History</span>
+                            <span className="font-medium">{t('transaction_history')}</span>
                           </Link>
                         </div>
 
