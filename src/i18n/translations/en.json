@@ -2191,7 +2191,12 @@
       "fetch_plans_failed": "Failed to fetch plans",
       "transaction_history": "Transaction History",
       "disabled_lower_reason": "You're on a higher plan — downgrades are restricted from here.",
-      "downgrade_not_allowed": "Downgrade not allowed"
+      "downgrade_not_allowed": "Downgrade not allowed",
+      "limit_criteria": {
+        "maxCharts": "Max Charts",
+        "maxDatasets": "Max Datasets",
+        "maxAiRequests": "Max AI Requests"
+      }
     }
   },
   "privacy": {
