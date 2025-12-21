@@ -67,49 +67,150 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
     // Remove 'config.' prefix if present
     const cleanKey = key.replace(/^config\./, '');
 
-    // Mapping for common technical terms to friendly labels
+    // Mapping for technical keys to user-friendly labels (chart + dataset configs)
     const labelMap: Record<string, string> = {
-      // Chart config
-      disabledLines: 'Disabled Lines',
-      showPoints: 'Show Points',
-      showPointValues: 'Show Point Values',
-      curve: 'Curve Style',
-      lineWidth: 'Line Width',
-      pointRadius: 'Point Radius',
-      showGrid: 'Show Grid',
-      showLegend: 'Show Legend',
-      legendPosition: 'Legend Position',
-      showTooltip: 'Show Tooltip',
-      tooltipMode: 'Tooltip Mode',
-      yAxisKeys: 'Y-Axis Keys',
-      xAxisKey: 'X-Axis Key',
-      xAxisLabel: 'X-Axis Label',
-      yAxisLabel: 'Y-Axis Label',
+      // Core chart sizing / layout
+      width: 'Chart Width',
+      height: 'Chart Height',
+      'margin.top': 'Margin Top',
+      'margin.right': 'Margin Right',
+      'margin.bottom': 'Margin Bottom',
+      'margin.left': 'Margin Left',
+      title: 'Chart Title',
       chartTitle: 'Chart Title',
       chartSubtitle: 'Chart Subtitle',
-      strokeWidth: 'Stroke Width',
-      fillOpacity: 'Fill Opacity',
-      gradientFill: 'Gradient Fill',
+      backgroundColor: 'Chart Background Color',
+      theme: 'Theme (Light/Dark/Auto)',
+
+      // Interaction / animation
+      showTooltip: 'Show Tooltip',
+      tooltipMode: 'Tooltip Mode',
+      animationDuration: 'Animation Duration (ms)',
+      enableZoom: 'Enable Zoom',
+      enablePan: 'Enable Pan',
+      zoomExtent: 'Zoom Extent',
+
+      // Legend / grid / fonts
+      showLegend: 'Show Legend',
+      legendPosition: 'Legend Position',
+      legendFontSize: 'Legend Font Size',
+      showGrid: 'Show Grid Lines',
+      gridOpacity: 'Grid Line Opacity',
+      titleFontSize: 'Title Font Size',
+      labelFontSize: 'Axis/Label Font Size',
+
+      // Axis bindings / labels
+      xAxisKey: 'X-Axis Field',
+      yAxisKey: 'Y-Axis Field',
+      yAxisKeys: 'Y-Axis Fields',
+      xAxisLabel: 'X-Axis Label Text',
+      yAxisLabel: 'Y-Axis Label Text',
+      xAxisStart: 'X-Axis Start (auto/zero)',
+      yAxisStart: 'Y-Axis Start (auto/zero)',
+      xAxisRotation: 'X-Axis Label Rotation',
+      yAxisRotation: 'Y-Axis Label Rotation',
+      showAxisLabels: 'Show Axis Labels',
+      showAxisTicks: 'Show Axis Ticks',
+      showAllXAxisTicks: 'Show All X-Axis Ticks',
+
+      // Series configs (line/bar/area/scatter)
+      seriesConfigs: 'Series Configuration',
+      disabledLines: 'Hidden Lines',
+      disabledBars: 'Hidden Bars',
+      showPoints: 'Show Data Points',
+      showPointValues: 'Show Point Values',
+      curve: 'Line Curve Style',
+      lineWidth: 'Line Width',
+      pointRadius: 'Point Radius',
+      lineStyle: 'Line Style',
+      pointValueDecimals: 'Point Value Decimals',
+      showStroke: 'Show Area Stroke',
+      barType: 'Bar Layout (grouped/stacked/diverging)',
+      barWidth: 'Bar Width',
+      barSpacing: 'Bar Spacing',
       stackMode: 'Stack Mode',
       showDataLabels: 'Show Data Labels',
       dataLabelPosition: 'Data Label Position',
+      strokeWidth: 'Stroke Width',
+      fillOpacity: 'Fill Opacity',
+      gradientFill: 'Gradient Fill',
       barPadding: 'Bar Padding',
       categoryGap: 'Category Gap',
       cornerRadius: 'Corner Radius',
-      innerRadius: 'Inner Radius',
+
+      // Pie / Donut
+      labelKey: 'Label Field',
+      valueKey: 'Value Field',
+      showLabels: 'Show Slice Labels',
+      showPercentage: 'Show Percentage',
+      showSliceValues: 'Show Slice Values',
+      innerRadius: 'Inner Radius (Donut Hole)',
       outerRadius: 'Outer Radius',
       startAngle: 'Start Angle',
       endAngle: 'End Angle',
-      paddingAngle: 'Padding Angle',
-      labelType: 'Label Type',
-      showPercent: 'Show Percent',
+      padAngle: 'Slice Padding Angle',
+      paddingAngle: 'Slice Padding Angle',
+      labelType: 'Label Display Type',
+      showPercent: 'Show Percent Labels',
       colorScheme: 'Color Scheme',
       customColors: 'Custom Colors',
-      // Dataset config
-      'datasetConfig.sort': 'Sort Configuration',
+      sortSlices: 'Slice Sort Order',
+      sliceOpacity: 'Slice Opacity',
+      legendMaxItems: 'Max Legend Items',
+      strokeColor: 'Slice Stroke Color',
+      strokeWidthPie: 'Slice Stroke Width',
+      hoverScale: 'Hover Scale Factor',
+      enableAnimation: 'Enable Slice Animation',
+      enableHoverEffect: 'Enable Hover Effect',
+      titleColor: 'Title Color',
+      labelColor: 'Label Color',
+      showTitle: 'Show Chart Title',
+
+      // Cycle plot
+      cycleKey: 'Cycle Group Field',
+      periodKey: 'Period Field',
+      valueKeyCycle: 'Value Field',
+      cycleColors: 'Cycle Colors',
+      showAverageLine: 'Show Average Line',
+      emphasizeLatestCycle: 'Emphasize Latest Cycle',
+      showRangeBand: 'Show Range Band',
+      periodOrdering: 'Period Ordering',
+      showTooltipDelta: 'Show Tooltip Delta',
+
+      // Heatmap
+      colorSchemeHeatmap: 'Color Scheme (Heatmap)',
+      showValues: 'Show Cell Values',
+      cellBorderWidth: 'Cell Border Width',
+      cellBorderColor: 'Cell Border Color',
+      valuePosition: 'Value Position',
+      minValue: 'Minimum Value',
+      maxValue: 'Maximum Value',
+      nullColor: 'Null/Empty Cell Color',
+      legendSteps: 'Legend Steps',
+
+      // Histogram
+      binCount: 'Number of Bins',
+      binWidth: 'Bin Width',
+      binMethod: 'Binning Method',
+      customBinEdges: 'Custom Bin Edges',
+      showDensity: 'Show Density Curve',
+      showCumulativeFrequency: 'Show Cumulative Frequency',
+      barColor: 'Bar Color',
+      showMean: 'Show Mean Line',
+      showMedian: 'Show Median Line',
+      normalize: 'Normalize to Probability Density',
+
+      // Dataset config (data prep)
+      'datasetConfig.sort': 'Sort Rules',
       'datasetConfig.filters': 'Filters',
-      'datasetConfig.aggregation': 'Aggregation',
+      'datasetConfig.aggregation': 'Aggregations',
+      'datasetConfig.aggregation.groupBy': 'Group By Columns',
+      'datasetConfig.aggregation.metrics': 'Aggregation Metrics',
       'datasetConfig.pivot': 'Pivot Table',
+      'datasetConfig.pivot.rows': 'Pivot Rows',
+      'datasetConfig.pivot.columns': 'Pivot Columns',
+      'datasetConfig.pivot.values': 'Pivot Values',
+      'datasetConfig.pivot.filters': 'Pivot Filters',
     };
 
     // Check if there's a direct mapping
@@ -127,7 +228,7 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
 
   const [showChart, setShowChart] = useState(true);
   const [showCurrentHistory, setShowCurrentHistory] = useState(false);
-  const [showDiffs, setShowDiffs] = useState(false);
+  const [showDiffs, setShowDiffs] = useState(true);
 
   // Handle navigation to history view page
   const handleViewHistoryChart = () => {
@@ -424,39 +525,6 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
             </div>
           )}
         </div>
-        {/* Current & Historical JSON Section */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <SectionToggle
-              open={showCurrentHistory}
-              onClick={() => setShowCurrentHistory(v => !v)}
-              label={t('chartHistory.comparison.current', 'Current Version')}
-            />
-            {showCurrentHistory &&
-              renderHighlightedJson(
-                currentForRender,
-                diffKeys,
-                'current',
-                flatDiffs,
-                historicalForRender
-              )}
-          </div>
-          <div>
-            <SectionToggle
-              open={showCurrentHistory}
-              onClick={() => setShowCurrentHistory(v => !v)}
-              label={t('chartHistory.comparison.historical', 'Historical Version')}
-            />
-            {showCurrentHistory &&
-              renderHighlightedJson(
-                historicalForRender,
-                diffKeys,
-                'historical',
-                flatDiffs,
-                currentForRender
-              )}
-          </div>
-        </div>
         {/* Differences Section */}
         <div>
           <SectionToggle
@@ -507,6 +575,40 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
               </ul>
             </div>
           )}
+        </div>
+
+        {/* Current & Historical JSON Section */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <SectionToggle
+              open={showCurrentHistory}
+              onClick={() => setShowCurrentHistory(v => !v)}
+              label={t('chartHistory.comparison.current', 'Current Version')}
+            />
+            {showCurrentHistory &&
+              renderHighlightedJson(
+                currentForRender,
+                diffKeys,
+                'current',
+                flatDiffs,
+                historicalForRender
+              )}
+          </div>
+          <div>
+            <SectionToggle
+              open={showCurrentHistory}
+              onClick={() => setShowCurrentHistory(v => !v)}
+              label={t('chartHistory.comparison.historical', 'Historical Version')}
+            />
+            {showCurrentHistory &&
+              renderHighlightedJson(
+                historicalForRender,
+                diffKeys,
+                'historical',
+                flatDiffs,
+                currentForRender
+              )}
+          </div>
         </div>
       </div>
     );
