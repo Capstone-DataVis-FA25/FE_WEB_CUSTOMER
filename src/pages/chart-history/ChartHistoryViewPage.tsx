@@ -349,7 +349,12 @@ const ChartHistoryViewPage: React.FC = () => {
 
       // Filter using original data and original headers
       const filtered =
-        applyDatasetFilters(dataToProcess, currentFilters, colIndexMap) || dataToProcess;
+        applyDatasetFilters(
+          dataToProcess,
+          currentFilters,
+          colIndexMap,
+          headersToUse as unknown as DataHeader[]
+        ) || dataToProcess;
 
       // Sort using filtered data
       const multiSorted = applyMultiLevelSort(filtered, sortLevels, colIndexMap) || filtered;

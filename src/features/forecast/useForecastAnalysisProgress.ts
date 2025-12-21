@@ -1,8 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { io } from 'socket.io-client';
 import { axiosPrivate } from '@/services/axios';
-
-const SOCKET_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+import { useSharedSocket } from '@/features/socket/useSharedSocket';
 
 export interface ForecastAnalysisJob {
   jobId: string;
@@ -43,18 +41,16 @@ export function useForecastAnalysisProgress(userId?: string | number) {
     localStorage.setItem('forecast-analysis-jobs', JSON.stringify(activeJobs));
   }, [activeJobs]);
 
+  const socket = useSharedSocket('user-notification', userId);
+
   // Connect to socket when userId is available
   useEffect(() => {
-    if (!userId) return;
+    if (!socket) return;
 
-    const socketInstance = io(`${SOCKET_URL}/user-notification`, {
-      query: { userId: String(userId) },
-    });
+    console.log('[Socket][ForecastAnalysis] Using shared socket:', socket.id || 'connecting...');
 
-    console.log('[Socket][ForecastAnalysis] Connecting to', `${SOCKET_URL}/user-notification`);
-
-    socketInstance.on('connect', async () => {
-      console.log('[Socket][ForecastAnalysis] Connected:', socketInstance.id);
+    const handleConnect = async () => {
+      console.log('[Socket][ForecastAnalysis] Connected:', socket.id);
 
       // Check restored jobs against backend - if forecast already has analysis or doesn't exist, remove job
       const currentJobsSnapshot = activeJobsRef.current;
@@ -96,9 +92,9 @@ export function useForecastAnalysisProgress(userId?: string | number) {
         console.log('[Socket][ForecastAnalysis] Removing stale jobs:', staleJobIds);
         setActiveJobs(jobs => jobs.filter(j => !staleJobIds.includes(j.jobId)));
       }
-    });
+    };
 
-    socketInstance.on('notification:created', notification => {
+    const handleNotification = (notification: any) => {
       console.log('[Socket][ForecastAnalysis] notification:created', notification);
 
       // Handle analysis started
@@ -147,16 +143,16 @@ export function useForecastAnalysisProgress(userId?: string | number) {
           jobs.map(j => (j.jobId === jobId ? { ...j, status: 'error' as const } : j))
         );
       }
-    });
+    };
 
-    socketInstance.on('disconnect', () => {
-      console.log('[Socket][ForecastAnalysis] Disconnected');
-    });
+    socket.on('connect', handleConnect);
+    socket.on('notification:created', handleNotification);
 
     return () => {
-      socketInstance.disconnect();
+      socket.off('connect', handleConnect);
+      socket.off('notification:created', handleNotification);
     };
-  }, [userId]);
+  }, [socket, userId]);
 
   // Add a new job manually (when submitting)
   const addJob = useCallback((job: Omit<ForecastAnalysisJob, 'status' | 'startTime'>) => {

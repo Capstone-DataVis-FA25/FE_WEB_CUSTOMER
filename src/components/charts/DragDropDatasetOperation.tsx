@@ -102,14 +102,6 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
     (newPivotConfig?: any) => {
       if (!chartConfig) return;
 
-      // If newPivotConfig is explicitly undefined/null, pivot was cleared - don't auto-select
-      if (newPivotConfig === undefined || newPivotConfig === null) {
-        console.log(
-          '[AutoSeries] triggerAutoSelection: Pivot was cleared, skipping auto-selection'
-        );
-        return;
-      }
-
       // Check if the provided pivot config has any active dimensions
       const hasPivot = Boolean(
         newPivotConfig &&
@@ -119,28 +111,8 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
             (newPivotConfig.filters?.length ?? 0) > 0)
       );
 
-      // Only auto-select if pivot is active
-      if (!hasPivot) {
-        console.log('[AutoSeries] triggerAutoSelection: No pivot active, skipping');
-        return;
-      }
-
       // Check if auto-select is enabled (defaults to true if not set)
       const autoSelectEnabled = (newPivotConfig as any)?.autoSelectEnabled !== false;
-      if (!autoSelectEnabled) {
-        console.log('[AutoSeries] triggerAutoSelection: Auto-select is disabled, skipping');
-        return;
-      }
-
-      console.log(
-        '[AutoSeries] triggerAutoSelection: Pivot changed, waiting for processedHeaders to update',
-        {
-          pivotRows: newPivotConfig.rows?.length || 0,
-          pivotColumns: newPivotConfig.columns?.length || 0,
-          pivotValues: newPivotConfig.values?.length || 0,
-          chartType: (chartConfig as any).chartType,
-        }
-      );
 
       // Use multiple requestAnimationFrame calls to ensure processedHeaders has updated
       // This is more reliable than setTimeout(0) for waiting for React state updates
@@ -161,16 +133,8 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
         }
 
         if (!currentHeaders) {
-          console.log(
-            '[AutoSeries] triggerAutoSelection: No processedHeaders available after waiting'
-          );
           return;
         }
-
-        console.log('[AutoSeries] triggerAutoSelection: Processing auto-selection', {
-          headersCount: currentHeaders.length,
-          attempts,
-        });
 
         const autoConfigResult = autoConfigureFromProcessedHeaders(
           chartConfig as any,
@@ -185,10 +149,6 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
 
           // Only clear if there's something to clear
           if (currentXAxisKey || currentSeries.length > 0) {
-            console.log(
-              '[AutoSeries] triggerAutoSelection: Auto-config returned null, clearing existing selection'
-            );
-
             // Clear X-axis and series for charts that use them
             if (
               chartType === 'line' ||
@@ -311,13 +271,8 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
         }
 
         if (configChanged) {
-          console.log('[AutoSeries] triggerAutoSelection: Config changed, applying autoConfig', {
-            chartType,
-            configChanged,
-          });
           handleConfigChange(autoConfig);
         } else {
-          console.log('[AutoSeries] triggerAutoSelection: Config already matches, skipping update');
         }
       };
 
@@ -359,11 +314,6 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
       prevChartTypeRef.current = currentChartType;
       return;
     }
-
-    console.log('[AutoSeries] Chart type changed, triggering auto-selection', {
-      from: prevChartType,
-      to: currentChartType,
-    });
 
     // Trigger auto-selection with current pivot config
     triggerAutoSelection(datasetConfig?.pivot);

@@ -4,6 +4,7 @@ import { SlideInUp } from '@/theme/animation';
 import { useToastContext } from '@/components/providers/ToastProvider';
 import { Button } from '@/components/ui/button';
 import { TrendingUp, Database, Settings, BarChart3, ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDataset } from '@/features/dataset/useDataset';
 import StepIndicator from './components/StepIndicator';
 import Step1SelectDataset from './components/Step1SelectDataset';
@@ -15,6 +16,7 @@ import { useAuth } from '@/features/auth/useAuth';
 import Routers from '@/router/routers';
 
 const ForecastCreatePage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { showError } = useToastContext();
   const { datasets, loadingList, error, getDatasets } = useDataset();
@@ -34,7 +36,7 @@ const ForecastCreatePage: React.FC = () => {
   const [forecastName, setForecastName] = useState('');
   const [selectedDatasetName, setSelectedDatasetName] = useState('');
   const [modelType, setModelType] = useState<'SVR' | 'LSTM'>('LSTM');
-  const [forecastWindow, setForecastWindow] = useState(30);
+  const [forecastWindow, setForecastWindow] = useState(5);
   const [runAnalysisAfterForecast, setRunAnalysisAfterForecast] = useState(false);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [result, setResult] = useState<{
@@ -85,8 +87,8 @@ const ForecastCreatePage: React.FC = () => {
     if (activeJob) {
       // User has an active job and is trying to start a new one
       showError(
-        'Forecast Already in Progress',
-        'You already have a forecast being processed. Please wait for it to complete before creating a new one.'
+        t('forecast_error_already_in_progress'),
+        t('forecast_error_already_in_progress_desc')
       );
       navigate(Routers.FORECAST);
     }
@@ -95,8 +97,9 @@ const ForecastCreatePage: React.FC = () => {
   // Fetch datasets on mount
   useEffect(() => {
     getDatasets().catch((err: any) => {
-      const errorMessage = err?.payload?.message || err?.message || 'Failed to load datasets';
-      showError('Failed to Load Datasets', errorMessage);
+      const errorMessage =
+        err?.payload?.message || err?.message || t('forecast_error_failed_load_datasets');
+      showError(t('forecast_error_failed_load_datasets'), errorMessage);
     });
   }, [getDatasets, showError]);
 
@@ -104,8 +107,10 @@ const ForecastCreatePage: React.FC = () => {
   useEffect(() => {
     if (error) {
       const errorMessage =
-        typeof error === 'string' ? error : (error as any)?.message || 'Failed to load datasets';
-      showError('Dataset Error', errorMessage);
+        typeof error === 'string'
+          ? error
+          : (error as any)?.message || t('forecast_error_failed_load_datasets');
+      showError(t('forecast_error_dataset_error'), errorMessage);
     }
   }, [error, showError]);
 
@@ -170,7 +175,7 @@ const ForecastCreatePage: React.FC = () => {
     if (currentStep === 1) {
       // Validate step 1
       if (!selectedDatasetId) {
-        showError('Dataset Required', 'Please select a dataset');
+        showError(t('forecast_error_dataset_required'), t('forecast_error_dataset_required_desc'));
         return;
       }
 
@@ -178,7 +183,10 @@ const ForecastCreatePage: React.FC = () => {
     } else if (currentStep === 2) {
       // Validate step 2
       if (!targetColumn) {
-        showError('Target Column Required', 'Please select the target column to forecast');
+        showError(
+          t('forecast_error_target_column_required'),
+          t('forecast_error_target_column_required_desc')
+        );
         return;
       }
       setCurrentStep(3);
@@ -197,7 +205,10 @@ const ForecastCreatePage: React.FC = () => {
 
   const handleForecast = async () => {
     if (!selectedDatasetId) {
-      showError('No Dataset Selected', 'Please select a dataset first');
+      showError(
+        t('forecast_error_no_dataset_selected'),
+        t('forecast_error_no_dataset_selected_desc')
+      );
       return;
     }
 
@@ -237,8 +248,8 @@ const ForecastCreatePage: React.FC = () => {
       }
     } catch (error: any) {
       const errorMessage =
-        error.response?.data?.message || error.message || 'Failed to start forecast';
-      showError('Forecast Error', errorMessage);
+        error.response?.data?.message || error.message || t('forecast_error_forecast_error');
+      showError(t('forecast_error_forecast_error'), errorMessage);
       setResult({
         success: false,
         stdout: [],
@@ -251,9 +262,9 @@ const ForecastCreatePage: React.FC = () => {
   };
 
   const steps = [
-    { number: 1, title: 'Select Dataset', icon: Database },
-    { number: 2, title: 'Configure Settings', icon: Settings },
-    { number: 3, title: 'View Results', icon: BarChart3 },
+    { number: 1, title: t('forecast_step_select_dataset'), icon: Database },
+    { number: 2, title: t('forecast_step_configure_settings'), icon: Settings },
+    { number: 3, title: t('forecast_step_view_results'), icon: BarChart3 },
   ];
 
   const handleBackToHistory = () => {
@@ -266,7 +277,7 @@ const ForecastCreatePage: React.FC = () => {
         {/* Back Button */}
         <Button variant="ghost" onClick={handleBackToHistory} className="mb-6">
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to History
+          {t('forecast_create_back_to_history')}
         </Button>
 
         {/* Header */}
@@ -278,10 +289,10 @@ const ForecastCreatePage: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Create New Forecast
+                  {t('forecast_create_title')}
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  Generate AI-powered predictions for your time series data
+                  {t('forecast_create_subtitle')}
                 </p>
               </div>
             </div>

@@ -52,30 +52,18 @@ export function detectSeriesFromPivot(
   columns: PivotDimension[],
   values: PivotValue[]
 ): { xAxisKey: string; seriesConfigs: SeriesConfig[] } | null {
-  console.log('[AutoSeries] detectSeriesFromPivot called', {
-    rowsCount: rows.length,
-    columnsCount: columns.length,
-    valuesCount: values.length,
-    rows: rows.map(r => ({ id: r.id, name: r.name })),
-    columns: columns.map(c => ({ id: c.id, name: c.name })),
-    values: values.map(v => ({ id: v.id, name: v.name, columnId: v.columnId })),
-  });
-
   // Minimum requirement: must have values AND (rows OR columns)
   if (values.length === 0) {
-    console.log('[AutoSeries] detectSeriesFromPivot: No values, returning null');
     return null;
   }
 
   // Need either rows or columns to have an X-axis
   if (rows.length === 0 && columns.length === 0) {
-    console.log('[AutoSeries] detectSeriesFromPivot: No rows or columns, returning null');
     return null;
   }
 
   // Use first row dimension as X-axis if available, otherwise use first column dimension
   const xAxisKey = rows.length > 0 ? rows[0].id : columns[0].id;
-  console.log('[AutoSeries] detectSeriesFromPivot: xAxisKey =', xAxisKey);
   const seriesConfigs: SeriesConfig[] = [];
 
   // For both cases, we use value.id as dataColumn
@@ -110,7 +98,6 @@ export function detectSeriesFromPivot(
   // For now, this creates one series per value, which will match all headers with that valueId
 
   const result = seriesConfigs.length > 0 ? { xAxisKey, seriesConfigs } : null;
-  console.log('[AutoSeries] detectSeriesFromPivot result:', result);
   return result;
 }
 
@@ -157,47 +144,28 @@ export function autoConfigureChartFromPivot(
   columns: PivotDimension[],
   values: PivotValue[]
 ): Partial<MainChartConfig> | null {
-  console.log('[AutoSeries] autoConfigureChartFromPivot called', {
-    chartType: chartConfig.chartType,
-    supportsAutoDetection: supportsSeriesAutoDetection(chartConfig.chartType),
-    rowsCount: rows.length,
-    columnsCount: columns.length,
-    valuesCount: values.length,
-  });
-
   // Check if chart type supports series
   if (!supportsSeriesAutoDetection(chartConfig.chartType)) {
-    console.log(
-      '[AutoSeries] autoConfigureChartFromPivot: Chart type not supported, returning null'
-    );
     return null;
   }
 
   // Minimum requirement: values AND (rows OR columns)
   if (values.length === 0) {
-    console.log('[AutoSeries] autoConfigureChartFromPivot: No values, returning null');
     return null;
   }
 
   // Need either rows or columns to have an X-axis
   if (rows.length === 0 && columns.length === 0) {
-    console.log('[AutoSeries] autoConfigureChartFromPivot: No rows or columns, returning null');
     return null;
   }
 
   // Detect X-axis and series
   const detected = detectSeriesFromPivot(rows, columns, values);
   if (!detected) {
-    console.log('[AutoSeries] autoConfigureChartFromPivot: detectSeriesFromPivot returned null');
     return null;
   }
 
   const { xAxisKey, seriesConfigs } = detected;
-  console.log('[AutoSeries] autoConfigureChartFromPivot: Detected', {
-    xAxisKey,
-    seriesCount: seriesConfigs.length,
-    seriesConfigs: seriesConfigs.map(s => ({ id: s.id, name: s.name, dataColumn: s.dataColumn })),
-  });
 
   // Build updates for chart config
   const updates: Partial<MainChartConfig> = {
@@ -208,7 +176,6 @@ export function autoConfigureChartFromPivot(
     } as any,
   };
 
-  console.log('[AutoSeries] autoConfigureChartFromPivot: Returning updates', updates);
   return updates;
 }
 
@@ -297,21 +264,12 @@ function autoSelectLineBarAreaScatter(
       const xAxisHeader = rowDimensions[0];
       // Validate X-axis type for scatter charts (must be number)
       if (isScatter && !isDataTypeValidForAxis(chartConfig.chartType, 'x', xAxisHeader.type)) {
-        console.log(
-          '[AutoSeries] Scatter: First row dimension not valid for X-axis (type: ' +
-            xAxisHeader.type +
-            '), searching for numeric column...'
-        );
         // For scatter: find first numeric column from all headers
         const numericHeader = processedHeaders.find(
           h => h.type === 'number' && isDataTypeValidForAxis(chartConfig.chartType, 'x', h.type)
         );
         if (numericHeader) {
           xAxisKey = (numericHeader as any).id || numericHeader.name;
-          console.log('[AutoSeries] Scatter: Found numeric column for X-axis', {
-            xAxisKey,
-            name: numericHeader.name,
-          });
         } else {
           xAxisKey = undefined;
         }
@@ -325,10 +283,6 @@ function autoSelectLineBarAreaScatter(
       );
       if (numericHeader) {
         xAxisKey = (numericHeader as any).id || numericHeader.name;
-        console.log('[AutoSeries] Scatter: Found numeric column for X-axis (no rows)', {
-          xAxisKey,
-          name: numericHeader.name,
-        });
       }
     }
     seriesCandidates = valueColumns;
@@ -355,21 +309,12 @@ function autoSelectLineBarAreaScatter(
         const xAxisHeader = actualRowDimensions[0];
         // Validate X-axis type for scatter charts (must be number)
         if (isScatter && !isDataTypeValidForAxis(chartConfig.chartType, 'x', xAxisHeader.type)) {
-          console.log(
-            '[AutoSeries] Scatter: First row dimension not valid for X-axis (type: ' +
-              xAxisHeader.type +
-              '), searching for numeric column...'
-          );
           // For scatter: find first numeric column from all headers
           const numericHeader = processedHeaders.find(
             h => h.type === 'number' && isDataTypeValidForAxis(chartConfig.chartType, 'x', h.type)
           );
           if (numericHeader) {
             xAxisKey = (numericHeader as any).id || numericHeader.name;
-            console.log('[AutoSeries] Scatter: Found numeric column for X-axis', {
-              xAxisKey,
-              name: numericHeader.name,
-            });
           } else {
             xAxisKey = undefined;
           }
@@ -383,10 +328,6 @@ function autoSelectLineBarAreaScatter(
         );
         if (numericHeader) {
           xAxisKey = (numericHeader as any).id || numericHeader.name;
-          console.log('[AutoSeries] Scatter: Found numeric column for X-axis (no rows)', {
-            xAxisKey,
-            name: numericHeader.name,
-          });
         }
       }
 
@@ -432,10 +373,6 @@ function autoSelectLineBarAreaScatter(
       if (allNumericHeaders.length > 0) {
         // Use the first numeric column that's not the X-axis
         validSeriesCandidates = [allNumericHeaders[0]];
-        console.log('[AutoSeries] Scatter: Found numeric column for Y-axis from all headers', {
-          yAxisKey: (allNumericHeaders[0] as any).id || allNumericHeaders[0].name,
-          name: allNumericHeaders[0].name,
-        });
       }
     }
   } else {
@@ -454,19 +391,8 @@ function autoSelectLineBarAreaScatter(
   const limitedSeriesCandidates = validSeriesCandidates.slice(0, MAX_AUTO_SERIES);
   const skippedCount = validSeriesCandidates.length - limitedSeriesCandidates.length;
 
-  console.log('[AutoSeries] Line/Bar/Area/Scatter: Headers', {
-    rowDimensionsCount: rowDimensions.length,
-    valueColumnsCount: valueColumns.length,
-    seriesCandidatesCount: seriesCandidates.length,
-    validSeriesCandidatesCount: validSeriesCandidates.length,
-    limitedCount: limitedSeriesCandidates.length,
-    skippedCount,
-    xAxisKey: xAxisKey || 'undefined',
-  });
-
   // If no X-axis AND no series candidates, return null (nothing to select)
   if (!xAxisKey && seriesCandidates.length === 0) {
-    console.log('[AutoSeries] Line/Bar/Area/Scatter: No X-axis and no series candidates');
     return null;
   }
 
@@ -531,12 +457,10 @@ function autoSelectPieDonut(
 
   // Need at least 1 row dimension and 1 value column
   if (rowDimensions.length === 0) {
-    console.log('[AutoSeries] Pie/Donut: No row dimensions for labelKey');
     return null;
   }
 
   if (valueColumns.length === 0) {
-    console.log('[AutoSeries] Pie/Donut: No value columns for valueKey');
     return null;
   }
 
@@ -545,14 +469,11 @@ function autoSelectPieDonut(
 
   // Value must be number type
   if (valueHeader.type !== 'number') {
-    console.log('[AutoSeries] Pie/Donut: valueKey must be a number column');
     return null;
   }
 
   const labelKey = (labelHeader as any).id || labelHeader.name;
   const valueKey = (valueHeader as any).id || valueHeader.name;
-
-  console.log('[AutoSeries] Pie/Donut: Auto-configured', { labelKey, valueKey });
 
   return {
     config: {
@@ -578,12 +499,10 @@ function autoSelectHeatmap(
 
   // Need at least 1 row dimension and 1 value column
   if (rowDimensions.length === 0) {
-    console.log('[AutoSeries] Heatmap: No row dimensions');
     return null;
   }
 
   if (valueColumns.length === 0) {
-    console.log('[AutoSeries] Heatmap: No value columns');
     return null;
   }
 
@@ -594,15 +513,12 @@ function autoSelectHeatmap(
 
   // Value must be number type
   if (valueHeader.type !== 'number') {
-    console.log('[AutoSeries] Heatmap: valueKey must be a number column');
     return null;
   }
 
   const xAxisKey = (xHeader as any).id || xHeader.name;
   const yAxisKey = (yHeader as any).id || yHeader.name;
   const valueKey = (valueHeader as any).id || valueHeader.name;
-
-  console.log('[AutoSeries] Heatmap: Auto-configured', { xAxisKey, yAxisKey, valueKey });
 
   return {
     config: {
@@ -629,12 +545,10 @@ function autoSelectCyclePlot(
 
   // Need at least 1 row dimension and 1 value column
   if (rowDimensions.length === 0) {
-    console.log('[AutoSeries] CyclePlot: No row dimensions');
     return null;
   }
 
   if (valueColumns.length === 0) {
-    console.log('[AutoSeries] CyclePlot: No value columns');
     return null;
   }
 
@@ -645,15 +559,12 @@ function autoSelectCyclePlot(
 
   // Value must be number type
   if (valueHeader.type !== 'number') {
-    console.log('[AutoSeries] CyclePlot: valueKey must be a number column');
     return null;
   }
 
   const cycleKey = (cycleHeader as any).id || cycleHeader.name;
   const periodKey = (periodHeader as any).id || periodHeader.name;
   const valueKey = (valueHeader as any).id || valueHeader.name;
-
-  console.log('[AutoSeries] CyclePlot: Auto-configured', { cycleKey, periodKey, valueKey });
 
   return {
     config: {
@@ -694,10 +605,6 @@ function autoSelectHistogram(
     const numberValueColumns = valueColumns.filter(h => h.type === 'number');
     if (numberValueColumns.length > 0) {
       numberColumns = numberValueColumns;
-      console.log('[AutoSeries] Histogram: Strategy 1 - Using value columns', {
-        count: numberColumns.length,
-        names: numberColumns.map(h => h.name),
-      });
     }
   }
 
@@ -712,10 +619,6 @@ function autoSelectHistogram(
       const numericColumnHeaders = columnDimensionHeaders.filter(h => h.type === 'number');
       if (numericColumnHeaders.length > 0) {
         numberColumns = numericColumnHeaders;
-        console.log('[AutoSeries] Histogram: Strategy 2 - Using column dimension headers', {
-          count: numberColumns.length,
-          names: numberColumns.map(h => h.name),
-        });
       }
     }
   }
@@ -729,13 +632,6 @@ function autoSelectHistogram(
     );
     if (allNumberColumns.length > 0) {
       numberColumns = allNumberColumns;
-      console.log(
-        '[AutoSeries] Histogram: Strategy 3 - Using number columns (excluding row dimensions)',
-        {
-          count: numberColumns.length,
-          names: numberColumns.map(h => h.name),
-        }
-      );
     }
   }
 
@@ -743,16 +639,11 @@ function autoSelectHistogram(
   if (numberColumns.length === 0) {
     numberColumns = processedHeaders.filter(h => h.type === 'number');
     if (numberColumns.length > 0) {
-      console.log('[AutoSeries] Histogram: Strategy 4 - Using all number columns (fallback)', {
-        count: numberColumns.length,
-        names: numberColumns.map(h => h.name),
-      });
     }
   }
 
   // No valid number columns found
   if (numberColumns.length === 0) {
-    console.log('[AutoSeries] Histogram: No number columns available');
     return null;
   }
 
@@ -791,12 +682,6 @@ function autoSelectHistogram(
     };
   });
 
-  console.log('[AutoSeries] Histogram: Auto-configured', {
-    seriesCount: seriesConfigs.length,
-    skippedCount,
-    seriesNames: seriesConfigs.map(s => s.name),
-  });
-
   return {
     config: {
       axisConfigs: {
@@ -827,22 +712,13 @@ export function autoConfigureFromProcessedHeaders(
   processedHeaders: DataHeader[] | undefined,
   pivotConfig?: any // Optional pivot config to help distinguish row dimensions from column dimension headers
 ): { config: Partial<MainChartConfig>; skippedCount: number } | null {
-  console.log('[AutoSeries] autoConfigureFromProcessedHeaders called', {
-    chartType: chartConfig.chartType,
-    supportsAutoDetection: supportsSeriesAutoDetection(chartConfig.chartType),
-    supportsPivotAutoConfig: supportsPivotAutoConfig(chartConfig.chartType),
-    headersCount: processedHeaders?.length || 0,
-  });
-
   // Check if chart type supports pivot auto-configuration
   if (!supportsPivotAutoConfig(chartConfig.chartType)) {
-    console.log('[AutoSeries] autoConfigureFromProcessedHeaders: Chart type not supported');
     return null;
   }
 
   // Need at least 1 header
   if (!processedHeaders || processedHeaders.length === 0) {
-    console.log('[AutoSeries] autoConfigureFromProcessedHeaders: No headers');
     return null;
   }
 
@@ -870,6 +746,5 @@ export function autoConfigureFromProcessedHeaders(
   }
 
   // Fallback: chart type not handled
-  console.log('[AutoSeries] autoConfigureFromProcessedHeaders: Chart type not handled', chartType);
   return null;
 }
