@@ -62,7 +62,12 @@ const PricingPage: React.FC = () => {
       setError(null);
       try {
         const data = await subscriptionPlansService.getActivePlans();
-        setPlans(data);
+        const sortedData = data.sort((a, b) => {
+          const priceA = Number((a as any).price ?? 0);
+          const priceB = Number((b as any).price ?? 0);
+          return priceA - priceB;
+        });
+        setPlans(sortedData);
       } catch (err: any) {
         setError(err?.message || t('subscription.pricing.fetch_plans_failed'));
       } finally {
@@ -256,8 +261,12 @@ const PricingPage: React.FC = () => {
                         const niceKey = k
                           .replace(/([A-Z])/g, ' $1')
                           .replace(/^./, s => s.toUpperCase());
-                        let display = String(v);
                         const lower = k.toLowerCase();
+                        const label = t(`subscription.pricing.limit_criteria.${k}`, {
+                          defaultValue: niceKey,
+                        });
+
+                        let display = '';
                         if (typeof v === 'number') {
                           if (
                             lower.includes('size') ||
@@ -265,15 +274,20 @@ const PricingPage: React.FC = () => {
                             lower.includes('mb')
                           ) {
                             display = `${v}MB`;
+                          } else {
+                            display = new Intl.NumberFormat().format(v);
                           }
+                        } else {
+                          display = String(v);
                         }
+
                         return (
                           <li
                             key={k}
                             className="text-sm text-muted-foreground flex items-center gap-2"
                           >
                             <span className="w-2 h-2 rounded-full bg-blue-600/30 dark:bg-blue-500/40" />
-                            <span>{`${niceKey}: ${display}`}</span>
+                            <span>{`${label}: ${display}`}</span>
                           </li>
                         );
                       })}
@@ -281,28 +295,29 @@ const PricingPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Subscribe Button */}
+                {/* Subscribe Button - hidden for lower-tier plans */}
                 <div className="mt-6 flex items-center justify-between">
-                  <Button
-                    className={`pricing-subscribe-button rounded-full px-6 py-2.5 font-semibold shadow-lg transition-all duration-300 bg-gradient-to-r ${subscribed ? 'from-gray-600 to-gray-700 disabled' : 'from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'}  hover:shadow-xl ${disabledBtn ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    onClick={() => onSubscribe(plan)}
-                    disabled={disabledBtn}
-                    aria-disabled={disabledBtn}
-                    tabIndex={disabledBtn ? -1 : 0}
-                    title={isLower ? t('subscription.pricing.disabled_lower_reason') : undefined}
-                  >
-                    {checkoutLoading === plan.id ? (
-                      <span className="flex items-center gap-2">
-                        {t('subscription.pricing.processing')}
-                      </span>
-                    ) : subscribed ? (
-                      t('subscription.pricing.subscribed')
-                    ) : isLower ? (
-                      t('subscription.pricing.downgrade_not_allowed')
-                    ) : (
-                      t('subscription.pricing.subscribe')
-                    )}
-                  </Button>
+                  {isLower ? (
+                    <div />
+                  ) : (
+                    <Button
+                      className={`pricing-subscribe-button rounded-full px-6 py-2.5 font-semibold shadow-lg transition-all duration-300 bg-gradient-to-r ${subscribed ? 'from-gray-600 to-gray-700 disabled' : 'from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'}  hover:shadow-xl ${disabledBtn ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      onClick={() => onSubscribe(plan)}
+                      disabled={disabledBtn}
+                      aria-disabled={disabledBtn}
+                      tabIndex={disabledBtn ? -1 : 0}
+                    >
+                      {checkoutLoading === plan.id ? (
+                        <span className="flex items-center gap-2">
+                          {t('subscription.pricing.processing')}
+                        </span>
+                      ) : subscribed ? (
+                        t('subscription.pricing.subscribed')
+                      ) : (
+                        t('subscription.pricing.subscribe')
+                      )}
+                    </Button>
+                  )}
                   <div className="text-xs text-muted-foreground cursor-default">
                     {plan.limits ? '' : ''}
                   </div>
@@ -329,7 +344,30 @@ const PricingPage: React.FC = () => {
                 (selectedPlan.limits
                   ? 'Limits:\n' +
                     Object.entries(selectedPlan.limits as Record<string, any>)
-                      .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1')}: ${v}`)
+                      .map(([k, v]) => {
+                        const niceKey = k
+                          .replace(/([A-Z])/g, ' $1')
+                          .replace(/^./, s => s.toUpperCase());
+                        const lower = k.toLowerCase();
+                        const label = t(`subscription.pricing.limits.${k}`, {
+                          defaultValue: niceKey,
+                        });
+                        let display = '';
+                        if (typeof v === 'number') {
+                          if (
+                            lower.includes('size') ||
+                            lower.includes('file') ||
+                            lower.includes('mb')
+                          ) {
+                            display = `${v}MB`;
+                          } else {
+                            display = new Intl.NumberFormat().format(v);
+                          }
+                        } else {
+                          display = String(v);
+                        }
+                        return `${label}: ${display}`;
+                      })
                       .join('\n')
                   : '')
               : ''

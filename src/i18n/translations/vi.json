@@ -1859,7 +1859,12 @@
       "fetch_plans_failed": "Không thể tải danh sách gói",
       "transaction_history": "Lịch sử giao dịch",
       "disabled_lower_reason": "Bạn đang ở gói cao hơn — không thể hạ cấp từ đây.",
-      "downgrade_not_allowed": "Không thể hạ cấp"
+      "downgrade_not_allowed": "Không thể hạ cấp",
+      "limit_criteria": {
+        "maxCharts": "Số biểu đồ tối đa",
+        "maxDatasets": "Số bộ dữ liệu tối đa",
+        "maxAiRequests": "Số yêu cầu AI tối đa"
+      }
     }
   },
   "privacy": {
