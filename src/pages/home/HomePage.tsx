@@ -43,6 +43,8 @@ import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { homeSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { ExperienceLevelModal, GuidanceConfirmModal } from '@/components/onboarding';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ChartDataPoint = any;
@@ -51,27 +53,83 @@ const HomePage: React.FC = () => {
   const [selectedChart, setSelectedChart] = useState<string>('bar');
   const { t } = useTranslation();
   const { user, isAuthenticated } = useAuth();
+  const {
+    experienceLevel,
+    isFirstVisit,
+    shouldShowTour,
+    markTourAsShown,
+    setExperienceLevel,
+    setWantsGuidance,
+  } = useOnboarding();
 
+  const [showExperienceModal, setShowExperienceModal] = useState(false);
+  const [showGuidanceModal, setShowGuidanceModal] = useState(false);
+
+  // Show experience selection modal on first visit
   useEffect(() => {
-    if (isAuthenticated && user?.id) {
-      const storageKey = `hasShownHomeTour_${user.id}`;
-      const hasShownTour = localStorage.getItem(storageKey);
+    if (isAuthenticated && user?.id && isFirstVisit) {
+      setTimeout(() => {
+        setShowExperienceModal(true);
+      }, 1000);
+    }
+  }, [isAuthenticated, user, isFirstVisit]);
 
-      if (hasShownTour !== 'true') {
-        const driverObj = driver({
-          showProgress: true,
-          steps: homeSteps,
-          popoverClass: 'driverjs-theme',
-          overlayOpacity: 0,
-        });
+  // Handle experience level selection
+  const handleExperienceLevelSelect = (level: 'beginner' | 'experienced' | 'professional') => {
+    setExperienceLevel(level);
+    setShowExperienceModal(false);
 
+    if (level === 'beginner') {
+      // Beginner: Auto-start tour
+      setTimeout(() => {
+        startTour();
+      }, 500);
+    } else if (level === 'experienced') {
+      // Experienced: Ask if they want guidance
+      setTimeout(() => {
+        setShowGuidanceModal(true);
+      }, 500);
+    }
+    // Professional: Do nothing, they can start tour manually
+  };
+
+  // Handle guidance confirmation for experienced users
+  const handleGuidanceConfirm = (wantsGuidance: boolean) => {
+    setWantsGuidance(wantsGuidance);
+    setShowGuidanceModal(false);
+
+    if (wantsGuidance) {
+      setTimeout(() => {
+        startTour();
+      }, 500);
+    }
+  };
+
+  // Start tour function
+  const startTour = () => {
+    if (!shouldShowTour('home')) return;
+
+    const driverObj = driver({
+      showProgress: true,
+      steps: homeSteps,
+      popoverClass: 'driverjs-theme',
+      overlayOpacity: 0.6,
+    });
+
+    driverObj.drive();
+    markTourAsShown('home');
+  };
+
+  // Auto-start tour for beginners on subsequent visits
+  useEffect(() => {
+    if (isAuthenticated && user?.id && experienceLevel === 'beginner' && !isFirstVisit) {
+      if (shouldShowTour('home')) {
         setTimeout(() => {
-          driverObj.drive();
-          localStorage.setItem(storageKey, 'true');
+          startTour();
         }, 1500);
       }
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, experienceLevel, isFirstVisit]);
 
   // Chart types data
   const chartTypes = [
@@ -733,6 +791,10 @@ const HomePage: React.FC = () => {
           </motion.div>
         </div>
       </motion.section>
+
+      {/* Onboarding Modals */}
+      <ExperienceLevelModal isOpen={showExperienceModal} onSelect={handleExperienceLevelSelect} />
+      <GuidanceConfirmModal isOpen={showGuidanceModal} onConfirm={handleGuidanceConfirm} />
     </div>
   );
 };
