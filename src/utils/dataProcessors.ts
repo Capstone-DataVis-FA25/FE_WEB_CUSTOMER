@@ -184,7 +184,14 @@ export const preformatDataToFormats = (
       const col = columns[ci];
       if (!col) return v;
       if (col.type === 'number' && v !== '' && nf) return formatNumberString(v, nf);
-      if (col.type === 'date' && v !== '' && df) return normalizeDateString(v, df);
+      if (col.type === 'date' && v !== '') {
+        // Use column's own dateFormat if available (e.g., from pivot timeUnit grouping),
+        // otherwise fall back to the global df parameter
+        const dateFormat = (col as any).dateFormat || df;
+        if (dateFormat) {
+          return normalizeDateString(v, dateFormat);
+        }
+      }
       return v;
     })
   );

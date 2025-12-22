@@ -53,7 +53,7 @@ function CleanDatasetWithAI({
   });
 
   const { t } = useTranslation();
-  const { showSuccess } = useToastContext();
+  const { showSuccess, showError } = useToastContext();
 
   const handleOptionChange = (key: keyof typeof cleaningOptions, value: string | boolean) => {
     setCleaningOptions(prev => ({ ...prev, [key]: value }));
@@ -125,10 +125,6 @@ function CleanDatasetWithAI({
     setError(null);
     setIsLoading(true);
     onProcessingChange?.(true);
-    showSuccess(
-      t('ai_clean_sending_title', 'Đang gửi dữ liệu để làm sạch'),
-      t('ai_clean_sending_desc', 'Vui lòng đợi, chúng tôi đang xử lý dữ liệu của bạn...')
-    );
     try {
       if (!effectiveUserId) throw new Error('Missing userId');
       const isExcel = selectedFile.name.match(/\.(xlsx?|xls)$/i);
@@ -156,6 +152,35 @@ function CleanDatasetWithAI({
         }
       } else if (isCsv) {
         const text = await selectedFile.text();
+        // Check if CSV has only header or only header + empty/whitespace row
+        const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+        if (lines.length <= 1) {
+          const msg = t(
+            'ai_clean_csv_no_data',
+            'File CSV chỉ có header, không có dữ liệu để làm sạch.'
+          );
+          setError(msg);
+          showError?.(msg);
+          setIsLoading(false);
+          onProcessingChange?.(false);
+          return;
+        }
+        // Check if all data rows (except header) are empty or whitespace
+        const dataRows = lines.slice(1);
+        const hasValidData = dataRows.some(row => row.split(',').some(cell => cell.trim() !== ''));
+        if (!hasValidData) {
+          const msg = t('ai_clean_csv_no_data', 'File CSV không có dữ liệu hợp lệ để làm sạch.');
+          setError(msg);
+          showError?.(msg);
+          setIsLoading(false);
+          onProcessingChange?.(false);
+          return;
+        }
+        // Only show success toast after validation passes
+        showSuccess(
+          t('ai_clean_sending_title', 'Đang gửi dữ liệu để làm sạch'),
+          t('ai_clean_sending_desc', 'Vui lòng đợi, chúng tôi đang xử lý dữ liệu của bạn...')
+        );
         const payload: CleanCsvRequest = {
           csv: text,
           ...(cleaningOptions.thousandsSeparator && {
@@ -346,7 +371,7 @@ function CleanDatasetWithAI({
                       <select
                         id="missingStrategy"
                         className="w-full min-w-[180px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 appearance-auto"
-                        style={{ minWidth: 180, paddingLeft: 16, paddingRight: 32 }}
+                        style={{ minWidth: 180, paddingLeft: 8, paddingRight: 32 }}
                         value={cleaningOptions.missingStrategy}
                         onChange={e => handleOptionChange('missingStrategy', e.target.value)}
                       >
@@ -371,7 +396,7 @@ function CleanDatasetWithAI({
                       <select
                         id="outlierStrategy"
                         className="w-full min-w-[180px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 appearance-auto"
-                        style={{ minWidth: 180, paddingLeft: 16, paddingRight: 32 }}
+                        style={{ minWidth: 180, paddingLeft: 8, paddingRight: 32 }}
                         value={cleaningOptions.outlierStrategy}
                         onChange={e => handleOptionChange('outlierStrategy', e.target.value)}
                       >
@@ -446,7 +471,7 @@ function CleanDatasetWithAI({
                       value={cleaningOptions.notes}
                       onChange={e => handleOptionChange('notes', e.target.value)}
                       placeholder="Optional: Add custom cleaning instructions..."
-                      className="w-full min-h-[60px] p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y"
+                      className="w-full min-h-[80px] p-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       Provide any specific cleaning requirements

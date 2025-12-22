@@ -14,8 +14,8 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 dayjs.extend(customParseFormat);
 
 // Confidence thresholds for smart detection
-export const COLUMN_TYPE_CONFIDENCE_THRESHOLD = 0.6; // For column type detection (text/number/date)
-export const FORMAT_APPLICATION_CONFIDENCE_THRESHOLD = 0.6; // For format application (date format, number separators)
+export const COLUMN_TYPE_CONFIDENCE_THRESHOLD = 0.6;
+export const FORMAT_APPLICATION_CONFIDENCE_THRESHOLD = 0.6;
 
 export interface DetectionResult {
   dateFormat: DateFormat;
@@ -79,7 +79,6 @@ const DATE_PATTERNS = [
     confidence: 0.85,
     validate: (val: string) => dayjs(val, 'DD MMMM YYYY', true).isValid(),
   },
-  // Ambiguous patterns - now validated strictly
   {
     format: 'DD/MM/YYYY' as DateFormat,
     regex: /^\d{2}\/\d{2}\/\d{4}$/,
@@ -107,7 +106,7 @@ const DATE_PATTERNS = [
   {
     format: 'YYYY' as DateFormat,
     regex: /^\d{4}$/,
-    confidence: 0.8, // Prefer year-only as date over plain number
+    confidence: 0.8,
     validate: (val: string) =>
       dayjs(val, 'YYYY', true).isValid() && Number(val) >= 1900 && Number(val) <= 2100,
   },
@@ -125,56 +124,48 @@ const DATE_PATTERNS = [
   },
   {
     format: 'YYYY-[Q]Q' as DateFormat,
-    // e.g. 2024-Q1
     regex: /^\d{4}-Q[1-4]$/,
     confidence: 0.8,
     validate: (val: string) => /^(\d{4})-Q([1-4])$/.test(val.trim()),
   },
   {
     format: 'DD Month YYYY' as DateFormat,
-    // e.g. 25 December 2024
     regex: /^\d{1,2} [A-Za-z]+ \d{4}$/,
     confidence: 0.85,
     validate: (val: string) => dayjs(val, 'DD MMMM YYYY', true).isValid(),
   },
   {
     format: 'MMMM' as DateFormat,
-    // e.g. February
     regex: /^[A-Za-z]+$/,
     confidence: 0.7,
     validate: (val: string) => dayjs(val, 'MMMM', true).isValid(),
   },
   {
     format: 'MMM' as DateFormat,
-    // e.g. Feb
     regex: /^[A-Za-z]{3}$/,
     confidence: 0.7,
     validate: (val: string) => dayjs(val, 'MMM', true).isValid(),
   },
   {
     format: 'MMMM YYYY' as DateFormat,
-    // e.g. February 2024
     regex: /^[A-Za-z]+ \d{4}$/,
     confidence: 0.8,
     validate: (val: string) => dayjs(val, 'MMMM YYYY', true).isValid(),
   },
   {
     format: 'MMM YYYY' as DateFormat,
-    // e.g. Feb 2024
     regex: /^[A-Za-z]{3} \d{4}$/,
     confidence: 0.8,
     validate: (val: string) => dayjs(val, 'MMM YYYY', true).isValid(),
   },
   {
     format: 'MMMM DD' as DateFormat,
-    // e.g. February 25
     regex: /^[A-Za-z]+ \d{1,2}$/,
     confidence: 0.75,
     validate: (val: string) => dayjs(val, 'MMMM DD', true).isValid(),
   },
   {
     format: 'MMM DD' as DateFormat,
-    // e.g. Feb 25
     regex: /^[A-Za-z]{3} \d{1,2}$/,
     confidence: 0.75,
     validate: (val: string) => dayjs(val, 'MMM DD', true).isValid(),
@@ -216,6 +207,60 @@ const NUMBER_PATTERNS = [
 ];
 
 /**
+ * Validates that a number pattern's separators are used correctly
+ */
+function validatePatternSeparators(
+  value: string,
+  pattern: { thousandsSeparator: string; decimalSeparator: string }
+): boolean {
+  const trimmed = value.trim();
+
+  // Validate thousands separator usage
+  if (pattern.thousandsSeparator && pattern.thousandsSeparator !== '') {
+    if (trimmed.includes(pattern.thousandsSeparator)) {
+      const decimalSep = pattern.decimalSeparator;
+      const parts = decimalSep ? trimmed.split(decimalSep) : [trimmed];
+      const integerPart = parts[0].replace(/^-/, '');
+
+      // Thousands separator must appear in groups of exactly 3 digits
+      const escaped = pattern.thousandsSeparator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const thousandsRegex = new RegExp(`^\\d{1,3}(\\${escaped}\\d{3})*$`);
+      if (!thousandsRegex.test(integerPart)) {
+        return false;
+      }
+    } else {
+      // Large numbers without thousands separator when pattern expects it
+      const numStr = trimmed.replace(/[^\d]/g, '');
+      if (numStr.length > 3) {
+        return false;
+      }
+    }
+  }
+
+  // Validate decimal separator usage
+  if (pattern.decimalSeparator && trimmed.includes(pattern.decimalSeparator)) {
+    const parts = trimmed.split(pattern.decimalSeparator);
+    if (parts.length !== 2 || !parts[1] || !/^\d+$/.test(parts[1])) {
+      return false;
+    }
+  }
+
+  // Special case: if pattern expects "." as thousands and "," as decimal,
+  // but value has "." with digits after (like "39166.593"),
+  // then "." is likely the decimal, not thousands
+  if (pattern.thousandsSeparator === '.' && pattern.decimalSeparator === ',') {
+    if (trimmed.includes('.') && !trimmed.includes(',')) {
+      const dotParts = trimmed.split('.');
+      if (dotParts.length === 2 && /^\d+$/.test(dotParts[0]) && /^\d+$/.test(dotParts[1])) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+/**
  * Analyze a single column to determine its type and format
  */
 function analyzeColumn(columnData: string[]): {
@@ -230,17 +275,14 @@ function analyzeColumn(columnData: string[]): {
     return { type: 'text', confidence: 0 };
   }
 
-  // Test for date patterns with validation
+  // Test for date patterns
   let dateScore = 0;
   let bestDatePattern = null;
   for (const pattern of DATE_PATTERNS) {
     const matches = samples.filter(val => {
       const trimmed = val.trim();
       if (!pattern.regex.test(trimmed)) return false;
-      if (pattern.validate) {
-        return pattern.validate(trimmed);
-      }
-      return true;
+      return pattern.validate ? pattern.validate(trimmed) : true;
     });
     const matchRatio = matches.length / samples.length;
     const score = matchRatio * pattern.confidence;
@@ -250,20 +292,33 @@ function analyzeColumn(columnData: string[]): {
     }
   }
 
-  // 🧩 FIXED NUMBER PATTERN ANALYSIS
+  // Test for number patterns
   let numberScore = 0;
   let bestNumberPattern = null;
+
   for (const pattern of NUMBER_PATTERNS) {
     const matches = samples.filter(val => pattern.regex.test(val.trim()));
     const matchRatio = matches.length / samples.length;
     let score = matchRatio * pattern.confidence;
 
-    // 🩹 Penalize if no thousands separator appears in the actual data
+    // Penalize if thousands separator doesn't appear in data
     if (
       pattern.thousandsSeparator &&
       !samples.some(val => val.includes(pattern.thousandsSeparator))
     ) {
-      score *= 0.7; // reduce confidence if separator isn't used at all
+      score *= 0.7;
+    }
+
+    // Validate separator usage
+    if (matches.length > 0) {
+      const validMatches = matches.filter(val => validatePatternSeparators(val, pattern)).length;
+      const validRatio = validMatches / matches.length;
+
+      if (validRatio < 0.5) {
+        score *= 0.2; // Heavy penalty for invalid patterns
+      } else if (validRatio < 0.8) {
+        score *= 0.5; // Moderate penalty
+      }
     }
 
     if (score > numberScore) {
@@ -272,19 +327,19 @@ function analyzeColumn(columnData: string[]): {
     }
   }
 
-  // 🔎 Heuristic fallback for custom separators (e.g., '#' thousands and '@' decimal)
+  // Heuristic fallback for custom separators
   if (numberScore <= 0.6) {
-    // Collect non-digit separators present in samples
     const candidateSet = new Set<string>();
     samples.forEach(s => {
-      const chars = s.replace(/[-\d]/g, '').split('');
-      chars.forEach(c => candidateSet.add(c));
+      s.replace(/[-\d]/g, '')
+        .split('')
+        .forEach(c => candidateSet.add(c));
     });
-    // Reasonable candidates only
+
     const CANDIDATES = Array.from(candidateSet).filter(c => " ,._'#@".includes(c));
-    // Try to infer decimal as rightmost separator with 1-3 digits on the right
     let inferredDecimal: string | null = null;
     let inferredThousands: string | null = null;
+
     for (const s of samples) {
       for (const c of CANDIDATES.sort((a, b) => s.lastIndexOf(b) - s.lastIndexOf(a))) {
         const idx = s.lastIndexOf(c);
@@ -298,14 +353,13 @@ function analyzeColumn(columnData: string[]): {
       }
       if (inferredDecimal) break;
     }
+
     if (inferredDecimal) {
-      // Infer thousands as any other candidate on left side
       const example = samples.find(v => v.includes(inferredDecimal!)) || samples[0];
       const left = example.split(inferredDecimal)[0];
       const others = CANDIDATES.filter(c => c !== inferredDecimal);
       inferredThousands = others.find(c => left.includes(c)) || '';
 
-      // Build a validating regex using inferred separators
       const esc = (ch: string) => (ch ? ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '');
       const thou = inferredThousands ? `(${esc(inferredThousands)}\\d{3})*` : '';
       const dec = inferredDecimal ? `(${esc(inferredDecimal)}\\d+)?` : '';
@@ -314,7 +368,7 @@ function analyzeColumn(columnData: string[]): {
       const dynMatches = samples.filter(v => dyn.test(v.trim()));
       const ratio = dynMatches.length / samples.length;
       if (ratio >= 0.6) {
-        numberScore = ratio * 0.9; // assign high confidence for consistent matches
+        numberScore = ratio * 0.9;
         bestNumberPattern = {
           thousandsSeparator: inferredThousands || '',
           decimalSeparator: inferredDecimal,
@@ -324,17 +378,6 @@ function analyzeColumn(columnData: string[]): {
       }
     }
   }
-
-  // Debug logging
-  // console.log('🔍 Column analysis:', {
-  //   samples: samples.slice(0, 3),
-  //   dateScore,
-  //   numberScore,
-  //   bestDatePattern: bestDatePattern?.format,
-  //   bestNumberPattern: bestNumberPattern
-  //     ? `${bestNumberPattern.thousandsSeparator}|${bestNumberPattern.decimalSeparator}`
-  //     : null,
-  // });
 
   // Determine final type
   if (dateScore > 0.6 && dateScore > numberScore) {
@@ -356,20 +399,15 @@ function detectDateFormat(
   const formatCounts: Record<string, number> = {};
   const formatConfidences: Record<string, number[]> = {};
 
-  // Iterate through columns and collect format information
   columnAnalyses.forEach((col, colIndex) => {
     if (col.type === 'date' && col.detectedFormat) {
       const format = col.detectedFormat.format;
       const columnData = data.map(row => row[colIndex]).filter(val => val && val.trim() !== '');
 
-      // Count valid matches for this format
       const matches = columnData.filter(val => {
         const trimmed = val.trim();
         if (!col.detectedFormat.regex.test(trimmed)) return false;
-        if (col.detectedFormat.validate) {
-          return col.detectedFormat.validate(trimmed);
-        }
-        return true;
+        return col.detectedFormat.validate ? col.detectedFormat.validate(trimmed) : true;
       });
 
       if (matches.length > 0) {
@@ -406,6 +444,13 @@ function detectDateFormat(
 }
 
 /**
+ * Calculate weighted score considering both confidence and match count
+ */
+function calculateWeightedScore(avgConfidence: number, count: number): number {
+  return avgConfidence * (1 + Math.log10(count + 1) / 10);
+}
+
+/**
  * Detect the most common number format across all columns
  */
 function detectNumberFormat(
@@ -415,7 +460,7 @@ function detectNumberFormat(
   const thousandsCounts: Record<string, { count: number; confidences: number[] }> = {};
   const decimalCounts: Record<string, { count: number; confidences: number[] }> = {};
 
-  // Iterate through number columns and collect separator information
+  // Collect separator information from number columns
   columnAnalyses.forEach((col, colIndex) => {
     if (col.type === 'number' && col.detectedFormat) {
       const columnData = data.map(row => row[colIndex]).filter(val => val && val.trim() !== '');
@@ -434,60 +479,85 @@ function detectNumberFormat(
 
         thousandsCounts[thousands].count += matches.length;
         thousandsCounts[thousands].confidences.push(col.confidence);
-
         decimalCounts[decimal].count += matches.length;
         decimalCounts[decimal].confidences.push(col.confidence);
       }
     }
   });
 
+  // Handle case where no thousands separator is detected
   if (Object.keys(thousandsCounts).length === 0) {
+    const detectedDecimal =
+      Object.keys(decimalCounts).length > 0
+        ? Object.entries(decimalCounts).reduce(
+            (best, [sep, data]) => {
+              const avgConf = data.confidences.reduce((a, b) => a + b, 0) / data.confidences.length;
+              const bestAvgConf =
+                best.data.confidences.reduce((a, b) => a + b, 0) / best.data.confidences.length;
+              return avgConf > bestAvgConf ? { sep, data } : best;
+            },
+            { sep: '.', data: { confidences: [0] } }
+          ).sep
+        : '.';
     return {
-      format: { thousandsSeparator: ',', decimalSeparator: '.' },
+      format: { thousandsSeparator: '', decimalSeparator: detectedDecimal },
       confidence: 0,
     };
   }
 
   // Find best thousands separator
-  let bestThousands = ',';
-  let bestThousandsConfidence = 0;
+  let bestThousands = '';
+  let bestThousandsScore = 0;
+  const hasNoThousands = thousandsCounts[''] !== undefined;
 
   Object.entries(thousandsCounts).forEach(([separator, data]) => {
     const avgConfidence = data.confidences.reduce((a, b) => a + b, 0) / data.confidences.length;
+    const count = data.count;
+    const weightedScore = calculateWeightedScore(avgConfidence, count);
 
-    if (avgConfidence > bestThousandsConfidence) {
-      bestThousandsConfidence = avgConfidence;
-      bestThousands = separator;
+    if (separator === '' && count > 0 && avgConfidence >= 0.5) {
+      const boostedScore = weightedScore * 1.2; // Prefer no-thousands if common
+      if (boostedScore > bestThousandsScore) {
+        bestThousandsScore = boostedScore;
+        bestThousands = separator;
+      }
+    } else if (separator !== '' && weightedScore > bestThousandsScore) {
+      if (!hasNoThousands || bestThousandsScore < 0.5) {
+        bestThousandsScore = weightedScore;
+        bestThousands = separator;
+      }
     }
   });
 
   // Find best decimal separator (must be different from thousands)
   let bestDecimal = '.';
-  let bestDecimalConfidence = 0;
+  let bestDecimalScore = 0;
 
   Object.entries(decimalCounts).forEach(([separator, data]) => {
-    // Skip if same as thousands separator
     if (separator === bestThousands) return;
 
     const avgConfidence = data.confidences.reduce((a, b) => a + b, 0) / data.confidences.length;
+    const count = data.count;
+    const weightedScore = calculateWeightedScore(avgConfidence, count);
 
-    if (avgConfidence > bestDecimalConfidence) {
-      bestDecimalConfidence = avgConfidence;
+    if (weightedScore > bestDecimalScore) {
+      bestDecimalScore = weightedScore;
       bestDecimal = separator;
     }
   });
 
-  // Validate that separators are different
-  if (bestThousands === bestDecimal) {
-    // If they're the same, prefer the more common convention
-    if (bestThousands === ',') {
-      bestDecimal = '.';
-    } else {
-      bestThousands = ',';
-    }
+  // Default to dot if no decimal separator detected
+  if (Object.keys(decimalCounts).length === 0 && Object.keys(thousandsCounts).length > 0) {
+    bestDecimal = '.';
   }
 
-  const overallConfidence = (bestThousandsConfidence + bestDecimalConfidence) / 2;
+  // Ensure separators are different
+  if (bestThousands === bestDecimal) {
+    bestThousands = '';
+    bestDecimal = '.';
+  }
+
+  const overallConfidence = (bestThousandsScore + bestDecimalScore) / 2;
 
   return {
     format: {
@@ -511,7 +581,6 @@ export function detectColumnFormats(data: string[][], maxRows: number = 20): Det
     };
   }
 
-  // Limit analysis to first maxRows rows
   const analysisData = data.slice(0, maxRows);
   const columnCount = analysisData[0]?.length || 0;
 
@@ -541,18 +610,10 @@ export function detectColumnFormats(data: string[][], maxRows: number = 20): Det
   const dateFormatResult = detectDateFormat(columnAnalyses, analysisData);
   const numberFormatResult = detectNumberFormat(columnAnalyses, analysisData);
 
-  // Build per-column date format list (null for non-date columns)
+  // Build per-column date format list
   const perColumnDateFormat: Array<DateFormat | null> = columnAnalyses.map(col =>
     col.type === 'date' && col.detectedFormat ? (col.detectedFormat.format as DateFormat) : null
   );
-
-  // console.log('🎯 Final detection results:', {
-  //   dateFormat: dateFormatResult.format,
-  //   dateConfidence: dateFormatResult.confidence,
-  //   numberFormat: numberFormatResult.format,
-  //   numberConfidence: numberFormatResult.confidence,
-  //   columnTypes: columnAnalyses.map(col => col.type),
-  // });
 
   return {
     dateFormat: dateFormatResult.format,
@@ -579,7 +640,6 @@ export function applyDetectedFormats(
     const confidence = detectionResult.confidence.columnTypes[index] || 0;
 
     if (confidence > COLUMN_TYPE_CONFIDENCE_THRESHOLD) {
-      // Apply type, and if date, attach a per-column dateFormat when available
       if (detectedType === 'date') {
         const formatFromDetection =
           detectionResult.perColumnDateFormat?.[index] || detectionResult.dateFormat;

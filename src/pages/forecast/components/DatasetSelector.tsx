@@ -3,6 +3,7 @@ import { Database, CheckCircle2, Search, Rows, Columns, Clock } from 'lucide-rea
 import { Input } from '@/components/ui/input';
 import type { Dataset } from '@/features/dataset/datasetAPI';
 import Utils from '@/utils/Utils';
+import { useTranslation } from 'react-i18next';
 
 interface DatasetSelectorProps {
   datasets: Dataset[];
@@ -17,6 +18,7 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
   onSelect,
   loading = false,
 }) => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredDatasets = datasets.filter(dataset =>
@@ -36,10 +38,10 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <Database className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
         <p className="text-gray-600 dark:text-gray-400 text-lg font-medium">
-          No datasets available
+          {t('forecast_step1_no_datasets')}
         </p>
         <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">
-          Create a dataset first to use it for forecasting
+          {t('forecast_step1_no_datasets_desc')}
         </p>
       </div>
     );
@@ -52,7 +54,7 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
         <Input
           type="text"
-          placeholder="Search datasets..."
+          placeholder={t('forecast_step1_search_placeholder')}
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           className="pl-10 border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800"
@@ -63,9 +65,7 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 max-h-[600px] overflow-y-auto overflow-x-hidden pr-3 pb-4 px-1 pt-2">
         {filteredDatasets.length === 0 ? (
           <div className="col-span-full text-center py-8">
-            <p className="text-gray-500 dark:text-gray-400">
-              No datasets found matching your search
-            </p>
+            <p className="text-gray-500 dark:text-gray-400">{t('forecast_step1_no_match')}</p>
           </div>
         ) : (
           filteredDatasets.map(dataset => {
@@ -136,7 +136,9 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
                   >
                     <div className="flex items-center gap-1 mb-1">
                       <Rows className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                      <span className="text-xs text-gray-600 dark:text-gray-400">Rows</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        {t('common_rows')}
+                      </span>
                     </div>
                     <p className="font-bold text-blue-600 dark:text-blue-400">
                       {dataset.rowCount?.toLocaleString() || 0}
@@ -151,7 +153,9 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
                   >
                     <div className="flex items-center gap-1 mb-1">
                       <Columns className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                      <span className="text-xs text-gray-600 dark:text-gray-400">Columns</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        {t('common_columns')}
+                      </span>
                     </div>
                     <p className="font-bold text-purple-600 dark:text-purple-400">
                       {dataset.columnCount || 0}
@@ -162,7 +166,9 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
                 {/* Updated Date */}
                 <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                   <Clock className="w-3 h-3" />
-                  <span>Updated {Utils.getDate(dataset.updatedAt, 18)}</span>
+                  <span>
+                    {t('common_updated')} {Utils.getDate(dataset.updatedAt, 18)}
+                  </span>
                 </div>
               </button>
             );
@@ -173,7 +179,8 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
       {/* Results Count */}
       {searchTerm && (
         <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-          Found {filteredDatasets.length} dataset{filteredDatasets.length !== 1 ? 's' : ''}
+          {t('forecast_step1_found')} {filteredDatasets.length} {t('forecast_step1_datasets_found')}
+          {filteredDatasets.length !== 1 ? 's' : ''}
         </p>
       )}
     </div>

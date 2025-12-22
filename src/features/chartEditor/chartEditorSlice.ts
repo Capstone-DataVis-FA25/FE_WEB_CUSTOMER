@@ -120,7 +120,6 @@ const chartEditorSlice = createSlice({
     // Handle config changes with deep merge
     updateChartConfig: (state, action: PayloadAction<DeepPartial<MainChartConfig>>) => {
       if (!state.chartConfig) {
-        console.warn('⚠️ No current config available, skipping update');
         return;
       }
 
@@ -170,9 +169,6 @@ const chartEditorSlice = createSlice({
 
       // Snapshot Immer draft to avoid logging revoked Proxy objects in console
       const snapshotCurrent = state.chartConfig ? current(state.chartConfig) : null;
-      console.log('📊 Current:', snapshotCurrent);
-      console.log('✅ New:', newConfig);
-      console.log('🔄 Fields changed:', changedFields);
 
       state.chartConfig = newConfig;
     },

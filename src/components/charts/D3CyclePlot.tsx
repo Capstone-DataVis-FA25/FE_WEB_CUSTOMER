@@ -398,7 +398,11 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
 
   // Get theme-specific colors
   const themeColors = React.useMemo(() => {
-    const colorEntries = Object.entries(colors);
+    // Fallback to default colors if empty object passed
+    const effectiveColors =
+      !colors || Object.keys(colors).length === 0 ? defaultColorsChart : colors;
+
+    const colorEntries = Object.entries(effectiveColors);
     return colorEntries.reduce(
       (acc, [key, value]) => {
         if (typeof value === 'object' && 'light' in value) {
@@ -1157,7 +1161,7 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
             .attr('x2', 20)
             .attr('y1', legendItemHeight / 2)
             .attr('y2', legendItemHeight / 2)
-            .attr('stroke', colorScale(String(cycle)))
+            .attr('stroke', colorForCycle(cycle))
             .attr('stroke-width', lineWidth);
 
           // Label
@@ -1191,7 +1195,7 @@ const D3CyclePlot: React.FC<D3CyclePlotProps> = ({
             .attr('x2', 20)
             .attr('y1', legendItemHeight / 2)
             .attr('y2', legendItemHeight / 2)
-            .attr('stroke', colorScale(String(cycle)))
+            .attr('stroke', colorForCycle(cycle))
             .attr('stroke-width', lineWidth);
 
           item

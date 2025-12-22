@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from 'react-i18next';
 import {
   TrendingUp,
   // Calendar,
@@ -59,6 +60,7 @@ interface ForecastListProps {
 }
 
 const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { showError, showSuccess } = useToastContext();
   const modalConfirm = useModalConfirm();
@@ -74,7 +76,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
   const [selectedModelType, setSelectedModelType] = useState<string>('all');
   const [selectedForecastWindow, setSelectedForecastWindow] = useState<string>('all');
   const [isCustomForecastWindow, setIsCustomForecastWindow] = useState(false);
-  const [customForecastWindow, setCustomForecastWindow] = useState<string>('30');
+  const [customForecastWindow, setCustomForecastWindow] = useState<string>('5');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
@@ -101,8 +103,8 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
     } catch (error: any) {
       console.error('Failed to fetch forecasts:', error);
       const errorMessage =
-        error.response?.data?.message || error.message || 'Failed to load forecasts';
-      showError('Forecast Error', errorMessage);
+        error.response?.data?.message || error.message || t('forecast_list_error_load');
+      showError(t('forecast_list_error'), errorMessage);
       setForecasts([]);
     } finally {
       setIsLoading(false);
@@ -133,12 +135,13 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
     const optionsMap = new Map<string, string>(); // value -> label
     const allOptions: Array<{ value: string; label: string }> = [];
 
-    // Base options from utility (use a default scale just to get presets)
+    // Base options from utility (values only; build labels with t() for i18n)
     const baseOptions = getForecastWindowOptions('Daily');
     baseOptions.forEach(opt => {
       if (!optionsMap.has(opt.value)) {
-        optionsMap.set(opt.value, opt.label);
-        allOptions.push({ value: opt.value, label: opt.label });
+        const label = `${opt.value} ${t('forecast_step2_forecast_window_steps')}`;
+        optionsMap.set(opt.value, label);
+        allOptions.push({ value: opt.value, label });
       }
     });
 
@@ -146,34 +149,38 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
     forecasts.forEach(f => {
       const valueStr = f.forecastWindow.toString();
       if (!optionsMap.has(valueStr)) {
-        allOptions.push({ value: valueStr, label: `${f.forecastWindow} steps` });
-        optionsMap.set(valueStr, `${f.forecastWindow} steps`);
+        const label = `${f.forecastWindow} ${t('forecast_step2_forecast_window_steps')}`;
+        allOptions.push({ value: valueStr, label });
+        optionsMap.set(valueStr, label);
       }
     });
 
     return allOptions.sort((a, b) => parseInt(a.value) - parseInt(b.value));
-  }, [forecasts]);
+  }, [forecasts, t]);
 
   // Get unique values from existing forecasts (for reference)
 
   // Prepare options for SelectValue components
   const datasetOptions = useMemo(() => {
     return [
-      { value: 'all', label: 'All Datasets' },
+      { value: 'all', label: t('forecast_list_all_datasets') },
       ...datasets.map(dataset => ({ value: dataset.id, label: dataset.name })),
     ];
-  }, [datasets]);
+  }, [datasets, t]);
 
   const modelTypeOptions = useMemo(() => {
     return [
-      { value: 'all', label: 'All Models' },
+      { value: 'all', label: t('forecast_list_all_models') },
       ...allModelTypes.map(m => ({ value: m, label: m })),
     ];
-  }, []);
+  }, [t]);
 
   const forecastWindowOptions = useMemo(() => {
-    return [{ value: 'all', label: 'All Steps' }, ...forecastWindowOptionsForTimeScale];
-  }, [forecastWindowOptionsForTimeScale]);
+    return [
+      { value: 'all', label: t('forecast_list_all_steps') },
+      ...forecastWindowOptionsForTimeScale,
+    ];
+  }, [forecastWindowOptionsForTimeScale, t]);
 
   // Reset forecast window when preset options change (if current selection is not valid)
   useEffect(() => {
@@ -279,8 +286,8 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
       try {
         await axiosPrivate.delete(`/forecasts/${forecast.id}`);
         showSuccess(
-          'Forecast Deleted',
-          `Forecast "${forecast.name || 'New Forecast'}" has been deleted successfully`
+          t('forecast_list_delete_title'),
+          `${t('forecast_creation_default_name')} "${forecast.name || t('forecast_creation_default_name')}" ${t('forecast_list_delete_desc')}`
         );
 
         // Remove the forecast from the list locally instead of refetching
@@ -297,8 +304,8 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
         }
       } catch (error: any) {
         const errorMessage =
-          error.response?.data?.message || error.message || 'Failed to delete forecast';
-        showError('Delete Failed', errorMessage);
+          error.response?.data?.message || error.message || t('forecast_detail_delete_error');
+        showError(t('forecast_list_delete_failed'), errorMessage);
       } finally {
         setDeletingId(null);
       }
@@ -322,7 +329,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
     setSelectedModelType('all');
     setSelectedForecastWindow('all');
     setIsCustomForecastWindow(false);
-    setCustomForecastWindow('30');
+    setCustomForecastWindow('5');
     setDateFrom('');
     setDateTo('');
   };
@@ -343,15 +350,15 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Forecast History
+              {t('forecast_list_title')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              View and manage your time series forecasts ({filteredForecasts.length})
+              {t('forecast_list_subtitle')} ({filteredForecasts.length})
             </p>
           </div>
           <Button onClick={onCreateNew} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
-            Create New Forecast
+            {t('forecast_list_create_new')}
           </Button>
         </div>
 
@@ -363,7 +370,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
-                  placeholder="Search forecasts by name, target column, or dataset..."
+                  placeholder={t('forecast_list_search_placeholder')}
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -378,7 +385,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                 className="flex items-center gap-2"
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Refresh
+                {t('forecast_list_refresh')}
               </Button>
 
               {/* Filter Button and Popover */}
@@ -389,7 +396,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                   onClick={() => setShowFilters(!showFilters)}
                 >
                   <Filter className="w-4 h-4" />
-                  Filters
+                  {t('forecast_list_filters')}
                   {hasActiveFilters && (
                     <span className="ml-1 px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">
                       {[
@@ -423,7 +430,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <h3 className="font-semibold text-gray-900 dark:text-white">
-                            Advanced Filters
+                            {t('forecast_list_advanced_filters')}
                           </h3>
                           {hasActiveFilters && (
                             <Button
@@ -433,20 +440,25 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                               className="h-7 text-xs"
                             >
                               <X className="w-3 h-3 mr-1" />
-                              Clear
+                              {t('forecast_list_clear')}
                             </Button>
                           )}
                         </div>
 
                         {/* Dataset Filter */}
                         <div>
-                          <Label className="mb-2 block text-sm">Dataset</Label>
+                          <Label className="mb-2 block text-sm">
+                            {t('forecast_list_table_dataset')}
+                          </Label>
                           <Select value={selectedDataset} onValueChange={setSelectedDataset}>
                             <SelectTrigger>
-                              <SelectValue placeholder="All Datasets" options={datasetOptions} />
+                              <SelectValue
+                                placeholder={t('forecast_list_all_datasets')}
+                                options={datasetOptions}
+                              />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="all">All Datasets</SelectItem>
+                              <SelectItem value="all">{t('forecast_list_all_datasets')}</SelectItem>
                               {datasets.map(dataset => (
                                 <SelectItem key={dataset.id} value={dataset.id}>
                                   {dataset.name}
@@ -460,13 +472,18 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                         <div className="grid grid-cols-2 gap-4">
                           {/* Model Type Filter */}
                           <div>
-                            <Label className="mb-2 block text-sm">Model</Label>
+                            <Label className="mb-2 block text-sm">
+                              {t('forecast_detail_model_type')}
+                            </Label>
                             <Select value={selectedModelType} onValueChange={setSelectedModelType}>
                               <SelectTrigger>
-                                <SelectValue placeholder="All Models" options={modelTypeOptions} />
+                                <SelectValue
+                                  placeholder={t('forecast_list_all_models')}
+                                  options={modelTypeOptions}
+                                />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="all">All Models</SelectItem>
+                                <SelectItem value="all">{t('forecast_list_all_models')}</SelectItem>
                                 {allModelTypes.map(m => (
                                   <SelectItem key={m} value={m}>
                                     {m}
@@ -478,7 +495,9 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
 
                           {/* Forecast Window Filter */}
                           <div>
-                            <Label className="mb-2 block text-sm">Forecast Window</Label>
+                            <Label className="mb-2 block text-sm">
+                              {t('forecast_step2_forecast_window')}
+                            </Label>
                             {isCustomForecastWindow ? (
                               <div className="space-y-2">
                                 <Input
@@ -490,7 +509,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                                     setSelectedForecastWindow(e.target.value);
                                   }}
                                   className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800"
-                                  placeholder="Enter custom value"
+                                  placeholder={t('forecast_list_custom_placeholder')}
                                 />
                                 <Button
                                   type="button"
@@ -502,7 +521,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                                   }}
                                   className="w-full text-xs"
                                 >
-                                  Use Preset Options
+                                  {t('forecast_list_use_preset')}
                                 </Button>
                               </div>
                             ) : (
@@ -518,24 +537,28 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                               >
                                 <SelectTrigger>
                                   <SelectValue
-                                    placeholder="All Steps"
+                                    placeholder={t('forecast_list_all_steps')}
                                     options={[
                                       ...forecastWindowOptions,
                                       {
                                         value: 'custom',
-                                        label: `Custom (${customForecastWindow})`,
+                                        label: `${t('forecast_step2_forecast_window_custom')} (${customForecastWindow})`,
                                       },
                                     ]}
                                   />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="all">All Steps</SelectItem>
+                                  <SelectItem value="all">
+                                    {t('forecast_list_all_steps')}
+                                  </SelectItem>
                                   {forecastWindowOptionsForTimeScale.map(option => (
                                     <SelectItem key={option.value} value={option.value}>
                                       {option.label}
                                     </SelectItem>
                                   ))}
-                                  <SelectItem value="custom">Custom...</SelectItem>
+                                  <SelectItem value="custom">
+                                    {t('forecast_list_custom')}
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             )}
@@ -544,11 +567,13 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
 
                         {/* Date Range Filter */}
                         <div>
-                          <Label className="mb-2 block text-sm">Date Range</Label>
+                          <Label className="mb-2 block text-sm">
+                            {t('forecast_list_date_range')}
+                          </Label>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <Label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
-                                From
+                                {t('forecast_list_from')}
                               </Label>
                               <Input
                                 type="date"
@@ -559,7 +584,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                             </div>
                             <div>
                               <Label className="mb-1 block text-xs text-gray-600 dark:text-gray-400">
-                                To
+                                {t('forecast_list_to')}
                               </Label>
                               <Input
                                 type="date"
@@ -580,7 +605,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                               }}
                               className="mt-2 h-7 text-xs text-gray-600 dark:text-gray-400"
                             >
-                              Clear dates
+                              {t('forecast_list_clear_dates')}
                             </Button>
                           )}
                         </div>
@@ -599,8 +624,8 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
             <CardContent className="pt-6">
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <LoadingSpinner
-                  title={isRefreshing ? 'Refreshing forecasts...' : 'Loading forecasts...'}
-                  subtitle="Please wait..."
+                  title={isRefreshing ? t('forecast_list_refreshing') : t('forecast_list_loading')}
+                  subtitle={t('forecast_list_please_wait')}
                 />
               </div>
             </CardContent>
@@ -611,21 +636,21 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <TrendingUp className="w-20 h-20 text-gray-300 dark:text-gray-600 mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  {hasActiveFilters ? 'No forecasts match your filters' : 'No forecasts yet'}
+                  {hasActiveFilters ? t('forecast_list_no_match') : t('forecast_list_no_forecasts')}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md">
                   {hasActiveFilters
-                    ? 'Try adjusting your filters to see more results.'
-                    : 'Get started by creating your first time series forecast. Our AI will analyze your data and generate predictions.'}
+                    ? t('forecast_list_no_match_desc')
+                    : t('forecast_list_no_forecasts_desc')}
                 </p>
                 {hasActiveFilters ? (
                   <Button onClick={resetFilters} variant="outline">
-                    Clear Filters
+                    {t('forecast_list_clear_filters')}
                   </Button>
                 ) : (
                   <Button onClick={onCreateNew} size="lg" className="flex items-center gap-2">
                     <Plus className="w-5 h-5" />
-                    Create Your First Forecast
+                    {t('forecast_list_create_first')}
                   </Button>
                 )}
               </div>
@@ -638,25 +663,25 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                 <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[15%]">
-                      Forecast Name
+                      {t('forecast_list_table_name')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[10%]">
-                      Dataset
+                      {t('forecast_list_table_dataset')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[16%]">
-                      Target Column
+                      {t('forecast_list_table_target')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[12%]">
-                      Feature Columns
+                      {t('forecast_list_table_features')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[7%]">
-                      Time Scale
+                      {t('forecast_list_table_time_scale')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[5%]">
-                      Steps
+                      {t('forecast_list_table_steps')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[15%]">
-                      Created
+                      {t('forecast_list_table_created')}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[5%]"></th>
                   </tr>
@@ -670,7 +695,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                     >
                       <td className="px-4 py-4">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {forecast.name || 'New Forecast'}
+                          {forecast.name || t('forecast_creation_default_name')}
                         </div>
                       </td>
                       <td className="px-4 py-4">
@@ -713,9 +738,10 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                                     setShowAllFeatures(forecast.id);
                                   }}
                                   className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors"
-                                  title={`View all ${forecast.featureColumns.length} feature columns`}
+                                  title={`${t('forecast_list_table_view_all')} ${forecast.featureColumns.length} ${t('forecast_list_table_feature_columns')}`}
                                 >
-                                  +{forecast.featureColumns.length - 2} more
+                                  +{forecast.featureColumns.length - 2}{' '}
+                                  {t('forecast_list_table_more')}
                                 </button>
                               )}
                             </div>
@@ -784,10 +810,10 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
         isOpen={modalConfirm.isOpen}
         onClose={modalConfirm.close}
         onConfirm={modalConfirm.confirm}
-        title="Delete Forecast"
-        message="Are you sure you want to delete this forecast? This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
+        title={t('forecast_detail_delete')}
+        message={t('forecast_detail_delete_confirm')}
+        confirmText={t('forecast_detail_delete')}
+        cancelText={t('common_cancel')}
         type="danger"
         loading={modalConfirm.isLoading}
       />
@@ -809,7 +835,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Layers className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    All Feature Columns ({featureColumns.length})
+                    {t('forecast_detail_feature_columns')} ({featureColumns.length})
                   </h3>
                   <button
                     onClick={() => setShowAllFeatures(null)}
@@ -839,7 +865,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
                     variant="outline"
                     className="w-full cursor-pointer"
                   >
-                    Close
+                    {t('common_close')}
                   </Button>
                 </div>
               </div>
