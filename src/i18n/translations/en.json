@@ -1,4 +1,6 @@
 {
+  "chart_editor_invalid_type": "Chart hasn't been implemented yet",
+  "chart_editor_select_type_hint": "Please select a valid chart type.",
   "home_barChart_title": "Bar Chart",
   "home_barChart_desc": "The classic bar chart — unbeaten in simplicity, and more readable than a column chart on mobile screens.",
   "home_lineChart_title": "Line Chart",
@@ -1139,7 +1141,7 @@
   "tour_pricing_features_desc": "Check the features list to see exactly what you get with each plan.",
   "tour_pricing_subscribe_title": "Get Started",
   "tour_pricing_subscribe_desc": "Ready to upgrade? Click to subscribe and unlock premium features instantly.",
-  "chart_create_unsupported_type": "Invalid chart type",
+  "chart_create_unsupported_type": "Chart Type not implemented.",
   "ai_clean_rules_title": "Cleaning Rules",
   "ai_clean_rule_remove_duplicates": "Remove duplicates",
   "ai_clean_rule_remove_duplicates_desc": "Remove exact duplicate rows",

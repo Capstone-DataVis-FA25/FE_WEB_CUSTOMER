@@ -172,12 +172,6 @@ const PricingPage: React.FC = () => {
           </div>
         </div>
 
-        {loading && (
-          <div className="py-16 text-center text-blue-500 text-lg font-medium">
-            {t('subscription.pricing.loading_plans')}
-          </div>
-        )}
-
         {error && (
           <div className="mx-auto max-w-lg p-4 bg-red-50 border border-red-200 rounded-xl shadow-md">
             <strong className="block font-semibold text-red-700 mb-1">
