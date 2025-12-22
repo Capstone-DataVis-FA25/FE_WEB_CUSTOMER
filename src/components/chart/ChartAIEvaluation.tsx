@@ -93,6 +93,7 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
       return;
     }
 
+    setIsOpen(false); // Đóng Evaluation Panel khi bắt đầu đánh giá
     setIsLoading(true);
     setError(null);
     setEvaluation(null);
@@ -207,8 +208,11 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
   };
 
   const handleJobCardClick = () => {
-    if (jobCard?.status !== 'done') return;
-    setIsOpen(true);
+    // Cho phép mở lại panel khi trạng thái là 'done' hoặc 'error'
+    if (jobCard?.status === 'done' || jobCard?.status === 'error') {
+      setIsOpen(true);
+      setJobCard(null); // Ẩn job card khi mở panel
+    }
   };
 
   // Block page/tab close or back navigation while evaluation is running
@@ -363,7 +367,7 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
           <div
             onClick={handleJobCardClick}
             className={`bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden transition ${
-              jobCard.status === 'done'
+              jobCard.status === 'done' || jobCard.status === 'error'
                 ? 'cursor-pointer hover:shadow-[0_10px_30px_rgba(0,0,0,0.12)]'
                 : 'cursor-default'
             }`}
@@ -379,7 +383,6 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
                       <>Evaluating... {formatStartTime(jobCard.startedAt)}</>
                     )}
                     {jobCard.status === 'done' && 'Completed'}
-                    {jobCard.status === 'error' && (jobCard.message || 'Failed')}
                   </p>
                 </div>
 
@@ -426,7 +429,7 @@ export const ChartAIEvaluation: React.FC<ChartAIEvaluationProps> = ({
 
               {jobCard.status === 'error' && (
                 <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                  {jobCard.message || 'Unable to evaluate chart.'}
+                  {jobCard.message || 'Không thể phân tích chart. Thử lại sau.'}
                 </p>
               )}
             </div>

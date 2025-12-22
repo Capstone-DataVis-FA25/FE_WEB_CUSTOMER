@@ -9,6 +9,7 @@ import transactionHistoryService, {
 } from '@/services/transactionHistory.service';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 const TransactionHistoryPage: React.FC = () => {
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
@@ -17,6 +18,7 @@ const TransactionHistoryPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const { showError } = useToast();
+  const { t } = useTranslation();
 
   const limit = 10;
 
@@ -33,7 +35,10 @@ const TransactionHistoryPage: React.FC = () => {
       setTotal(response.total);
     } catch (err: any) {
       console.error(err);
-      showError('Error', err?.message || 'Failed to load transaction history');
+      showError(
+        t('subscription.transaction_history.failed_load_title'),
+        err?.message || t('subscription.transaction_history.failed_load')
+      );
     } finally {
       setLoading(false);
     }
@@ -41,10 +46,9 @@ const TransactionHistoryPage: React.FC = () => {
 
   const getStatusBadge = (status: TransactionStatus) => {
     const statusMap: Record<TransactionStatus, { label: string; className: string }> = {
-      COMPLETED: { label: 'Completed', className: 'bg-green-500 text-white' },
-      PENDING: { label: 'Pending', className: 'bg-yellow-500 text-white' },
-      FAILED: { label: 'Failed', className: 'bg-red-500 text-white' },
-      REFUNDED: { label: 'Refunded', className: 'bg-gray-500 text-white' },
+      COMPLETED: { label: t('transaction_status.completed'), className: 'bg-green-500 text-white' },
+      PENDING: { label: t('transaction_status.pending'), className: 'bg-yellow-500 text-white' },
+      FAILED: { label: t('transaction_status.failed'), className: 'bg-red-500 text-white' },
     };
     const s = statusMap[status] || { label: status, className: 'bg-gray-300 text-gray-800' };
     return <Badge className={s.className}>{s.label}</Badge>;
@@ -62,9 +66,9 @@ const TransactionHistoryPage: React.FC = () => {
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            Transaction History
+            {t('subscription.transaction_history.title')}
           </h1>
-          <p className="text-muted-foreground">View your payment and subscription transactions</p>
+          <p className="text-muted-foreground">{t('subscription.transaction_history.subtitle')}</p>
         </div>
 
         {loading && (
@@ -75,7 +79,9 @@ const TransactionHistoryPage: React.FC = () => {
 
         {!loading && transactions.length === 0 && (
           <Card className="p-8 text-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-md">
-            <p className="text-muted-foreground">No transactions found</p>
+            <p className="text-muted-foreground">
+              {t('subscription.transaction_history.no_transactions')}
+            </p>
           </Card>
         )}
         {!loading && transactions.length > 0 && (
@@ -90,16 +96,18 @@ const TransactionHistoryPage: React.FC = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          {tx.subscriptionPlan?.name || 'Unknown Plan'}
+                          {tx.subscriptionPlan?.name ||
+                            t('subscription.transaction_history.unknown_plan')}
                         </h3>
                         {getStatusBadge(tx.status)}
                       </div>
                       <p className="text-sm text-muted-foreground mb-1">
-                        Transaction ID: <span className="font-mono text-xs">{tx.id}</span>
+                        {t('subscription.transaction_history.transaction_id')}:{' '}
+                        <span className="font-mono text-xs">{tx.id}</span>
                       </p>
                       {tx.providerTransactionId && (
                         <p className="text-sm text-muted-foreground mb-1">
-                          Provider ID:{' '}
+                          {t('subscription.transaction_history.provider_id')}:{' '}
                           <span className="font-mono text-xs">{tx.providerTransactionId}</span>
                         </p>
                       )}
@@ -113,7 +121,7 @@ const TransactionHistoryPage: React.FC = () => {
                       </p>
                       {tx.provider && (
                         <p className="text-xs text-muted-foreground capitalize mt-1">
-                          via {tx.provider}
+                          {t('subscription.transaction_history.via', { provider: tx.provider })}
                         </p>
                       )}
                     </div>
@@ -130,17 +138,17 @@ const TransactionHistoryPage: React.FC = () => {
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1 || loading}
                 >
-                  Previous
+                  {t('prev_button')}
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  Page {page} of {totalPages} ({total} total)
+                  {t('subscription.transaction_history.page_info', { page, totalPages, total })}
                 </span>
                 <Button
                   variant="outline"
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages || loading}
                 >
-                  Next
+                  {t('next_button')}
                 </Button>
               </div>
             )}

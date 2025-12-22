@@ -220,7 +220,7 @@ const ChartHistoryPanel: React.FC<ChartHistoryPanelProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 h-screen w-96 bg-white dark:bg-gray-800 shadow-2xl z-50 flex flex-col"
+            className="fixed right-0 top-0 h-screen w-96 bg-white dark:bg-gray-800 shadow-2xl z-[65] flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">

@@ -1,5 +1,9 @@
 import type { DataHeader } from '@/utils/dataProcessors';
 import type { SortLevel, DatasetFilterColumn } from '@/types/chart';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+
+dayjs.extend(customParseFormat);
 
 export type ColumnIndexMap = Map<string, number>;
 
@@ -22,19 +26,55 @@ const cmpNumbers = (a: string | undefined, b: string | undefined) => {
   return { na, nb, va: Number.isNaN(na) ? null : na, vb: Number.isNaN(nb) ? null : nb };
 };
 
-const parseDate = (s: string | undefined) => {
-  if (!s) return NaN;
-  const t = Date.parse(s);
-  return Number.isNaN(t) ? NaN : t;
+/**
+ * Parse a date string using the column's date format, with fallback to ISO format
+ */
+const parseDate = (s: string | undefined, dateFormat?: string): number => {
+  if (!s || s.trim() === '') return NaN;
+
+  // If dateFormat is provided, use dayjs with that format
+  if (dateFormat) {
+    // Normalize format (e.g., "DD Month YYYY" -> "DD MMMM YYYY")
+    const normalizedFormat = dateFormat.replace(/Month/g, 'MMMM');
+    const parsed = dayjs(s, normalizedFormat, true);
+    if (parsed.isValid()) {
+      return parsed.valueOf();
+    }
+  }
+
+  // Fallback: try ISO format first, then dayjs auto-parse
+  const isoParsed = dayjs(s, 'YYYY-MM-DD', true);
+  if (isoParsed.isValid()) {
+    return isoParsed.valueOf();
+  }
+
+  // Last resort: dayjs auto-parse
+  const autoParsed = dayjs(s);
+  if (autoParsed.isValid()) {
+    return autoParsed.valueOf();
+  }
+
+  // Try native Date.parse as final fallback
+  const nativeParsed = Date.parse(s);
+  return Number.isNaN(nativeParsed) ? NaN : nativeParsed;
 };
 
 export const applyDatasetFilters = (
   data: string[][] | undefined,
   filters: DatasetFilterColumn[] | undefined,
-  colIndex: ColumnIndexMap
+  colIndex: ColumnIndexMap,
+  headers?: DataHeader[]
 ): string[][] | undefined => {
   if (!data || data.length === 0) return data;
   if (!filters || filters.length === 0) return data;
+
+  // Build a map from column index to header (for date format lookup)
+  const headerMap = new Map<number, DataHeader>();
+  if (headers) {
+    headers.forEach((header, idx) => {
+      headerMap.set(idx, header);
+    });
+  }
 
   const toComparableString = (value: unknown) => (value == null ? '' : String(value));
 
@@ -46,6 +86,11 @@ export const applyDatasetFilters = (
       if (idx == null) continue; // unknown column -> ignore filter
       const value = row[idx] ?? '';
       const valueAsString = toComparableString(value);
+
+      // Get date format from header if available
+      const header = headerMap.get(idx);
+      const dateFormat = header?.type === 'date' ? header.dateFormat : undefined;
+
       const passThisColumn = (col.conditions || []).every(cond => {
         const op = cond.operator;
         if (op === 'between' || op === 'between_exclusive') {
@@ -60,9 +105,9 @@ export const applyDatasetFilters = (
             const hi = Math.max(a, b);
             return inclusive ? va >= lo && va <= hi : va > lo && va < hi;
           }
-          const tv = parseDate(value);
-          const ta = parseDate(String(cond.value ?? ''));
-          const tb = parseDate(String(cond.valueEnd ?? ''));
+          const tv = parseDate(value, dateFormat);
+          const ta = parseDate(String(cond.value ?? ''), dateFormat);
+          const tb = parseDate(String(cond.valueEnd ?? ''), dateFormat);
           if (Number.isNaN(tv) || Number.isNaN(ta) || Number.isNaN(tb)) return true;
           const lo = Math.min(ta, tb);
           const hi = Math.max(ta, tb);
@@ -88,11 +133,37 @@ export const applyDatasetFilters = (
           case 'equals': {
             const candidates = Array.isArray(cond.value) ? cond.value : [cond.value];
             if (!candidates || candidates.length === 0) return true;
+
+            // For date columns, compare parsed timestamps instead of strings
+            if (header?.type === 'date' && dateFormat) {
+              const valueTimestamp = parseDate(value, dateFormat);
+              if (!Number.isNaN(valueTimestamp)) {
+                return candidates.some(candidate => {
+                  const candidateTimestamp = parseDate(String(candidate ?? ''), dateFormat);
+                  return !Number.isNaN(candidateTimestamp) && valueTimestamp === candidateTimestamp;
+                });
+              }
+            }
+
+            // For non-date or if date parsing fails, fall back to string comparison
             return candidates.some(candidate => valueAsString === toComparableString(candidate));
           }
           case 'not_equals': {
             const candidates = Array.isArray(cond.value) ? cond.value : [cond.value];
             if (!candidates || candidates.length === 0) return true;
+
+            // For date columns, compare parsed timestamps instead of strings
+            if (header?.type === 'date' && dateFormat) {
+              const valueTimestamp = parseDate(value, dateFormat);
+              if (!Number.isNaN(valueTimestamp)) {
+                return !candidates.some(candidate => {
+                  const candidateTimestamp = parseDate(String(candidate ?? ''), dateFormat);
+                  return !Number.isNaN(candidateTimestamp) && valueTimestamp === candidateTimestamp;
+                });
+              }
+            }
+
+            // For non-date or if date parsing fails, fall back to string comparison
             return !candidates.some(candidate => valueAsString === toComparableString(candidate));
           }
           case 'contains':
@@ -114,8 +185,8 @@ export const applyDatasetFilters = (
             if (va != null && !Number.isNaN(vb)) {
               return op === 'greater_than' ? va > vb : va >= vb;
             }
-            const tv = parseDate(value);
-            const ta = parseDate(String(cond.value ?? ''));
+            const tv = parseDate(value, dateFormat);
+            const ta = parseDate(String(cond.value ?? ''), dateFormat);
             if (!Number.isNaN(tv) && !Number.isNaN(ta)) {
               return op === 'greater_than' ? tv > ta : tv >= ta;
             }
@@ -129,8 +200,8 @@ export const applyDatasetFilters = (
             if (va != null && !Number.isNaN(vb)) {
               return op === 'less_than' ? va < vb : va <= vb;
             }
-            const tv = parseDate(value);
-            const ta = parseDate(String(cond.value ?? ''));
+            const tv = parseDate(value, dateFormat);
+            const ta = parseDate(String(cond.value ?? ''), dateFormat);
             if (!Number.isNaN(tv) && !Number.isNaN(ta)) {
               return op === 'less_than' ? tv < ta : tv <= ta;
             }
@@ -138,16 +209,16 @@ export const applyDatasetFilters = (
             return true;
           }
           case 'after': {
-            const tv = parseDate(value);
-            const ta = parseDate(String(cond.value ?? ''));
+            const tv = parseDate(value, dateFormat);
+            const ta = parseDate(String(cond.value ?? ''), dateFormat);
             if (!Number.isNaN(tv) && !Number.isNaN(ta)) {
               return tv > ta;
             }
             return true;
           }
           case 'before': {
-            const tv = parseDate(value);
-            const ta = parseDate(String(cond.value ?? ''));
+            const tv = parseDate(value, dateFormat);
+            const ta = parseDate(String(cond.value ?? ''), dateFormat);
             if (!Number.isNaN(tv) && !Number.isNaN(ta)) {
               return tv < ta;
             }

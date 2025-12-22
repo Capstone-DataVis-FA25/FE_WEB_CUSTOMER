@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle2, ChevronRight } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Step {
   number: number;
@@ -15,6 +16,7 @@ interface StepIndicatorProps {
 }
 
 const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep }) => {
+  const { t } = useTranslation();
   return (
     <Card className="border-0 shadow-xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm mb-6">
       <CardContent className="pt-6">
@@ -51,7 +53,7 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep }) => 
                             : 'text-gray-500 dark:text-gray-400'
                       }`}
                     >
-                      Step {step.number}
+                      {t('forecast_step')} {step.number}
                     </div>
                     <div
                       className={`text-base font-semibold ${

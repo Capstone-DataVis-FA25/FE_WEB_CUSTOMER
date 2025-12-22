@@ -4,7 +4,6 @@ export enum TransactionStatus {
   PENDING = 'PENDING',
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
-  REFUNDED = 'REFUNDED',
 }
 export interface TransactionItem {
   id: string;

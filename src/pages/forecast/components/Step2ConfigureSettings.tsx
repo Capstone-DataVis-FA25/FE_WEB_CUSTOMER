@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { SlideInUp } from '@/theme/animation';
 import { BarChart3, Settings, ChevronLeft, Play, ChevronDown, X, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface Step2ConfigureSettingsProps {
   forecastName: string;
@@ -57,6 +58,20 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
   onBack,
   onNext,
 }) => {
+  const { t } = useTranslation();
+  const [isCustomForecastWindow, setIsCustomForecastWindow] = useState(false);
+  const [customForecastWindowValue, setCustomForecastWindowValue] = useState<string>('');
+
+  // Initialize custom value if forecastWindow is not in preset options (only on mount)
+  useEffect(() => {
+    const presetOptions = [5, 10, 15, 20];
+    if (!presetOptions.includes(forecastWindow)) {
+      setIsCustomForecastWindow(true);
+      setCustomForecastWindowValue(forecastWindow.toString());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Track which controls are open
   const [isTargetOpen, setIsTargetOpen] = useState(false);
   const [isModelOpen, setIsModelOpen] = useState(false);
@@ -123,7 +138,7 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
   const getTypeBadge = (type: string) => {
     switch (type) {
       case 'number':
-        return '(number)';
+        return t('forecast_step2_target_column_type');
       case 'date':
         return '(date)';
       case 'string':
@@ -138,9 +153,9 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
   const targetColumnOptions = React.useMemo(() => {
     return datasetHeaders.map(header => ({
       value: header,
-      label: `${header} (number)`, // Format: "ColumnName (number)" for SelectValue to parse
+      label: `${header} ${t('forecast_step2_target_column_type')}`, // Format: "ColumnName (number)" for SelectValue to parse
     }));
-  }, [datasetHeaders]);
+  }, [datasetHeaders, t]);
 
   return (
     <SlideInUp delay={0.2}>
@@ -148,10 +163,10 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
         <CardHeader className="pb-6">
           <CardTitle className="text-2xl text-gray-900 dark:text-white flex items-center gap-3">
             <Settings className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            Configure Settings
+            {t('forecast_step2_title')}
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
-            Set up time scale and forecast parameters
+            {t('forecast_step2_desc')}
           </CardDescription>
         </CardHeader>
 
@@ -164,7 +179,7 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">
-                  Selected Dataset
+                  {t('forecast_step1_datasets')}
                 </p>
                 <p className="text-lg font-bold text-gray-900 dark:text-white truncate">
                   {selectedDatasetName}
@@ -177,11 +192,14 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
               htmlFor="forecastName"
               className="text-lg font-semibold text-gray-900 dark:text-white mb-2 block"
             >
-              Forecast Name (Optional)
+              {t('forecast_step2_forecast_name')}
             </Label>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              {t('forecast_step2_forecast_name_desc')}
+            </p>
             <Input
               id="forecastName"
-              placeholder="e.g., Q4 Sales Forecast"
+              placeholder={t('forecast_step2_forecast_name_placeholder')}
               value={forecastName}
               onChange={e => {
                 const value = e.target.value;
@@ -193,7 +211,7 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
               className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {forecastName.length}/70 characters
+              {forecastName.length}/70 {t('forecast_step2_characters')}
             </p>
           </div>
 
@@ -202,10 +220,10 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
               htmlFor="targetColumn"
               className="text-lg font-semibold text-gray-900 dark:text-white mb-2 block"
             >
-              Target Column
+              {t('forecast_step2_target_column')}
             </Label>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              The target variable to be the focus of the forecast.
+              {t('forecast_step2_target_column_desc')}
             </p>
             {datasetHeaders.length > 0 ? (
               <SelectWithOpen
@@ -221,12 +239,17 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
                 }}
               >
                 <SelectTrigger className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800">
-                  <SelectValue placeholder="Select target column" options={targetColumnOptions} />
+                  <SelectValue
+                    placeholder={t('forecast_step2_target_column_placeholder')}
+                    options={targetColumnOptions}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {targetColumn && (
                     <SelectItem value="">
-                      <span className="text-gray-500 dark:text-gray-400">Clear selection</span>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {t('forecast_step2_target_column_clear')}
+                      </span>
                     </SelectItem>
                   )}
                   {datasetHeaders.map(header => (
@@ -234,7 +257,7 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
                       <div className="flex items-center justify-between w-full">
                         <span>{header}</span>
                         <span className="ml-auto text-[10px] text-gray-500 dark:text-gray-400 flex-shrink-0">
-                          (number)
+                          {t('forecast_step2_target_column_type')}
                         </span>
                       </div>
                     </SelectItem>
@@ -244,7 +267,7 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
             ) : (
               <Input
                 id="targetColumn"
-                placeholder="e.g., Value, Sales, Temperature"
+                placeholder={t('forecast_step2_target_column_example')}
                 value={targetColumn}
                 onChange={e => setTargetColumn(e.target.value)}
                 className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800"
@@ -258,11 +281,23 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
               htmlFor="featureColumns"
               className="text-lg font-semibold text-gray-900 dark:text-white mb-2 block"
             >
-              Feature Columns (Optional)
+              {t('forecast_step2_feature_columns')}
             </Label>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              Select additional <span className="font-semibold">numeric</span> columns to use as
-              features for the forecast.
+              {t('forecast_step2_feature_columns_desc')
+                .split('numeric')
+                .map((part, i, arr) =>
+                  i === arr.length - 1 ? (
+                    part
+                  ) : (
+                    <React.Fragment key={i}>
+                      {part}
+                      <span className="font-semibold">
+                        {t('forecast_step2_feature_columns_numeric')}
+                      </span>
+                    </React.Fragment>
+                  )
+                )}
             </p>
             {availableFeatureColumns.length > 0 ? (
               <div className="relative" ref={featureColumnsRef}>
@@ -290,10 +325,10 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
                     )}
                   >
                     {featureColumns.length === 0
-                      ? 'Select feature columns'
+                      ? t('forecast_step2_feature_columns_select')
                       : featureColumns.length === 1
                         ? featureColumns[0]
-                        : `${featureColumns.length} columns selected`}
+                        : `${featureColumns.length} ${t('forecast_step2_feature_columns_selected')}`}
                   </span>
                   <ChevronDown
                     className={cn(
@@ -344,7 +379,7 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
             ) : (
               <Input
                 id="featureColumns"
-                placeholder="No numeric columns available for features"
+                placeholder={t('forecast_step2_feature_columns_no_available')}
                 disabled
                 className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800"
               />
@@ -386,10 +421,10 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
                 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2"
               >
                 <BarChart3 className="w-4 h-4" />
-                <span>Model</span>
+                <span>{t('forecast_step2_model')}</span>
               </Label>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                Choose the forecasting algorithm.
+                {t('forecast_step2_model_desc')}
               </p>
               <SelectWithOpen
                 value={modelType}
@@ -404,23 +439,27 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
                 }}
               >
                 <SelectTrigger className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800">
-                  <SelectValue placeholder="Select model" />
+                  <SelectValue placeholder={t('forecast_step2_model_select')}>
+                    {modelType === 'LSTM'
+                      ? t('forecast_step2_model_lstm')
+                      : t('forecast_step2_model_svr')}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="LSTM">LSTM (neural network)</SelectItem>
-                  <SelectItem value="SVR">SVR (support vector regression)</SelectItem>
+                  <SelectItem value="LSTM">{t('forecast_step2_model_lstm')}</SelectItem>
+                  <SelectItem value="SVR">{t('forecast_step2_model_svr')}</SelectItem>
                 </SelectContent>
               </SelectWithOpen>
               <div className="mt-2 text-xs text-gray-600 dark:text-gray-400 space-y-1">
                 {modelType === 'LSTM' ? (
                   <>
-                    <p>• Best for complex, non-linear patterns with enough data.</p>
-                    <p>• Slower to train, but can capture richer dynamics.</p>
+                    <p>• {t('forecast_step2_model_lstm_desc1')}</p>
+                    <p>• {t('forecast_step2_model_lstm_desc2')}</p>
                   </>
                 ) : (
                   <>
-                    <p>• Best for small/medium datasets and smoother trends.</p>
-                    <p>• Faster and more stable when data is limited.</p>
+                    <p>• {t('forecast_step2_model_svr_desc1')}</p>
+                    <p>• {t('forecast_step2_model_svr_desc2')}</p>
                   </>
                 )}
               </div>
@@ -432,23 +471,86 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
                 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2"
               >
                 <BarChart3 className="w-4 h-4" />
-                <span>Forecast Window</span>
+                <span>{t('forecast_step2_forecast_window')}</span>
               </Label>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                Number of data points to forecast into the future.
+                {t('forecast_step2_forecast_window_desc')}
               </p>
-              <Input
-                id="forecastWindow"
-                type="number"
-                min="1"
-                value={forecastWindow.toString()}
-                onChange={e => {
-                  const val = parseInt(e.target.value, 10);
-                  setForecastWindow(Number.isNaN(val) || val <= 0 ? 1 : val);
-                }}
-                className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800"
-                placeholder="e.g. 30"
-              />
+              <div className="space-y-2">
+                <Select
+                  value={isCustomForecastWindow ? 'custom' : forecastWindow.toString()}
+                  onValueChange={value => {
+                    if (value === 'custom') {
+                      setIsCustomForecastWindow(true);
+                      setCustomForecastWindowValue(forecastWindow.toString());
+                    } else {
+                      setIsCustomForecastWindow(false);
+                      setForecastWindow(parseInt(value, 10));
+                    }
+                  }}
+                >
+                  <SelectTrigger className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800">
+                    <SelectValue placeholder={t('forecast_step2_forecast_window_select')}>
+                      {isCustomForecastWindow
+                        ? `${t('forecast_step2_forecast_window_custom')} (${customForecastWindowValue || forecastWindow})`
+                        : `${forecastWindow} ${t('forecast_step2_forecast_window_steps')}`}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5 {t('forecast_step2_forecast_window_steps')}</SelectItem>
+                    <SelectItem value="10">
+                      10 {t('forecast_step2_forecast_window_steps')}
+                    </SelectItem>
+                    <SelectItem value="15">
+                      15 {t('forecast_step2_forecast_window_steps')}
+                    </SelectItem>
+                    <SelectItem value="20">
+                      20 {t('forecast_step2_forecast_window_steps')}
+                    </SelectItem>
+                    <SelectItem value="custom">
+                      {t('forecast_step2_forecast_window_custom')}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {isCustomForecastWindow && (
+                  <Input
+                    id="forecastWindowCustom"
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={customForecastWindowValue}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setCustomForecastWindowValue(val);
+                      const numVal = parseInt(val, 10);
+                      if (!Number.isNaN(numVal) && numVal > 0) {
+                        if (numVal <= 50) {
+                          setForecastWindow(numVal);
+                        } else {
+                          // If exceeds max, set to max
+                          setForecastWindow(50);
+                          setCustomForecastWindowValue('50');
+                        }
+                      } else if (val === '') {
+                        // Allow empty input while typing
+                        setCustomForecastWindowValue('');
+                      }
+                    }}
+                    onBlur={e => {
+                      const val = parseInt(e.target.value, 10);
+                      if (Number.isNaN(val) || val <= 0) {
+                        setCustomForecastWindowValue('5');
+                        setForecastWindow(5);
+                      } else if (val > 50) {
+                        setCustomForecastWindowValue('50');
+                        setForecastWindow(50);
+                      }
+                    }}
+                    className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800"
+                    placeholder={t('forecast_step2_forecast_window_custom_placeholder')}
+                  />
+                )}
+              </div>
             </div>
           </div>
 
@@ -465,31 +567,32 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
                 htmlFor="runAnalysisAfterForecast"
                 className="text-sm font-semibold text-gray-900 dark:text-white cursor-pointer"
               >
-                Analyze forecast after creation
+                {t('forecast_step2_analyze_after')}
               </Label>
               <p className="text-xs text-gray-600 dark:text-gray-400">
-                If enabled, an AI analysis will be generated for the forecast chart once it is
-                ready.
+                {t('forecast_step2_analyze_after_desc')}
               </p>
             </div>
           </div>
 
           {/* Navigation */}
           <div className="flex justify-between pt-4">
-            <Button
-              onClick={onBack}
-              variant="outline"
-              className="px-6 py-3 border-2 border-gray-200 dark:border-gray-600"
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={onBack}
+                variant="outline"
+                className="px-6 py-3 border-2 border-gray-200 dark:border-gray-600"
+              >
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                {t('forecast_step2_back')}
+              </Button>
+            </div>
             <Button
               onClick={onNext}
               className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg"
             >
-              Generate Forecast
-              <Play className="w-4 h-4 ml-2" />
+              <Play className="w-4 h-4 mr-2" />
+              {t('forecast_step2_generate')}
             </Button>
           </div>
         </CardContent>
