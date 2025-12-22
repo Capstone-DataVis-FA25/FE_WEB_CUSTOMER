@@ -66,7 +66,7 @@ const Header: React.FC<HeaderProps> = ({
   const { activeJobs: cleaningJobs } = useAiCleaningProgress(userId);
 
   const navItems = [
-    { name: t('navigation_home'), href: '/' },
+    { name: t('navigation_home'), href: `${Routers.HOME}` },
     ...(isAuthenticated
       ? [
           { name: 'Datasets', href: `${Routers.WORKSPACE_DATASETS}` },
@@ -74,8 +74,8 @@ const Header: React.FC<HeaderProps> = ({
           { name: t('navigation_forecast'), href: `${Routers.FORECAST}` },
         ]
       : []),
-    { name: t('navigation_pricing'), href: '/pricing' },
-    { name: t('navigation_about'), href: '/about-us' },
+    { name: t('navigation_pricing'), href: `${Routers.PRICING}` },
+    { name: t('navigation_about'), href: `${Routers.ABOUT_US}` },
   ];
 
   const resourcesItems = [
@@ -181,7 +181,6 @@ const Header: React.FC<HeaderProps> = ({
                     setIsResourcesDropdownOpen(true);
                   }}
                   onMouseLeave={() => {
-                    // Delay close slightly to allow moving into submenu area
                     if (resourcesCloseTimerRef.current) {
                       window.clearTimeout(resourcesCloseTimerRef.current);
                     }

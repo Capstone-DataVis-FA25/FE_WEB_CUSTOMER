@@ -93,7 +93,7 @@ const ChartTab: React.FC<ChartTabProps> = ({
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                {t('chart_list_create_first')}
+                {t('tour_chart_create_title')}
               </Button>
             )}
           </CardContent>

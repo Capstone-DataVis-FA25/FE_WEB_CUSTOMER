@@ -255,8 +255,7 @@ const ChatBot: React.FC = () => {
                             {msg.needsChartTypeSelection && (
                               <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-3">
                                 <div className="flex items-center gap-2 text-blue-400 text-sm font-semibold">
-                                  <TrendingUp size={16} />
-                                  <span>Chọn loại biểu đồ</span>
+                                  <span>{t('home_chartTypes_desc')}</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                   <button
@@ -266,7 +265,7 @@ const ChatBot: React.FC = () => {
                                     className="col-span-2 text-left px-3 py-2 bg-blue-600 hover:bg-blue-500 border border-blue-500 rounded-lg transition-all duration-200 flex items-center gap-2"
                                   >
                                     <span className="text-white text-sm font-medium">
-                                      AI Tự động chọn (Best match)
+                                      {t('home_chartTypes_auto')}
                                     </span>
                                   </button>
 
@@ -375,7 +374,6 @@ const ChatBot: React.FC = () => {
                       <div className="flex justify-start">
                         <div className="bg-slate-800 text-slate-100 px-4 py-3 rounded-lg rounded-bl-none border border-slate-700 flex items-center gap-2">
                           <Loader2 size={16} className="animate-spin text-blue-400 flex-shrink-0" />
-                          <span className="text-xs text-slate-400">{t('chat_processing')}</span>
                         </div>
                       </div>
                     )}

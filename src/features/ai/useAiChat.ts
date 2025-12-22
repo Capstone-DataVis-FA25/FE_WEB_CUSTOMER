@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { AiChatRequest, AiChatResponse } from './aiAPI';
 import { chatWithAi } from './aiAPI';
 import type { DatasetInfo, ChartGenerationResponse } from './aiTypes';
+import useLanguage from '@/hooks/useLanguage';
+import { t } from 'i18next';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -18,10 +20,10 @@ export function useAiChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null);
-
+  const { currentLanguage } = useLanguage();
   const sendMessage = async (
     message: string,
-    language = 'en',
+    language = currentLanguage,
     datasetId?: string,
     chartType?: string
   ) => {
@@ -68,7 +70,6 @@ export function useAiChat() {
 
         setMessages([...newMessages, assistantMessage]);
 
-        // If dataset was provided in this request, save it
         if (datasetId) {
           setSelectedDatasetId(datasetId);
         }
@@ -77,14 +78,14 @@ export function useAiChat() {
           ...newMessages,
           {
             role: 'assistant' as const,
-            content: 'Xin lỗi, tôi không thể xử lý yêu cầu của bạn lúc này.',
+            content: t('chatbox.errorExecuteResponse'),
           },
         ]);
       }
     } catch (e) {
       setMessages([
         ...newMessages,
-        { role: 'assistant' as const, content: 'Xin lỗi, có lỗi kết nối. Vui lòng thử lại.' },
+        { role: 'assistant' as const, content: t('chatbox.errorTryAgain') },
       ]);
       setError('API error');
     } finally {
@@ -95,15 +96,12 @@ export function useAiChat() {
   const selectDataset = (datasetId: string, followUpMessage?: string) => {
     setSelectedDatasetId(datasetId);
     if (followUpMessage) {
-      sendMessage(followUpMessage, 'vi', datasetId);
+      sendMessage(followUpMessage, currentLanguage, datasetId);
     }
   };
 
   const selectChartType = (chartType: string, prompt: string) => {
-    // Re-send original prompt with selected chart type
-    // If chartType is 'auto', backend handles it.
-    // If 'line', 'bar' etc, backend handles it.
-    sendMessage(prompt, 'vi', selectedDatasetId || undefined, chartType);
+    sendMessage(prompt, currentLanguage, selectedDatasetId || undefined, chartType);
   };
 
   const clearDatasetSelection = () => {

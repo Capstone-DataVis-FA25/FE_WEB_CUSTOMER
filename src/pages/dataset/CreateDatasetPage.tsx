@@ -59,7 +59,7 @@ function CreateDatasetPageContent() {
       showProgress: true,
       steps: createDatasetSteps,
       popoverClass: 'driverjs-theme driver-theme-datasets',
-      overlayOpacity: 0,
+      overlayOpacity: 0.6,
     });
     driverObj.drive();
   };

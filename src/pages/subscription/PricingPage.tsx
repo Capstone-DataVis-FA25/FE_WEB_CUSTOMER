@@ -16,6 +16,7 @@ import { HelpCircle } from 'lucide-react';
 import { useAuth } from '@/features/auth/useAuth';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { pricingSteps } from '@/config/driver-steps/pricing-steps';
+import { useOnboarding } from '@/hooks/useOnboarding';
 import { Link } from 'react-router-dom';
 import Routers from '@/router/routers';
 
@@ -29,14 +30,13 @@ const PricingPage: React.FC = () => {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const { showError, showSuccess } = useToast();
+  const { shouldShowTour, markTourAsShown } = useOnboarding();
 
-  // Auto-show tour on first visit
+  // Auto-show tour on first visit - integrated with useOnboarding hook
   useEffect(() => {
     if (isAuthenticated && user?.id) {
-      const storageKey = `hasShownPricingTour_${user.id}`;
-      const hasShownTour = localStorage.getItem(storageKey);
-
-      if (hasShownTour !== 'true') {
+      // Check if tour should be shown based on user's experience level
+      if (shouldShowTour('pricing')) {
         const driverObj = driver({
           steps: pricingSteps,
           showProgress: true,
@@ -45,16 +45,16 @@ const PricingPage: React.FC = () => {
           prevBtnText: '← Previous',
           doneBtnText: 'Done ✓',
           popoverClass: 'driverjs-theme',
-          overlayOpacity: 0,
+          overlayOpacity: 0.6,
         });
 
         setTimeout(() => {
           driverObj.drive();
-          localStorage.setItem(storageKey, 'true');
+          markTourAsShown('pricing');
         }, 1000);
       }
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, shouldShowTour, markTourAsShown]);
 
   useEffect(() => {
     const load = async () => {
@@ -135,7 +135,7 @@ const PricingPage: React.FC = () => {
       prevBtnText: '← Previous',
       doneBtnText: 'Done ✓',
       popoverClass: 'driverjs-theme',
-      overlayOpacity: 0,
+      overlayOpacity: 0.6,
     });
     driverObj.drive();
   };
