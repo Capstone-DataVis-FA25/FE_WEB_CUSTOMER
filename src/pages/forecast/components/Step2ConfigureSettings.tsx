@@ -439,11 +439,7 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
                 }}
               >
                 <SelectTrigger className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800">
-                  <SelectValue placeholder={t('forecast_step2_model_select')}>
-                    {modelType === 'LSTM'
-                      ? t('forecast_step2_model_lstm')
-                      : t('forecast_step2_model_svr')}
-                  </SelectValue>
+                  <SelectValue placeholder={t('forecast_step2_model_select')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="LSTM">{t('forecast_step2_model_lstm')}</SelectItem>
@@ -490,11 +486,7 @@ const Step2ConfigureSettings: React.FC<Step2ConfigureSettingsProps> = ({
                   }}
                 >
                   <SelectTrigger className="border-2 border-gray-200 dark:border-gray-600 focus:border-blue-200 dark:focus:border-blue-800">
-                    <SelectValue placeholder={t('forecast_step2_forecast_window_select')}>
-                      {isCustomForecastWindow
-                        ? `${t('forecast_step2_forecast_window_custom')} (${customForecastWindowValue || forecastWindow})`
-                        : `${forecastWindow} ${t('forecast_step2_forecast_window_steps')}`}
-                    </SelectValue>
+                    <SelectValue placeholder={t('forecast_step2_forecast_window_select')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="5">5 {t('forecast_step2_forecast_window_steps')}</SelectItem>
