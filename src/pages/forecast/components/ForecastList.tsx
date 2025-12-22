@@ -76,7 +76,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
   const [selectedModelType, setSelectedModelType] = useState<string>('all');
   const [selectedForecastWindow, setSelectedForecastWindow] = useState<string>('all');
   const [isCustomForecastWindow, setIsCustomForecastWindow] = useState(false);
-  const [customForecastWindow, setCustomForecastWindow] = useState<string>('30');
+  const [customForecastWindow, setCustomForecastWindow] = useState<string>('5');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
@@ -135,12 +135,13 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
     const optionsMap = new Map<string, string>(); // value -> label
     const allOptions: Array<{ value: string; label: string }> = [];
 
-    // Base options from utility (use a default scale just to get presets)
+    // Base options from utility (values only; build labels with t() for i18n)
     const baseOptions = getForecastWindowOptions('Daily');
     baseOptions.forEach(opt => {
       if (!optionsMap.has(opt.value)) {
-        optionsMap.set(opt.value, opt.label);
-        allOptions.push({ value: opt.value, label: opt.label });
+        const label = `${opt.value} ${t('forecast_step2_forecast_window_steps')}`;
+        optionsMap.set(opt.value, label);
+        allOptions.push({ value: opt.value, label });
       }
     });
 
@@ -148,13 +149,14 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
     forecasts.forEach(f => {
       const valueStr = f.forecastWindow.toString();
       if (!optionsMap.has(valueStr)) {
-        allOptions.push({ value: valueStr, label: `${f.forecastWindow} steps` });
-        optionsMap.set(valueStr, `${f.forecastWindow} steps`);
+        const label = `${f.forecastWindow} ${t('forecast_step2_forecast_window_steps')}`;
+        allOptions.push({ value: valueStr, label });
+        optionsMap.set(valueStr, label);
       }
     });
 
     return allOptions.sort((a, b) => parseInt(a.value) - parseInt(b.value));
-  }, [forecasts]);
+  }, [forecasts, t]);
 
   // Get unique values from existing forecasts (for reference)
 
@@ -327,7 +329,7 @@ const ForecastList: React.FC<ForecastListProps> = ({ onCreateNew }) => {
     setSelectedModelType('all');
     setSelectedForecastWindow('all');
     setIsCustomForecastWindow(false);
-    setCustomForecastWindow('30');
+    setCustomForecastWindow('5');
     setDateFrom('');
     setDateTo('');
   };
