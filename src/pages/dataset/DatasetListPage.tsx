@@ -31,8 +31,16 @@ const DatasetListPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
-  const { datasets, loading, deleting, error, getDatasets, deleteDataset, clearDatasetError } =
-    useDataset();
+  const {
+    datasets,
+    loading,
+    loadingList,
+    deleting,
+    error,
+    getDatasets,
+    deleteDataset,
+    clearDatasetError,
+  } = useDataset();
   const { user, isAuthenticated } = useAuth();
   const { shouldShowTour, markTourAsShown } = useOnboarding();
 
@@ -289,7 +297,7 @@ const DatasetListPage: React.FC = () => {
   };
 
   // While initial fetch is in-flight and no items yet, show only header + a scoped spinner
-  const isInitialLoading = loading && allFilteredDatasets.length === 0;
+  const isInitialLoading = loadingList && allFilteredDatasets.length === 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
@@ -574,7 +582,7 @@ const DatasetListPage: React.FC = () => {
 
             {/* Datasets List */}
             <DatasetTab
-              loading={loading}
+              loading={loadingList}
               deleting={deleting}
               filteredDatasets={filteredDatasets}
               allFilteredDatasets={allFilteredDatasets}

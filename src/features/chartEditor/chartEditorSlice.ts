@@ -1,5 +1,4 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { current } from 'immer';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
 import type { MainChartConfig } from '@/types/chart';
@@ -165,10 +164,10 @@ const chartEditorSlice = createSlice({
         return changes;
       };
 
-      const changedFields = findDeepChanges(state.chartConfig, configChanges);
+      // const changedFields = findDeepChanges(state.chartConfig, configChanges);
 
       // Snapshot Immer draft to avoid logging revoked Proxy objects in console
-      const snapshotCurrent = state.chartConfig ? current(state.chartConfig) : null;
+      // const snapshotCurrent = state.chartConfig ? current(state.chartConfig) : null;
 
       state.chartConfig = newConfig;
     },

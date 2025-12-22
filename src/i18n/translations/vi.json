@@ -1,4 +1,6 @@
 {
+  "chart_editor_invalid_type": "Biểu đồ chưa được triển khai",
+  "chart_editor_select_type_hint": "Vui lòng chọn một loại biểu đồ hợp lệ.",
   "home_features_title": "Không chỉ là biểu đồ tĩnh: đáp ứng, tùy chỉnh và cập nhật trực tiếp",
   "home_features_desc": "Những điều giúp bạn dễ dàng hơn",
   "home_feature_unlimited_title": "Không giới hạn biểu đồ",
@@ -925,7 +927,7 @@
   "ai_clean_title": "Làm sạch Dataset với AI",
   "ai_clean_description": "Sử dụng AI để tự động làm sạch và chuẩn hóa dữ liệu của bạn. Chọn giữa file Excel hoặc văn bản CSV.",
   "dataset_selection_desc_new": "Chọn dataset để tạo biểu đồ. Bạn chỉ có thể chọn một dataset tại một thời điểm.",
-  "chart_create_unsupported_type": "Biểu đồ không hợp lệ",
+  "chart_create_unsupported_type": "Biểu đồ không được hỗ trợ.",
   "dataset_selection_title": "Chọn dataset",
   "dataset_selection_refresh_button": "Làm mới",
   "dataset_selection_cancel_button": "Hủy bỏ",
