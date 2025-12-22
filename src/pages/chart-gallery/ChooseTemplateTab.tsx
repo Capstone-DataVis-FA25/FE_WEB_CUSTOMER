@@ -40,6 +40,7 @@ import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { chartGallerySteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
+import { useOnboarding } from '@/hooks/useOnboarding';
 
 export default function ChooseTemplateTab() {
   const { t } = useTranslation();
@@ -47,6 +48,7 @@ export default function ChooseTemplateTab() {
   const { showError, showSuccess } = useToastContext();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const { shouldShowTour, markTourAsShown } = useOnboarding();
 
   // Extract data from both location state AND query parameters
   const locationState = location.state as {
@@ -223,13 +225,11 @@ export default function ChooseTemplateTab() {
     loadChartTemplates();
   }, [t, showError]);
 
-  // Tour logic
+  // Tour logic - integrated with useOnboarding hook
   useEffect(() => {
     if (isAuthenticated && user?.id && categories.length > 0 && !isLoading) {
-      const storageKey = `hasShownChartGalleryTour_${user.id}`;
-      const hasShownTour = localStorage.getItem(storageKey);
-
-      if (hasShownTour !== 'true') {
+      // Check if tour should be shown based on user's experience level
+      if (shouldShowTour('chart-gallery')) {
         const driverObj = driver({
           showProgress: true,
           steps: chartGallerySteps,
@@ -239,11 +239,11 @@ export default function ChooseTemplateTab() {
 
         setTimeout(() => {
           driverObj.drive();
-          localStorage.setItem(storageKey, 'true');
+          markTourAsShown('chart-gallery');
         }, 1000);
       }
     }
-  }, [isAuthenticated, user, categories.length, isLoading]);
+  }, [isAuthenticated, user, categories.length, isLoading, shouldShowTour, markTourAsShown]);
 
   // Calculate chart counts for filters
   const allTemplates = useMemo(() => {

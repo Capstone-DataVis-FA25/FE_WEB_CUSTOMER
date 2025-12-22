@@ -47,6 +47,7 @@ import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { chartListSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
+import { useOnboarding } from '@/hooks/useOnboarding';
 import ChartTab from './components/ChartTab';
 import { Button } from '@/components/ui/button';
 
@@ -57,6 +58,7 @@ const ChartListPage: React.FC = () => {
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
   const { user, isAuthenticated } = useAuth();
+  const { shouldShowTour, markTourAsShown } = useOnboarding();
 
   // Charts API integration - using real charts feature
   const {
@@ -76,13 +78,11 @@ const ChartListPage: React.FC = () => {
   const [deletingChartId, setDeletingChartId] = useState<string | null>(null);
   const [selectingDatasetModal, setSelectingDatasetModal] = useState<boolean>(false);
 
-  // Tour logic
+  // Tour logic - integrated with useOnboarding hook
   useEffect(() => {
     if (isAuthenticated && user?.id && charts.length > 0 && !chartsLoading) {
-      const storageKey = `hasShownChartListTour_${user.id}`;
-      const hasShownTour = localStorage.getItem(storageKey);
-
-      if (hasShownTour !== 'true') {
+      // Check if tour should be shown based on user's experience level
+      if (shouldShowTour('chart-list')) {
         const driverObj = driver({
           showProgress: true,
           steps: chartListSteps,
@@ -92,11 +92,11 @@ const ChartListPage: React.FC = () => {
 
         setTimeout(() => {
           driverObj.drive();
-          localStorage.setItem(storageKey, 'true');
+          markTourAsShown('chart-list');
         }, 1000);
       }
     }
-  }, [isAuthenticated, user, charts.length, chartsLoading]);
+  }, [isAuthenticated, user, charts.length, chartsLoading, shouldShowTour, markTourAsShown]);
 
   // Get initial values from URL
   const getInitialFromDate = () => {
