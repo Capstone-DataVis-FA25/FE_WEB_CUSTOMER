@@ -1,5 +1,4 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { current } from 'immer';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { ChartDataPoint } from '@/components/charts/D3LineChart';
 import type { MainChartConfig } from '@/types/chart';
