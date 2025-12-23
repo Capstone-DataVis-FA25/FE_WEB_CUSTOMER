@@ -135,7 +135,7 @@ class ChartEvaluationService {
         ctx.textAlign = 'center';
         ctx.font = 'bold 32px Arial';
         ctx.fillStyle = '#fff';
-        const mainText = 'Not Found Chart Image';
+        const mainText = 'Chart Image Not Found';
         const subText = 'Please create a chart before using AI features.';
         const mainFontSize = 32;
         const subFontSize = 18;

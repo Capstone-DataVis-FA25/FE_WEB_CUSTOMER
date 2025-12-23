@@ -58,13 +58,16 @@ const RestoreConfirmDialog: React.FC<RestoreConfirmDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-[600px] max-h-[80vh] bg-white dark:bg-gray-800 z-50 pointer-events-auto"
+        aria-describedby="restore-confirm-description"
+      >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-yellow-500" />
+          <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+            <AlertTriangle className="w-6 h-6 text-yellow-500" />
             {t('chartHistory.restoreDialog.title', 'Restore Chart Version')}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription id="restore-confirm-description" className="text-muted-foreground">
             {t(
               'chartHistory.restoreDialog.description',
               'Your current chart will be saved before restoring. This action can be undone by restoring again.'
@@ -76,9 +79,6 @@ const RestoreConfirmDialog: React.FC<RestoreConfirmDialogProps> = ({
           {/* Version Info Preview */}
           {versionInfo && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 space-y-2">
-              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                {t('chartHistory.restoreDialog.restoringTo', 'Restoring to:')}
-              </p>
               <div className="text-xs space-y-1 text-blue-800 dark:text-blue-200">
                 <p>
                   <strong>Created at:</strong> {new Date(versionInfo.createdAt).toLocaleString()}
@@ -89,7 +89,7 @@ const RestoreConfirmDialog: React.FC<RestoreConfirmDialogProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="changeNote">
-              {t('chartHistory.restoreDialog.changeNoteLabel', 'Change Note (Optional)')}
+              {t('chartHistory.restoreDialog.changeNoteLabel', 'Change Note')}
             </Label>
             <Textarea
               id="changeNote"
@@ -112,14 +112,21 @@ const RestoreConfirmDialog: React.FC<RestoreConfirmDialogProps> = ({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleCancel} disabled={isRestoring}>
+        <DialogFooter className="flex gap-3 pt-4 pointer-events-auto">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isRestoring}
+            className="rounded-lg pointer-events-auto"
+          >
             {t('common.cancel', 'Cancel')}
           </Button>
           <Button
+            type="button"
             onClick={handleConfirm}
             disabled={isRestoring}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
           >
             {isRestoring ? (
               <>
