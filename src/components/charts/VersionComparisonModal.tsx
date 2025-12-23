@@ -51,8 +51,39 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
     for (const key in obj) {
       const value = obj[key];
       if (value && typeof value === 'object' && 'current' in value && 'historical' in value) {
+        const leafPath = prefix ? `${prefix}.${key}` : key;
+        const currentVal = (value as DiffLeaf).current;
+        const historicalVal = (value as DiffLeaf).historical;
+
+        const currentIsObject =
+          currentVal && typeof currentVal === 'object' && !Array.isArray(currentVal);
+        const historicalIsObject =
+          historicalVal && typeof historicalVal === 'object' && !Array.isArray(historicalVal);
+
+        // If the diff is an object, break it into child-level diffs so keys like "margin.top" render nicely.
+        if (currentIsObject || historicalIsObject) {
+          const childKeys = new Set([
+            ...(currentIsObject ? Object.keys(currentVal) : []),
+            ...(historicalIsObject ? Object.keys(historicalVal) : []),
+          ]);
+
+          if (childKeys.size > 0) {
+            childKeys.forEach(childKey => {
+              result[`${leafPath}.${childKey}`] = {
+                current: currentIsObject
+                  ? (currentVal as Record<string, any>)[childKey]
+                  : undefined,
+                historical: historicalIsObject
+                  ? (historicalVal as Record<string, any>)[childKey]
+                  : undefined,
+              };
+            });
+            continue; // Already expanded this diff
+          }
+        }
+
         // This is a leaf diff node
-        result[prefix ? `${prefix}.${key}` : key] = value as DiffLeaf;
+        result[leafPath] = value as DiffLeaf;
       } else if (value && typeof value === 'object') {
         // Nested object, recurse
         const nested = flattenDifferences(value as DiffObject, prefix ? `${prefix}.${key}` : key);
@@ -60,6 +91,64 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
       }
     }
     return result;
+  };
+
+  const toTitleCase = (val: string) =>
+    val
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/[_-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^./, str => str.toUpperCase());
+
+  // Helper to render values in a human-friendly way (no JSON braces)
+  const renderReadableValue = (value: any, depth = 0) => {
+    if (value === null || value === undefined) {
+      return <span className="text-gray-500">—</span>;
+    }
+
+    const isPrimitive = (v: any) =>
+      typeof v !== 'object' || v === null || v instanceof Date || v instanceof RegExp;
+
+    if (isPrimitive(value)) {
+      return <span>{String(value)}</span>;
+    }
+
+    // Arrays
+    if (Array.isArray(value)) {
+      if (value.length === 0) return <span className="text-gray-500">(empty)</span>;
+      return (
+        <ul className={`space-y-1 ${depth === 0 ? 'list-disc list-inside' : 'list-none'}`}>
+          {value.map((item, idx) => (
+            <li key={idx} className="pl-1">
+              {isPrimitive(item) ? (
+                <span>{String(item)}</span>
+              ) : (
+                <div className="border border-gray-200 dark:border-gray-700 rounded p-2 text-[11px] leading-relaxed bg-white/40 dark:bg-slate-900/40">
+                  {renderReadableValue(item, depth + 1)}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
+    // Objects
+    const entries = Object.entries(value);
+    if (entries.length === 0) return <span className="text-gray-500">(empty)</span>;
+    return (
+      <div className="space-y-1 text-[11px] leading-relaxed">
+        {entries.map(([k, v]) => (
+          <div key={k} className="flex flex-col gap-0.5">
+            <span className="font-medium text-gray-700 dark:text-gray-300">{toTitleCase(k)}:</span>
+            <div className="pl-2 text-gray-800 dark:text-gray-100">
+              {renderReadableValue(v, depth + 1)}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   // Helper to convert technical key names to user-friendly labels
@@ -112,6 +201,16 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
       showAxisLabels: 'Show Axis Labels',
       showAxisTicks: 'Show Axis Ticks',
       showAllXAxisTicks: 'Show All X-Axis Ticks',
+
+      // Series / axis config basics
+      name: 'Series Name',
+      dataColumn: 'Data Column',
+      color: 'Color',
+      visible: 'Visible',
+      pointStyle: 'Point Style',
+      opacity: 'Opacity',
+      formatter: 'Formatter',
+      customFormatter: 'Custom Formatter',
 
       // Series configs (line/bar/area/scatter)
       seriesConfigs: 'Series Configuration',
@@ -218,12 +317,30 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
       return labelMap[cleanKey];
     }
 
+    // Axis config specific formatting
+    if (cleanKey.startsWith('axisConfigs.')) {
+      const axisPath = cleanKey.replace(/^axisConfigs\./, '');
+      const [first, ...rest] = axisPath.split('.');
+
+      // Simple axis-level fields (xAxisKey, xAxisLabel, etc.)
+      if (first !== 'seriesConfigs') {
+        const baseLabel = labelMap[first] ?? toTitleCase(first);
+        return `Axis: ${baseLabel}`;
+      }
+
+      // seriesConfigs.<index>.<field>
+      const [seriesIndex, ...seriesRest] = rest;
+      const seriesLabel = Number.isFinite(Number(seriesIndex))
+        ? `Series ${Number(seriesIndex) + 1}`
+        : toTitleCase(seriesIndex || 'Series');
+      const fieldKey = seriesRest.join('.') || '';
+      const fieldLabel = labelMap[fieldKey] ?? toTitleCase(fieldKey || 'Series');
+      return `Axis Series (${seriesLabel}) - ${fieldLabel}`;
+    }
+
     // Otherwise, convert camelCase to Title Case
     // e.g., "showPoints" -> "Show Points"
-    return cleanKey
-      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
-      .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
-      .trim();
+    return toTitleCase(cleanKey);
   };
 
   const [showChart, setShowChart] = useState(true);
@@ -464,15 +581,15 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
         <div className="ml-4 mt-1 grid grid-cols-2 gap-2">
           <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded">
             <div className="text-gray-600 dark:text-gray-400 mb-1">Current:</div>
-            <pre className="text-xs whitespace-pre-wrap break-words">
-              {JSON.stringify(flatDiffs[key].current, null, 2)}
-            </pre>
+            <div className="text-xs whitespace-pre-wrap break-words">
+              {renderReadableValue(flatDiffs[key].current)}
+            </div>
           </div>
           <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded">
             <div className="text-gray-600 dark:text-gray-400 mb-1">Historical:</div>
-            <pre className="text-xs whitespace-pre-wrap break-words">
-              {JSON.stringify(flatDiffs[key].historical, null, 2)}
-            </pre>
+            <div className="text-xs whitespace-pre-wrap break-words">
+              {renderReadableValue(flatDiffs[key].historical)}
+            </div>
           </div>
         </div>
       </li>
@@ -615,7 +732,7 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} modal={!modalConfirm.isOpen}>
       <DialogContent className="min-w-5xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
