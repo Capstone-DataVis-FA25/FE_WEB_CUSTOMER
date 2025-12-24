@@ -39,6 +39,7 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({ chartId, isOpen, on
   const [originalEditContent, setOriginalEditContent] = useState('');
   const [deleteConfirmNoteId, setDeleteConfirmNoteId] = useState<string | null>(null);
   const [saveConfirmNoteId, setSaveConfirmNoteId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const fetchedForChartRef = useRef<string | null>(null);
@@ -166,9 +167,12 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({ chartId, isOpen, on
     if (!chartId) return;
 
     try {
+      setTogglingId(noteId);
       await toggleNoteCompleted(noteId).unwrap();
     } catch (error) {
       console.error('[ChartNoteSidebar] Failed to toggle note:', error);
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -333,24 +337,32 @@ const ChartNoteSidebar: React.FC<ChartNoteSidebarProps> = ({ chartId, isOpen, on
                               <div className="group relative">
                                 <div className="flex items-start gap-2">
                                   {/* Checkbox for completed status */}
-                                  <input
-                                    type="checkbox"
-                                    checked={note.isCompleted}
-                                    onChange={() => handleToggleCompleted(note.id)}
-                                    className="mt-3 w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
-                                    title={
-                                      note.isCompleted
-                                        ? t('mark_as_incomplete', 'Mark as incomplete')
-                                        : t('mark_as_complete', 'Mark as complete')
-                                    }
-                                  />
+                                  <div className="relative mt-3 w-4 h-4">
+                                    {togglingId === note.id ? (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="h-4 w-4 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
+                                      </div>
+                                    ) : (
+                                      <input
+                                        type="checkbox"
+                                        checked={note.isCompleted}
+                                        onChange={() => handleToggleCompleted(note.id)}
+                                        className="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                                        title={
+                                          note.isCompleted
+                                            ? t('mark_as_incomplete', 'Mark as incomplete')
+                                            : t('mark_as_complete', 'Mark as complete')
+                                        }
+                                      />
+                                    )}
+                                  </div>
 
                                   <div
                                     className={`flex-1 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 shadow-sm border border-gray-200 dark:border-gray-700 ${
                                       note.isCompleted ? 'opacity-60 line-through' : ''
                                     }`}
                                   >
-                                    <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
+                                    <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words break-all w-full">
                                       {note.content}
                                     </p>
                                   </div>
