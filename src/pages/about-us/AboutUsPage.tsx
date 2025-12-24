@@ -115,8 +115,7 @@ const teamMembers = [
   {
     name: 'Hoang Nguyen',
     position: 'Frontend Developer',
-    image:
-      'https://scontent.fdad1-4.fna.fbcdn.net/v/t39.30808-6/475829182_631722649229606_2227659801422246226_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=a5f93a&_nc_eui2=AeH1Kjolqdx5jSCWpc91pTsaa9vsgT5tL25r2-yBPm0vbpEMuWV4LiPC0zn7Y0CYTv5r7nKUGD96K3TcGZITr_8g&_nc_ohc=hxa9cmAw98QQ7kNvwGd2qw5&_nc_oc=Admw_3gzsJS60gLDESHdV23EMTHUqsIX5Qz_-8hfa_vv3NKEylNG--6B9mhv4aulUBc&_nc_zt=23&_nc_ht=scontent.fdad1-4.fna&_nc_gid=rGLs2_2P23cxOaWiBqkieQ&oh=00_AfY7Q9LxUDuA-8GtSTFKkjrtfoxNvnCxHWud189cfco_FA&oe=68C22608',
+    image: new URL('../../assets/images/LeKimHoangNguyen.jpg', import.meta.url).href,
   },
   {
     name: 'Duy An',
@@ -127,19 +126,17 @@ const teamMembers = [
   {
     name: 'Trong Hung',
     position: 'Frontend Developer',
-    image:
-      'https://scontent.fdad1-2.fna.fbcdn.net/v/t39.30808-6/507403130_1932224754195013_246730476869903395_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=102&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeGPbEQXpvm7TJk8Lc1f9T8HlGckoVSJuEaUZyShVIm4RvDKOdOVxuHeQLhLwTVV3gyGG9-MK3BosbqK5oz3etNp&_nc_ohc=tOnGEfFt8OoQ7kNvwEe4c0M&_nc_oc=AdkyVe7qAat0bRhnKkpb2R8P4jkzxcMPDDN1BvikfUiJGdvds_9OpENizdNFiKgNIpU&_nc_zt=23&_nc_ht=scontent.fdad1-2.fna&_nc_gid=ZWzKrnAwFicnD5apw1lWcQ&oh=00_AfZhKKFQ3NblrAouyrjszYgkHR6Gw1P7LdtQaSSI0JTDtQ&oe=68C22085',
+    image: new URL('../../assets/images/PhamTrongHung.jpg', import.meta.url).href,
   },
   {
     name: 'Cong Minh',
     position: 'Backend Developer',
-    image:
-      'https://scontent.fdad1-4.fna.fbcdn.net/v/t39.30808-6/458615581_1549152505672648_4478946102712107219_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=100&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeEIAycEOgea94qofQRgh7HvKIsqqnpSUgAoiyqqelJSAL_n3nxo5st3WddwpE58KyOBB89b4nLdgohTU2k80cpV&_nc_ohc=seGpNyNcrUoQ7kNvwFcjw21&_nc_oc=AdkYKBFhZNp4EXO7ncUjxVBDgVK7ZjdXZ4SIFA4YwPRpDimHXUXa-N-TJ2yGhPxdYao&_nc_zt=23&_nc_ht=scontent.fdad1-4.fna&_nc_gid=w_FBEXGPkwACYCv50-HUBA&oh=00_AfbSpkY3gv3OUfOVOssB7PpguSk1Pb1cv4CjW1ljQEGEWA&oe=68C2113D',
+    image: new URL('../../assets/images/HoangCongMinh.jpg', import.meta.url).href,
   },
   {
     name: 'Thai Bao',
     position: 'Backend Developer',
-    image: '/assets/images/dev5.jpg',
+    image: new URL('../../assets/images/PhanQuocThaiBao.jpg', import.meta.url).href,
   },
 ];
 
@@ -147,7 +144,7 @@ export default function AboutPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br bg-[var(--gradient-main)]">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
       {/* Hero Section */}
       <motion.section
         className="relative py-20 px-4 overflow-hidden"
@@ -156,7 +153,7 @@ export default function AboutPage() {
         viewport={viewportConfigs.repeat}
         variants={containerVariants}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 border-t border-blue-100 dark:border-gray-800" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50  to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 border-t border-blue-100 dark:border-gray-800" />
         <div className="relative max-w-6xl mx-auto">
           <motion.div
             className="grid lg:grid-cols-2 gap-12 items-center"

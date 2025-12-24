@@ -80,14 +80,9 @@ const Header: React.FC<HeaderProps> = ({
 
   const resourcesItems = [
     { name: t('resources_faq'), href: '/resources/frequent-questions' },
-    { name: t('resources_changelog'), href: '/resources/changelog' },
-    { name: t('resources_blog'), href: '/resources/blog' },
     { name: t('resources_docs'), href: Routers.ACADEMIC_DOCS },
-    { name: t('resources_community'), href: '/resources/community' },
-    { name: t('resources_forum'), href: '/resources/forum' },
     { name: t('resources_careers'), href: '/resources/careers' },
     { name: t('resources_privacy'), href: '/privacy-policy' },
-    { name: t('resources_terms'), href: '/terms-of-service' },
   ];
 
   useEffect(() => {

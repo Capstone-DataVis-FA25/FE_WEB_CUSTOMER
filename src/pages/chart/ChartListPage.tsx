@@ -695,7 +695,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('all');
+                                setChartTypeFilter(`${t('all')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'all', page: 1 });
                               }}
@@ -705,7 +705,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('line');
+                                setChartTypeFilter(`${t('line')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'line', page: 1 });
                               }}
@@ -715,7 +715,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('bar');
+                                setChartTypeFilter(`${t('bar')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'bar', page: 1 });
                               }}
@@ -725,7 +725,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('area');
+                                setChartTypeFilter(`${t('area')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'area', page: 1 });
                               }}
@@ -735,7 +735,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('scatter');
+                                setChartTypeFilter(`${t('scatter')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'scatter', page: 1 });
                               }}
@@ -745,7 +745,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('pie');
+                                setChartTypeFilter(`${t('pie')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'pie', page: 1 });
                               }}
@@ -755,7 +755,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('donut');
+                                setChartTypeFilter(`${t('donut')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'donut', page: 1 });
                               }}
@@ -765,7 +765,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('cycleplot');
+                                setChartTypeFilter(`${t('cycleplot')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'cycleplot', page: 1 });
                               }}
@@ -775,7 +775,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('heatmap');
+                                setChartTypeFilter(`${t('heatmap')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'heatmap', page: 1 });
                               }}

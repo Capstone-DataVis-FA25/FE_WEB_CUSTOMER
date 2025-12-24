@@ -597,14 +597,14 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
                                 {/* Hint: diverging allows date, others require number */}
                                 <p className="text-xs text-muted-foreground italic mt-1">
                                   {barType === 'diverging'
-                                    ? `💡 Value can be numeric or date (for timeline positive/negative split)`
-                                    : `💡 Value must be numeric values (number)`}
+                                    ? `Value can be numeric or date (for timeline positive/negative split)`
+                                    : `Value must be numeric values (number)`}
                                 </p>
                               </div>
                             </div>
                             <div className="pt-2 border-t border-border/30">
                               <ColorPicker
-                                label={t('chart_editor_series_color', 'Series Color')}
+                                label={t('chart_editor_series_color')}
                                 value={seriesItem.color}
                                 onChange={color => onUpdateSeries(seriesItem.id, { color })}
                               />
