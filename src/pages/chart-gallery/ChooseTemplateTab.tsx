@@ -75,7 +75,6 @@ export default function ChooseTemplateTab() {
   const [selectedTemplate, setSelectedTemplate] = useState<ChartTemplate | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['All']);
-  const [selectedPurposes, setSelectedPurposes] = useState<string[]>(['All']);
   const [showFeatured, setShowFeatured] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showDatasetModal, setShowDatasetModal] = useState(false);
@@ -263,12 +262,9 @@ export default function ChooseTemplateTab() {
 
     const matchesCategory = selectedCategory === 'All' || template.category === selectedCategory;
     const matchesType = selectedTypes.includes('All') || selectedTypes.includes(template.type);
-    const matchesPurpose =
-      selectedPurposes.includes('All') ||
-      selectedPurposes.some(purpose => template.configuration?.purpose === purpose);
     const matchesFeatured = !showFeatured || template.featured === true;
 
-    return matchesSearch && matchesCategory && matchesType && matchesPurpose && matchesFeatured;
+    return matchesSearch && matchesCategory && matchesType && matchesFeatured;
   });
 
   // Pagination
@@ -277,11 +273,6 @@ export default function ChooseTemplateTab() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedCategory, selectedTypes, selectedPurposes, showFeatured]);
 
   if (isLoading) {
     return (
