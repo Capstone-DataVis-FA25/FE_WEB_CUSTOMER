@@ -586,6 +586,11 @@ const ChartEditorPage: React.FC = () => {
           headersToUse as unknown as DataHeader[]
         ) || dataToProcess;
 
+      console.log('[DEBUG][Filter] Original data rows:', dataToProcess?.length);
+      console.log('[DEBUG][Filter] Filtered data rows:', filtered?.length);
+      console.log('[DEBUG][Filter] Has filters:', !!currentFilters && currentFilters.length > 0);
+      console.log('[DEBUG][Filter] Filters:', currentFilters);
+
       // Sort using filtered data
       const multiSorted = applyMultiLevelSort(filtered, sortLevels, colIndexMap) || filtered;
 
@@ -630,6 +635,15 @@ const ChartEditorPage: React.FC = () => {
           : (headersToUse as unknown as DataHeader[]);
         finalData = aggregationResult ? aggregationResult.data : multiSorted;
       }
+
+      console.log('[DEBUG][ProcessedData] Final data rows:', finalData?.length);
+      console.log('[DEBUG][ProcessedData] Final headers count:', finalHeaders?.length);
+      console.log(
+        '[DEBUG][ProcessedData] Final headers:',
+        finalHeaders?.map(h => ({ id: (h as any).id, name: h.name, type: h.type }))
+      );
+      console.log('[DEBUG][ProcessedData] Has pivot:', hasPivot);
+      console.log('[DEBUG][ProcessedData] Has aggregation:', !!currentAggregation);
 
       return { data: finalData, headers: finalHeaders };
     } catch (e) {
@@ -697,13 +711,71 @@ const ChartEditorPage: React.FC = () => {
   // EFFECT: Clean up chart config when headers change (e.g., aggregation changes)
   // ============================================================
   useEffect(() => {
-    if (!processedData.headers || !chartConfig) return;
+    console.log('[DEBUG][CleanupEffect] Running cleanup effect');
+    console.log('[DEBUG][CleanupEffect] processedData.headers:', processedData.headers?.length);
+    console.log('[DEBUG][CleanupEffect] processedData.data:', processedData.data?.length);
+    console.log('[DEBUG][CleanupEffect] chartConfig exists:', !!chartConfig);
+
+    if (!processedData.headers || !chartConfig) {
+      console.log('[DEBUG][CleanupEffect] Skipping cleanup - missing headers or config');
+      return;
+    }
+
+    // Check if pivot is active
+    const hasPivot =
+      datasetConfig?.pivot &&
+      ((datasetConfig.pivot.rows?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.columns?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.values?.length ?? 0) > 0);
+
+    // CRITICAL FIX: Skip cleanup when pivot is active AND data is empty
+    // When pivot data is empty, applyPivot returns null and we fall back to original headers
+    // But chart config still has pivot-generated IDs (pivot-row_*, col-*) that don't match original headers
+    // This mismatch is temporary - once data is not empty, pivot headers will be back
+    // So we should NOT cleanup in this case to preserve the pivot config
+    if (hasPivot && (!processedData.data || processedData.data.length === 0)) {
+      console.log(
+        '[DEBUG][CleanupEffect] Skipping cleanup - pivot active but data is empty (preserving pivot config)'
+      );
+      return;
+    }
+
+    console.log(
+      '[DEBUG][CleanupEffect] Current xAxisKey:',
+      (chartConfig as any)?.axisConfigs?.xAxisKey
+    );
+    console.log(
+      '[DEBUG][CleanupEffect] Current series count:',
+      (chartConfig as any)?.axisConfigs?.seriesConfigs?.length
+    );
+    console.log(
+      '[DEBUG][CleanupEffect] Headers IDs:',
+      processedData.headers.map(h => (h as any).id || h.name)
+    );
 
     const cleanedConfig = cleanupChartConfig(chartConfig, processedData.headers);
+
     if (cleanedConfig !== chartConfig) {
+      console.log('[DEBUG][CleanupEffect] Config changed!');
+      console.log(
+        '[DEBUG][CleanupEffect] New xAxisKey:',
+        (cleanedConfig as any)?.axisConfigs?.xAxisKey
+      );
+      console.log(
+        '[DEBUG][CleanupEffect] New series count:',
+        (cleanedConfig as any)?.axisConfigs?.seriesConfigs?.length
+      );
       setChartConfig(cleanedConfig);
+    } else {
+      console.log('[DEBUG][CleanupEffect] No changes to config');
     }
-  }, [processedData.headers, chartConfig, setChartConfig]);
+  }, [
+    processedData.headers,
+    processedData.data,
+    chartConfig,
+    setChartConfig,
+    datasetConfig?.pivot,
+  ]);
 
   // ============================================================
   // EFFECT: Sync chart data from processed data
