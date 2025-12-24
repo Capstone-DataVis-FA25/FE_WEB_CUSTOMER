@@ -13,6 +13,7 @@ interface ChatMessage {
   needsChartTypeSelection?: boolean;
   originalMessage?: string;
   chartData?: ChartGenerationResponse;
+  createdDataset?: DatasetInfo;
 }
 
 export function useAiChat() {
@@ -58,6 +59,8 @@ export function useAiChat() {
       console.log('======================================');
 
       if (res.code === 200 && actualData?.success) {
+        console.log('AI Response Data:', actualData);
+
         const assistantMessage: ChatMessage = {
           role: 'assistant' as const,
           content: actualData.reply,
@@ -66,6 +69,7 @@ export function useAiChat() {
           originalMessage: actualData.originalMessage,
           datasets: actualData.datasets,
           chartData: actualData.chartData,
+          createdDataset: actualData.createdDataset || actualData.data, // Map createdDataset or generic data
         };
 
         setMessages([...newMessages, assistantMessage]);
@@ -78,7 +82,7 @@ export function useAiChat() {
           ...newMessages,
           {
             role: 'assistant' as const,
-            content: t('chatbox.errorExecuteResponse'),
+            content: actualData?.reply || t('chatbox.errorExecuteResponse'),
           },
         ]);
       }

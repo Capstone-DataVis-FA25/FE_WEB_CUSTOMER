@@ -235,66 +235,6 @@ const ChartIcon: React.FC<ChartIconProps> = ({ type, className = '', size = 120 
           </svg>
         );
 
-      case 'column':
-        return (
-          <svg viewBox="0 0 120 80" className={`w-full h-full ${className}`}>
-            {/* Grid lines */}
-            <defs>
-              <pattern id="columnGrid" width="20" height="16" patternUnits="userSpaceOnUse">
-                <path
-                  d="M 20 0 L 0 0 0 16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="0.5"
-                  opacity="0.2"
-                />
-              </pattern>
-            </defs>
-            <rect width="120" height="80" fill="url(#columnGrid)" />
-
-            {/* Axes */}
-            <line
-              x1="15"
-              y1="65"
-              x2="105"
-              y2="65"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              opacity="0.6"
-            />
-            <line
-              x1="15"
-              y1="65"
-              x2="15"
-              y2="15"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              opacity="0.6"
-            />
-
-            {/* Columns */}
-            {[
-              { x: 25, height: 35, color: '#3b82f6' },
-              { x: 35, height: 45, color: '#10b981' },
-              { x: 45, height: 28, color: '#f59e0b' },
-              { x: 55, height: 50, color: '#ef4444' },
-              { x: 65, height: 38, color: '#8b5cf6' },
-              { x: 75, height: 42, color: '#06b6d4' },
-              { x: 85, height: 55, color: '#f97316' },
-            ].map((col, index) => (
-              <rect
-                key={index}
-                x={col.x - 3}
-                y={65 - col.height}
-                width="6"
-                height={col.height}
-                fill={col.color}
-                rx="1"
-              />
-            ))}
-          </svg>
-        );
-
       case 'scatter':
         return (
           <svg viewBox="0 0 120 80" className={`w-full h-full ${className}`}>

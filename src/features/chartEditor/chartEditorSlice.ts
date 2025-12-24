@@ -164,11 +164,6 @@ const chartEditorSlice = createSlice({
         return changes;
       };
 
-      // const changedFields = findDeepChanges(state.chartConfig, configChanges);
-
-      // Snapshot Immer draft to avoid logging revoked Proxy objects in console
-      // const snapshotCurrent = state.chartConfig ? current(state.chartConfig) : null;
-
       state.chartConfig = newConfig;
     },
 

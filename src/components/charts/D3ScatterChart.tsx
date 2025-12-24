@@ -313,9 +313,14 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     return { radius: adaptiveRadius, opacity: adaptiveOpacity };
   }, [processedData, pointRadius, minPointRadius, pointOpacity]);
 
+  // Determine active Y keys (support multiple series)
+  const activeYKeys = useMemo(() => {
+    return yAxisKeys && yAxisKeys.length > 0 ? yAxisKeys : [yAxisKey];
+  }, [yAxisKeys, yAxisKey]);
+
   // Determine if current selection is valid for scatter and prepare a clearer error UI
   const validationInfo = useMemo(() => {
-    if (!processedData || processedData.length === 0 || !xAxisKey || !yAxisKey) {
+    if (!processedData || processedData.length === 0 || !xAxisKey || activeYKeys.length === 0) {
       return {
         isInvalid: true,
         validCount: 0,
@@ -326,7 +331,9 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
         yReq: getAxisRequirementDescription('scatter', 'y'),
       };
     }
-    const val = validateScatterDataObjects(processedData, xAxisKey, yAxisKey);
+
+    const val = validateScatterDataObjects(processedData, xAxisKey, activeYKeys[0]);
+
     if (val.validCount < 2) {
       const suggestions = suggestNumericPairsFromObjects(processedData, 2).slice(0, 4);
       return {
@@ -339,12 +346,12 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     }
     return {
       isInvalid: false,
-      ...val,
+      ...val, // includes validCount of first series
       suggestions: [] as Array<[string, string]>,
       xReq: '',
       yReq: '',
     };
-  }, [processedData, xAxisKey, yAxisKey]);
+  }, [processedData, xAxisKey, activeYKeys]);
 
   // Get theme-specific colors
   const themeColors = useMemo(() => {
@@ -485,7 +492,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     xAxisLabel,
     yAxisLabel,
     xAxisKey,
-    yAxisKey,
+    activeYKeys,
     xAxisRotation,
     processedData,
   ]);
@@ -505,7 +512,13 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
 
   // Main chart rendering with tooltip and legend
   useEffect(() => {
-    if (!processedData || processedData.length === 0 || !svgRef.current || !xAxisKey || !yAxisKey) {
+    if (
+      !processedData ||
+      processedData.length === 0 ||
+      !svgRef.current ||
+      !xAxisKey ||
+      activeYKeys.length === 0
+    ) {
       return;
     }
 
@@ -585,13 +598,13 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     if (innerWidth <= 0 || innerHeight <= 0) return;
 
     // Validate selected X/Y keys on processed data
-    const validation = validateScatterDataObjects(processedData, xAxisKey, yAxisKey);
+    const validation = validateScatterDataObjects(processedData, xAxisKey, activeYKeys[0]);
     // Debug logs for validation
     try {
       console.groupCollapsed && console.groupCollapsed('[D3ScatterChart] validation');
       console.debug('[D3ScatterChart] processedData.length=', processedData.length);
       console.debug('[D3ScatterChart] keys=', Object.keys(processedData[0] || {}));
-      console.debug('[D3ScatterChart] xAxisKey, yAxisKey=', xAxisKey, yAxisKey);
+      console.debug('[D3ScatterChart] xAxisKey, activeYKeys=', xAxisKey, activeYKeys);
       console.debug('[D3ScatterChart] validation=', validation);
     } catch (e) {
       /* ignore */
@@ -608,32 +621,30 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
     }
 
     // Create numeric arrays for scales and regression
+    // X values (common)
     const xValues = processedData.map(d => +d[xAxisKey]).filter(v => !isNaN(v));
-    const yValues = processedData.map(d => +d[yAxisKey]).filter(v => !isNaN(v));
+
+    // Y values: Collect ALL values from ALL active series to determine global Y scale
+    const allYValues: number[] = [];
+    activeYKeys.forEach(key => {
+      const vals = processedData.map(d => +d[key]).filter(v => !isNaN(v));
+      allYValues.push(...vals);
+    });
 
     // Debug: show sample converted rows and extents
     try {
       console.groupCollapsed && console.groupCollapsed('[D3ScatterChart] sample conversion');
-      const sample = processedData.slice(0, 6).map((d, i) => ({
-        row: i + 1,
-        rawX: d[xAxisKey],
-        rawY: d[yAxisKey],
-        numX: Number(d[xAxisKey]),
-        numY: Number(d[yAxisKey]),
-        valid: !isNaN(Number(d[xAxisKey])) && !isNaN(Number(d[yAxisKey])),
-      }));
-      console.debug('[D3ScatterChart] sampleRows=', sample);
       console.debug(
         '[D3ScatterChart] xValues.length=',
         xValues.length,
-        'yValues.length=',
-        yValues.length
+        'allYValues.length=',
+        allYValues.length
       );
       console.debug(
         '[D3ScatterChart] xExtent=',
         d3.extent(xValues),
         'yExtent=',
-        d3.extent(yValues)
+        d3.extent(allYValues)
       );
     } catch (e) {
       /* ignore */
@@ -647,7 +658,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
 
     // Before drawing, expand left margin if Y tick labels are very long
     try {
-      const yExt = d3.extent(yValues) as [number, number];
+      const yExt = d3.extent(allYValues) as [number, number];
       const yDomain: [number, number] = [yAxisStart === 'zero' ? 0 : yExt[0], yExt[1]];
       const yScaleForMeasure = d3.scaleLinear().domain(yDomain).nice().range([innerHeight, 0]);
       const fontPx = fontSize.axis || 12;
@@ -697,7 +708,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
       .attr('transform', `translate(${responsiveMargin.left},${responsiveMargin.top})`);
 
     const xExtent = d3.extent(xValues) as [number, number];
-    const yExtent = d3.extent(yValues) as [number, number];
+    const yExtent = d3.extent(allYValues) as [number, number];
 
     // Apply axis start config
     const xDomain: [number, number] = [
@@ -954,16 +965,40 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
           : [yAxisKey];
 
     // If colorKey is provided and no explicit multiple y keys, we'll fallback to color grouping per point
-    if (keysToRender && keysToRender.length > 1) {
+    if (keysToRender && keysToRender.length > 0) {
       keysToRender.forEach((key, idx) => {
         const seriesLabel = (seriesNames && seriesNames[key]) || key;
         const seriesColor =
           (seriesColorsMap && seriesColorsMap[key]) ||
           themeColors[key] ||
-          Object.values(themeColors)[idx] ||
+          Object.values(themeColors)[idx % 8] ||
           '#3b82f6';
 
         const validPoints = processedData.filter(d => !isNaN(+d[xAxisKey]) && !isNaN(+d[key]));
+
+        // Regression Line (Per Series)
+        if (showRegressionLine && validPoints.length > 1) {
+          try {
+            const xSeries = validPoints.map(d => +d[xAxisKey]);
+            const ySeries = validPoints.map(d => +d[key]);
+            const { slope, intercept } = calculateLinearRegression(xSeries, ySeries);
+            const regressionColor = regressionLineColor || seriesColor;
+
+            chartGroup
+              .append('line')
+              .attr('class', `regression-line-${idx}`)
+              .attr('x1', xScale(xDomain[0]))
+              .attr('y1', yScale(slope * xDomain[0] + intercept))
+              .attr('x2', xScale(xDomain[1]))
+              .attr('y2', yScale(slope * xDomain[1] + intercept))
+              .attr('stroke', regressionColor)
+              .attr('stroke-width', regressionLineWidth)
+              .attr('stroke-dasharray', '5,5')
+              .attr('opacity', 0.8);
+          } catch (e) {
+            console.warn('RegErr', e);
+          }
+        }
 
         chartGroup
           .selectAll(`.scatter-point-${idx}`)
@@ -974,7 +1009,9 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
           .attr('cx', (d: ScatterDataPoint) => xScale(+d[xAxisKey]))
           .attr('cy', (d: ScatterDataPoint) => yScale(+d[key]))
           .attr('r', 0)
-          .attr('fill', seriesColor)
+          .attr('fill', d =>
+            colorKey && colorScale ? colorScale(String(d[colorKey])) : seriesColor
+          )
           .attr('opacity', adaptiveStyles.opacity)
           .style('cursor', showTooltip ? 'pointer' : 'default')
           .style('transition', 'all 0.2s ease')
@@ -1005,23 +1042,32 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
               .attr('opacity', adaptiveStyles.opacity * 0.3);
 
             // No need to remove - renderD3Tooltip will clear and update content
-            // IMPORTANT: Must clear old tooltip content before drawing new one
-            tooltipGroup.selectAll('*').remove();
+            // tooltipGroup.selectAll('*').remove();
 
             const xVal = xAxisFormatter ? xAxisFormatter(+d[xAxisKey]) : String(d[xAxisKey]);
             const yVal = yAxisFormatter ? yAxisFormatter(+d[key]) : String(d[key]);
 
-            // Build comprehensive tooltip with all available data
-            const lines: string[] = [];
+            // Build comprehensive tooltip using utility functions
+            const scatterTooltipLines: TooltipLine[] = [];
 
-            // Add series label as header if available
-            if (seriesLabel && seriesLabel !== key) {
-              lines.push(`📊 ${seriesLabel}`);
+            // Add series name as header if multiple series
+            if (keysToRender.length > 1) {
+              scatterTooltipLines.push(
+                createHeader(seriesLabel, { fontSize: 13, color: seriesColor })
+              );
             }
 
             // Add X and Y values with clear labels
-            lines.push(`📈 ${xAxisKey}: ${xVal}`);
-            lines.push(`📉 ${seriesLabel}: ${yVal}`);
+            scatterTooltipLines.push(
+              createStatLine(xAxisLabel || xAxisKey, xVal, { fontSize: 12, fontWeight: '600' })
+            );
+            scatterTooltipLines.push(
+              createStatLine(yAxisLabel || seriesLabel, yVal, {
+                fontSize: 12,
+                fontWeight: '600',
+                color: keysToRender.length > 1 ? seriesColor : undefined,
+              })
+            );
 
             // Add other important columns (non-numeric or identifier columns)
             const allKeys = Object.keys(d);
@@ -1030,6 +1076,7 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
                 k =>
                   k !== xAxisKey &&
                   k !== key &&
+                  (!processedData[0].hasOwnProperty(yAxisKey) || k !== yAxisKey) &&
                   k !== colorKey &&
                   k !== sizeKey &&
                   d[k] !== undefined &&
@@ -1039,84 +1086,46 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
               .slice(0, 3); // Limit to 3 additional fields
 
             if (otherKeys.length > 0) {
-              lines.push(''); // Empty line as separator
+              scatterTooltipLines.push(createSeparator());
               otherKeys.forEach(k => {
                 const val = typeof d[k] === 'number' ? d[k].toLocaleString() : String(d[k]);
-                lines.push(`• ${k}: ${val}`);
+                scatterTooltipLines.push(createStatLine(k, val, { fontSize: 11 }));
               });
             }
 
             // Add color category if available
             if (colorKey && d[colorKey]) {
-              lines.push(''); // Empty line as separator
-              lines.push(`🏷️ ${colorKey}: ${d[colorKey]}`);
+              scatterTooltipLines.push(createSeparator());
+              scatterTooltipLines.push(
+                createStatLine(colorKey, String(d[colorKey]), {
+                  fontSize: 11,
+                  fontWeight: '500',
+                  color: colorScale ? colorScale(String(d[colorKey])) : undefined,
+                })
+              );
             }
 
             // Add size value if available
             if (sizeKey && d[sizeKey]) {
               const sizeVal =
                 typeof d[sizeKey] === 'number' ? d[sizeKey].toLocaleString() : String(d[sizeKey]);
-              lines.push(`📏 ${sizeKey}: ${sizeVal}`);
+              scatterTooltipLines.push(
+                createStatLine(sizeKey, sizeVal, { fontSize: 11, fontWeight: '500' })
+              );
             }
 
-            const textColorLocal = isDarkMode ? '#fff' : '#222';
-
-            const textEl = tooltipGroup
-              .append('text')
-              .attr('fill', textColorLocal)
-              .style('font-size', '12px')
-              .style('font-family', 'system-ui, -apple-system, sans-serif');
-
-            lines.forEach((line, i) => {
-              const tspan = textEl
-                .append('tspan')
-                .attr('x', 12)
-                .attr('y', 14 + i * 18)
-                .text(line);
-
-              // Make first line (header) bold
-              if (i === 0 && seriesLabel && seriesLabel !== key) {
-                tspan.style('font-weight', '600').style('font-size', '13px');
-              }
-
-              // Reduce spacing for empty lines
-              if (line === '') {
-                tspan.attr('y', 14 + i * 18 - 6);
-              }
-            });
-
-            const bbox = (textEl.node() as SVGTextElement).getBBox();
-
-            tooltipGroup
-              .insert('rect', 'text')
-              .attr('width', bbox.width + 20)
-              .attr('height', bbox.height + 10)
-              .attr('fill', isDarkMode ? '#222' : '#fff')
-              .attr('stroke', isDarkMode ? '#eee' : '#333')
-              .attr('rx', 8)
-              .attr('opacity', 0.95);
-
+            // Get pointer position
             const mouse = d3.pointer(event, chartGroup.node());
-            const tooltipWidth = bbox.width + 20;
-            const tooltipHeight = bbox.height + 10;
 
-            // Always position tooltip above the point
-            let tx = mouse[0] - tooltipWidth / 2; // Center horizontally on point
-            let ty = mouse[1] - tooltipHeight - 15; // Position above with 15px gap
-
-            // Adjust horizontal position if tooltip goes off left/right edges
-            if (tx < 0) {
-              tx = 5; // Minimum left padding
-            } else if (tx + tooltipWidth > innerWidth) {
-              tx = innerWidth - tooltipWidth - 5; // Maximum right padding
-            }
-
-            // If tooltip would go off top, position below the point instead
-            if (ty < 0) {
-              ty = mouse[1] + 15; // Position below with 15px gap
-            }
-
-            tooltipGroup.attr('transform', `translate(${tx},${ty})`);
+            // Render tooltip using utility function
+            renderD3Tooltip(tooltipGroup, {
+              lines: scatterTooltipLines,
+              isDarkMode,
+              position: { x: mouse[0], y: mouse[1] },
+              containerWidth: innerWidth,
+              containerHeight: innerHeight,
+              preferPosition: 'above',
+            });
 
             // Smooth fade in
             tooltipGroup.transition().duration(200).style('opacity', 1);
@@ -1425,24 +1434,6 @@ const D3ScatterChart: React.FC<D3ScatterChartProps> = ({
 
         cursorX += estimatedTextWidth(it.label) + itemSpacing;
       });
-    }
-
-    // Regression line
-    if (showRegressionLine && xValues.length > 1) {
-      const regression = calculateLinearRegression(xValues, yValues);
-      const regressionColor = regressionLineColor || (isDarkMode ? '#ef4444' : '#dc2626');
-
-      chartGroup
-        .append('line')
-        .attr('class', 'regression-line')
-        .attr('x1', xScale(xDomain[0]))
-        .attr('y1', yScale(regression.slope * xDomain[0] + regression.intercept))
-        .attr('x2', xScale(xDomain[1]))
-        .attr('y2', yScale(regression.slope * xDomain[1] + regression.intercept))
-        .attr('stroke', regressionColor)
-        .attr('stroke-width', regressionLineWidth)
-        .attr('stroke-dasharray', '5,5')
-        .attr('opacity', 0.7);
     }
 
     // Tooltip group created AFTER all points/lines so it renders on top
