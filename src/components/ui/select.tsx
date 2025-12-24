@@ -28,6 +28,9 @@ export interface SelectValueProps {
   options?: Array<{ value: string; label: string }>;
 }
 
+// Keep track of all Select instances so we can close others when one opens
+const allSelectSetters = new Set<React.Dispatch<React.SetStateAction<boolean>>>();
+
 const SelectContext = React.createContext<{
   value?: string;
   onValueChange?: (value: string) => void;
@@ -40,6 +43,7 @@ const SelectContext = React.createContext<{
   unregisterItem?: (value: string) => void;
   itemsRef?: React.MutableRefObject<Map<string, React.RefObject<HTMLDivElement>>>;
   registerItemRef?: (value: string, ref: React.RefObject<HTMLDivElement>) => void;
+  closeOthers?: () => void;
 }>({
   open: false,
   setOpen: () => {},
@@ -52,6 +56,22 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
   const contentRef = React.useRef<HTMLDivElement>(null);
   const itemsMap = React.useRef(new Map<string, string>());
   const itemsRef = React.useRef(new Map<string, React.RefObject<HTMLDivElement>>());
+
+  // Register this Select's setter so we can close it from other instances
+  React.useEffect(() => {
+    allSelectSetters.add(setOpen);
+    return () => {
+      allSelectSetters.delete(setOpen);
+    };
+  }, [setOpen]);
+
+  const closeOthers = React.useCallback(() => {
+    allSelectSetters.forEach(fn => {
+      if (fn !== setOpen) {
+        fn(false);
+      }
+    });
+  }, []);
 
   const registerItem = React.useCallback((v: string, label: string) => {
     itemsMap.current.set(v, label);
@@ -96,6 +116,7 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
         unregisterItem,
         itemsRef,
         registerItemRef,
+        closeOthers,
       }}
     >
       <div className="relative" ref={containerRef}>
@@ -107,14 +128,34 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
 
 const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
   ({ className, children, onClick, ...props }, ref) => {
-    const { setOpen, open, triggerRef } = React.useContext(SelectContext);
+    const { setOpen, open, triggerRef, closeOthers } = React.useContext(SelectContext);
 
     React.useImperativeHandle(ref, () => (triggerRef?.current ?? null) as HTMLButtonElement);
 
     const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
-      setOpen(prev => !prev);
+
+      if (!open) {
+        // When opening this Select, close all others
+        closeOthers?.();
+        setOpen(true);
+      } else {
+        setOpen(false);
+      }
+
       onClick?.(e);
+
+      // Notify the rest of the app that a Select has just been toggled open/closed.
+      // This lets custom dropdowns (like the feature multi-select) respond and close themselves.
+      try {
+        window.dispatchEvent(
+          new CustomEvent('app:select-toggled', {
+            detail: { open: !open },
+          })
+        );
+      } catch {
+        // In non-browser environments, window may not exist; safely ignore.
+      }
     };
 
     return (

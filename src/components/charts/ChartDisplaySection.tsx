@@ -95,14 +95,72 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
         xFormatterType: 'number' as const,
       };
       axisConfigs = chartConfig.axisConfigs || {};
+
+      // Build colors map: when pivot tables have column dimensions, one series can map to multiple headers
+      // We need to find ALL headers that match each series's dataColumn and assign colors to each
+      const findAllHeadersForColor = (dataColumn: string) => {
+        return dataHeaders.filter(
+          h =>
+            (h as any).id === dataColumn ||
+            (h as any).headerId === dataColumn ||
+            (h as any).valueId === dataColumn
+        );
+      };
+
       (axisConfigs.seriesConfigs || []).forEach((series: any) => {
         if (series.dataColumn && series.color) {
-          const header = findHeader(series.dataColumn);
-          const columnName = header ? header.name : series.dataColumn;
-          colors[columnName] = {
-            light: series.color,
-            dark: series.color,
-          };
+          const matchingHeaders = findAllHeadersForColor(series.dataColumn);
+
+          if (matchingHeaders.length === 0) {
+            // Fallback: use findHeader if no headers found
+            const header = findHeader(series.dataColumn);
+            const columnName = header ? header.name : series.dataColumn;
+            colors[columnName] = {
+              light: series.color,
+              dark: series.color,
+            };
+          } else {
+            // Assign color to each matching header
+            // First header gets the series color, others get generated colors
+            matchingHeaders.forEach((header, index) => {
+              const headerName = header.name;
+              if (index === 0) {
+                colors[headerName] = {
+                  light: series.color,
+                  dark: series.color,
+                };
+              } else {
+                // Generate unique colors for additional headers from the same series
+                const colorPalette = [
+                  '#f97316',
+                  '#ec4899',
+                  '#8b5cf6',
+                  '#06b6d4',
+                  '#10b981',
+                  '#f59e0b',
+                  '#ef4444',
+                  '#3b82f6',
+                  '#14b8a6',
+                  '#f43f5e',
+                  '#a855f7',
+                  '#84cc16',
+                  '#6366f1',
+                  '#22c55e',
+                  '#eab308',
+                  '#d946ef',
+                ];
+                const baseColorIndex = (axisConfigs.seriesConfigs || []).findIndex(
+                  (s: any) => s.id === series.id
+                );
+                const colorIndex = (baseColorIndex + index) % colorPalette.length;
+                const generatedColor = colorPalette[colorIndex];
+                colors[headerName] = {
+                  light: generatedColor,
+                  dark: generatedColor,
+                };
+              }
+            });
+          }
         }
       });
       safeChartConfig = chartConfig.config || null;
@@ -209,15 +267,48 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
           (series: any) => series.visible !== false
         );
 
-        // Get display names for labels
-        const yAxisKeysNames = visibleSeries.map((series: any) => {
-          const columnName = getHeaderName(series.dataColumn);
-          return columnName;
-        });
+        // Helper: Find ALL headers that match a dataColumn (for pivot tables with column dimensions)
+        const findAllHeaders = (dataColumn: string) => {
+          return dataHeaders.filter(
+            h =>
+              (h as any).id === dataColumn ||
+              (h as any).headerId === dataColumn ||
+              (h as any).valueId === dataColumn
+          );
+        };
 
-        // Get actual data keys used in chartData
-        const yAxisDataKeys = visibleSeries.map((series: any) => {
-          return getChartDataKey(series.dataColumn);
+        // Get display names for labels
+        // When pivot tables have column dimensions, one series can map to multiple headers
+        // We need to find ALL headers that match each series's dataColumn
+        const yAxisKeysNames: string[] = [];
+        const yAxisDataKeys: string[] = [];
+        const seriesNameMap: Record<string, string> = {}; // Map header name to series display name
+
+        visibleSeries.forEach((series: any) => {
+          const matchingHeaders = findAllHeaders(series.dataColumn);
+
+          if (matchingHeaders.length === 0) {
+            // Fallback: use getHeaderName if no headers found
+            const columnName = getHeaderName(series.dataColumn);
+            const dataKey = getChartDataKey(series.dataColumn);
+            yAxisKeysNames.push(columnName);
+            yAxisDataKeys.push(dataKey);
+            seriesNameMap[columnName] = series.name || columnName;
+          } else {
+            // For each matching header, add it to yAxisKeysNames
+            // This handles the case where one series maps to multiple headers (pivot with columns)
+            matchingHeaders.forEach(header => {
+              const headerName = header.name;
+              const headerId = (header as any).id || header.name;
+              const dataKey = getChartDataKey(headerId);
+
+              yAxisKeysNames.push(headerName);
+              yAxisDataKeys.push(dataKey);
+
+              // Use series name for all headers from the same series
+              seriesNameMap[headerName] = series.name || headerName;
+            });
+          }
         });
 
         // Then check if no series are selected OR no visible series
@@ -275,12 +366,7 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
           xAxisKey: xAxisKeyName,
           yAxisKeys: yAxisKeysNames as string[],
           colors: colors,
-          seriesNames: Object.fromEntries(
-            (axisConfigs.seriesConfigs || []).map((series: any) => [
-              getHeaderName(series.dataColumn),
-              series.name,
-            ])
-          ),
+          seriesNames: seriesNameMap, // Use the map we built that handles multiple headers per series
           title: safeChartConfig.title,
           xAxisLabel: axisConfigs.xAxisLabel || xAxisKeyName, // Use column name as default
           yAxisLabel:
@@ -941,8 +1027,8 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
       default:
         return (
           <ErrorPanel
-            title={t('chart_editor_invalid_type', 'Invalid chart type')}
-            subtitle={t('chart_editor_select_type_hint', 'Please select a valid chart type.')}
+            title={t('chart_editor_invalid_type')}
+            subtitle={t('chart_editor_select_type_hint')}
             bordered
           />
         );

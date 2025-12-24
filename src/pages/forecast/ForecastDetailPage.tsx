@@ -10,7 +10,6 @@ import {
   AlertCircle,
   ArrowLeft,
   TrendingUp,
-  Calendar,
   Target,
   HelpCircle,
   Sparkles,
@@ -26,6 +25,7 @@ import { useToastContext } from '@/components/providers/ToastProvider';
 import getApiBackendUrl from '@/utils/apiConfig';
 import useLanguage from '@/hooks/useLanguage';
 import i18n from '@/i18n/i18n';
+import { useTranslation } from 'react-i18next';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { useModalConfirm } from '@/hooks/useModal';
 import { useForecastAnalysisProgress } from '@/features/forecast/useForecastAnalysisProgress';
@@ -55,7 +55,6 @@ interface ForecastData {
   name?: string;
   targetColumn: string;
   featureColumns?: string[] | null;
-  timeScale: string;
   forecastWindow: number;
   modelType: string;
   predictions: ForecastPrediction[];
@@ -68,6 +67,7 @@ interface ForecastData {
 }
 
 const ForecastDetailPage: React.FC = () => {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { showError, showSuccess } = useToastContext();
@@ -80,6 +80,11 @@ const ForecastDetailPage: React.FC = () => {
   const { currentLanguage } = useLanguage(); // Reactive language hook
   const { user } = useAuth();
   const { activeJobs } = useForecastAnalysisProgress(user?.id);
+
+  // Check if analysis is currently running for this forecast
+  const isAnalysisRunning = id
+    ? activeJobs.some(job => job.forecastId === id && job.status === 'processing')
+    : false;
 
   const MAX_VISIBLE_FEATURES = 3;
   const featureColumns = forecast?.featureColumns || [];
@@ -123,23 +128,63 @@ const ForecastDetailPage: React.FC = () => {
       textToParse = analysisText;
     }
 
-    // Parse sections (format: "1. Section Title\n\nContent...")
+    // Parse sections (format: "Section Title\n\nContent..." or "1. Section Title\n\nContent...")
     const sections: Array<{ title: string; content: string }> = [];
     const lines = textToParse.split('\n');
     let currentSection: { title: string; content: string } | null = null;
 
+    // Section titles to look for (case-insensitive) - both English and Vietnamese
+    const sectionTitles = [
+      // English titles
+      'Summary',
+      'Future Outlook',
+      'Uncertainty',
+      'Key Takeaways',
+      // Vietnamese titles (common translations)
+      'Tóm tắt',
+      'Tóm Tắt',
+      'Triển vọng tương lai',
+      'Triển Vọng Tương Lai',
+      'Tương lai',
+      'Tương Lai',
+      'Độ không chắc chắn',
+      'Độ Không Chắc Chắn',
+      'Điểm chính',
+      'Điểm Chính',
+      'Những điểm chính',
+      'Những Điểm Chính',
+      'Điểm quan trọng',
+      'Điểm Quan Trọng',
+    ];
+    const sectionTitlePattern = new RegExp(
+      `^(${sectionTitles.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`,
+      'i'
+    );
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      const match = line.match(/^(\d+)\.\s+(.+)$/);
 
-      if (match) {
+      // Check for numbered section format: "1. Section Title"
+      const numberedMatch = line.match(/^(\d+)\.\s+(.+)$/);
+      // Check for plain section title format: "Section Title"
+      const titleMatch = sectionTitlePattern.test(line) && line.length < 50;
+
+      if (numberedMatch || titleMatch) {
+        const sectionTitle = numberedMatch ? numberedMatch[2] : line;
+
+        // Skip "Uncertainty" section
+        if (sectionTitle.toLowerCase() === 'uncertainty') {
+          currentSection = null;
+          continue;
+        }
+
         // Save previous section if exists
         if (currentSection) {
           sections.push(currentSection);
         }
         // Start new section
         currentSection = {
-          title: match[2],
+          title: sectionTitle,
           content: '',
         };
       } else if (currentSection && line) {
@@ -271,6 +316,9 @@ const ForecastDetailPage: React.FC = () => {
       const response = await axiosPrivate.get(`/forecasts/${id}`);
       const forecastData = response.data?.data || response.data;
       setForecast(forecastData);
+
+      // Mark any pending notifications for this forecast as read
+      // This will be handled by useEffect below to ensure it runs after jobs are loaded
     } catch (error: any) {
       console.error('Failed to fetch forecast:', error);
       const errorMessage =
@@ -340,16 +388,16 @@ const ForecastDetailPage: React.FC = () => {
 
   // Listen for analysis completion and refresh forecast
   useEffect(() => {
-    if (!id || !forecast) return;
+    if (!id) return;
 
     // Check if there's a completed job for this forecast
     const completedJob = activeJobs.find(job => job.forecastId === id && job.status === 'done');
 
     if (completedJob) {
-      // Refresh forecast to get updated analysis
+      // Refresh forecast to get updated analysis (once per job completion)
       fetchForecast();
     }
-  }, [activeJobs, id, forecast]);
+  }, [activeJobs, id]);
 
   if (isLoading) {
     return (
@@ -369,14 +417,16 @@ const ForecastDetailPage: React.FC = () => {
             <CardContent className="pt-6">
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <AlertCircle className="w-16 h-16 text-orange-500 mb-4" />
-                <p className="text-gray-600 dark:text-gray-400 mb-4">Forecast not found</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  {t('forecast_detail_not_found')}
+                </p>
                 <Button
                   onClick={() => navigate('/forecast')}
                   variant="outline"
                   className="cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Forecast
+                  {t('forecast_detail_back')}
                 </Button>
               </div>
             </CardContent>
@@ -400,7 +450,7 @@ const ForecastDetailPage: React.FC = () => {
               className="mb-4 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Forecast
+              {t('forecast_detail_back')}
             </Button>
           </div>
 
@@ -411,10 +461,10 @@ const ForecastDetailPage: React.FC = () => {
                 <div>
                   <CardTitle className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                    {forecast.name || 'Forecast Details'}
+                    {forecast.name || t('forecast_detail_title')}
                   </CardTitle>
                   <CardDescription className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Generated on {new Date(forecast.createdAt).toLocaleString()}
+                    {t('forecast_detail_generated')} {new Date(forecast.createdAt).toLocaleString()}
                   </CardDescription>
                 </div>
                 <Button
@@ -427,12 +477,12 @@ const ForecastDetailPage: React.FC = () => {
                   {isDeleting ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      Deleting...
+                      {t('forecast_detail_deleting')}
                     </>
                   ) : (
                     <>
                       <Trash2 className="w-4 h-4" />
-                      Delete
+                      {t('forecast_detail_delete')}
                     </>
                   )}
                 </Button>
@@ -444,14 +494,14 @@ const ForecastDetailPage: React.FC = () => {
                 {/* Forecast Summary Info */}
                 <div>
                   <Label className="mb-3 block text-sm font-semibold text-gray-900 dark:text-white">
-                    Forecast Summary
+                    {t('forecast_detail_summary')}
                   </Label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                       <Target className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Target Column
+                          {t('forecast_detail_target_column')}
                         </div>
                         <div
                           className="text-sm font-medium text-gray-900 dark:text-white mt-0.5 truncate"
@@ -466,14 +516,14 @@ const ForecastDetailPage: React.FC = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Feature Columns
+                            {t('forecast_detail_feature_columns')}
                           </div>
                           {featureColumns.length > MAX_VISIBLE_FEATURES && (
                             <button
                               onClick={() => setShowAllFeatures(true)}
                               className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer font-medium"
                             >
-                              View All ({featureColumns.length})
+                              {t('forecast_detail_view_all')} ({featureColumns.length})
                             </button>
                           )}
                         </div>
@@ -491,22 +541,15 @@ const ForecastDetailPage: React.FC = () => {
                               ))}
                               {remainingCount > 0 && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
-                                  +{remainingCount} more
+                                  +{remainingCount} {t('forecast_list_table_more')}
                                 </span>
                               )}
                             </div>
                           ) : (
-                            <span className="text-gray-400 dark:text-gray-500 text-sm">None</span>
+                            <span className="text-gray-400 dark:text-gray-500 text-sm">
+                              {t('forecast_detail_none')}
+                            </span>
                           )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                      <div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Time Scale</div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
-                          {forecast.timeScale}
                         </div>
                       </div>
                     </div>
@@ -514,17 +557,19 @@ const ForecastDetailPage: React.FC = () => {
                       <TrendingUp className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                       <div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Forecast Window
+                          {t('forecast_detail_forecast_window')}
                         </div>
                         <div className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
-                          {forecast.forecastWindow} {forecast.timeScale.toLowerCase()}
+                          {forecast.forecastWindow} {t('forecast_list_table_steps')}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 col-span-2 md:col-span-4">
+                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                       <Cpu className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                       <div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Model Type</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {t('forecast_detail_model_type')}
+                        </div>
                         <div className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
                           {forecast.modelType}
                         </div>
@@ -537,7 +582,7 @@ const ForecastDetailPage: React.FC = () => {
                 {forecast.metrics && (
                   <div>
                     <Label className="mb-3 block text-sm font-semibold text-gray-900 dark:text-white">
-                      Model Performance Metrics
+                      {t('forecast_detail_performance')}
                     </Label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -547,11 +592,10 @@ const ForecastDetailPage: React.FC = () => {
                             <HelpCircle className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-help" />
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-72 p-3 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-xl border border-gray-700">
                               <div className="font-semibold mb-1 text-purple-400">
-                                R² (R-squared)
+                                {t('forecast_detail_r2_title')}
                               </div>
                               <div className="text-gray-300 leading-relaxed">
-                                Measures how well the model explains the variance in the data.
-                                Values closer to 1.0 indicate better fit.
+                                {t('forecast_detail_r2_desc')}
                               </div>
                               <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
                             </div>
@@ -567,15 +611,15 @@ const ForecastDetailPage: React.FC = () => {
                               }`}
                             >
                               {forecast.metrics.testR2 > 0.7
-                                ? 'Excellent'
+                                ? t('forecast_detail_excellent')
                                 : forecast.metrics.testR2 > 0.5
-                                  ? 'Good'
-                                  : 'Fair'}
+                                  ? t('forecast_detail_good')
+                                  : t('forecast_detail_fair')}
                             </span>
                           )}
                         </div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                          {forecast.metrics.testR2?.toFixed(3) || 'N/A'}
+                          {forecast.metrics.testR2?.toFixed(3) || t('forecast_detail_na')}
                         </div>
                       </div>
                       <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -585,18 +629,17 @@ const ForecastDetailPage: React.FC = () => {
                             <HelpCircle className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-help" />
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-72 p-3 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-xl border border-gray-700">
                               <div className="font-semibold mb-1 text-purple-400">
-                                RMSE (Root Mean Squared Error)
+                                {t('forecast_detail_rmse_title')}
                               </div>
                               <div className="text-gray-300 leading-relaxed">
-                                Measures the average magnitude of prediction errors. Lower values
-                                indicate better accuracy.
+                                {t('forecast_detail_rmse_desc')}
                               </div>
                               <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
                             </div>
                           </div>
                         </div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                          {forecast.metrics.testRMSE?.toFixed(3) || 'N/A'}
+                          {forecast.metrics.testRMSE?.toFixed(3) || t('forecast_detail_na')}
                         </div>
                       </div>
                       <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -606,18 +649,17 @@ const ForecastDetailPage: React.FC = () => {
                             <HelpCircle className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-help" />
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-72 p-3 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-xl border border-gray-700">
                               <div className="font-semibold mb-1 text-purple-400">
-                                MAE (Mean Absolute Error)
+                                {t('forecast_detail_mae_title')}
                               </div>
                               <div className="text-gray-300 leading-relaxed">
-                                Measures the average absolute difference between predicted and
-                                actual values. Lower values indicate better accuracy.
+                                {t('forecast_detail_mae_desc')}
                               </div>
                               <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
                             </div>
                           </div>
                         </div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                          {forecast.metrics.testMAE?.toFixed(3) || 'N/A'}
+                          {forecast.metrics.testMAE?.toFixed(3) || t('forecast_detail_na')}
                         </div>
                       </div>
                       <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -627,18 +669,17 @@ const ForecastDetailPage: React.FC = () => {
                             <HelpCircle className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-help" />
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-72 p-3 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-xl border border-gray-700">
                               <div className="font-semibold mb-1 text-purple-400">
-                                MAPE (Mean Absolute Percentage Error)
+                                {t('forecast_detail_mape_title')}
                               </div>
                               <div className="text-gray-300 leading-relaxed">
-                                Measures the average percentage difference between predicted and
-                                actual values. Lower percentages indicate better accuracy.
+                                {t('forecast_detail_mape_desc')}
                               </div>
                               <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
                             </div>
                           </div>
                         </div>
                         <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                          {forecast.metrics.testMAPE?.toFixed(2) || 'N/A'}%
+                          {forecast.metrics.testMAPE?.toFixed(2) || t('forecast_detail_na')}%
                         </div>
                       </div>
                     </div>
@@ -648,14 +689,14 @@ const ForecastDetailPage: React.FC = () => {
                 {/* Comparison Chart */}
                 <div>
                   <Label className="mb-3 block text-sm font-semibold text-gray-900 dark:text-white">
-                    Historical Data vs Forecast Comparison
+                    {t('forecast_detail_chart_title')}
                   </Label>
                   <div className="bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                     {forecast.chartImageUrl ? (
                       <div className="p-4">
                         <img
-                          src={`${getApiBackendUrl()}${forecast.chartImageUrl}`}
-                          alt="Forecast Comparison Chart"
+                          src={`${getApiBackendUrl().replace(/\/$/, '')}${forecast.chartImageUrl}`}
+                          alt={t('forecast_detail_chart_alt')}
                           className="w-full h-auto rounded"
                           onError={e => {
                             console.error('Failed to load chart image:', forecast.chartImageUrl);
@@ -667,7 +708,7 @@ const ForecastDetailPage: React.FC = () => {
                       <div className="p-8 text-center">
                         <BarChart3 className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Chart visualization will be available here once generated
+                          {t('forecast_detail_chart_unavailable')}
                         </p>
                       </div>
                     )}
@@ -679,25 +720,25 @@ const ForecastDetailPage: React.FC = () => {
                   <div className="mb-3 flex items-center justify-between">
                     <Label className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
                       <TrendingUp className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                      Analysis
+                      {t('forecast_detail_analysis')}
                     </Label>
                     {(!forecast.analyze || forecast.analyze.trim() === '') && (
                       <Button
                         onClick={handleAnalyze}
-                        disabled={isAnalyzing}
+                        disabled={isAnalyzing || isAnalysisRunning}
                         size="sm"
                         className="flex items-center gap-2 cursor-pointer"
                         variant="outline"
                       >
-                        {isAnalyzing ? (
+                        {isAnalyzing || isAnalysisRunning ? (
                           <>
                             <RefreshCw className="w-4 h-4 animate-spin" />
-                            Generating...
+                            {t('forecast_detail_generating')}
                           </>
                         ) : (
                           <>
                             <Sparkles className="w-4 h-4" />
-                            Generate Analysis
+                            {t('forecast_detail_generate_analysis')}
                           </>
                         )}
                       </Button>
@@ -705,64 +746,114 @@ const ForecastDetailPage: React.FC = () => {
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
                     {forecast.analyze ? (
-                      <div className="space-y-6">
-                        {parseAnalysisSections(forecast.analyze).map((section, index) => (
-                          <div
-                            key={index}
-                            className="bg-white dark:bg-gray-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow"
-                          >
-                            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3 pb-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
-                              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs font-bold">
-                                {index + 1}
-                              </span>
-                              {section.title}
-                            </h3>
-                            <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                              {section.content.split('\n').map((line, lineIndex) => {
-                                const trimmedLine = line.trim();
-                                // Check if line is a bullet point (starts with - or *)
-                                if (trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
-                                  const bulletText = trimmedLine.substring(1).trim();
-                                  // Remove any remaining asterisks
-                                  const cleanText = bulletText.replace(/\*/g, '');
-                                  return (
-                                    <div
-                                      key={lineIndex}
-                                      className="ml-4 mb-2 flex items-start gap-2"
-                                    >
-                                      <span className="text-purple-600 dark:text-purple-400 mt-1.5 flex-shrink-0">
-                                        •
-                                      </span>
-                                      <span>{cleanText}</span>
-                                    </div>
-                                  );
-                                }
-                                // Check if line starts with bold text (format: **Bold Text**: description)
-                                const boldMatch = trimmedLine.match(/^\*\*(.+?)\*\*:\s*(.+)$/);
-                                if (boldMatch) {
-                                  return (
-                                    <div key={lineIndex} className="mb-3 last:mb-0">
-                                      <span className="font-semibold text-gray-900 dark:text-white">
-                                        {boldMatch[1]}:
-                                      </span>
-                                      <span className="ml-1">{boldMatch[2]}</span>
-                                    </div>
-                                  );
-                                }
-                                // Regular paragraph - clean any remaining asterisks
-                                if (trimmedLine) {
-                                  const cleanText = trimmedLine.replace(/\*/g, '');
-                                  return (
-                                    <p key={lineIndex} className="mb-3 last:mb-0">
-                                      {cleanText}
-                                    </p>
-                                  );
-                                }
-                                return null;
-                              })}
+                      <div className="space-y-4">
+                        {parseAnalysisSections(forecast.analyze).map((section, index) => {
+                          // Determine section icon and styling based on title
+                          const getSectionStyle = (title: string) => {
+                            const lowerTitle = title.toLowerCase();
+                            if (lowerTitle.includes('summary')) {
+                              return {
+                                iconBg: 'bg-blue-100 dark:bg-blue-900/30',
+                                iconColor: 'text-blue-600 dark:text-blue-400',
+                                borderColor: 'border-blue-200 dark:border-blue-800',
+                              };
+                            } else if (
+                              lowerTitle.includes('future') ||
+                              lowerTitle.includes('outlook')
+                            ) {
+                              return {
+                                iconBg: 'bg-green-100 dark:bg-green-900/30',
+                                iconColor: 'text-green-600 dark:text-green-400',
+                                borderColor: 'border-green-200 dark:border-green-800',
+                              };
+                            } else if (lowerTitle.includes('takeaway')) {
+                              return {
+                                iconBg: 'bg-purple-100 dark:bg-purple-900/30',
+                                iconColor: 'text-purple-600 dark:text-purple-400',
+                                borderColor: 'border-purple-200 dark:border-purple-800',
+                              };
+                            }
+                            return {
+                              iconBg: 'bg-gray-100 dark:bg-gray-700',
+                              iconColor: 'text-gray-600 dark:text-gray-400',
+                              borderColor: 'border-gray-200 dark:border-gray-700',
+                            };
+                          };
+
+                          const style = getSectionStyle(section.title);
+                          const isKeyTakeaways = section.title.toLowerCase().includes('takeaway');
+
+                          return (
+                            <div
+                              key={index}
+                              className={`bg-white dark:bg-gray-800 rounded-lg p-6 border-2 ${style.borderColor} shadow-sm hover:shadow-lg transition-all duration-200`}
+                            >
+                              <h3
+                                className={`text-lg font-bold text-gray-900 dark:text-white mb-4 pb-3 border-b-2 ${style.borderColor} flex items-center gap-3`}
+                              >
+                                <span
+                                  className={`flex items-center justify-center w-8 h-8 rounded-lg ${style.iconBg} ${style.iconColor} text-sm font-bold`}
+                                >
+                                  {index + 1}
+                                </span>
+                                {section.title}
+                              </h3>
+                              <div
+                                className={`text-sm ${isKeyTakeaways ? 'space-y-2' : 'text-gray-700 dark:text-gray-300'} leading-relaxed`}
+                              >
+                                {section.content.split('\n').map((line, lineIndex) => {
+                                  const trimmedLine = line.trim();
+                                  // Check if line is a bullet point (starts with - or *)
+                                  if (trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
+                                    const bulletText = trimmedLine.substring(1).trim();
+                                    // Remove any remaining asterisks
+                                    const cleanText = bulletText.replace(/\*/g, '');
+                                    return (
+                                      <div
+                                        key={lineIndex}
+                                        className="ml-6 mb-2.5 flex items-start gap-3"
+                                      >
+                                        <span
+                                          className={`${style.iconColor} mt-1.5 flex-shrink-0 font-bold`}
+                                        >
+                                          •
+                                        </span>
+                                        <span className="text-gray-700 dark:text-gray-300">
+                                          {cleanText}
+                                        </span>
+                                      </div>
+                                    );
+                                  }
+                                  // Check if line starts with bold text (format: **Bold Text**: description)
+                                  const boldMatch = trimmedLine.match(/^\*\*(.+?)\*\*:\s*(.+)$/);
+                                  if (boldMatch) {
+                                    return (
+                                      <div key={lineIndex} className="mb-3 last:mb-0">
+                                        <span className="font-semibold text-gray-900 dark:text-white">
+                                          {boldMatch[1]}:
+                                        </span>
+                                        <span className="ml-1">{boldMatch[2]}</span>
+                                      </div>
+                                    );
+                                  }
+                                  // Regular paragraph - clean any remaining asterisks
+                                  if (trimmedLine) {
+                                    const cleanText = trimmedLine.replace(/\*/g, '');
+                                    return (
+                                      <p
+                                        key={lineIndex}
+                                        className="mb-3 last:mb-0 text-gray-700 dark:text-gray-300"
+                                      >
+                                        {cleanText}
+                                      </p>
+                                    );
+                                  }
+                                  return null;
+                                })}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                         {parseAnalysisSections(forecast.analyze).length === 0 && (
                           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
                             {parseAnalysis(forecast.analyze)}
@@ -773,7 +864,7 @@ const ForecastDetailPage: React.FC = () => {
                       <div className="text-center py-8">
                         <TrendingUp className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Analysis will be available here once generated
+                          {t('forecast_detail_analysis_unavailable')}
                         </p>
                       </div>
                     )}
@@ -784,7 +875,8 @@ const ForecastDetailPage: React.FC = () => {
                 {forecast.predictions && forecast.predictions.length > 0 && (
                   <div>
                     <Label className="mb-3 block text-sm font-semibold text-gray-900 dark:text-white">
-                      Forecast Predictions ({forecast.predictions.length} steps)
+                      {t('forecast_detail_predictions')} ({forecast.predictions.length}{' '}
+                      {t('forecast_list_table_steps')})
                     </Label>
                     <div className="bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                       <div className="overflow-x-auto">
@@ -792,16 +884,16 @@ const ForecastDetailPage: React.FC = () => {
                           <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                             <tr>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                Step
+                                {t('forecast_detail_table_step')}
                               </th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                Predicted Value
+                                {t('forecast_detail_table_predicted')}
                               </th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                Range
+                                {t('forecast_detail_table_range')}
                               </th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                Uncertainty
+                                {t('forecast_detail_table_uncertainty')}
                               </th>
                             </tr>
                           </thead>
@@ -866,7 +958,7 @@ const ForecastDetailPage: React.FC = () => {
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <Layers className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                All Feature Columns ({featureColumns.length})
+                {t('forecast_detail_all_features')} ({featureColumns.length})
               </h3>
               <button
                 onClick={() => setShowAllFeatures(false)}

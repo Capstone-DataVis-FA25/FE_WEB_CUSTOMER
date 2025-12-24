@@ -22,7 +22,6 @@ export type ChartType =
   | 'pie'
   | 'area'
   | 'donut'
-  | 'column'
   | 'scatter'
   | 'cycleplot'
   | 'map'

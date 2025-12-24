@@ -52,16 +52,13 @@ const DatasetTab: React.FC<DatasetTabProps> = ({
           </div>
           <h3 className="text-2xl font-semibold mb-2">
             {searchTerm || allFilteredDatasets.length > 0
-              ? t('workspace_noDatasetFound', 'No datasets found')
-              : t('workspace_noDatasetYet', 'No datasets yet')}
+              ? t('dataset_not_found')
+              : t('dataset_not_yet')}
           </h3>
           <p className="text-muted-foreground text-center mb-6 max-w-md">
             {searchTerm || allFilteredDatasets.length > 0
-              ? t('workspace_adjustSearchTerms', 'Try adjusting your search terms or filters')
-              : t(
-                  'workspace_createFirstDataset',
-                  'Create your first dataset to get started with data visualization'
-                )}
+              ? t('dataset_search')
+              : t('tour_dataset_create_title')}
           </p>
           {!searchTerm && allFilteredDatasets.length === 0 && (
             <Button
@@ -70,7 +67,7 @@ const DatasetTab: React.FC<DatasetTabProps> = ({
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             >
               <Plus className="h-5 w-5 mr-2" />
-              {t('workspace_createFirstDatasetButton', 'Create Your First Dataset')}
+              {t('tour_dataset_create_title')}
             </Button>
           )}
         </CardContent>

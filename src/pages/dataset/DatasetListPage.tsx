@@ -22,6 +22,7 @@ import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { datasetListSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
+import { useOnboarding } from '@/hooks/useOnboarding';
 import DatasetTab from './components/DatasetTab';
 
 const DatasetListPage: React.FC = () => {
@@ -30,9 +31,18 @@ const DatasetListPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
-  const { datasets, loading, deleting, error, getDatasets, deleteDataset, clearDatasetError } =
-    useDataset();
+  const {
+    datasets,
+    loading,
+    loadingList,
+    deleting,
+    error,
+    getDatasets,
+    deleteDataset,
+    clearDatasetError,
+  } = useDataset();
   const { user, isAuthenticated } = useAuth();
+  const { shouldShowTour, markTourAsShown } = useOnboarding();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -116,27 +126,25 @@ const DatasetListPage: React.FC = () => {
     getDatasets();
   }, [getDatasets]);
 
-  // Tour logic
+  // Tour logic - integrated with useOnboarding hook
   useEffect(() => {
     if (isAuthenticated && user?.id && datasets.length > 0 && !loading) {
-      const storageKey = `hasShownDatasetListTour_${user.id}`;
-      const hasShownTour = localStorage.getItem(storageKey);
-
-      if (hasShownTour !== 'true') {
+      // Check if tour should be shown based on user's experience level
+      if (shouldShowTour('dataset-list')) {
         const driverObj = driver({
           showProgress: true,
           steps: datasetListSteps,
           popoverClass: 'driverjs-theme driver-theme-datasets',
-          overlayOpacity: 0.2,
+          overlayOpacity: 0.6,
         });
 
         setTimeout(() => {
           driverObj.drive();
-          localStorage.setItem(storageKey, 'true');
+          markTourAsShown('dataset-list');
         }, 1000);
       }
     }
-  }, [isAuthenticated, user, datasets.length, loading]);
+  }, [isAuthenticated, user, datasets.length, loading, shouldShowTour, markTourAsShown]);
 
   // Show error toast when error occurs
   useEffect(() => {
@@ -283,13 +291,13 @@ const DatasetListPage: React.FC = () => {
       showProgress: true,
       steps: datasetListSteps,
       popoverClass: 'driverjs-theme driver-theme-datasets',
-      overlayOpacity: 0,
+      overlayOpacity: 0.6,
     });
     driverObj.drive();
   };
 
   // While initial fetch is in-flight and no items yet, show only header + a scoped spinner
-  const isInitialLoading = loading && allFilteredDatasets.length === 0;
+  const isInitialLoading = loadingList && allFilteredDatasets.length === 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
@@ -574,7 +582,7 @@ const DatasetListPage: React.FC = () => {
 
             {/* Datasets List */}
             <DatasetTab
-              loading={loading}
+              loading={loadingList}
               deleting={deleting}
               filteredDatasets={filteredDatasets}
               allFilteredDatasets={allFilteredDatasets}

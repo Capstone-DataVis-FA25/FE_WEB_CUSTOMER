@@ -453,21 +453,48 @@ const ChartEditorPage: React.FC = () => {
   const sortLevels: SortLevel[] = useMemo(() => datasetConfig?.sort ?? [], [datasetConfig]);
 
   useEffect(() => {
-    // console.log('[ChartEditorPage] Dataset loader effect fired', { datasetId });
-
     if (!datasetId) {
       setChartData([]);
       setIsFetchingDatasetById(false);
+
+      // Clear dataset-dependent config when dataset is removed
+      if (chartConfig) {
+        // Use type casting to handle the union type (MainChartConfig)
+        // treating it as a intersection of all possible configs for reset purposes
+        const currentConfig = chartConfig as any;
+        const resetConfig = {
+          ...currentConfig,
+          datasetConfig: undefined,
+          axisConfigs: currentConfig.axisConfigs
+            ? {
+                ...currentConfig.axisConfigs,
+                xAxisKey: undefined,
+                yAxisKey: undefined,
+                valueKey: undefined,
+                seriesConfigs: [],
+                cycleKey: undefined,
+                periodKey: undefined,
+              }
+            : undefined,
+          config: currentConfig.config
+            ? {
+                ...currentConfig.config,
+                labelKey: undefined,
+                valueKey: undefined,
+              }
+            : undefined,
+        };
+
+        setChartConfig(resetConfig as MainChartConfig);
+      }
       return;
     }
 
     setIsFetchingDatasetById(true);
     (async () => {
       try {
-        // console.log('[ChartEditorPage] getDatasetById -> start', datasetId);
         const res = await getDatasetById(datasetId);
         const ok = (res as any)?.meta?.requestStatus === 'fulfilled';
-        // console.log('[ChartEditorPage] getDatasetById -> done', { ok, datasetId });
 
         if (!ok) {
           const msg = (res as any)?.payload?.message || 'Error loading dataset';
@@ -579,7 +606,12 @@ const ChartEditorPage: React.FC = () => {
 
       // Filter using original data and original headers
       const filtered =
-        applyDatasetFilters(dataToProcess, currentFilters, colIndexMap) || dataToProcess;
+        applyDatasetFilters(
+          dataToProcess,
+          currentFilters,
+          colIndexMap,
+          headersToUse as unknown as DataHeader[]
+        ) || dataToProcess;
 
       // Sort using filtered data
       const multiSorted = applyMultiLevelSort(filtered, sortLevels, colIndexMap) || filtered;

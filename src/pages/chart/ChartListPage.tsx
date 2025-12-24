@@ -47,7 +47,9 @@ import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { chartListSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
+import { useOnboarding } from '@/hooks/useOnboarding';
 import ChartTab from './components/ChartTab';
+import { Button } from '@/components/ui/button';
 
 const ChartListPage: React.FC = () => {
   const { t } = useTranslation();
@@ -56,6 +58,7 @@ const ChartListPage: React.FC = () => {
   const { showSuccess, showError, toasts, removeToast } = useToast();
   const modalConfirm = useModalConfirm();
   const { user, isAuthenticated } = useAuth();
+  const { shouldShowTour, markTourAsShown } = useOnboarding();
 
   // Charts API integration - using real charts feature
   const {
@@ -75,27 +78,25 @@ const ChartListPage: React.FC = () => {
   const [deletingChartId, setDeletingChartId] = useState<string | null>(null);
   const [selectingDatasetModal, setSelectingDatasetModal] = useState<boolean>(false);
 
-  // Tour logic
+  // Tour logic - integrated with useOnboarding hook
   useEffect(() => {
     if (isAuthenticated && user?.id && charts.length > 0 && !chartsLoading) {
-      const storageKey = `hasShownChartListTour_${user.id}`;
-      const hasShownTour = localStorage.getItem(storageKey);
-
-      if (hasShownTour !== 'true') {
+      // Check if tour should be shown based on user's experience level
+      if (shouldShowTour('chart-list')) {
         const driverObj = driver({
           showProgress: true,
           steps: chartListSteps,
           popoverClass: 'driverjs-theme driver-theme-charts',
-          overlayOpacity: 0.2,
+          overlayOpacity: 0.6,
         });
 
         setTimeout(() => {
           driverObj.drive();
-          localStorage.setItem(storageKey, 'true');
+          markTourAsShown('chart-list');
         }, 1000);
       }
     }
-  }, [isAuthenticated, user, charts.length, chartsLoading]);
+  }, [isAuthenticated, user, charts.length, chartsLoading, shouldShowTour, markTourAsShown]);
 
   // Get initial values from URL
   const getInitialFromDate = () => {
@@ -379,7 +380,7 @@ const ChartListPage: React.FC = () => {
       showProgress: true,
       steps: chartListSteps,
       popoverClass: 'driverjs-theme driver-theme-charts',
-      overlayOpacity: 0,
+      overlayOpacity: 0.6,
     });
     driverObj.drive();
   };
@@ -413,23 +414,23 @@ const ChartListPage: React.FC = () => {
             </div>
           </div>
           <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3">
-            <button
+            <Button
               onClick={startTour}
-              type="button"
-              className="h-11 px-6 border-2 border-blue-300 hover:border-blue-500 rounded-2xl backdrop-blur-sm text-left flex items-center justify-center shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-900 dark:to-gray-800 font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-100"
+              variant="outline"
+              className="border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"
             >
               <HelpCircle className="h-4 w-4 mr-2" />
               {t('chart_list_start_tour')}
-            </button>
-            <button
+            </Button>
+            <Button
               id="btn-new-chart"
               onClick={() => handleCreateChart()}
               type="button"
-              className="h-11 px-6 border-2 border-emerald-300 hover:border-emerald-500 rounded-2xl backdrop-blur-sm text-left flex items-center justify-center shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-900 dark:to-gray-800 font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             >
               <Plus className="h-4 w-4 mr-2" />
               {t('chart_list_new_chart')}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -694,7 +695,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('all');
+                                setChartTypeFilter(`${t('all')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'all', page: 1 });
                               }}
@@ -704,7 +705,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('line');
+                                setChartTypeFilter(`${t('line')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'line', page: 1 });
                               }}
@@ -714,7 +715,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('bar');
+                                setChartTypeFilter(`${t('bar')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'bar', page: 1 });
                               }}
@@ -724,7 +725,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('area');
+                                setChartTypeFilter(`${t('area')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'area', page: 1 });
                               }}
@@ -734,7 +735,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('scatter');
+                                setChartTypeFilter(`${t('scatter')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'scatter', page: 1 });
                               }}
@@ -744,7 +745,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('pie');
+                                setChartTypeFilter(`${t('pie')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'pie', page: 1 });
                               }}
@@ -754,7 +755,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('donut');
+                                setChartTypeFilter(`${t('donut')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'donut', page: 1 });
                               }}
@@ -764,7 +765,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('cycleplot');
+                                setChartTypeFilter(`${t('cycleplot')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'cycleplot', page: 1 });
                               }}
@@ -774,7 +775,7 @@ const ChartListPage: React.FC = () => {
                             <DropdownMenuItem
                               className="rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                               onClick={() => {
-                                setChartTypeFilter('heatmap');
+                                setChartTypeFilter(`${t('heatmap')}`);
                                 chartPagination.setPage(1);
                                 updateURL({ type: 'heatmap', page: 1 });
                               }}

@@ -31,7 +31,6 @@ const ChartTemplateCard: React.FC<ChartTemplateCardProps> = ({ template, isSelec
         onClick={onClick}
       >
         <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 relative overflow-hidden">
-          {/* Chart Preview */}
           <div className="absolute inset-0 p-2">
             <ChartPreview
               type={template.type}
@@ -53,7 +52,6 @@ const ChartTemplateCard: React.FC<ChartTemplateCardProps> = ({ template, isSelec
               </div>
             </div>
           )}
-          {/* No hover actions (Eye/Star) */}
         </div>
 
         <div className="p-4">

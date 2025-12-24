@@ -16,6 +16,7 @@ import { HelpCircle } from 'lucide-react';
 import { useAuth } from '@/features/auth/useAuth';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { pricingSteps } from '@/config/driver-steps/pricing-steps';
+import { useOnboarding } from '@/hooks/useOnboarding';
 import { Link } from 'react-router-dom';
 import Routers from '@/router/routers';
 
@@ -29,14 +30,13 @@ const PricingPage: React.FC = () => {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const { showError, showSuccess } = useToast();
+  const { shouldShowTour, markTourAsShown } = useOnboarding();
 
-  // Auto-show tour on first visit
+  // Auto-show tour on first visit - integrated with useOnboarding hook
   useEffect(() => {
     if (isAuthenticated && user?.id) {
-      const storageKey = `hasShownPricingTour_${user.id}`;
-      const hasShownTour = localStorage.getItem(storageKey);
-
-      if (hasShownTour !== 'true') {
+      // Check if tour should be shown based on user's experience level
+      if (shouldShowTour('pricing')) {
         const driverObj = driver({
           steps: pricingSteps,
           showProgress: true,
@@ -45,16 +45,16 @@ const PricingPage: React.FC = () => {
           prevBtnText: '← Previous',
           doneBtnText: 'Done ✓',
           popoverClass: 'driverjs-theme',
-          overlayOpacity: 0,
+          overlayOpacity: 0.6,
         });
 
         setTimeout(() => {
           driverObj.drive();
-          localStorage.setItem(storageKey, 'true');
+          markTourAsShown('pricing');
         }, 1000);
       }
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, shouldShowTour, markTourAsShown]);
 
   useEffect(() => {
     const load = async () => {
@@ -62,7 +62,12 @@ const PricingPage: React.FC = () => {
       setError(null);
       try {
         const data = await subscriptionPlansService.getActivePlans();
-        setPlans(data);
+        const sortedData = data.sort((a, b) => {
+          const priceA = Number((a as any).price ?? 0);
+          const priceB = Number((b as any).price ?? 0);
+          return priceA - priceB;
+        });
+        setPlans(sortedData);
       } catch (err: any) {
         setError(err?.message || t('subscription.pricing.fetch_plans_failed'));
       } finally {
@@ -74,6 +79,15 @@ const PricingPage: React.FC = () => {
 
   const isSubscribed = (plan: SubscriptionPlan) => {
     return user?.subscriptionPlanId === plan.id;
+  };
+
+  const isLowerTierThanSubscribed = (plan: SubscriptionPlan) => {
+    if (!user?.subscriptionPlanId) return false;
+    const current = plans.find(p => p.id === user.subscriptionPlanId);
+    if (!current) return false;
+    const planPrice = Number((plan as any).price ?? 0);
+    const currentPrice = Number((current as any).price ?? 0);
+    return planPrice < currentPrice;
   };
 
   const onSubscribe = async (plan: SubscriptionPlan) => {
@@ -121,7 +135,7 @@ const PricingPage: React.FC = () => {
       prevBtnText: '← Previous',
       doneBtnText: 'Done ✓',
       popoverClass: 'driverjs-theme',
-      overlayOpacity: 0,
+      overlayOpacity: 0.6,
     });
     driverObj.drive();
   };
@@ -144,7 +158,7 @@ const PricingPage: React.FC = () => {
                   variant="outline"
                   className="rounded-full px-4 py-2 shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2"
                 >
-                  Transaction History
+                  {t('subscription.pricing.transaction_history')}
                 </Button>
               </Link>
             )}
@@ -157,12 +171,6 @@ const PricingPage: React.FC = () => {
             </Button>
           </div>
         </div>
-
-        {loading && (
-          <div className="py-16 text-center text-blue-500 text-lg font-medium">
-            {t('subscription.pricing.loading_plans')}
-          </div>
-        )}
 
         {error && (
           <div className="mx-auto max-w-lg p-4 bg-red-50 border border-red-200 rounded-xl shadow-md">
@@ -183,118 +191,134 @@ const PricingPage: React.FC = () => {
           id="pricing-plans-grid"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center"
         >
-          {plans.map(plan => (
-            <Card
-              key={plan.id}
-              className="pricing-plan-card w-full max-w-sm p-8 rounded-2xl bg-white/70 backdrop-blur-md border border-gray-200 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 dark:bg-gray-800/70 dark:border-gray-700"
-            >
-              {/* Header */}
-              <div className="pricing-plan-header flex justify-between items-start mb-6">
-                <div className="pricing-plan-name-section">
-                  <h3 className="pricing-plan-name text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {plan.name}
-                  </h3>
-                  {plan.description && (
-                    <p className="pricing-plan-description text-sm text-muted-foreground mt-1">
-                      {plan.description}
-                    </p>
-                  )}
+          {plans.map(plan => {
+            const isLower = isLowerTierThanSubscribed(plan);
+            const subscribed = isSubscribed(plan);
+            const disabledBtn = subscribed || !!checkoutLoading || isLower;
+            return (
+              <Card
+                key={plan.id}
+                className="pricing-plan-card w-full max-w-sm p-8 rounded-2xl bg-white/70 backdrop-blur-md border border-gray-200 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 dark:bg-gray-800/70 dark:border-gray-700"
+              >
+                {/* Header */}
+                <div className="pricing-plan-header flex justify-between items-start mb-6">
+                  <div className="pricing-plan-name-section">
+                    <h3 className="pricing-plan-name text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {plan.name}
+                    </h3>
+                    {plan.description && (
+                      <p className="pricing-plan-description text-sm text-muted-foreground mt-1">
+                        {plan.description}
+                      </p>
+                    )}
+                  </div>
+                  <Badge
+                    className={`pricing-plan-badge ${
+                      plan.isActive
+                        ? 'bg-green-500 text-white shadow-md'
+                        : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'
+                    }`}
+                  >
+                    {plan.isActive
+                      ? t('subscription.pricing.active')
+                      : t('subscription.pricing.inactive')}
+                  </Badge>
                 </div>
-                <Badge
-                  className={`pricing-plan-badge ${
-                    plan.isActive
-                      ? 'bg-green-500 text-white shadow-md'
-                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'
-                  }`}
-                >
-                  {plan.isActive
-                    ? t('subscription.pricing.active')
-                    : t('subscription.pricing.inactive')}
-                </Badge>
-              </div>
 
-              {/* Price */}
-              <div className="pricing-plan-price text-4xl font-extrabold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                <span className="pricing-plan-amount">
-                  {formatPrice(plan.price, plan.currency)}
-                </span>
-                <span className="pricing-plan-interval text-base font-medium text-gray-600 dark:text-gray-300 ml-2">
-                  {plan.interval ? `/${plan.interval}` : ''}
-                </span>
-              </div>
+                {/* Price */}
+                <div className="pricing-plan-price text-4xl font-extrabold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  <span className="pricing-plan-amount">
+                    {formatPrice(plan.price, plan.currency)}
+                  </span>
+                </div>
 
-              {/* Features */}
-              {plan.features && plan.features.length > 0 && (
-                <ul className="pricing-plan-features mb-6 space-y-2">
-                  {plan.features.map((f, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-blue-600/30 dark:bg-blue-500/40" />
-                      <span className="text-sm text-muted-foreground">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {/* Limits - render details if present */}
-              {plan.limits && Object.keys(plan.limits).length > 0 && (
-                <div className="pricing-plan-limits mb-4 text-sm text-muted-foreground">
-                  <strong className="block mb-2 text-sm text-gray-700 dark:text-gray-200">
-                    {t('subscription.pricing.limits')}
-                  </strong>
-                  <ul className="space-y-1">
-                    {Object.entries(plan.limits as Record<string, any>).map(([k, v]) => {
-                      const niceKey = k
-                        .replace(/([A-Z])/g, ' $1')
-                        .replace(/^./, s => s.toUpperCase());
-                      let display = String(v);
-                      const lower = k.toLowerCase();
-                      if (typeof v === 'number') {
-                        if (
-                          lower.includes('size') ||
-                          lower.includes('file') ||
-                          lower.includes('mb')
-                        ) {
-                          display = `${v}MB`;
-                        }
-                      }
-                      return (
-                        <li
-                          key={k}
-                          className="text-sm text-muted-foreground flex items-center gap-2"
-                        >
-                          <span className="w-2 h-2 rounded-full bg-blue-600/30 dark:bg-blue-500/40" />
-                          <span>{`${niceKey}: ${display}`}</span>
-                        </li>
-                      );
-                    })}
+                {/* Features */}
+                {plan.features && plan.features.length > 0 && (
+                  <ul className="pricing-plan-features mb-6 space-y-2">
+                    {plan.features.map((f, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-blue-600/30 dark:bg-blue-500/40" />
+                        <span className="text-sm text-muted-foreground">{f}</span>
+                      </li>
+                    ))}
                   </ul>
-                </div>
-              )}
+                )}
 
-              {/* Subscribe Button */}
-              <div className="mt-6 flex items-center justify-between">
-                <Button
-                  className={`pricing-subscribe-button rounded-full px-6 py-2.5 font-semibold shadow-lg transition-all duration-300 bg-gradient-to-r ${isSubscribed(plan) ? 'from-gray-600 to-gray-700 disabled' : 'from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'}  hover:shadow-xl`}
-                  onClick={() => onSubscribe(plan)}
-                  disabled={isSubscribed(plan) || !!checkoutLoading}
-                >
-                  {checkoutLoading === plan.id ? (
-                    <span className="flex items-center gap-2">
-                      {t('subscription.pricing.processing')}
-                    </span>
-                  ) : isSubscribed(plan) ? (
-                    t('subscription.pricing.subscribed')
+                {/* Limits - render details if present */}
+                {plan.limits && Object.keys(plan.limits).length > 0 && (
+                  <div className="pricing-plan-limits mb-4 text-sm text-muted-foreground">
+                    <strong className="block mb-2 text-sm text-gray-700 dark:text-gray-200">
+                      {t('subscription.pricing.limits')}
+                    </strong>
+                    <ul className="space-y-1">
+                      {Object.entries(plan.limits as Record<string, any>).map(([k, v]) => {
+                        const niceKey = k
+                          .replace(/([A-Z])/g, ' $1')
+                          .replace(/^./, s => s.toUpperCase());
+                        const lower = k.toLowerCase();
+                        const label = t(`subscription.pricing.limit_criteria.${k}`, {
+                          defaultValue: niceKey,
+                        });
+
+                        let display = '';
+                        if (typeof v === 'number') {
+                          if (
+                            lower.includes('size') ||
+                            lower.includes('file') ||
+                            lower.includes('mb')
+                          ) {
+                            display = `${v}MB`;
+                          } else {
+                            display = new Intl.NumberFormat().format(v);
+                          }
+                        } else {
+                          display = String(v);
+                        }
+
+                        return (
+                          <li
+                            key={k}
+                            className="text-sm text-muted-foreground flex items-center gap-2"
+                          >
+                            <span className="w-2 h-2 rounded-full bg-blue-600/30 dark:bg-blue-500/40" />
+                            <span>{`${label}: ${display}`}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Subscribe Button - hidden for lower-tier plans */}
+                <div className="mt-6 flex items-center justify-between">
+                  {isLower ? (
+                    <div />
                   ) : (
-                    t('subscription.pricing.subscribe')
+                    <Button
+                      className={`pricing-subscribe-button rounded-full px-6 py-2.5 font-semibold shadow-lg transition-all duration-300 bg-gradient-to-r ${subscribed ? 'from-gray-600 to-gray-700 disabled' : 'from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'}  hover:shadow-xl ${disabledBtn ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      onClick={() => onSubscribe(plan)}
+                      disabled={disabledBtn}
+                      aria-disabled={disabledBtn}
+                      tabIndex={disabledBtn ? -1 : 0}
+                    >
+                      {checkoutLoading === plan.id ? (
+                        <span className="flex items-center gap-2">
+                          {t('subscription.pricing.processing')}
+                        </span>
+                      ) : subscribed ? (
+                        t('subscription.pricing.subscribed')
+                      ) : (
+                        t('subscription.pricing.subscribe')
+                      )}
+                    </Button>
                   )}
-                </Button>
-                <div className="text-xs text-muted-foreground cursor-default">
-                  {/* Small helper text - limits are shown above when available */}
-                  {plan.limits ? '' : ''}
+                  <div className="text-xs text-muted-foreground cursor-default">
+                    {plan.limits ? '' : ''}
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
         {/* Confirmation modal for subscribing */}
         <ModalConfirm
@@ -314,7 +338,30 @@ const PricingPage: React.FC = () => {
                 (selectedPlan.limits
                   ? 'Limits:\n' +
                     Object.entries(selectedPlan.limits as Record<string, any>)
-                      .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1')}: ${v}`)
+                      .map(([k, v]) => {
+                        const niceKey = k
+                          .replace(/([A-Z])/g, ' $1')
+                          .replace(/^./, s => s.toUpperCase());
+                        const lower = k.toLowerCase();
+                        const label = t(`subscription.pricing.limits.${k}`, {
+                          defaultValue: niceKey,
+                        });
+                        let display = '';
+                        if (typeof v === 'number') {
+                          if (
+                            lower.includes('size') ||
+                            lower.includes('file') ||
+                            lower.includes('mb')
+                          ) {
+                            display = `${v}MB`;
+                          } else {
+                            display = new Intl.NumberFormat().format(v);
+                          }
+                        } else {
+                          display = String(v);
+                        }
+                        return `${label}: ${display}`;
+                      })
                       .join('\n')
                   : '')
               : ''

@@ -102,45 +102,17 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
     (newPivotConfig?: any) => {
       if (!chartConfig) return;
 
-      // If newPivotConfig is explicitly undefined/null, pivot was cleared - don't auto-select
-      if (newPivotConfig === undefined || newPivotConfig === null) {
-        console.log(
-          '[AutoSeries] triggerAutoSelection: Pivot was cleared, skipping auto-selection'
-        );
-        return;
-      }
-
       // Check if the provided pivot config has any active dimensions
-      const hasPivot = Boolean(
-        newPivotConfig &&
-          ((newPivotConfig.rows?.length ?? 0) > 0 ||
-            (newPivotConfig.columns?.length ?? 0) > 0 ||
-            (newPivotConfig.values?.length ?? 0) > 0 ||
-            (newPivotConfig.filters?.length ?? 0) > 0)
-      );
-
-      // Only auto-select if pivot is active
-      if (!hasPivot) {
-        console.log('[AutoSeries] triggerAutoSelection: No pivot active, skipping');
-        return;
-      }
+      // const hasPivot = Boolean(
+      //   newPivotConfig &&
+      //     ((newPivotConfig.rows?.length ?? 0) > 0 ||
+      //       (newPivotConfig.columns?.length ?? 0) > 0 ||
+      //       (newPivotConfig.values?.length ?? 0) > 0 ||
+      //       (newPivotConfig.filters?.length ?? 0) > 0)
+      // );
 
       // Check if auto-select is enabled (defaults to true if not set)
-      const autoSelectEnabled = (newPivotConfig as any)?.autoSelectEnabled !== false;
-      if (!autoSelectEnabled) {
-        console.log('[AutoSeries] triggerAutoSelection: Auto-select is disabled, skipping');
-        return;
-      }
-
-      console.log(
-        '[AutoSeries] triggerAutoSelection: Pivot changed, waiting for processedHeaders to update',
-        {
-          pivotRows: newPivotConfig.rows?.length || 0,
-          pivotColumns: newPivotConfig.columns?.length || 0,
-          pivotValues: newPivotConfig.values?.length || 0,
-          chartType: (chartConfig as any).chartType,
-        }
-      );
+      // const autoSelectEnabled = (newPivotConfig as any)?.autoSelectEnabled !== false;
 
       // Use multiple requestAnimationFrame calls to ensure processedHeaders has updated
       // This is more reliable than setTimeout(0) for waiting for React state updates
@@ -161,16 +133,8 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
         }
 
         if (!currentHeaders) {
-          console.log(
-            '[AutoSeries] triggerAutoSelection: No processedHeaders available after waiting'
-          );
           return;
         }
-
-        console.log('[AutoSeries] triggerAutoSelection: Processing auto-selection', {
-          headersCount: currentHeaders.length,
-          attempts,
-        });
 
         const autoConfigResult = autoConfigureFromProcessedHeaders(
           chartConfig as any,
@@ -185,10 +149,6 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
 
           // Only clear if there's something to clear
           if (currentXAxisKey || currentSeries.length > 0) {
-            console.log(
-              '[AutoSeries] triggerAutoSelection: Auto-config returned null, clearing existing selection'
-            );
-
             // Clear X-axis and series for charts that use them
             if (
               chartType === 'line' ||
@@ -311,13 +271,8 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
         }
 
         if (configChanged) {
-          console.log('[AutoSeries] triggerAutoSelection: Config changed, applying autoConfig', {
-            chartType,
-            configChanged,
-          });
           handleConfigChange(autoConfig);
         } else {
-          console.log('[AutoSeries] triggerAutoSelection: Config already matches, skipping update');
         }
       };
 
@@ -342,10 +297,10 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
     // Check if pivot is active
     const hasPivot = Boolean(
       datasetConfig?.pivot &&
-        ((datasetConfig.pivot.rows?.length ?? 0) > 0 ||
-          (datasetConfig.pivot.columns?.length ?? 0) > 0 ||
-          (datasetConfig.pivot.values?.length ?? 0) > 0 ||
-          (datasetConfig.pivot.filters?.length ?? 0) > 0)
+      ((datasetConfig.pivot.rows?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.columns?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.values?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.filters?.length ?? 0) > 0)
     );
 
     if (!hasPivot) {
@@ -360,11 +315,6 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
       return;
     }
 
-    console.log('[AutoSeries] Chart type changed, triggering auto-selection', {
-      from: prevChartType,
-      to: currentChartType,
-    });
-
     // Trigger auto-selection with current pivot config
     triggerAutoSelection(datasetConfig?.pivot);
 
@@ -375,15 +325,15 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
   // Check if aggregation or pivot is active
   const hasAggregation = Boolean(
     datasetConfig?.aggregation &&
-      ((datasetConfig.aggregation.groupBy?.length ?? 0) > 0 ||
-        (datasetConfig.aggregation.metrics?.length ?? 0) > 0)
+    ((datasetConfig.aggregation.groupBy?.length ?? 0) > 0 ||
+      (datasetConfig.aggregation.metrics?.length ?? 0) > 0)
   );
   const hasPivot = Boolean(
     datasetConfig?.pivot &&
-      ((datasetConfig.pivot.rows?.length ?? 0) > 0 ||
-        (datasetConfig.pivot.columns?.length ?? 0) > 0 ||
-        (datasetConfig.pivot.values?.length ?? 0) > 0 ||
-        (datasetConfig.pivot.filters?.length ?? 0) > 0)
+    ((datasetConfig.pivot.rows?.length ?? 0) > 0 ||
+      (datasetConfig.pivot.columns?.length ?? 0) > 0 ||
+      (datasetConfig.pivot.values?.length ?? 0) > 0 ||
+      (datasetConfig.pivot.filters?.length ?? 0) > 0)
   );
 
   // Determine disabled tabs
@@ -554,15 +504,15 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
       const currentConfig = (chartConfig as any)?.datasetConfig;
       const hasAgg = Boolean(
         currentConfig?.aggregation &&
-          ((currentConfig.aggregation.groupBy?.length ?? 0) > 0 ||
-            (currentConfig.aggregation.metrics?.length ?? 0) > 0)
+        ((currentConfig.aggregation.groupBy?.length ?? 0) > 0 ||
+          (currentConfig.aggregation.metrics?.length ?? 0) > 0)
       );
       const hasPiv = Boolean(
         currentConfig?.pivot &&
-          ((currentConfig.pivot.rows?.length ?? 0) > 0 ||
-            (currentConfig.pivot.columns?.length ?? 0) > 0 ||
-            (currentConfig.pivot.values?.length ?? 0) > 0 ||
-            (currentConfig.pivot.filters?.length ?? 0) > 0)
+        ((currentConfig.pivot.rows?.length ?? 0) > 0 ||
+          (currentConfig.pivot.columns?.length ?? 0) > 0 ||
+          (currentConfig.pivot.values?.length ?? 0) > 0 ||
+          (currentConfig.pivot.filters?.length ?? 0) > 0)
       );
 
       switch (zone) {

@@ -1,8 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { io } from 'socket.io-client';
 import { getCleanResult } from './aiAPI';
-
-const SOCKET_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+import { useSharedSocket } from '@/features/socket/useSharedSocket';
 
 export interface CleaningJob {
   jobId: string;
@@ -44,21 +42,36 @@ export function useAiCleaningProgress(userId?: string | number) {
     localStorage.setItem('ai-cleaning-jobs', JSON.stringify(activeJobs));
   }, [activeJobs]);
 
+  const socket = useSharedSocket('user-notification', userId);
+
   // Connect to socket when userId is available
   useEffect(() => {
-    if (!userId) return;
+    if (!socket) return;
 
-    const socketInstance = io(`${SOCKET_URL}/user-notification`, {
-      query: { userId: String(userId) },
-    });
+    console.log('[Socket][Progress] Using shared socket:', socket.id || 'connecting...');
 
-    console.log('[Socket][Progress] Connecting to', `${SOCKET_URL}/user-notification`);
+    const handleConnect = () => {
+      console.log('[Socket][Progress] Connected:', socket.id);
 
-    socketInstance.on('connect', () => {
-      console.log('[Socket][Progress] Connected:', socketInstance.id);
-    });
+      // Clean up stale jobs: if restored jobs don't receive updates within 2 seconds,
+      // they're likely stale (backend reset) and should be removed
+      // (2 seconds is enough - if backend is running, it will send updates immediately)
+      setTimeout(() => {
+        setActiveJobs(jobs => {
+          const staleJobs = jobs.filter(j => !j.hasReceivedUpdate);
+          if (staleJobs.length > 0) {
+            console.log(
+              '[Socket][Progress] Removing stale jobs:',
+              staleJobs.map(j => j.jobId)
+            );
+            return jobs.filter(j => j.hasReceivedUpdate);
+          }
+          return jobs;
+        });
+      }, 2000); // 2 seconds timeout - backend should send updates immediately if running
+    };
 
-    socketInstance.on('notification:created', notification => {
+    const handleNotification = (notification: any) => {
       console.log('[Socket][Progress] notification:created', notification);
 
       // Only handle progress updates - NO TOAST
@@ -124,16 +137,16 @@ export function useAiCleaningProgress(userId?: string | number) {
           jobs.map(j => (j.jobId === jobId ? { ...j, status: 'error' as const } : j))
         );
       }
-    });
+    };
 
-    socketInstance.on('disconnect', () => {
-      console.log('[Socket][Progress] Disconnected');
-    });
+    socket.on('connect', handleConnect);
+    socket.on('notification:created', handleNotification);
 
     return () => {
-      socketInstance.disconnect();
+      socket.off('connect', handleConnect);
+      socket.off('notification:created', handleNotification);
     };
-  }, [userId]);
+  }, [socket, userId]);
 
   // Add a new job manually (when submitting)
   const addJob = useCallback(

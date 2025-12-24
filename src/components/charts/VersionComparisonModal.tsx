@@ -51,8 +51,39 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
     for (const key in obj) {
       const value = obj[key];
       if (value && typeof value === 'object' && 'current' in value && 'historical' in value) {
+        const leafPath = prefix ? `${prefix}.${key}` : key;
+        const currentVal = (value as DiffLeaf).current;
+        const historicalVal = (value as DiffLeaf).historical;
+
+        const currentIsObject =
+          currentVal && typeof currentVal === 'object' && !Array.isArray(currentVal);
+        const historicalIsObject =
+          historicalVal && typeof historicalVal === 'object' && !Array.isArray(historicalVal);
+
+        // If the diff is an object, break it into child-level diffs so keys like "margin.top" render nicely.
+        if (currentIsObject || historicalIsObject) {
+          const childKeys = new Set([
+            ...(currentIsObject ? Object.keys(currentVal) : []),
+            ...(historicalIsObject ? Object.keys(historicalVal) : []),
+          ]);
+
+          if (childKeys.size > 0) {
+            childKeys.forEach(childKey => {
+              result[`${leafPath}.${childKey}`] = {
+                current: currentIsObject
+                  ? (currentVal as Record<string, any>)[childKey]
+                  : undefined,
+                historical: historicalIsObject
+                  ? (historicalVal as Record<string, any>)[childKey]
+                  : undefined,
+              };
+            });
+            continue; // Already expanded this diff
+          }
+        }
+
         // This is a leaf diff node
-        result[prefix ? `${prefix}.${key}` : key] = value as DiffLeaf;
+        result[leafPath] = value as DiffLeaf;
       } else if (value && typeof value === 'object') {
         // Nested object, recurse
         const nested = flattenDifferences(value as DiffObject, prefix ? `${prefix}.${key}` : key);
@@ -62,54 +93,223 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
     return result;
   };
 
+  const toTitleCase = (val: string) =>
+    val
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/[_-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^./, str => str.toUpperCase());
+
+  // Helper to render values in a human-friendly way (no JSON braces)
+  const renderReadableValue = (value: any, depth = 0) => {
+    if (value === null || value === undefined) {
+      return <span className="text-gray-500">—</span>;
+    }
+
+    const isPrimitive = (v: any) =>
+      typeof v !== 'object' || v === null || v instanceof Date || v instanceof RegExp;
+
+    if (isPrimitive(value)) {
+      return <span>{String(value)}</span>;
+    }
+
+    // Arrays
+    if (Array.isArray(value)) {
+      if (value.length === 0) return <span className="text-gray-500">(empty)</span>;
+      return (
+        <ul className={`space-y-1 ${depth === 0 ? 'list-disc list-inside' : 'list-none'}`}>
+          {value.map((item, idx) => (
+            <li key={idx} className="pl-1">
+              {isPrimitive(item) ? (
+                <span>{String(item)}</span>
+              ) : (
+                <div className="border border-gray-200 dark:border-gray-700 rounded p-2 text-[11px] leading-relaxed bg-white/40 dark:bg-slate-900/40">
+                  {renderReadableValue(item, depth + 1)}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
+    // Objects
+    const entries = Object.entries(value);
+    if (entries.length === 0) return <span className="text-gray-500">(empty)</span>;
+    return (
+      <div className="space-y-1 text-[11px] leading-relaxed">
+        {entries.map(([k, v]) => (
+          <div key={k} className="flex flex-col gap-0.5">
+            <span className="font-medium text-gray-700 dark:text-gray-300">{toTitleCase(k)}:</span>
+            <div className="pl-2 text-gray-800 dark:text-gray-100">
+              {renderReadableValue(v, depth + 1)}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // Helper to convert technical key names to user-friendly labels
   const getFieldLabel = (key: string): string => {
     // Remove 'config.' prefix if present
     const cleanKey = key.replace(/^config\./, '');
 
-    // Mapping for common technical terms to friendly labels
+    // Mapping for technical keys to user-friendly labels (chart + dataset configs)
     const labelMap: Record<string, string> = {
-      // Chart config
-      disabledLines: 'Disabled Lines',
-      showPoints: 'Show Points',
-      showPointValues: 'Show Point Values',
-      curve: 'Curve Style',
-      lineWidth: 'Line Width',
-      pointRadius: 'Point Radius',
-      showGrid: 'Show Grid',
-      showLegend: 'Show Legend',
-      legendPosition: 'Legend Position',
-      showTooltip: 'Show Tooltip',
-      tooltipMode: 'Tooltip Mode',
-      yAxisKeys: 'Y-Axis Keys',
-      xAxisKey: 'X-Axis Key',
-      xAxisLabel: 'X-Axis Label',
-      yAxisLabel: 'Y-Axis Label',
+      // Core chart sizing / layout
+      width: 'Chart Width',
+      height: 'Chart Height',
+      'margin.top': 'Margin Top',
+      'margin.right': 'Margin Right',
+      'margin.bottom': 'Margin Bottom',
+      'margin.left': 'Margin Left',
+      title: 'Chart Title',
       chartTitle: 'Chart Title',
       chartSubtitle: 'Chart Subtitle',
-      strokeWidth: 'Stroke Width',
-      fillOpacity: 'Fill Opacity',
-      gradientFill: 'Gradient Fill',
+      backgroundColor: 'Chart Background Color',
+      theme: 'Theme (Light/Dark/Auto)',
+
+      // Interaction / animation
+      showTooltip: 'Show Tooltip',
+      tooltipMode: 'Tooltip Mode',
+      animationDuration: 'Animation Duration (ms)',
+      enableZoom: 'Enable Zoom',
+      enablePan: 'Enable Pan',
+      zoomExtent: 'Zoom Extent',
+
+      // Legend / grid / fonts
+      showLegend: 'Show Legend',
+      legendPosition: 'Legend Position',
+      legendFontSize: 'Legend Font Size',
+      showGrid: 'Show Grid Lines',
+      gridOpacity: 'Grid Line Opacity',
+      titleFontSize: 'Title Font Size',
+      labelFontSize: 'Axis/Label Font Size',
+
+      // Axis bindings / labels
+      xAxisKey: 'X-Axis Field',
+      yAxisKey: 'Y-Axis Field',
+      yAxisKeys: 'Y-Axis Fields',
+      xAxisLabel: 'X-Axis Label Text',
+      yAxisLabel: 'Y-Axis Label Text',
+      xAxisStart: 'X-Axis Start (auto/zero)',
+      yAxisStart: 'Y-Axis Start (auto/zero)',
+      xAxisRotation: 'X-Axis Label Rotation',
+      yAxisRotation: 'Y-Axis Label Rotation',
+      showAxisLabels: 'Show Axis Labels',
+      showAxisTicks: 'Show Axis Ticks',
+      showAllXAxisTicks: 'Show All X-Axis Ticks',
+
+      // Series / axis config basics
+      name: 'Series Name',
+      dataColumn: 'Data Column',
+      color: 'Color',
+      visible: 'Visible',
+      pointStyle: 'Point Style',
+      opacity: 'Opacity',
+      formatter: 'Formatter',
+      customFormatter: 'Custom Formatter',
+
+      // Series configs (line/bar/area/scatter)
+      seriesConfigs: 'Series Configuration',
+      disabledLines: 'Hidden Lines',
+      disabledBars: 'Hidden Bars',
+      showPoints: 'Show Data Points',
+      showPointValues: 'Show Point Values',
+      curve: 'Line Curve Style',
+      lineWidth: 'Line Width',
+      pointRadius: 'Point Radius',
+      lineStyle: 'Line Style',
+      pointValueDecimals: 'Point Value Decimals',
+      showStroke: 'Show Area Stroke',
+      barType: 'Bar Layout (grouped/stacked/diverging)',
+      barWidth: 'Bar Width',
+      barSpacing: 'Bar Spacing',
       stackMode: 'Stack Mode',
       showDataLabels: 'Show Data Labels',
       dataLabelPosition: 'Data Label Position',
+      strokeWidth: 'Stroke Width',
+      fillOpacity: 'Fill Opacity',
+      gradientFill: 'Gradient Fill',
       barPadding: 'Bar Padding',
       categoryGap: 'Category Gap',
       cornerRadius: 'Corner Radius',
-      innerRadius: 'Inner Radius',
+
+      // Pie / Donut
+      labelKey: 'Label Field',
+      valueKey: 'Value Field',
+      showLabels: 'Show Slice Labels',
+      showPercentage: 'Show Percentage',
+      showSliceValues: 'Show Slice Values',
+      innerRadius: 'Inner Radius (Donut Hole)',
       outerRadius: 'Outer Radius',
       startAngle: 'Start Angle',
       endAngle: 'End Angle',
-      paddingAngle: 'Padding Angle',
-      labelType: 'Label Type',
-      showPercent: 'Show Percent',
+      padAngle: 'Slice Padding Angle',
+      paddingAngle: 'Slice Padding Angle',
+      labelType: 'Label Display Type',
+      showPercent: 'Show Percent Labels',
       colorScheme: 'Color Scheme',
       customColors: 'Custom Colors',
-      // Dataset config
-      'datasetConfig.sort': 'Sort Configuration',
+      sortSlices: 'Slice Sort Order',
+      sliceOpacity: 'Slice Opacity',
+      legendMaxItems: 'Max Legend Items',
+      strokeColor: 'Slice Stroke Color',
+      strokeWidthPie: 'Slice Stroke Width',
+      hoverScale: 'Hover Scale Factor',
+      enableAnimation: 'Enable Slice Animation',
+      enableHoverEffect: 'Enable Hover Effect',
+      titleColor: 'Title Color',
+      labelColor: 'Label Color',
+      showTitle: 'Show Chart Title',
+
+      // Cycle plot
+      cycleKey: 'Cycle Group Field',
+      periodKey: 'Period Field',
+      valueKeyCycle: 'Value Field',
+      cycleColors: 'Cycle Colors',
+      showAverageLine: 'Show Average Line',
+      emphasizeLatestCycle: 'Emphasize Latest Cycle',
+      showRangeBand: 'Show Range Band',
+      periodOrdering: 'Period Ordering',
+      showTooltipDelta: 'Show Tooltip Delta',
+
+      // Heatmap
+      colorSchemeHeatmap: 'Color Scheme (Heatmap)',
+      showValues: 'Show Cell Values',
+      cellBorderWidth: 'Cell Border Width',
+      cellBorderColor: 'Cell Border Color',
+      valuePosition: 'Value Position',
+      minValue: 'Minimum Value',
+      maxValue: 'Maximum Value',
+      nullColor: 'Null/Empty Cell Color',
+      legendSteps: 'Legend Steps',
+
+      // Histogram
+      binCount: 'Number of Bins',
+      binWidth: 'Bin Width',
+      binMethod: 'Binning Method',
+      customBinEdges: 'Custom Bin Edges',
+      showDensity: 'Show Density Curve',
+      showCumulativeFrequency: 'Show Cumulative Frequency',
+      barColor: 'Bar Color',
+      showMean: 'Show Mean Line',
+      showMedian: 'Show Median Line',
+      normalize: 'Normalize to Probability Density',
+
+      // Dataset config (data prep)
+      'datasetConfig.sort': 'Sort Rules',
       'datasetConfig.filters': 'Filters',
-      'datasetConfig.aggregation': 'Aggregation',
+      'datasetConfig.aggregation': 'Aggregations',
+      'datasetConfig.aggregation.groupBy': 'Group By Columns',
+      'datasetConfig.aggregation.metrics': 'Aggregation Metrics',
       'datasetConfig.pivot': 'Pivot Table',
+      'datasetConfig.pivot.rows': 'Pivot Rows',
+      'datasetConfig.pivot.columns': 'Pivot Columns',
+      'datasetConfig.pivot.values': 'Pivot Values',
+      'datasetConfig.pivot.filters': 'Pivot Filters',
     };
 
     // Check if there's a direct mapping
@@ -117,17 +317,35 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
       return labelMap[cleanKey];
     }
 
+    // Axis config specific formatting
+    if (cleanKey.startsWith('axisConfigs.')) {
+      const axisPath = cleanKey.replace(/^axisConfigs\./, '');
+      const [first, ...rest] = axisPath.split('.');
+
+      // Simple axis-level fields (xAxisKey, xAxisLabel, etc.)
+      if (first !== 'seriesConfigs') {
+        const baseLabel = labelMap[first] ?? toTitleCase(first);
+        return `Axis: ${baseLabel}`;
+      }
+
+      // seriesConfigs.<index>.<field>
+      const [seriesIndex, ...seriesRest] = rest;
+      const seriesLabel = Number.isFinite(Number(seriesIndex))
+        ? `Series ${Number(seriesIndex) + 1}`
+        : toTitleCase(seriesIndex || 'Series');
+      const fieldKey = seriesRest.join('.') || '';
+      const fieldLabel = labelMap[fieldKey] ?? toTitleCase(fieldKey || 'Series');
+      return `Axis Series (${seriesLabel}) - ${fieldLabel}`;
+    }
+
     // Otherwise, convert camelCase to Title Case
     // e.g., "showPoints" -> "Show Points"
-    return cleanKey
-      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
-      .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
-      .trim();
+    return toTitleCase(cleanKey);
   };
 
   const [showChart, setShowChart] = useState(true);
   const [showCurrentHistory, setShowCurrentHistory] = useState(false);
-  const [showDiffs, setShowDiffs] = useState(false);
+  const [showDiffs, setShowDiffs] = useState(true);
 
   // Handle navigation to history view page
   const handleViewHistoryChart = () => {
@@ -363,15 +581,15 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
         <div className="ml-4 mt-1 grid grid-cols-2 gap-2">
           <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded">
             <div className="text-gray-600 dark:text-gray-400 mb-1">Current:</div>
-            <pre className="text-xs whitespace-pre-wrap break-words">
-              {JSON.stringify(flatDiffs[key].current, null, 2)}
-            </pre>
+            <div className="text-xs whitespace-pre-wrap break-words">
+              {renderReadableValue(flatDiffs[key].current)}
+            </div>
           </div>
           <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded">
             <div className="text-gray-600 dark:text-gray-400 mb-1">Historical:</div>
-            <pre className="text-xs whitespace-pre-wrap break-words">
-              {JSON.stringify(flatDiffs[key].historical, null, 2)}
-            </pre>
+            <div className="text-xs whitespace-pre-wrap break-words">
+              {renderReadableValue(flatDiffs[key].historical)}
+            </div>
           </div>
         </div>
       </li>
@@ -424,39 +642,6 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
             </div>
           )}
         </div>
-        {/* Current & Historical JSON Section */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <SectionToggle
-              open={showCurrentHistory}
-              onClick={() => setShowCurrentHistory(v => !v)}
-              label={t('chartHistory.comparison.current', 'Current Version')}
-            />
-            {showCurrentHistory &&
-              renderHighlightedJson(
-                currentForRender,
-                diffKeys,
-                'current',
-                flatDiffs,
-                historicalForRender
-              )}
-          </div>
-          <div>
-            <SectionToggle
-              open={showCurrentHistory}
-              onClick={() => setShowCurrentHistory(v => !v)}
-              label={t('chartHistory.comparison.historical', 'Historical Version')}
-            />
-            {showCurrentHistory &&
-              renderHighlightedJson(
-                historicalForRender,
-                diffKeys,
-                'historical',
-                flatDiffs,
-                currentForRender
-              )}
-          </div>
-        </div>
         {/* Differences Section */}
         <div>
           <SectionToggle
@@ -508,12 +693,46 @@ const VersionComparisonModal: React.FC<VersionComparisonModalProps> = ({
             </div>
           )}
         </div>
+
+        {/* Current & Historical JSON Section */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <SectionToggle
+              open={showCurrentHistory}
+              onClick={() => setShowCurrentHistory(v => !v)}
+              label={t('chartHistory.comparison.current', 'Current Version')}
+            />
+            {showCurrentHistory &&
+              renderHighlightedJson(
+                currentForRender,
+                diffKeys,
+                'current',
+                flatDiffs,
+                historicalForRender
+              )}
+          </div>
+          <div>
+            <SectionToggle
+              open={showCurrentHistory}
+              onClick={() => setShowCurrentHistory(v => !v)}
+              label={t('chartHistory.comparison.historical', 'Historical Version')}
+            />
+            {showCurrentHistory &&
+              renderHighlightedJson(
+                historicalForRender,
+                diffKeys,
+                'historical',
+                flatDiffs,
+                currentForRender
+              )}
+          </div>
+        </div>
       </div>
     );
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} modal={!modalConfirm.isOpen}>
       <DialogContent className="min-w-5xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

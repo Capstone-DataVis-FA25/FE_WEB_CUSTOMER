@@ -4,7 +4,6 @@ import { API_ENDPOINTS } from '@/constants/endpoints';
 export interface EvaluateChartRequest {
   chartId: string;
   chartImage: string; // base64 encoded image
-  questions?: string[];
   language?: string;
   selectedColumns?: string[];
 }
@@ -17,11 +16,7 @@ export interface EvaluateChartResponse {
     name: string;
     type: string;
   };
-  datasetInfo: {
-    name: string;
-    rows: number;
-    columns: number;
-  };
+  selectedColumns?: string[];
   processingTime: number;
 }
 
@@ -140,7 +135,7 @@ class ChartEvaluationService {
         ctx.textAlign = 'center';
         ctx.font = 'bold 32px Arial';
         ctx.fillStyle = '#fff';
-        const mainText = 'Not Found Chart Image';
+        const mainText = 'Chart Image Not Found';
         const subText = 'Please create a chart before using AI features.';
         const mainFontSize = 32;
         const subFontSize = 18;

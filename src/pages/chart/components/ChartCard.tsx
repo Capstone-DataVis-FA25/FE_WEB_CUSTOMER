@@ -198,7 +198,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
             <Database className="h-3 w-3" />
             <span className="font-medium">{t('chart_card_dataset')}:</span>
             <span className="text-gray-700 dark:text-gray-300 truncate max-w-[10rem]">
-              {chart.dataset?.name || chart.datasetName || `Dataset ${chart.datasetId}`}
+              {chart.dataset?.name || chart.datasetName || t('dataset_deleted')}
             </span>
           </div>
         </div>

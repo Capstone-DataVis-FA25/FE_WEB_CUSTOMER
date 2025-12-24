@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { AiChatRequest, AiChatResponse } from './aiAPI';
 import { chatWithAi } from './aiAPI';
 import type { DatasetInfo, ChartGenerationResponse } from './aiTypes';
+import useLanguage from '@/hooks/useLanguage';
+import { t } from 'i18next';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -11,75 +13,18 @@ interface ChatMessage {
   needsChartTypeSelection?: boolean;
   originalMessage?: string;
   chartData?: ChartGenerationResponse;
+  createdDataset?: DatasetInfo;
 }
 
-const CHAT_STORAGE_KEY = 'datavis_ai_chat_history';
-const DATASET_STORAGE_KEY = 'datavis_ai_selected_dataset';
-
-// Load messages from localStorage
-const loadCachedMessages = (): ChatMessage[] => {
-  try {
-    const cached = localStorage.getItem(CHAT_STORAGE_KEY);
-    return cached ? JSON.parse(cached) : [];
-  } catch (error) {
-    console.error('Failed to load chat history:', error);
-    return [];
-  }
-};
-
-// Save messages to localStorage
-const saveChatMessages = (messages: ChatMessage[]) => {
-  try {
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
-  } catch (error) {
-    console.error('Failed to save chat history:', error);
-  }
-};
-
-// Load selected dataset from localStorage
-const loadSelectedDataset = (): string | null => {
-  try {
-    return localStorage.getItem(DATASET_STORAGE_KEY);
-  } catch (error) {
-    console.error('Failed to load selected dataset:', error);
-    return null;
-  }
-};
-
-// Save selected dataset to localStorage
-const saveSelectedDataset = (datasetId: string | null) => {
-  try {
-    if (datasetId) {
-      localStorage.setItem(DATASET_STORAGE_KEY, datasetId);
-    } else {
-      localStorage.removeItem(DATASET_STORAGE_KEY);
-    }
-  } catch (error) {
-    console.error('Failed to save selected dataset:', error);
-  }
-};
-
 export function useAiChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => loadCachedMessages());
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(() =>
-    loadSelectedDataset()
-  );
-
-  // Save messages to localStorage whenever they change
-  useEffect(() => {
-    saveChatMessages(messages);
-  }, [messages]);
-
-  // Save selected dataset to localStorage whenever it changes
-  useEffect(() => {
-    saveSelectedDataset(selectedDatasetId);
-  }, [selectedDatasetId]);
-
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null);
+  const { currentLanguage } = useLanguage();
   const sendMessage = async (
     message: string,
-    language = 'en',
+    language = currentLanguage,
     datasetId?: string,
     chartType?: string
   ) => {
@@ -114,6 +59,8 @@ export function useAiChat() {
       console.log('======================================');
 
       if (res.code === 200 && actualData?.success) {
+        console.log('AI Response Data:', actualData);
+
         const assistantMessage: ChatMessage = {
           role: 'assistant' as const,
           content: actualData.reply,
@@ -122,11 +69,11 @@ export function useAiChat() {
           originalMessage: actualData.originalMessage,
           datasets: actualData.datasets,
           chartData: actualData.chartData,
+          createdDataset: actualData.createdDataset || actualData.data, // Map createdDataset or generic data
         };
 
         setMessages([...newMessages, assistantMessage]);
 
-        // If dataset was provided in this request, save it
         if (datasetId) {
           setSelectedDatasetId(datasetId);
         }
@@ -135,14 +82,14 @@ export function useAiChat() {
           ...newMessages,
           {
             role: 'assistant' as const,
-            content: 'Xin lỗi, tôi không thể xử lý yêu cầu của bạn lúc này.',
+            content: actualData?.reply || t('chatbox.errorExecuteResponse'),
           },
         ]);
       }
     } catch (e) {
       setMessages([
         ...newMessages,
-        { role: 'assistant' as const, content: 'Xin lỗi, có lỗi kết nối. Vui lòng thử lại.' },
+        { role: 'assistant' as const, content: t('chatbox.errorTryAgain') },
       ]);
       setError('API error');
     } finally {
@@ -153,15 +100,12 @@ export function useAiChat() {
   const selectDataset = (datasetId: string, followUpMessage?: string) => {
     setSelectedDatasetId(datasetId);
     if (followUpMessage) {
-      sendMessage(followUpMessage, 'vi', datasetId);
+      sendMessage(followUpMessage, currentLanguage, datasetId);
     }
   };
 
   const selectChartType = (chartType: string, prompt: string) => {
-    // Re-send original prompt with selected chart type
-    // If chartType is 'auto', backend handles it.
-    // If 'line', 'bar' etc, backend handles it.
-    sendMessage(prompt, 'vi', selectedDatasetId || undefined, chartType);
+    sendMessage(prompt, currentLanguage, selectedDatasetId || undefined, chartType);
   };
 
   const clearDatasetSelection = () => {
@@ -171,8 +115,6 @@ export function useAiChat() {
   const clearChat = () => {
     setMessages([]);
     setSelectedDatasetId(null);
-    localStorage.removeItem(CHAT_STORAGE_KEY);
-    localStorage.removeItem(DATASET_STORAGE_KEY);
   };
 
   return {

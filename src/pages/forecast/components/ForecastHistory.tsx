@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import {
   History,
   TrendingUp,
-  Calendar,
+  // Calendar,
   Target,
   Clock,
   Eye,
@@ -31,7 +31,6 @@ interface ForecastHistoryItem {
   id: string;
   name?: string | null;
   targetColumn: string;
-  timeScale: string;
   forecastWindow: number;
   modelType: string;
   createdAt: string;
@@ -175,12 +174,8 @@ const ForecastHistory: React.FC = () => {
                           {forecast.targetColumn}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {forecast.timeScale}
-                        </span>
-                        <span className="flex items-center gap-1">
                           <TrendingUp className="w-3 h-3" />
-                          {forecast.forecastWindow} {forecast.timeScale.toLowerCase()}
+                          {forecast.forecastWindow} steps
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
