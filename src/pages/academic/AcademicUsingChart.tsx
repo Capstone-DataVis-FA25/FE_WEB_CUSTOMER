@@ -168,7 +168,6 @@ export const AcademicUsingChart = () => {
                 "DataVis is a powerful data visualization platform that helps you create stunning charts and graphs from your data. Whether you're a student, researcher, or professional, DataVis makes it easy to transform raw data into meaningful insights."
               )}
             </p>
-
             <DocsCard type="tip" title={t('docs_why_datavis')}>
               <ul className="list-disc list-inside space-y-1">
                 <li>{t('docs_benefit_1')}</li>
@@ -180,116 +179,75 @@ export const AcademicUsingChart = () => {
                   )}
                 </li>
                 <li>{t('docs_benefit_4')}</li>
-                <li>{t('docs_benefit_5')}</li>
               </ul>
             </DocsCard>
           </DocSection>
         );
-
-      case 'quick-start':
+      case 'ai-chart-analysis':
         return (
-          <DocSection id="quick-start" title={t('docs_quick_start')} icon={Icon}>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">{t('docs_quick_start_intro')}</p>
-
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
-                  {t('docs_step_1')}
-                </h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-2">{t('docs_step_1_desc')}</p>
-                <DocsCard type="info">
-                  {t(
-                    'docs_free_tier',
-                    'The free tier includes unlimited charts and 5GB of storage.'
-                  )}
-                </DocsCard>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
-                  {t('docs_step_2')}
-                </h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-2">
-                  {t(
-                    'docs_step_2_desc',
-                    'Upload your data in CSV, Excel, or JSON format. You can also paste data directly.'
-                  )}
-                </p>
-                <CodeBlock
-                  language="csv"
-                  code={`Month,Sales,Expenses
-January,12000,8000
-February,15000,9000
-March,18000,10000`}
-                />
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
-                  {t('docs_step_3')}
-                </h3>
-                <p className="text-gray-700 dark:text-gray-300">
-                  {t(
-                    'docs_step_3_desc',
-                    'Select from our library of chart types including line, bar, pie, scatter, and more.'
-                  )}
-                </p>
-              </div>
-            </div>
-          </DocSection>
-        );
-
-      case 'first-chart':
-        return (
-          <DocSection id="first-chart" title={t('docs_first_chart')} icon={Icon}>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
-              {t('docs_first_chart_intro', "Let's create your first chart step by step:")}
+          <DocSection id="ai-chart-analysis" title={t('docs_ai_chart_analysis_title')} icon={Icon}>
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
+              {t('docs_ai_chart_analysis_intro')}
             </p>
-
-            <div className="space-y-4">
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  1. {t('docs_navigate_charts')}
-                </h4>
-                <p className="text-gray-700 dark:text-gray-300">{t('docs_navigate_charts_desc')}</p>
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  {t('docs_ai_chart_analysis_how_to')}
+                </h3>
+                <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                  <li>{t('docs_ai_chart_analysis_step1')}</li>
+                  <li>{t('docs_ai_chart_analysis_step2')}</li>
+                  <li>{t('docs_ai_chart_analysis_step3')}</li>
+                  <li>{t('docs_ai_chart_analysis_step4')}</li>
+                </ul>
               </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  2. {t('docs_click_new_chart')}
-                </h4>
-                <p className="text-gray-700 dark:text-gray-300">{t('docs_click_new_chart_desc')}</p>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  {t('docs_ai_chart_analysis_tips')}
+                </h3>
+                <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                  <li>{t('docs_ai_chart_analysis_tip1')}</li>
+                  <li>{t('docs_ai_chart_analysis_tip2')}</li>
+                  <li>{t('docs_ai_chart_analysis_tip3')}</li>
+                </ul>
               </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  3. {t('docs_select_dataset')}
-                </h4>
-                <p className="text-gray-700 dark:text-gray-300">{t('docs_select_dataset_desc')}</p>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  {t('docs_ai_chart_analysis_use_cases')}
+                </h3>
+                <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                  <li>{t('docs_ai_chart_analysis_use_case1')}</li>
+                  <li>{t('docs_ai_chart_analysis_use_case2')}</li>
+                  <li>{t('docs_ai_chart_analysis_use_case3')}</li>
+                </ul>
               </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  4. {t('docs_configure_chart')}
-                </h4>
-                <p className="text-gray-700 dark:text-gray-300">
-                  {t(
-                    'docs_configure_chart_desc',
-                    'Select chart type, axes, and customize appearance.'
-                  )}
-                </p>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  {t('docs_ai_chart_analysis_can_detect')}
+                </h3>
+                <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                  <li>{t('docs_ai_chart_analysis_detect1')}</li>
+                  <li>{t('docs_ai_chart_analysis_detect2')}</li>
+                  <li>{t('docs_ai_chart_analysis_detect3')}</li>
+                  <li>{t('docs_ai_chart_analysis_detect4')}</li>
+                </ul>
               </div>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  {t('docs_ai_chart_analysis_examples')}
+                </h3>
+                <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                  <li>{t('docs_ai_chart_analysis_example1')}</li>
+                  <li>{t('docs_ai_chart_analysis_example2')}</li>
+                  <li>{t('docs_ai_chart_analysis_example3')}</li>
+                </ul>
+              </div>
+              <DocsCard type="warning" title={t('docs_ai_chart_analysis_warning')}>
+                <p>{t('docs_ai_chart_analysis_note')}</p>
+              </DocsCard>
             </div>
-
-            <DocsCard type="tip" title={t('docs_tip_preview')} className="mt-6">
-              {t(
-                'docs_tip_preview_desc',
-                'Use the preview panel to see your chart update in real-time as you make changes.'
-              )}
-            </DocsCard>
           </DocSection>
         );
-
       case 'chart-editor':
         return (
           <DocSection id="chart-editor" title={t('docs_chart_editor')} icon={Icon}>

@@ -69,7 +69,7 @@ const Header: React.FC<HeaderProps> = ({
     { name: t('navigation_home'), href: `${Routers.HOME}` },
     ...(isAuthenticated
       ? [
-          { name: 'Datasets', href: `${Routers.WORKSPACE_DATASETS}` },
+          { name: t('forecast_step1_datasets'), href: `${Routers.WORKSPACE_DATASETS}` },
           { name: t('navigation_charts'), href: `${Routers.WORKSPACE_CHARTS}` },
           { name: t('navigation_forecast'), href: `${Routers.FORECAST}` },
         ]
@@ -391,7 +391,8 @@ const Header: React.FC<HeaderProps> = ({
                         </AvatarFallback>
                       </Avatar>
                       <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {user?.firstName} {user?.lastName}
+                        {/* {shortNamePreview(`${user?.firstName || ''} ${user?.lastName || ''}`)} */}
+                        {user?.lastName || ''}
                       </span>
                       <ChevronDown
                         className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isUserDropdownOpen ? 'rotate-180' : ''}`}

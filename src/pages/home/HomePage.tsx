@@ -208,14 +208,24 @@ const HomePage: React.FC = () => {
     );
   };
 
-  enum CurrentPage {
-    HOME = 'home',
-  }
+  const handleNavigateToEditor = () => {
+    navigate(Routers.CHART_GALLERY);
+  };
 
-  const handleNavigateToEditor = (currentPage: CurrentPage, datasetId?: String | null) => {
-    if (datasetId && currentPage === CurrentPage.HOME) {
-      navigate(Routers.CHART_GALLERY);
-    }
+  const handleGoToExamples = () => {
+    navigate(Routers.BAR_CHART_DEMO); // Or a landing page for examples
+  };
+  const handleGoToStory = () => {
+    navigate(Routers.CHART_GALLERY);
+  };
+  const handleGoToAcademy = () => {
+    navigate(Routers.ACADEMIC_DOCS);
+  };
+  const handleGoToSupport = () => {
+    navigate(Routers.FREQUENT_QUESTIONS);
+  };
+  const handleFinalCTA = () => {
+    navigate(Routers.CHART_GALLERY);
   };
 
   // Get selected chart data
@@ -331,14 +341,19 @@ const HomePage: React.FC = () => {
                 <Button
                   id="hero-cta-build-chart"
                   size="lg"
-                  onClick={() => handleNavigateToEditor(CurrentPage.HOME)}
+                  onClick={() => handleNavigateToEditor()}
                   className="text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0"
                 >
                   <Play className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
                   {t('home_hero_cta_build')}
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
-                <Button variant="outline" size="lg" className="text-lg px-8 py-6 rounded-xl">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="text-lg px-8 py-6 rounded-xl"
+                  onClick={handleGoToExamples}
+                >
                   <BookOpen className="w-5 h-5 mr-2" />
                   {t('home_hero_cta_examples')}
                 </Button>
@@ -451,14 +466,13 @@ const HomePage: React.FC = () => {
                     <Button
                       variant="outline"
                       className="group"
-                      onClick={() =>
-                        (window.location.href =
-                          selectedChart === 'bar'
-                            ? Routers.BAR_CHART_EDITOR_DEMO
-                            : selectedChart === 'line'
-                              ? Routers.LINE_CHART_EDITOR_DEMO
-                              : Routers.AREA_CHART_EDITOR_DEMO)
-                      }
+                      onClick={() => {
+                        if (selectedChart === 'bar') navigate(Routers.BAR_CHART_EDITOR_DEMO);
+                        else if (selectedChart === 'line') navigate(Routers.LINE_CHART_EDITOR_DEMO);
+                        else if (selectedChart === 'area') navigate(Routers.AREA_CHART_EDITOR_DEMO);
+                        else if (selectedChart === 'pie') navigate(Routers.PIE_CHART_EDITOR_DEMO);
+                        else navigate(Routers.CHART_GALLERY);
+                      }}
                     >
                       {t('home_chart_learn_more')} {selectedChartData?.title.toLowerCase()}
                       <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -675,7 +689,12 @@ const HomePage: React.FC = () => {
                     </div>
                     <h3 className="font-semibold text-foreground mb-3">{story.case}</h3>
                     <p className="text-muted-foreground mb-4">{story.description}</p>
-                    <Button variant="outline" size="sm" className="group">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="group"
+                      onClick={() => handleGoToStory()}
+                    >
                       {t('home_story_view_case')}
                       <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                     </Button>
@@ -726,7 +745,7 @@ const HomePage: React.FC = () => {
                     {t('home_help_academy_title')}
                   </h3>
                   <p className="text-muted-foreground mb-6">{t('home_help_academy_desc')}</p>
-                  <Button className="group">
+                  <Button className="group" onClick={handleGoToAcademy}>
                     <BookOpen className="w-4 h-4 mr-2" />
                     {t('home_help_academy_btn')}
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -745,7 +764,7 @@ const HomePage: React.FC = () => {
                     {t('home_help_support_title')}
                   </h3>
                   <p className="text-muted-foreground mb-6">{t('home_help_support_desc')}</p>
-                  <Button variant="outline" className="group">
+                  <Button variant="outline" className="group" onClick={handleGoToSupport}>
                     <HeadphonesIcon className="w-4 h-4 mr-2" />
                     {t('home_help_support_btn')}
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -789,6 +808,7 @@ const HomePage: React.FC = () => {
                   <Button
                     size="lg"
                     className="text-lg px-12 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group"
+                    onClick={handleFinalCTA}
                   >
                     <Play className="w-6 h-6 mr-2 group-hover:scale-110 transition-transform" />
                     {t('home_cta_btn')}
