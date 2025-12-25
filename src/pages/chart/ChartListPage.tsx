@@ -386,7 +386,7 @@ const ChartListPage: React.FC = () => {
   };
 
   // While initial fetch is in-flight and no items yet, show only header + a scoped spinner
-  const isInitialLoading = chartsLoading && allFilteredCharts.length === 0;
+  // const isInitialLoading = chartsLoading && allFilteredCharts.length === 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
@@ -434,7 +434,7 @@ const ChartListPage: React.FC = () => {
           </div>
         </div>
 
-        {isInitialLoading ? (
+        {chartsLoading ? (
           <div className="flex justify-center items-center min-h-[calc(100vh-220px)]">
             <LoadingSpinner />
           </div>
