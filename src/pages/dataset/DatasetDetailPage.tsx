@@ -200,7 +200,7 @@ const DatasetDetailPage: React.FC = () => {
     if (!editableName.trim()) {
       setValidationErrors(prev => ({
         ...prev,
-        name: t('dataset_nameRequired', 'Dataset name is required'),
+        name: t('dataset_nameRequired'),
       }));
       return;
     }
@@ -267,10 +267,7 @@ const DatasetDetailPage: React.FC = () => {
 
     // Validate fields: only name is required
     if (!editableName.trim()) {
-      showError(
-        t('dataset_validationError', 'Validation Error'),
-        t('dataset_nameRequired', 'Dataset name is required')
-      );
+      showError(t('dataset_validationError'), t('dataset_nameRequired'));
       return;
     }
 
@@ -344,20 +341,9 @@ const DatasetDetailPage: React.FC = () => {
 
         // Always show error toast
         if (errorStatus === 409) {
-          showError(
-            t('dataset_nameExists', 'Dataset Name Already Exists'),
-            errorMessage ||
-              t(
-                'dataset_nameExistsMessage',
-                `A dataset with the name "${editableName.trim()}" already exists. Please choose a different name.`
-              )
-          );
+          showError(t('dataset_nameExists'), errorMessage || t('dataset_nameExistsMessage'));
         } else {
-          showError(
-            t('dataset_updateFailed', 'Update Failed'),
-            errorMessage ||
-              t('dataset_updateFailedMessage', 'Failed to update dataset. Please try again.')
-          );
+          showError(t('dataset_updateFailed'), errorMessage || t('dataset_updateFailedMessage'));
         }
 
         // Close the modal - don't throw error to prevent crash
@@ -546,18 +532,10 @@ const DatasetDetailPage: React.FC = () => {
                 </div>
               </div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-                {t('dataset_notFound', 'Dataset Not Found')}
+                {t('dataset_notFound')}
               </h2>
               <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                {extractedId
-                  ? t(
-                      'dataset_notFoundMessage',
-                      'The dataset you are looking for does not exist or you do not have access to it.'
-                    )
-                  : t(
-                      'dataset_noIdMessage',
-                      'No dataset ID was provided. Please access this page through the workspace or provide a valid dataset ID.'
-                    )}
+                {extractedId ? t('dataset_notFoundMessage') : t('dataset_noIdMessage')}
               </p>
               <div className="space-y-3">
                 <Button
@@ -565,18 +543,10 @@ const DatasetDetailPage: React.FC = () => {
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  {t('dataset_backToList', 'Back to Datasets')}
+                  {t('dataset_backToList')}
                 </Button>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {extractedId
-                    ? t(
-                        'dataset_notFoundHint',
-                        'Try checking the URL or contact your administrator if you believe this is an error.'
-                      )
-                    : t(
-                        'dataset_noIdHint',
-                        'Access datasets through the workspace to view their details.'
-                      )}
+                  {extractedId ? t('dataset_notFoundHint') : t('dataset_noIdHint')}
                 </p>
               </div>
             </Card>
@@ -609,20 +579,17 @@ const DatasetDetailPage: React.FC = () => {
                 </div>
               </div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-                {t('dataset_notFound', 'Dataset Not Found')}
+                {t('dataset_notFound')}
               </h2>
               <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                {t(
-                  'dataset_notFoundMessage',
-                  'The dataset you are looking for does not exist or you do not have access to it.'
-                )}
+                {t('dataset_notFoundMessage')}
               </p>
               <Button
                 onClick={() => navigate(Routers.WORKSPACE_DATASETS, { replace: true })}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                {t('dataset_backToList', 'Back to Datasets')}
+                {t('dataset_backToList')}
               </Button>
             </Card>
           </SlideInUp>
@@ -698,11 +665,8 @@ const DatasetDetailPage: React.FC = () => {
         onConfirm={modalConfirm.confirm}
         loading={modalConfirm.isLoading}
         type="danger"
-        title={t('dataset_deleteConfirmTitle', 'Delete Dataset')}
-        message={t(
-          'dataset_deleteConfirmMessage',
-          'Are you sure you want to delete this dataset? This action cannot be undone.'
-        )}
+        title={t('dataset_deleteTitle')}
+        message={t('dataset_deleteConfirmation')}
         confirmText={t('dataset_delete', 'Delete')}
         cancelText={t('common_cancel', 'Cancel')}
       />
@@ -717,13 +681,10 @@ const DatasetDetailPage: React.FC = () => {
         }}
         loading={modalConfirm.isLoading}
         type="success"
-        title={t('dataset_saveConfirmTitle', 'Save Changes')}
-        message={t(
-          'dataset_saveConfirmMessage',
-          'Are you sure you want to save the changes to this dataset?'
-        )}
-        confirmText={t('save', 'Save')}
-        cancelText={t('common_cancel', 'Cancel')}
+        title={t('dataset_saveConfirmTitle')}
+        message={t('dataset_saveConfirmMessage')}
+        confirmText={t('save')}
+        cancelText={t('common_cancel')}
       />
 
       {/* Reset Confirmation Modal */}

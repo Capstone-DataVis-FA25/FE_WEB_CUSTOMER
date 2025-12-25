@@ -17,12 +17,13 @@ import { useAuth } from '@/features/auth/useAuth';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
 import { pricingSteps } from '@/config/driver-steps/pricing-steps';
 import { useOnboarding } from '@/hooks/useOnboarding';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Routers from '@/router/routers';
 
 const PricingPage: React.FC = () => {
   const user = useSelector(selectUser);
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { isAuthenticated, refreshUser } = useAuth();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(false);
@@ -91,7 +92,8 @@ const PricingPage: React.FC = () => {
   };
 
   const onSubscribe = async (plan: SubscriptionPlan) => {
-    setSelectedPlan(plan);
+    if (isAuthenticated) setSelectedPlan(plan);
+    else navigate(Routers.AUTH, { state: { from: window.location.pathname } });
   };
 
   const confirmSubscribe = async () => {
