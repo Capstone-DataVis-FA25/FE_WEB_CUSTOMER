@@ -1027,8 +1027,8 @@ const ChartDisplaySection: React.FC<ChartDisplaySectionProps> = ({ processedHead
       default:
         return (
           <ErrorPanel
-            title={t('chart_editor_invalid_type', 'Invalid chart type')}
-            subtitle={t('chart_editor_select_type_hint', 'Please select a valid chart type.')}
+            title={t('chart_editor_invalid_type')}
+            subtitle={t('chart_editor_select_type_hint')}
             bordered
           />
         );

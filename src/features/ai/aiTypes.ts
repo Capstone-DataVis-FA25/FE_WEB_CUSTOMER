@@ -102,4 +102,6 @@ export interface AiChatResponse {
   datasets?: DatasetInfo[];
   chartGenerated?: boolean;
   chartData?: ChartGenerationResponse;
+  createdDataset?: DatasetInfo;
+  data?: any;
 }

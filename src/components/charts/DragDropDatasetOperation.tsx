@@ -103,16 +103,16 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
       if (!chartConfig) return;
 
       // Check if the provided pivot config has any active dimensions
-      const hasPivot = Boolean(
-        newPivotConfig &&
-        ((newPivotConfig.rows?.length ?? 0) > 0 ||
-          (newPivotConfig.columns?.length ?? 0) > 0 ||
-          (newPivotConfig.values?.length ?? 0) > 0 ||
-          (newPivotConfig.filters?.length ?? 0) > 0)
-      );
+      // const hasPivot = Boolean(
+      //   newPivotConfig &&
+      //     ((newPivotConfig.rows?.length ?? 0) > 0 ||
+      //       (newPivotConfig.columns?.length ?? 0) > 0 ||
+      //       (newPivotConfig.values?.length ?? 0) > 0 ||
+      //       (newPivotConfig.filters?.length ?? 0) > 0)
+      // );
 
       // Check if auto-select is enabled (defaults to true if not set)
-      const autoSelectEnabled = (newPivotConfig as any)?.autoSelectEnabled !== false;
+      // const autoSelectEnabled = (newPivotConfig as any)?.autoSelectEnabled !== false;
 
       // Use multiple requestAnimationFrame calls to ensure processedHeaders has updated
       // This is more reliable than setTimeout(0) for waiting for React state updates

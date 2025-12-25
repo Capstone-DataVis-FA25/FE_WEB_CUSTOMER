@@ -58,7 +58,7 @@ const DatasetTab: React.FC<DatasetTabProps> = ({
           <p className="text-muted-foreground text-center mb-6 max-w-md">
             {searchTerm || allFilteredDatasets.length > 0
               ? t('dataset_search')
-              : t('dataset_create')}
+              : t('tour_dataset_create_title')}
           </p>
           {!searchTerm && allFilteredDatasets.length === 0 && (
             <Button

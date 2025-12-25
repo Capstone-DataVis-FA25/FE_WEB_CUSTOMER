@@ -21,7 +21,6 @@ import Pagination from '@/components/ui/pagination';
 import {
   Search,
   Star,
-  Filter,
   Grid3X3,
   TrendingUp,
   ArrowRight,
@@ -76,7 +75,6 @@ export default function ChooseTemplateTab() {
   const [selectedTemplate, setSelectedTemplate] = useState<ChartTemplate | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['All']);
-  const [selectedPurposes, setSelectedPurposes] = useState<string[]>(['All']);
   const [showFeatured, setShowFeatured] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showDatasetModal, setShowDatasetModal] = useState(false);
@@ -169,7 +167,6 @@ export default function ChooseTemplateTab() {
       return;
     }
 
-    // Always continue with template - if no dataset, will use sample data
     continueWithTemplate(template);
   };
 
@@ -185,7 +182,6 @@ export default function ChooseTemplateTab() {
       'area',
       'pie',
       'donut',
-      'column',
       'scatter',
       'map',
       'heatmap',
@@ -197,11 +193,6 @@ export default function ChooseTemplateTab() {
       'funnel',
       'waterfall',
     ],
-    []
-  );
-
-  const purposes = useMemo(
-    () => ['All', 'comparison', 'distribution', 'change-over-time', 'correlation', 'geographical'],
     []
   );
 
@@ -262,17 +253,6 @@ export default function ChooseTemplateTab() {
     return counts;
   }, [allTemplates, chartTypes]);
 
-  const purposeCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    purposes.forEach(purpose => {
-      if (purpose === 'All') return;
-      counts[purpose] = allTemplates.filter(
-        template => template.configuration?.purpose === purpose
-      ).length;
-    });
-    return counts;
-  }, [allTemplates, purposes]);
-
   // Filter templates based on selected criteria
   const filteredTemplates = allTemplates.filter(template => {
     const matchesSearch =
@@ -282,12 +262,9 @@ export default function ChooseTemplateTab() {
 
     const matchesCategory = selectedCategory === 'All' || template.category === selectedCategory;
     const matchesType = selectedTypes.includes('All') || selectedTypes.includes(template.type);
-    const matchesPurpose =
-      selectedPurposes.includes('All') ||
-      selectedPurposes.some(purpose => template.configuration?.purpose === purpose);
     const matchesFeatured = !showFeatured || template.featured === true;
 
-    return matchesSearch && matchesCategory && matchesType && matchesPurpose && matchesFeatured;
+    return matchesSearch && matchesCategory && matchesType && matchesFeatured;
   });
 
   // Pagination
@@ -296,11 +273,6 @@ export default function ChooseTemplateTab() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedCategory, selectedTypes, selectedPurposes, showFeatured]);
 
   if (isLoading) {
     return (
@@ -456,42 +428,6 @@ export default function ChooseTemplateTab() {
                         </span>
                         <Badge variant="outline" className="text-xs ml-2 shrink-0">
                           {type === 'All' ? allTemplates.length : chartTypeCounts[type] || 0}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Separator />
-
-            {/* Purpose Filter */}
-            <div id="purpose-filter" className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-purple-500" />
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                  {t('chart_gallery_purpose')}
-                </span>
-              </div>
-              <Select
-                value={selectedPurposes[0] || 'All'}
-                onValueChange={value => setSelectedPurposes([value])}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t('chart_gallery_select_purpose')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {purposes.map(purpose => (
-                    <SelectItem key={purpose} value={purpose}>
-                      <div className="flex items-center justify-between w-full min-w-0">
-                        <span className="capitalize truncate">
-                          {purpose === 'All'
-                            ? t('chart_gallery_category_all')
-                            : purpose.replace('-', ' ')}
-                        </span>
-                        <Badge variant="outline" className="text-xs ml-2 shrink-0">
-                          {purpose === 'All' ? allTemplates.length : purposeCounts[purpose] || 0}
                         </Badge>
                       </div>
                     </SelectItem>

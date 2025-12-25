@@ -467,16 +467,113 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
           .y1(d => yScale(d[1]))
           .curve(curve);
 
-        // Create area path
+        // Create area path with interaction
         const areaPath = g
           .append('path')
           .datum(layer)
           .attr('fill', currentColors[key])
           .attr('stroke', 'none')
-          .attr('fill-opacity', 0)
           .attr('d', area)
           .attr('clip-path', `url(#${clipId})`)
-          .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))');
+          .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))')
+          .style('cursor', 'pointer'); // Add pointer cursor
+
+        // Add tooltip listeners to stacked area
+        if (showTooltip) {
+          areaPath
+            .on('mouseover', function (event) {
+              const [mouseX] = d3.pointer(event, g.node());
+
+              const xStep = innerWidth / data.length;
+              const index = Math.min(data.length - 1, Math.max(0, Math.floor(mouseX / xStep)));
+              const d = data[index];
+              if (!d) return;
+
+              const value = d[key] as number;
+              // Skip if value is invalid
+              if (value == null || isNaN(value)) return;
+
+              // Calculate stats
+              const allValues = data
+                .map(item => item[key] as number)
+                .filter(val => val != null && !isNaN(val));
+              const total = d3.sum(allValues);
+              const average = d3.mean(allValues) || 0;
+              const percentage = total > 0 ? (value / total) * 100 : 0;
+
+              // Determine comparison
+              const diffFromAvg = value - average;
+              const diffPercentage = average > 0 ? (diffFromAvg / average) * 100 : 0;
+              const comparisonText =
+                diffFromAvg > 0
+                  ? `+${diffPercentage.toFixed(1)}% above average`
+                  : `${diffPercentage.toFixed(1)}% below average`;
+
+              const tooltipLines = [
+                createHeader(key, { color: currentColors[key] }),
+                createSeparator(),
+                createStatLine('Value', yAxisFormatter ? yAxisFormatter(value) : String(value), {
+                  prefix: '📊 ',
+                }),
+                createPercentLine('Percentage', percentage),
+                createStatLine(
+                  'Average',
+                  yAxisFormatter ? yAxisFormatter(average) : String(average),
+                  { prefix: '〰️ ' }
+                ),
+                createStatLine('Comparison', comparisonText, {
+                  prefix: diffFromAvg >= 0 ? '📈 ' : '📉 ',
+                }),
+              ];
+
+              const [mx, my] = d3.pointer(event, g.node());
+
+              const tooltipConfig = {
+                lines: tooltipLines,
+                isDarkMode,
+                textColor,
+                strokeColor: currentColors[key],
+                position: { x: mx, y: my },
+                containerWidth: innerWidth,
+                containerHeight: innerHeight,
+              };
+
+              let tooltipGroup = g.select('.tooltip') as any;
+              if (tooltipGroup.empty()) {
+                tooltipGroup = g.append('g').attr('class', 'tooltip').style('opacity', 0);
+              }
+
+              tooltipGroup.node().__tooltipConfig = tooltipConfig;
+              renderD3Tooltip(tooltipGroup, tooltipConfig);
+
+              if (parseFloat(tooltipGroup.style('opacity') || '0') === 0) {
+                tooltipGroup.transition().duration(200).style('opacity', 1);
+              }
+            })
+            .on('mousemove', function (event) {
+              const [mx, my] = d3.pointer(event, g.node());
+              const tooltipGroup = g.select('.tooltip');
+              if (!tooltipGroup.empty()) {
+                const cfg = (tooltipGroup.node() as any).__tooltipConfig;
+                if (cfg) {
+                  cfg.position = { x: mx, y: my };
+                  renderD3Tooltip(tooltipGroup as any, cfg);
+                }
+              }
+            })
+            .on('mouseout', function () {
+              g.select('.tooltip').transition().duration(150).style('opacity', 0);
+            });
+        }
+
+        // Original animation code
+        areaPath
+          .attr('fill-opacity', 0)
+          .transition()
+          .delay(index * 200)
+          .duration(animationDuration)
+          .ease(d3.easeQuadInOut)
+          .attr('fill-opacity', opacity);
 
         // Add stroke if enabled
         if (showStroke) {
@@ -499,19 +596,12 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             .attr('opacity', 0)
             .attr('d', line)
             .attr('clip-path', `url(#${clipId})`)
+            .style('pointer-events', 'none') // Ensure stroke doesn't block area
             .transition()
             .delay(animationDuration + index * 200)
             .duration(500)
             .attr('opacity', 1);
         }
-
-        // Animate area
-        areaPath
-          .transition()
-          .delay(index * 200)
-          .duration(animationDuration)
-          .ease(d3.easeQuadInOut)
-          .attr('fill-opacity', opacity);
       });
     } else {
       // For overlapping areas
@@ -587,7 +677,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
           .attr('fill-opacity', 0)
           .attr('d', area)
           .attr('clip-path', `url(#${clipId})`)
-          .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))');
+          .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))')
+          .style('pointer-events', 'none');
 
         // Add stroke line if enabled
         if (showStroke) {
@@ -612,7 +703,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             .attr('d', line)
             .attr('clip-path', `url(#${clipId})`)
             .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
-            .style('opacity', 0);
+            .style('opacity', 0)
+            .style('pointer-events', 'none');
 
           // Animate stroke
           const totalLength = strokePath.node()?.getTotalLength() || 0;
@@ -654,122 +746,7 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
             .attr('stroke-width', 2)
             .attr('clip-path', `url(#${clipId})`)
             .style('filter', 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))')
-            .on('mouseover', function (event, d) {
-              if (!showTooltip) return;
-
-              d3.select(this)
-                .transition()
-                .duration(200)
-                .attr('r', currentWidth < MOBILE_BREAKPOINT ? 5 : 6)
-                .attr('stroke-width', 3);
-
-              // Calculate statistics for detailed tooltip (filter null values)
-              const value = d[key] as number;
-              const allValues = data
-                .map(item => item[key] as number)
-                .filter(val => val != null && !isNaN(val));
-              const total = d3.sum(allValues);
-              const average = d3.mean(allValues) || 0;
-              const percentage = total > 0 ? (value / total) * 100 : 0;
-
-              // Calculate ranking
-              const sortedValues = [...allValues].sort((a, b) => b - a);
-              const rank = sortedValues.indexOf(value) + 1;
-
-              // Determine comparison text
-              const diffFromAvg = value - average;
-              const diffPercentage = average > 0 ? (diffFromAvg / average) * 100 : 0;
-              const comparisonText =
-                diffFromAvg > 0
-                  ? `+${diffPercentage.toFixed(1)}% above average`
-                  : `${diffPercentage.toFixed(1)}% below average`;
-
-              // Build tooltip content lines
-              const tooltipLines = [
-                createHeader(key, { color: currentColors[key] }),
-                createSeparator(),
-                createStatLine('Value', yAxisFormatter ? yAxisFormatter(value) : String(value), {
-                  prefix: '📊 ',
-                }),
-                createPercentLine('Percentage', percentage),
-                createStatLine(
-                  'Average',
-                  yAxisFormatter ? yAxisFormatter(average) : String(average),
-                  { prefix: '〰️ ' }
-                ),
-                createStatLine('Comparison', comparisonText, {
-                  prefix: diffFromAvg >= 0 ? '📈 ' : '📉 ',
-                }),
-                createRankLine(rank, data.length),
-              ];
-
-              // Get mouse position relative to the chart
-              const [mouseX, mouseY] = d3.pointer(event, g.node());
-
-              // Reuse existing tooltip group or create if doesn't exist
-              let tooltipGroup = g.select('.tooltip') as d3.Selection<
-                SVGGElement,
-                unknown,
-                null,
-                undefined
-              >;
-              if (tooltipGroup.empty()) {
-                tooltipGroup = g.append('g').attr('class', 'tooltip').style('opacity', 0);
-              }
-
-              // Store tooltip config for mousemove updates
-              const tooltipConfig = {
-                lines: tooltipLines,
-                isDarkMode,
-                textColor,
-                strokeColor: currentColors[key],
-                position: { x: mouseX, y: mouseY },
-                containerWidth: innerWidth,
-                containerHeight: innerHeight,
-                preferPosition: 'auto' as const,
-              };
-
-              // Store config on the element for mousemove
-              (tooltipGroup.node() as any).__tooltipConfig = tooltipConfig;
-
-              // Render enhanced tooltip (this updates content)
-              renderD3Tooltip(tooltipGroup, tooltipConfig);
-
-              // Only fade in if tooltip was just created (opacity is 0)
-              // Don't fade in on every mouseover to avoid flickering
-              const currentOpacity = parseFloat(tooltipGroup.style('opacity') || '0');
-              if (currentOpacity === 0) {
-                tooltipGroup.transition().duration(200).style('opacity', 1);
-              }
-            })
-            .on('mousemove', function (event) {
-              if (!showTooltip) return;
-
-              // Update tooltip position on mouse move
-              const [mouseX, mouseY] = d3.pointer(event, g.node());
-
-              const tooltipGroup = g.select('.tooltip') as d3.Selection<
-                SVGGElement,
-                unknown,
-                null,
-                undefined
-              >;
-
-              if (!tooltipGroup.empty()) {
-                // Get stored config and update position
-                const tooltipConfig = (tooltipGroup.node() as any).__tooltipConfig;
-                if (tooltipConfig) {
-                  tooltipConfig.position = { x: mouseX, y: mouseY };
-                  renderD3Tooltip(tooltipGroup, tooltipConfig);
-                }
-              }
-            })
-            .on('mouseout', function () {
-              d3.select(this).transition().duration(200).attr('r', 4).attr('stroke-width', 2);
-
-              // Smooth fade out instead of immediate remove
-              g.select('.tooltip').transition().duration(150).style('opacity', 0);
-            })
+            .style('pointer-events', 'none') // Disable direct interaction, let global overlay handle it
             .transition()
             .delay(animationDuration * 2 + index * 100)
             .duration(300)
@@ -794,7 +771,8 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         .attr('stroke', gridColor)
         .attr('stroke-width', 1)
         .attr('stroke-dasharray', '3,3')
-        .attr('opacity', gridOpacity);
+        .attr('opacity', gridOpacity)
+        .style('pointer-events', 'none');
 
       // Vertical grid lines
       g.selectAll('.grid-line-vertical')
@@ -809,147 +787,236 @@ const D3AreaChart: React.FC<D3AreaChartProps> = ({
         .attr('stroke', gridColor)
         .attr('stroke-width', 1)
         .attr('stroke-dasharray', '3,3')
-        .attr('opacity', gridOpacity * 0.7);
+        .attr('opacity', gridOpacity * 0.7)
+        .style('pointer-events', 'none');
     }
 
-    // Add interactive overlay for hover tooltips (even without points)
-    if (showTooltip && !showPoints) {
+    // Add interactive overlay for hover tooltips
+    if (showTooltip && !stackedMode) {
       const enabledAreas = yAxisKeys.filter(key => !disabledLines.includes(key));
+      const pointWidth = innerWidth / data.length;
 
-      // Create invisible overlay rectangles for each data point area
-      enabledAreas.forEach(key => {
-        const pointWidth = innerWidth / data.length;
-        // Sanitize key for class name to avoid invalid selector errors (e.g. "sum(Count)")
-        const safeKey = key.replace(/[^a-zA-Z0-9-_]/g, '-');
+      // X-Band Overlay: Create full-height bands for each X data point
+      g.selectAll('.hover-band')
+        .data(data)
+        .enter()
+        .append('rect')
+        .attr('class', 'hover-band')
+        .attr('x', d => {
+          const xPos = xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey]));
+          return xPos - pointWidth / 2;
+        })
+        .attr('y', 0)
+        .attr('width', pointWidth)
+        .attr('height', innerHeight)
+        .attr('fill', 'transparent')
+        .attr('pointer-events', 'all')
+        .style('cursor', 'crosshair')
+        .on('mouseover', function (event, d) {
+          const [mouseX, mouseY] = d3.pointer(event, g.node());
 
-        g.selectAll(`.hover-area-${safeKey}`)
-          .data(data)
-          .enter()
-          .append('rect')
-          .attr('class', `hover-area-${safeKey}`)
-          .attr('x', d => {
-            const xPos = xScale(xAreNumbers ? Number(d[xAxisKey]) : String(d[xAxisKey]));
-            return xPos - pointWidth / 2;
-          })
-          .attr('y', 0)
-          .attr('width', pointWidth)
-          .attr('height', innerHeight)
-          .attr('fill', 'transparent')
-          .attr('pointer-events', 'all')
-          .style('cursor', 'crosshair')
-          .on('mouseover', function (event, d) {
-            // Check if this data point has valid value
-            const value = d[key] as number;
-            if (value == null || isNaN(value)) return; // Skip invalid data points
+          // Find closest series by Y distance
+          let bestKey: string | null = null;
+          let minDist = Infinity;
 
-            // Removed opacity change on hover to respect user's transparency setting
-            // Area maintains the configured opacity value
-
-            // Calculate statistics for detailed tooltip (filter null values)
-            const allValues = data
-              .map(item => item[key] as number)
-              .filter(val => val != null && !isNaN(val));
-            const total = d3.sum(allValues);
-            const average = d3.mean(allValues) || 0;
-            const percentage = total > 0 ? (value / total) * 100 : 0;
-
-            // Calculate ranking
-            const sortedValues = [...allValues].sort((a, b) => b - a);
-            const rank = sortedValues.indexOf(value) + 1;
-
-            // Determine comparison text
-            const diffFromAvg = value - average;
-            const diffPercentage = average > 0 ? (diffFromAvg / average) * 100 : 0;
-            const comparisonText =
-              diffFromAvg > 0
-                ? `+${diffPercentage.toFixed(1)}% above average`
-                : `${diffPercentage.toFixed(1)}% below average`;
-
-            // Build tooltip content lines
-            const tooltipLines = [
-              createHeader(key, { color: currentColors[key] }),
-              createSeparator(),
-              createStatLine('Value', yAxisFormatter ? yAxisFormatter(value) : String(value), {
-                prefix: '📊 ',
-              }),
-              createPercentLine('Percentage', percentage),
-              createStatLine(
-                'Average',
-                yAxisFormatter ? yAxisFormatter(average) : String(average),
-                { prefix: '〰️ ' }
-              ),
-              createStatLine('Comparison', comparisonText, {
-                prefix: diffFromAvg >= 0 ? '📈 ' : '📉 ',
-              }),
-              createRankLine(rank, data.length),
-            ];
-
-            // Get mouse position relative to the chart
-            const [mouseX, mouseY] = d3.pointer(event, g.node());
-
-            // Reuse existing tooltip group or create if doesn't exist
-            let tooltipGroup = g.select('.tooltip') as d3.Selection<
-              SVGGElement,
-              unknown,
-              null,
-              undefined
-            >;
-            if (tooltipGroup.empty()) {
-              tooltipGroup = g.append('g').attr('class', 'tooltip').style('opacity', 0);
-            }
-
-            // Store tooltip config for mousemove updates
-            const tooltipConfig = {
-              lines: tooltipLines,
-              isDarkMode,
-              textColor,
-              strokeColor: currentColors[key],
-              position: { x: mouseX, y: mouseY },
-              containerWidth: innerWidth,
-              containerHeight: innerHeight,
-              preferPosition: 'auto' as const,
-            };
-
-            // Store config on the element for mousemove
-            (tooltipGroup.node() as any).__tooltipConfig = tooltipConfig;
-
-            // Render enhanced tooltip (this updates content)
-            renderD3Tooltip(tooltipGroup, tooltipConfig);
-
-            // Only fade in if tooltip was just created (opacity is 0)
-            // Don't fade in on every mouseover to avoid flickering
-            const currentOpacity = parseFloat(tooltipGroup.style('opacity') || '0');
-            if (currentOpacity === 0) {
-              tooltipGroup.transition().duration(200).style('opacity', 1);
-            }
-          })
-          .on('mousemove', function (event) {
-            // Update tooltip position on mouse move
-            const [mouseX, mouseY] = d3.pointer(event, g.node());
-
-            const tooltipGroup = g.select('.tooltip') as d3.Selection<
-              SVGGElement,
-              unknown,
-              null,
-              undefined
-            >;
-
-            if (!tooltipGroup.empty()) {
-              // Get stored config and update position
-              const tooltipConfig = (tooltipGroup.node() as any).__tooltipConfig;
-              if (tooltipConfig) {
-                tooltipConfig.position = { x: mouseX, y: mouseY };
-                renderD3Tooltip(tooltipGroup, tooltipConfig);
+          enabledAreas.forEach(key => {
+            const val = d[key] as number;
+            if (val != null && !isNaN(val)) {
+              const yPos = yScale(val);
+              const dist = Math.abs(yPos - mouseY);
+              if (dist < minDist) {
+                minDist = dist;
+                bestKey = key;
               }
             }
-          })
-          .on('mouseout', function () {
-            // No need to reset opacity since we don't change it on hover anymore
-
-            // Smooth fade out tooltip
-            g.select('.tooltip').transition().duration(150).style('opacity', 0);
           });
-      });
+
+          if (!bestKey) return;
+
+          const key = bestKey;
+          const value = d[key] as number;
+
+          // Highlight the specific point
+          // Reset all points first
+          g.selectAll('circle').transition().duration(100).attr('r', 4).attr('stroke-width', 2);
+
+          const seriesIndex = enabledAreas.indexOf(key);
+          const activePoint = g.selectAll(`.point-${seriesIndex}`).filter((p: any) => p === d);
+
+          activePoint
+            .transition()
+            .duration(150)
+            .attr('r', currentWidth < MOBILE_BREAKPOINT ? 5 : 6)
+            .attr('stroke-width', 3);
+
+          // Calculate statistics for tooltip
+          const allValues = data
+            .map(item => item[key] as number)
+            .filter(val => val != null && !isNaN(val));
+          const total = d3.sum(allValues);
+          const average = d3.mean(allValues) || 0;
+          const percentage = total > 0 ? (value / total) * 100 : 0;
+          const sortedValues = [...allValues].sort((a, b) => b - a);
+          const rank = sortedValues.indexOf(value) + 1;
+          const diffFromAvg = value - average;
+          const diffPercentage = average > 0 ? (diffFromAvg / average) * 100 : 0;
+          const comparisonText =
+            diffFromAvg > 0
+              ? `+${diffPercentage.toFixed(1)}% above average`
+              : `${diffPercentage.toFixed(1)}% below average`;
+
+          const tooltipLines = [
+            createHeader(key, { color: currentColors[key] }),
+            createSeparator(),
+            createStatLine('Value', yAxisFormatter ? yAxisFormatter(value) : String(value), {
+              prefix: '📊 ',
+            }),
+            createPercentLine('Percentage', percentage),
+            createStatLine('Average', yAxisFormatter ? yAxisFormatter(average) : String(average), {
+              prefix: '〰️ ',
+            }),
+            createStatLine('Comparison', comparisonText, {
+              prefix: diffFromAvg >= 0 ? '📈 ' : '📉 ',
+            }),
+            createRankLine(rank, data.length),
+          ];
+
+          // Tooltip Rendering
+          let tooltipGroup = g.select('.tooltip') as any;
+          if (tooltipGroup.empty()) {
+            tooltipGroup = g.append('g').attr('class', 'tooltip').style('opacity', 0);
+          }
+
+          const tooltipConfig = {
+            lines: tooltipLines,
+            isDarkMode,
+            textColor,
+            strokeColor: currentColors[key],
+            position: { x: mouseX, y: mouseY }, // Use mouse position for immediate feedback
+            containerWidth: innerWidth,
+            containerHeight: innerHeight,
+          };
+
+          tooltipGroup.node().__tooltipConfig = tooltipConfig;
+          renderD3Tooltip(tooltipGroup, tooltipConfig);
+
+          if (parseFloat(tooltipGroup.style('opacity') || '0') === 0) {
+            tooltipGroup.transition().duration(200).style('opacity', 1);
+          }
+        })
+        .on('mousemove', function (event, d) {
+          const [mouseX, mouseY] = d3.pointer(event, g.node());
+
+          // Re-calculate best key on movement to switch series if vertical mouse movement
+          let bestKey: string | null = null;
+          let minDist = Infinity;
+          enabledAreas.forEach(key => {
+            const val = d[key] as number;
+            if (val != null && !isNaN(val)) {
+              const yPos = yScale(val);
+              const dist = Math.abs(yPos - mouseY);
+              if (dist < minDist) {
+                minDist = dist;
+                bestKey = key;
+              }
+            }
+          });
+
+          if (bestKey) {
+            // If key changed, we might want to re-trigger mouseover logic (highlight point change)
+            // But simpler to just update tooltip position and trust mouseover handles major switches?
+            // Actually, mouseover only fires when entering the RECT.
+            // Inside the RECT, we are just moving Y. X is constant.
+            // So we MUST update the Best Key logic here in MouseMove!
+
+            // Copy-paste logic or extract?
+            // Since I can't extract easily here, I will reuse the logic.
+            // It's effectively the same logic as mouseover.
+            // Ideally mouseover just delegates to mousemove?
+            // But we need to enter/leave points.
+
+            // Let's assume the user hovers steadily.
+            // Updated logic: MouseMove needs to do everything MouseOver does to be reactive to Y-changes.
+
+            const key = bestKey;
+            const value = d[key] as number;
+
+            // Update Point Highlight (Reactive to Y)
+            const seriesIndex = enabledAreas.indexOf(key);
+            const activePoint = g.selectAll(`.point-${seriesIndex}`).filter((p: any) => p === d);
+
+            // Check if active point is already highlighted?
+            // Just force reset others and set this one.
+            // Performance note: doing this on every pixel move is heavy.
+            // Optimization: Check if bestKey changed.
+
+            const currentActiveKey = (g.node() as any).__activeKey;
+            if (currentActiveKey !== key) {
+              (g.node() as any).__activeKey = key;
+              g.selectAll('circle').attr('r', 4).attr('stroke-width', 2); // Reset all
+              activePoint.attr('r', 6).attr('stroke-width', 3);
+
+              // Update Tooltip Content (Series changed)
+              // ... Re-calculate content ...
+              const allValues = data
+                .map(item => item[key] as number)
+                .filter(val => val != null && !isNaN(val));
+              const total = d3.sum(allValues);
+              const average = d3.mean(allValues) || 0;
+              const percentage = total > 0 ? (value / total) * 100 : 0;
+              const sortedValues = [...allValues].sort((a, b) => b - a);
+              const rank = sortedValues.indexOf(value) + 1;
+              const diffFromAvg = value - average;
+              const diffPercentage = average > 0 ? (diffFromAvg / average) * 100 : 0;
+              const comparisonText =
+                diffFromAvg > 0
+                  ? `+${diffPercentage.toFixed(1)}% above average`
+                  : `${diffPercentage.toFixed(1)}% below average`;
+
+              const tooltipLines = [
+                createHeader(key, { color: currentColors[key] }),
+                createSeparator(),
+                createStatLine('Value', yAxisFormatter ? yAxisFormatter(value) : String(value), {
+                  prefix: '📊 ',
+                }),
+                createPercentLine('Percentage', percentage),
+                createStatLine(
+                  'Average',
+                  yAxisFormatter ? yAxisFormatter(average) : String(average),
+                  { prefix: '〰️ ' }
+                ),
+                createStatLine('Comparison', comparisonText, {
+                  prefix: diffFromAvg >= 0 ? '📈 ' : '📉 ',
+                }),
+                createRankLine(rank, data.length),
+              ];
+
+              const tooltipGroup = g.select('.tooltip');
+              if (!tooltipGroup.empty()) {
+                const cfg = (tooltipGroup.node() as any).__tooltipConfig;
+                if (cfg) {
+                  cfg.lines = tooltipLines;
+                  cfg.strokeColor = currentColors[key];
+                }
+              }
+            }
+
+            // Always update position
+            const tooltipGroup = g.select('.tooltip');
+            if (!tooltipGroup.empty()) {
+              const cfg = (tooltipGroup.node() as any).__tooltipConfig;
+              if (cfg) {
+                cfg.position = { x: mouseX, y: mouseY };
+                renderD3Tooltip(tooltipGroup as any, cfg);
+              }
+            }
+          }
+        })
+        .on('mouseout', function () {
+          g.selectAll('circle').transition().duration(200).attr('r', 4).attr('stroke-width', 2);
+          g.select('.tooltip').transition().duration(150).style('opacity', 0);
+          (g.node() as any).__activeKey = null;
+        });
     }
 
     const xAxis = d3

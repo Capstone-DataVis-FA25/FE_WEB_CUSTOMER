@@ -26,7 +26,7 @@ export const getSystemTheme = (): 'light' | 'dark' => {
   if (typeof window !== 'undefined') {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
-  return 'light';
+  return 'dark';
 };
 
 // Áp dụng theme vào DOM bằng cách thêm/xóa class 'dark'
@@ -47,9 +47,9 @@ export const applyTheme = (theme: Theme) => {
 export const getStoredTheme = (): Theme => {
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem('theme') as Theme;
-    return stored || 'light'; // mặc định là light
+    return stored || 'dark'; // mặc định là dark
   }
-  return 'light';
+  return 'dark';
 };
 
 // Lưu theme vào localStorage

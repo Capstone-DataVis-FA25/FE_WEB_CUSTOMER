@@ -192,14 +192,56 @@ const ChatBot: React.FC = () => {
                 className="relative flex-1 overflow-y-auto p-4 space-y-4 bg-slate-900"
               >
                 {messages.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-center">
-                    <div className="space-y-3">
-                      <p className="text-slate-300 text-sm font-semibold">
-                        {t('chat_welcome_greeting')}
-                      </p>
-                      <p className="text-slate-400 text-xs max-w-xs leading-relaxed">
-                        {t('chat_welcome_message')}
-                      </p>
+                  <div className="flex flex-col items-center justify-center h-full px-6 text-center">
+                    <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-blue-500/20">
+                      <Lottie
+                        animationData={chatbotLottie}
+                        loop
+                        autoplay
+                        style={{ width: 80, height: 80 }}
+                      />
+                    </div>
+                    <h3 className="text-white font-bold text-lg mb-2">
+                      {t('chat_welcome_title', 'Data Analysis AI')}
+                    </h3>
+                    <p className="text-slate-400 text-xs mb-8 max-w-[240px] leading-relaxed">
+                      {t(
+                        'chat_welcome_subtitle',
+                        'I can help you create datasets, visualize data, and answer questions.'
+                      )}
+                    </p>
+
+                    <div className="grid grid-cols-1 w-full gap-2.5">
+                      {[
+                        {
+                          icon: <Database size={14} className="text-green-400" />,
+                          label: t('chat_suggest_create_data', 'Create sample dataset'),
+                          msg: 'Create a sample dataset of monthly sales for 2024 with 3 regions.',
+                        },
+                        {
+                          icon: <TrendingUp size={14} className="text-blue-400" />,
+                          label: t('chat_suggest_create_chart', 'Create a chart'),
+                          msg: 'Help me create a bar chart to visualize sales data.',
+                        },
+                        {
+                          icon: <Send size={14} className="text-purple-400" />,
+                          label: t('chat_suggest_how_to', 'How to use features?'),
+                          msg: 'How do I import my own Excel file?',
+                        },
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => sendMessage(item.msg, 'vi')}
+                          className="flex items-center gap-3 px-4 py-3 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-xl transition-all duration-200 group text-left"
+                        >
+                          <div className="p-2 bg-slate-900 rounded-lg group-hover:scale-110 transition-transform duration-200 item-icon">
+                            {item.icon}
+                          </div>
+                          <span className="text-slate-200 text-sm font-medium group-hover:text-blue-400 transition-colors">
+                            {item.label}
+                          </span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 ) : (
@@ -215,9 +257,11 @@ const ChatBot: React.FC = () => {
                           </div>
                         ) : (
                           <div className="max-w-[85%] space-y-3">
-                            <div className="px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 rounded-bl-none">
-                              <MarkdownMessage content={msg.content} />
-                            </div>
+                            {msg.content && (
+                              <div className="px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 rounded-bl-none">
+                                <MarkdownMessage content={msg.content} />
+                              </div>
+                            )}
 
                             {/* Dataset Selection UI */}
                             {msg.needsDatasetSelection &&
@@ -363,6 +407,35 @@ const ChatBot: React.FC = () => {
                                 >
                                   <TrendingUp size={16} />
                                   {t('chat_continue_to_editor')}
+                                </button>
+                              </div>
+                            )}
+                            {/* Created Dataset Preview Card */}
+                            {msg.createdDataset && (
+                              <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-green-500/30 rounded-lg p-4 space-y-3 shadow-lg">
+                                <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
+                                  <Database size={16} />
+                                  <span>{t('chat_dataset_created_title', 'Dataset Created')}</span>
+                                </div>
+                                <div>
+                                  <h4 className="text-white font-semibold text-sm">
+                                    {msg.createdDataset.name}
+                                  </h4>
+                                  <p className="text-slate-400 text-xs mt-1 line-clamp-2">
+                                    {msg.createdDataset.description}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    const targetUrl =
+                                      (msg.createdDataset as any).url || '/workspace/datasets';
+                                    navigate(targetUrl);
+                                    setIsOpen(false);
+                                  }}
+                                  className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm flex items-center justify-center gap-2"
+                                >
+                                  <Database size={16} />
+                                  {t('chat_continue_to_datasets', 'Continue to Datasets')}
                                 </button>
                               </div>
                             )}

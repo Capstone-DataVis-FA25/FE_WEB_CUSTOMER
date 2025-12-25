@@ -32,6 +32,8 @@ export interface AiChatResponse {
       chartUrl: string;
       success: boolean;
     };
+    createdDataset?: { id: string; name: string; description?: string };
+    data?: any;
   };
 }
 

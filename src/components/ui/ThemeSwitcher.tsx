@@ -21,7 +21,7 @@ const ThemeSwitcher: React.FC = () => {
     <button
       onClick={toggleTheme}
       className="flex items-center gap-2 px-3 py-3 rounded-lg bg-gray-100/80 dark:bg-gray-800/80 hover:bg-gray-200/80 dark:hover:bg-gray-700/80 border border-gray-200/50 dark:border-gray-700/50 transition-all duration-200 backdrop-blur-sm shadow-sm hover:shadow-md group"
-    >      
+    >
       {/* Theme indicator */}
       <div className="flex items-center gap-1">
         {isDark ? (

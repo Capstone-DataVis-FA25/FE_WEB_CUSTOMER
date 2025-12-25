@@ -45,6 +45,7 @@ import { homeSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { ExperienceLevelModal, GuidanceConfirmModal } from '@/components/onboarding';
+import { useNavigate } from 'react-router-dom';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ChartDataPoint = any;
@@ -62,6 +63,7 @@ const HomePage: React.FC = () => {
     setWantsGuidance,
   } = useOnboarding();
 
+  const navigate = useNavigate();
   const [showExperienceModal, setShowExperienceModal] = useState(false);
   const [showGuidanceModal, setShowGuidanceModal] = useState(false);
 
@@ -206,6 +208,16 @@ const HomePage: React.FC = () => {
     );
   };
 
+  enum CurrentPage {
+    HOME = 'home',
+  }
+
+  const handleNavigateToEditor = (currentPage: CurrentPage, datasetId?: String | null) => {
+    if (datasetId && currentPage === CurrentPage.HOME) {
+      navigate(Routers.CHART_GALLERY);
+    }
+  };
+
   // Get selected chart data
   const selectedChartData = chartTypes.find(chart => chart.id === selectedChart);
 
@@ -319,6 +331,7 @@ const HomePage: React.FC = () => {
                 <Button
                   id="hero-cta-build-chart"
                   size="lg"
+                  onClick={() => handleNavigateToEditor(CurrentPage.HOME)}
                   className="text-lg px-8 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0"
                 >
                   <Play className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />

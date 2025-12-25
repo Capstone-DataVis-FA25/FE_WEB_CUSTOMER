@@ -51,14 +51,6 @@ const chartTemplatesData: ChartCategory[] = [
         category: 'basic',
         configuration: { type: 'donut' },
       },
-      {
-        id: 'column-basic',
-        name: 'Column Chart',
-        description: 'Basic column chart',
-        type: 'column',
-        category: 'basic',
-        configuration: { type: 'column' },
-      },
     ],
   },
   {
