@@ -208,10 +208,6 @@ const HomePage: React.FC = () => {
     );
   };
 
-  enum CurrentPage {
-    HOME = 'home',
-  }
-
   const handleNavigateToEditor = () => {
     navigate(Routers.CHART_GALLERY);
   };

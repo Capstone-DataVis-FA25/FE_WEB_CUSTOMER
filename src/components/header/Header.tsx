@@ -26,7 +26,6 @@ import { useAiJobNotification } from '@/features/ai/useAiJobNotification';
 import { useForecastCreationProgress } from '@/features/forecast/useForecastCreationProgress';
 import { useForecastAnalysisProgress } from '@/features/forecast/useForecastAnalysisProgress';
 import { useAiCleaningProgress } from '@/features/ai/useAiCleaningProgress';
-import shortNamePreview from '@/utils/shortNamePreview';
 
 interface HeaderProps {
   isAuthenticated?: boolean;
