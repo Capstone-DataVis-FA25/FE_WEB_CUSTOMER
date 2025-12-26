@@ -100,10 +100,7 @@ const ChatBot: React.FC = () => {
 
   const handleDatasetSelect = (datasetId: string, datasetName: string) => {
     console.log('[Chat] User selected dataset:', { datasetId, datasetName });
-    selectDataset(
-      datasetId,
-      `Tôi đã chọn dataset "${datasetName}". Tạo biểu đồ phù hợp với dữ liệu này.`
-    );
+    selectDataset(datasetId, t('chat_prompt_dataset_selected_create_chart', { datasetName }));
   };
 
   const handleNavigateToChart = (chartUrl: string) => {

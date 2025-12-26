@@ -472,7 +472,9 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                 id="btn-save-chart"
                 size="sm"
                 onClick={onSave}
-                disabled={mode === 'create' ? creating || !isFormValid : !combinedHasChanges}
+                disabled={
+                  mode === 'create' ? creating || !isFormValid : !combinedHasChanges || !isFormValid
+                }
                 className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creating ? (
