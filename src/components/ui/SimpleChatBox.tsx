@@ -216,17 +216,17 @@ const ChatBot: React.FC = () => {
                         {
                           icon: <Database size={14} className="text-green-400" />,
                           label: t('chat_suggest_create_data', 'Create sample dataset'),
-                          msg: 'Create a sample dataset of monthly sales for 2024 with 3 regions.',
+                          msg: 'Create a sample dataset of monthly sales for 2025 with 3 regions.',
                         },
                         {
                           icon: <TrendingUp size={14} className="text-blue-400" />,
                           label: t('chat_suggest_create_chart', 'Create a chart'),
-                          msg: 'Help me create a bar chart to visualize sales data.',
+                          msg: 'Help me create a new chart to visualize ',
                         },
                         {
                           icon: <Send size={14} className="text-purple-400" />,
                           label: t('chat_suggest_how_to', 'How to use features?'),
-                          msg: 'How do I import my own Excel file?',
+                          msg: 'How do I import my own file?',
                         },
                       ].map((item, idx) => (
                         <button
@@ -336,6 +336,14 @@ const ChatBot: React.FC = () => {
                                     className="text-left px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors flex items-center gap-2"
                                   >
                                     <span className="text-white text-xs">Pie Chart</span>
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      selectChartType('area', msg.originalMessage || '')
+                                    }
+                                    className="text-left px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors flex items-center gap-2"
+                                  >
+                                    <span className="text-white text-xs">Area Chart</span>
                                   </button>
                                   <button
                                     onClick={() =>

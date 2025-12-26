@@ -21,14 +21,16 @@ export function useAiChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null);
+  const [lastUserPrompt, setLastUserPrompt] = useState<string>('');
   const { currentLanguage } = useLanguage();
   const sendMessage = async (
     message: string,
-    language = currentLanguage,
+    language?: string,
     datasetId?: string,
     chartType?: string
   ) => {
     const newMessages: ChatMessage[] = [...messages, { role: 'user', content: message }];
+    setLastUserPrompt(message);
     setMessages(newMessages);
     setIsLoading(true);
     setError(null);
@@ -39,10 +41,15 @@ export function useAiChat() {
       const payload: AiChatRequest = {
         message,
         messages: JSON.stringify(recentMessages),
-        language,
+        language: language || currentLanguage,
         datasetId: datasetId || selectedDatasetId || undefined,
         chartType,
       };
+
+      // Only send language if explicitly provided; default to model auto-detect based on user text
+      if (language) {
+        payload.language = language;
+      }
 
       const res: AiChatResponse = await chatWithAi(payload);
 
@@ -99,13 +106,43 @@ export function useAiChat() {
 
   const selectDataset = (datasetId: string, followUpMessage?: string) => {
     setSelectedDatasetId(datasetId);
-    if (followUpMessage) {
-      sendMessage(followUpMessage, currentLanguage, datasetId);
-    }
+
+    const hintMessage: ChatMessage = {
+      role: 'assistant',
+      content: followUpMessage || t('chat_prompt_choose_chart_type'),
+      needsChartTypeSelection: true,
+      originalMessage: lastUserPrompt,
+    };
+
+    setMessages(prev => [...prev, hintMessage]);
   };
 
   const selectChartType = (chartType: string, prompt: string) => {
-    sendMessage(prompt, currentLanguage, selectedDatasetId || undefined, chartType);
+    const effectivePrompt = prompt || lastUserPrompt;
+
+    const chartTypeLabels: Record<string, string> = {
+      auto: t('home_chartTypes_auto'),
+      line: 'Line Chart',
+      bar: 'Bar Chart',
+      pie: 'Pie Chart',
+      area: 'Area Chart',
+      donut: 'Donut Chart',
+      heatmap: 'Heatmap',
+      scatter: 'Scatter',
+      histogram: 'Histogram',
+      cycleplot: 'Cycle Plot',
+    };
+
+    const selectedTypeLabel = chartTypeLabels[chartType] || chartType;
+    const chartTypeLine = t('chat_selected_chart_type', {
+      type: selectedTypeLabel,
+      defaultValue: `Chart Type: ${selectedTypeLabel}`,
+    });
+
+    const composedPrompt = `${effectivePrompt}\n${chartTypeLine}`.trim();
+
+    // Let backend auto-detect language from user text; avoid forcing via param
+    sendMessage(composedPrompt, undefined, selectedDatasetId || undefined, chartType);
   };
 
   const clearDatasetSelection = () => {
