@@ -44,68 +44,17 @@ import 'driver.js/dist/driver.css';
 import { homeSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
 import { useOnboarding } from '@/hooks/useOnboarding';
-import { ExperienceLevelModal, GuidanceConfirmModal } from '@/components/onboarding';
 import { useNavigate } from 'react-router-dom';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ChartDataPoint = any;
 
 const HomePage: React.FC = () => {
   const [selectedChart, setSelectedChart] = useState<string>('bar');
   const { t } = useTranslation();
   const { user, isAuthenticated } = useAuth();
-  const {
-    experienceLevel,
-    isFirstVisit,
-    shouldShowTour,
-    markTourAsShown,
-    setExperienceLevel,
-    setWantsGuidance,
-  } = useOnboarding();
+  const { experienceLevel, isFirstVisit, shouldShowTour, markTourAsShown } = useOnboarding();
 
   const navigate = useNavigate();
-  const [showExperienceModal, setShowExperienceModal] = useState(false);
-  const [showGuidanceModal, setShowGuidanceModal] = useState(false);
-
-  // Show experience selection modal on first visit
-  useEffect(() => {
-    if (isAuthenticated && user?.id && isFirstVisit) {
-      setTimeout(() => {
-        setShowExperienceModal(true);
-      }, 1000);
-    }
-  }, [isAuthenticated, user, isFirstVisit]);
-
-  // Handle experience level selection
-  const handleExperienceLevelSelect = (level: 'beginner' | 'experienced' | 'professional') => {
-    setExperienceLevel(level);
-    setShowExperienceModal(false);
-
-    if (level === 'beginner') {
-      // Beginner: Auto-start tour
-      setTimeout(() => {
-        startTour();
-      }, 500);
-    } else if (level === 'experienced') {
-      // Experienced: Ask if they want guidance
-      setTimeout(() => {
-        setShowGuidanceModal(true);
-      }, 500);
-    }
-    // Professional: Do nothing, they can start tour manually
-  };
-
-  // Handle guidance confirmation for experienced users
-  const handleGuidanceConfirm = (wantsGuidance: boolean) => {
-    setWantsGuidance(wantsGuidance);
-    setShowGuidanceModal(false);
-
-    if (wantsGuidance) {
-      setTimeout(() => {
-        startTour();
-      }, 500);
-    }
-  };
 
   // Start tour function
   const startTour = () => {
@@ -347,15 +296,6 @@ const HomePage: React.FC = () => {
                   <Play className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
                   {t('home_hero_cta_build')}
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="text-lg px-8 py-6 rounded-xl"
-                  onClick={handleGoToExamples}
-                >
-                  <BookOpen className="w-5 h-5 mr-2" />
-                  {t('home_hero_cta_examples')}
                 </Button>
               </motion.div>
             </motion.div>
@@ -824,10 +764,6 @@ const HomePage: React.FC = () => {
           </motion.div>
         </div>
       </motion.section>
-
-      {/* Onboarding Modals */}
-      <ExperienceLevelModal isOpen={showExperienceModal} onSelect={handleExperienceLevelSelect} />
-      <GuidanceConfirmModal isOpen={showGuidanceModal} onConfirm={handleGuidanceConfirm} />
     </div>
   );
 };
