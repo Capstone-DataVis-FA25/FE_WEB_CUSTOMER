@@ -469,7 +469,7 @@ const DatasetDetailPage: React.FC = () => {
         // build list route
         navigate(Routers.WORKSPACE_DATASETS);
         showSuccess(
-          t('dataset_deleteSuccess', 'Dataset Deleted'),
+          t('dataset_deleteSuccess'),
           t(
             'dataset_deleteSuccessMessage',
             `Dataset "${currentDataset.name}" and all associated forecasts have been deleted successfully`
@@ -701,10 +701,7 @@ const DatasetDetailPage: React.FC = () => {
         }}
         type="warning"
         title={t('dataset_resetConfirmTitle', 'Reset Changes')}
-        message={t(
-          'dataset_resetConfirmMessage',
-          'Are you sure you want to reset all changes? This will discard all unsaved modifications.'
-        )}
+        message={t('dataset_resetConfirmMessage')}
         confirmText={t('reset', 'Reset')}
         cancelText={t('common_cancel', 'Cancel')}
       />
