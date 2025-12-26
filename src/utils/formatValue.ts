@@ -348,11 +348,56 @@ export function formatDate(
   locale: string = 'en-US'
 ): string {
   try {
+    // Special handling for year-only values (e.g., 2020, 2021)
+    // If value is a number between 1900-2100, treat it as a year
+    if (typeof value === 'number' && !isNaN(value)) {
+      const numValue = Math.round(value);
+      if (numValue >= 1900 && numValue <= 2100 && Math.abs(value - numValue) < 0.01) {
+        // This is likely a year value, not a timestamp
+        // Convert to Jan 1 of that year
+        const date = new Date(numValue, 0, 1); // Month is 0-indexed (0 = January)
+
+        // For year-only format, just return the year
+        if (format === 'year-only') {
+          return numValue.toString();
+        }
+
+        // For other formats, format the date normally
+        return formatDateObject(date, format, locale);
+      }
+    }
+
+    // Normal date parsing for timestamps and date strings
     const date = new Date(value);
     if (isNaN(date.getTime())) {
       return String(value);
     }
 
+    return formatDateObject(date, format, locale);
+  } catch {
+    return String(value);
+  }
+}
+
+/**
+ * Helper function to format a Date object according to the specified format
+ */
+function formatDateObject(
+  date: Date,
+  format:
+    | 'auto'
+    | 'numeric'
+    | 'short'
+    | 'medium'
+    | 'long'
+    | 'full'
+    | 'relative'
+    | 'year-only'
+    | 'month-year'
+    | 'iso',
+  locale: string = 'en-US'
+): string {
+  try {
     // Auto format: intelligently pick format based on data density
     if (format === 'auto') {
       // For x-axis with many points, use most compact format
@@ -418,7 +463,7 @@ export function formatDate(
 
     return date.toLocaleDateString(locale, formatOptions[format]);
   } catch {
-    return String(value);
+    return String(date);
   }
 }
 

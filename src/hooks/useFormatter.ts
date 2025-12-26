@@ -84,14 +84,31 @@ export function useFormatter(formatterConfig?: Partial<FormatterConfig>): UseFor
           return '';
         }
 
-        // Try to parse as date first (for date strings like "2024-01-15")
-        const dateTest = new Date(value);
-        if (!isNaN(dateTest.getTime()) && config.type === 'date') {
-          // It's a valid date string, format it as timestamp
-          return createFormatter(config)(dateTest.getTime());
+        // For date formatter, try to parse as number first (handles year values like "2020")
+        if (config.type === 'date') {
+          const numValue = parseFloat(value);
+          if (!isNaN(numValue)) {
+            // Check if it's a year value (1900-2100)
+            const roundedNum = Math.round(numValue);
+            if (
+              roundedNum >= 1900 &&
+              roundedNum <= 2100 &&
+              Math.abs(numValue - roundedNum) < 0.01
+            ) {
+              // It's a year value, pass it as number directly
+              return createFormatter(config)(numValue);
+            }
+          }
+
+          // Try to parse as date string (for date strings like "2024-01-15")
+          const dateTest = new Date(value);
+          if (!isNaN(dateTest.getTime())) {
+            // It's a valid date string, format it as timestamp
+            return createFormatter(config)(dateTest.getTime());
+          }
         }
 
-        // Try to parse as number
+        // For non-date formatters or if date parsing failed, try to parse as number
         const numValue = parseFloat(value);
         if (!isNaN(numValue)) {
           return createFormatter(config)(numValue);
