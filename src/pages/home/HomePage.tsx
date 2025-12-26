@@ -161,9 +161,6 @@ const HomePage: React.FC = () => {
     navigate(Routers.CHART_GALLERY);
   };
 
-  const handleGoToExamples = () => {
-    navigate(Routers.BAR_CHART_DEMO); // Or a landing page for examples
-  };
   const handleGoToStory = () => {
     navigate(Routers.CHART_GALLERY);
   };

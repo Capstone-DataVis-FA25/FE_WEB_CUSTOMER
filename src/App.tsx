@@ -69,8 +69,7 @@ function App() {
       >
         <GoogleOAuthProvider clientId={googleClientId || ''}>
           <ToastProvider>
-            {/* {showSplash ? <SplashScreen onDone={handleSplashDone} /> : <AppRouter />} */}
-            <AppRouter />
+            {showSplash ? <SplashScreen onDone={handleSplashDone} /> : <AppRouter />}
           </ToastProvider>
         </GoogleOAuthProvider>
       </PersistGate>

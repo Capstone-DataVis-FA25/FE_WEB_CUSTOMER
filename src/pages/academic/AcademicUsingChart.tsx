@@ -12,7 +12,6 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Settings,
   Brain,
   MessageSquare,
   TrendingUp,
