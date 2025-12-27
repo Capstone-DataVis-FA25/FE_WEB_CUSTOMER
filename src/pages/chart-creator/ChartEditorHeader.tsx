@@ -230,12 +230,10 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                               }
                             }}
                             autoFocus
-                            placeholder={t('chart_name_required', 'Chart name is required')}
+                            placeholder={t('chart_name_required')}
                           />
                           {validationErrors.name && (
-                            <span className="text-red-500 text-xs ml-2">
-                              {t('field_required', 'This field is required')}
-                            </span>
+                            <span className="text-red-500 text-xs ml-2">{t('field_required')}</span>
                           )}
                         </div>
                       ) : (
@@ -255,9 +253,7 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                               }
                             }}
                           >
-                            {editableName ||
-                              currentChart?.name ||
-                              t('chart_name_placeholder', 'Untitled Chart')}
+                            {editableName || currentChart?.name || t('chart_name_placeholder')}
                           </h1>
                           {(mode === 'edit' || mode === 'create') && (
                             <Pencil className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" />
@@ -334,13 +330,11 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                               }
                             }
                           }}
-                          placeholder={t('description_required', 'Description is required')}
+                          placeholder={t('chart_description_required')}
                           autoFocus
                         />
                         {validationErrors.description && (
-                          <span className="text-red-500 text-xs">
-                            {t('field_required', 'This field is required')}
-                          </span>
+                          <span className="text-red-500 text-xs">{t('field_required')}</span>
                         )}
                       </div>
                     ) : (
@@ -363,7 +357,7 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                         >
                           {editableDescription ||
                             currentChart?.description ||
-                            t('chart_description_placeholder', 'Click to add description...')}
+                            t('chart_description_placeholder')}
                         </span>
                         {(mode === 'edit' || mode === 'create') && (
                           <Pencil className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" />
@@ -463,9 +457,7 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                   className="flex items-center gap-2"
                 >
                   <Database className="w-4 h-4" />
-                  {currentDatasetName
-                    ? t('chart_change_dataset', 'Change Dataset')
-                    : t('chart_select_dataset', 'Select Dataset')}
+                  {currentDatasetName ? t('chart_change_dataset') : t('chart_select_dataset')}
                 </Button>
               )}
               <Button
@@ -480,14 +472,12 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                 {creating ? (
                   <>
                     <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    {t('chart_create_creating', 'Creating...')}
+                    {t('chart_create_creating')}
                   </>
                 ) : (
                   <>
                     <Save className="w-4 h-4" />
-                    {mode === 'create'
-                      ? t('chart_create_save', 'Create Chart')
-                      : t('common_save', 'Save')}
+                    {mode === 'create' ? t('chart_create_save') : t('common_save')}
                   </>
                 )}
               </Button>
