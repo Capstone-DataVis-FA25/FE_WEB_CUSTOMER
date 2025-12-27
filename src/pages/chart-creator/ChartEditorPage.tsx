@@ -883,15 +883,15 @@ const ChartEditorPage: React.FC = () => {
 
   const handleCreateChart = async () => {
     if (!editableName.trim()) {
-      showError('Chart name is required');
+      showError(t('chart_name_required'));
       return;
     }
     if (!editableDescription.trim()) {
-      showError('Chart description is required');
+      showError(t('chart_description_required'));
       return;
     }
     if (!chartConfig) {
-      showError('Chart configuration is required');
+      showError(t('chart_config_required'));
       return;
     }
 
@@ -902,7 +902,7 @@ const ChartEditorPage: React.FC = () => {
         datasetIdFromUrl,
         locationState: locationState?.datasetId,
       });
-      showError('Dataset is required to create a chart');
+      showError(t('chart_dataset_required'));
       return;
     }
 
@@ -931,7 +931,7 @@ const ChartEditorPage: React.FC = () => {
         };
 
         const result = await createChart(createData).unwrap();
-        showSuccess(t('chart_create_success', 'Chart created successfully'));
+        showSuccess(t('chart_create_success'));
 
         // Navigate to edit mode with new chart ID
         navigate(`${location.pathname}?chartId=${result.id}`, {
@@ -939,7 +939,7 @@ const ChartEditorPage: React.FC = () => {
         });
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        showError(t('chart_create_error', 'Failed to create chart'), errorMessage);
+        showError(t('chart_create_error'), errorMessage);
         throw error;
       }
     });
@@ -1274,39 +1274,30 @@ const ChartEditorPage: React.FC = () => {
           type="warning"
           title={
             currentModalAction === 'save'
-              ? t('chart_save_confirm_title', 'Save Changes')
+              ? t('chart_save_confirm_title')
               : currentModalAction === 'reset'
-                ? t('chart_reset_confirm_title', 'Reset Changes')
-                : t('chart_confirm_title', 'Confirm Action')
+                ? t('chart_reset_confirm_title')
+                : t('chart_confirm_title')
           }
           message={
             currentModalAction === 'save'
               ? mode === 'create'
-                ? t(
-                    'chart_create_confirm_message',
-                    'Are you sure you want to create this chart? This will save your chart configuration.'
-                  )
-                : t(
-                    'chart_save_confirm_message',
-                    'Are you sure you want to save these changes? This will update your chart configuration.'
-                  )
+                ? t('chart_create_confirm_message')
+                : t('chart_save_confirm_message')
               : currentModalAction === 'reset'
-                ? t(
-                    'chart_reset_confirm_message',
-                    'Are you sure you want to reset all changes? This will restore your chart to its original state and all unsaved changes will be lost.'
-                  )
-                : t('chart_confirm_message', 'Are you sure you want to continue?')
+                ? t('chart_reset_confirm_message')
+                : t('chart_confirm_message')
           }
           confirmText={
             currentModalAction === 'save'
               ? mode === 'create'
-                ? t('chart_create', 'Create Chart')
-                : t('common_save', 'Save')
+                ? t('chart_create_save')
+                : t('common_save')
               : currentModalAction === 'reset'
-                ? t('common_reset', 'Reset')
-                : t('common_confirm', 'Confirm')
+                ? t('common_reset')
+                : t('common_confirm')
           }
-          cancelText={t('common_cancel', 'Cancel')}
+          cancelText={t('common_cancel')}
         />
       </div>
 
