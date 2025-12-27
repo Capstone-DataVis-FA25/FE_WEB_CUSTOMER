@@ -238,7 +238,7 @@ const AxisConfigurationSection: React.FC<AxisConfigurationSectionProps> = ({
                       <option value="placeholder" disabled>
                         {validXAxisHeaders.length === 0
                           ? t('no_valid_columns')
-                          : t('select_column')}
+                          : t('chart_gallery_select_columns')}
                       </option>
 
                       {/* List only valid headers as selectable options */}
