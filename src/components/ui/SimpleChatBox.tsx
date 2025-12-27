@@ -215,12 +215,12 @@ const ChatBot: React.FC = () => {
                         {
                           icon: <TrendingUp size={14} className="text-blue-400" />,
                           label: t('chat_suggest_create_chart'),
-                          msg: 'Help me create a new chart to visualize ',
+                          msg: 'Help me create a new chart to visualize',
                         },
                         {
                           icon: <Send size={14} className="text-purple-400" />,
                           label: t('chat_suggest_how_to'),
-                          msg: 'How do I import my own file?',
+                          msg: 'How to upload my dataset ?',
                         },
                       ].map((item, idx) => (
                         <button
@@ -353,7 +353,7 @@ const ChatBot: React.FC = () => {
                                     }
                                     className="text-left px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors flex items-center gap-2"
                                   >
-                                    <span className="text-white text-xs">Heatmap</span>
+                                    <span className="text-white text-xs">Heatmap Chart</span>
                                   </button>
                                   <button
                                     onClick={() =>
@@ -361,7 +361,7 @@ const ChatBot: React.FC = () => {
                                     }
                                     className="text-left px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors flex items-center gap-2"
                                   >
-                                    <span className="text-white text-xs">Scatter</span>
+                                    <span className="text-white text-xs">Scatter Chart</span>
                                   </button>
                                   <button
                                     onClick={() =>
@@ -369,7 +369,7 @@ const ChatBot: React.FC = () => {
                                     }
                                     className="text-left px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors flex items-center gap-2"
                                   >
-                                    <span className="text-white text-xs">Histogram</span>
+                                    <span className="text-white text-xs">Histogram Chart</span>
                                   </button>
                                   <button
                                     onClick={() =>
@@ -377,7 +377,7 @@ const ChatBot: React.FC = () => {
                                     }
                                     className="text-left px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors flex items-center gap-2"
                                   >
-                                    <span className="text-white text-xs">Cycle Plot</span>
+                                    <span className="text-white text-xs">Cycle Plot Chart</span>
                                   </button>
                                 </div>
                               </div>

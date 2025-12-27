@@ -20,7 +20,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { datasetListSteps } from '@/config/driver-steps/index';
+import { getDatasetListSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
 import DatasetTab from './components/DatasetTab';
 
@@ -125,21 +125,24 @@ const DatasetListPage: React.FC = () => {
   }, [getDatasets]);
 
   useEffect(() => {
-    if (isAuthenticated && user?.id && datasets.length > 0 && !loading) {
+    if (isAuthenticated && user?.id && !loading) {
       const storageKey = `hasShownDatasetListTour_${user.id}`;
       const hasShownTour = localStorage.getItem(storageKey);
 
       if (hasShownTour !== 'true') {
         const driverObj = driver({
           showProgress: true,
-          steps: datasetListSteps,
+          steps: getDatasetListSteps(),
+          showButtons: ['next', 'previous', 'close'],
+          nextBtnText: t('driver_next'),
+          prevBtnText: t('driver_prev'),
+          doneBtnText: t('driver_done'),
           popoverClass: 'driverjs-theme driver-theme-datasets',
           overlayOpacity: 0.2,
         });
 
         setTimeout(() => {
           driverObj.drive();
-          ``;
           localStorage.setItem(storageKey, 'true');
         }, 1000);
       }
@@ -289,7 +292,11 @@ const DatasetListPage: React.FC = () => {
   const startTour = () => {
     const driverObj = driver({
       showProgress: true,
-      steps: datasetListSteps,
+      steps: getDatasetListSteps(),
+      showButtons: ['next', 'previous', 'close'],
+      nextBtnText: t('driver_next'),
+      prevBtnText: t('driver_prev'),
+      doneBtnText: t('driver_done'),
       popoverClass: 'driverjs-theme driver-theme-datasets',
       overlayOpacity: 0.6,
     });

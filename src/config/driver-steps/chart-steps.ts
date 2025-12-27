@@ -2,7 +2,7 @@ import type { DriveStep } from 'driver.js';
 import { Icons } from './icons';
 import { t } from './i18n-helper';
 
-export const chartListSteps: DriveStep[] = [
+export const getChartListSteps = (): DriveStep[] => [
   {
     popover: {
       title: `${Icons.BarChart3} ${t('tour_chart_welcome_title')}`,

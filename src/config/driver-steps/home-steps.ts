@@ -2,7 +2,7 @@ import type { DriveStep } from 'driver.js';
 import { Icons } from './icons';
 import { t } from './i18n-helper';
 
-export const homeSteps: DriveStep[] = [
+export const getHomeSteps = (): DriveStep[] => [
   {
     popover: {
       title: `${Icons.Rocket} ${t('tour_home_welcome_title')}`,

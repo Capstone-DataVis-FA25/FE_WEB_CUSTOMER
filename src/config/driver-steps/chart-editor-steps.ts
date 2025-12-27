@@ -2,7 +2,7 @@ import type { DriveStep } from 'driver.js';
 import { Icons } from './icons';
 import { t } from './i18n-helper';
 
-export const chartEditorSteps: DriveStep[] = [
+export const getChartEditorSteps = (): DriveStep[] => [
   {
     popover: {
       title: `${Icons.Rocket} ${t('tour_editor_welcome_title')}`,

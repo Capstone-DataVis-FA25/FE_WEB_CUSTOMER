@@ -45,7 +45,7 @@ type Chart = BaseChart & {
 
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { chartListSteps } from '@/config/driver-steps/index';
+import { getChartListSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
 import ChartTab from './components/ChartTab';
 import { Button } from '@/components/ui/button';
@@ -77,14 +77,18 @@ const ChartListPage: React.FC = () => {
   const [selectingDatasetModal, setSelectingDatasetModal] = useState<boolean>(false);
 
   useEffect(() => {
-    if (isAuthenticated && user?.id && charts.length > 0 && !chartsLoading) {
+    if (isAuthenticated && user?.id && !chartsLoading) {
       const storageKey = `hasShownChartListTour_${user.id}`;
       const hasShownTour = localStorage.getItem(storageKey);
 
       if (hasShownTour !== 'true') {
         const driverObj = driver({
           showProgress: true,
-          steps: chartListSteps,
+          steps: getChartListSteps(),
+          showButtons: ['next', 'previous', 'close'],
+          nextBtnText: t('driver_next'),
+          prevBtnText: t('driver_prev'),
+          doneBtnText: t('driver_done'),
           popoverClass: 'driverjs-theme driver-theme-charts',
           overlayOpacity: 0.2,
         });
@@ -377,7 +381,11 @@ const ChartListPage: React.FC = () => {
   const startTour = () => {
     const driverObj = driver({
       showProgress: true,
-      steps: chartListSteps,
+      steps: getChartListSteps(),
+      showButtons: ['next', 'previous', 'close'],
+      nextBtnText: t('driver_next'),
+      prevBtnText: t('driver_prev'),
+      doneBtnText: t('driver_done'),
       popoverClass: 'driverjs-theme driver-theme-charts',
       overlayOpacity: 0.6,
     });

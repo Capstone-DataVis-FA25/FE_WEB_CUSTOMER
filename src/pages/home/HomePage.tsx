@@ -41,7 +41,7 @@ import ChartPreview from '@/components/charts/gallery-chart-preview/ChartPreview
 import Routers from '@/router/routers';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { homeSteps } from '@/config/driver-steps/index';
+import { getHomeSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useNavigate } from 'react-router-dom';
@@ -68,7 +68,11 @@ const HomePage: React.FC = () => {
       if (hasShownTour !== 'true') {
         const driverObj = driver({
           showProgress: true,
-          steps: homeSteps,
+          steps: getHomeSteps(),
+          showButtons: ['next', 'previous', 'close'],
+          nextBtnText: t('driver_next'),
+          prevBtnText: t('driver_prev'),
+          doneBtnText: t('driver_done'),
           popoverClass: 'driverjs-theme',
           overlayOpacity: 0,
         });
@@ -99,7 +103,11 @@ const HomePage: React.FC = () => {
 
     const driverObj = driver({
       showProgress: true,
-      steps: homeSteps,
+      steps: getHomeSteps(),
+      showButtons: ['next', 'previous', 'close'],
+      nextBtnText: t('driver_next'),
+      prevBtnText: t('driver_prev'),
+      doneBtnText: t('driver_done'),
       popoverClass: 'driverjs-theme',
       overlayOpacity: 0.6,
     });

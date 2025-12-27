@@ -15,7 +15,7 @@ import 'driver.js/dist/driver.css';
 import { HelpCircle } from 'lucide-react';
 import { useAuth } from '@/features/auth/useAuth';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
-import { pricingSteps } from '@/config/driver-steps/pricing-steps';
+import { getPricingSteps } from '@/config/driver-steps/pricing-steps';
 import { Link, useNavigate } from 'react-router-dom';
 import Routers from '@/router/routers';
 
@@ -39,12 +39,12 @@ const PricingPage: React.FC = () => {
 
       if (hasShownTour !== 'true') {
         const driverObj = driver({
-          steps: pricingSteps,
+          steps: getPricingSteps(),
           showProgress: true,
           showButtons: ['next', 'previous', 'close'],
-          nextBtnText: 'Next →',
-          prevBtnText: '← Previous',
-          doneBtnText: 'Done ✓',
+          nextBtnText: t('driver_next'),
+          prevBtnText: t('driver_prev'),
+          doneBtnText: t('driver_done'),
           popoverClass: 'driverjs-theme',
           overlayOpacity: 0,
         });
@@ -130,12 +130,12 @@ const PricingPage: React.FC = () => {
 
   const startTour = () => {
     const driverObj = driver({
-      steps: pricingSteps,
+      steps: getPricingSteps(),
       showProgress: true,
       showButtons: ['next', 'previous', 'close'],
-      nextBtnText: 'Next →',
-      prevBtnText: '← Previous',
-      doneBtnText: 'Done ✓',
+      nextBtnText: t('driver_next'),
+      prevBtnText: t('driver_prev'),
+      doneBtnText: t('driver_done'),
       popoverClass: 'driverjs-theme',
       overlayOpacity: 0.6,
     });

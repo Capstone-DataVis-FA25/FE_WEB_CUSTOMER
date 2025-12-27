@@ -2584,6 +2584,9 @@
   "docs_forecast_case_4": "Lập kế hoạch Ngân sách",
   "docs_forecast_case_4_desc": "Dự báo chi phí, phân bổ ngân sách, và lập kế hoạch tài chính.",
   "chat_continue_to_editor": "Tiếp tục tới Chart Editor",
+  "driver_next": "Tiếp theo",
+  "driver_prev": "Quay lại",
+  "driver_done": "Hoàn tất",
   "transaction_status": {
     "pending": "Đang chờ",
     "completed": "Hoàn thành",
