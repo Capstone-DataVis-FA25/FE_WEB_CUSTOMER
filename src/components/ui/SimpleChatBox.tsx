@@ -17,6 +17,7 @@ import Lottie from 'lottie-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MarkdownMessage } from '@/components/ai/MarkdownMessage';
 import { useTranslation } from 'react-i18next';
+import useLanguage from '@/hooks/useLanguage';
 
 const ChatBot: React.FC = () => {
   const { pathname } = useLocation();
@@ -30,6 +31,7 @@ const ChatBot: React.FC = () => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { messages, isLoading, sendMessage, selectDataset, selectChartType } = useAiChat();
+  const { currentLanguage } = useLanguage();
 
   useEffect(() => {
     const handleCloseChatbot = () => {
@@ -89,7 +91,7 @@ const ChatBot: React.FC = () => {
 
   const handleSend = async () => {
     if (!input.trim()) return;
-    await sendMessage(input, 'vi');
+    await sendMessage(input, currentLanguage);
     setInput('');
     setTimeout(() => {
       inputRef.current?.focus();
@@ -98,10 +100,7 @@ const ChatBot: React.FC = () => {
 
   const handleDatasetSelect = (datasetId: string, datasetName: string) => {
     console.log('[Chat] User selected dataset:', { datasetId, datasetName });
-    selectDataset(
-      datasetId,
-      `Tôi đã chọn dataset "${datasetName}". Tạo biểu đồ phù hợp với dữ liệu này.`
-    );
+    selectDataset(datasetId, t('chat_prompt_dataset_selected_create_chart', { datasetName }));
   };
 
   const handleNavigateToChart = (chartUrl: string) => {
@@ -201,32 +200,27 @@ const ChatBot: React.FC = () => {
                         style={{ width: 80, height: 80 }}
                       />
                     </div>
-                    <h3 className="text-white font-bold text-lg mb-2">
-                      {t('chat_welcome_title', 'Data Analysis AI')}
-                    </h3>
+                    <h3 className="text-white font-bold text-lg mb-2">{t('chat_welcome_title')}</h3>
                     <p className="text-slate-400 text-xs mb-8 max-w-[240px] leading-relaxed">
-                      {t(
-                        'chat_welcome_subtitle',
-                        'I can help you create datasets, visualize data, and answer questions.'
-                      )}
+                      {t('chat_welcome_subtitle')}
                     </p>
 
                     <div className="grid grid-cols-1 w-full gap-2.5">
                       {[
                         {
                           icon: <Database size={14} className="text-green-400" />,
-                          label: t('chat_suggest_create_data', 'Create sample dataset'),
-                          msg: 'Create a sample dataset of monthly sales for 2024 with 3 regions.',
+                          label: t('chat_suggest_create_data'),
+                          msg: 'Create a sample dataset of monthly sales for 2025 with 3 regions.',
                         },
                         {
                           icon: <TrendingUp size={14} className="text-blue-400" />,
-                          label: t('chat_suggest_create_chart', 'Create a chart'),
-                          msg: 'Help me create a bar chart to visualize sales data.',
+                          label: t('chat_suggest_create_chart'),
+                          msg: 'Help me create a new chart to visualize',
                         },
                         {
                           icon: <Send size={14} className="text-purple-400" />,
-                          label: t('chat_suggest_how_to', 'How to use features?'),
-                          msg: 'How do I import my own Excel file?',
+                          label: t('chat_suggest_how_to'),
+                          msg: 'How to upload my dataset ?',
                         },
                       ].map((item, idx) => (
                         <button
@@ -339,6 +333,14 @@ const ChatBot: React.FC = () => {
                                   </button>
                                   <button
                                     onClick={() =>
+                                      selectChartType('area', msg.originalMessage || '')
+                                    }
+                                    className="text-left px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors flex items-center gap-2"
+                                  >
+                                    <span className="text-white text-xs">Area Chart</span>
+                                  </button>
+                                  <button
+                                    onClick={() =>
                                       selectChartType('donut', msg.originalMessage || '')
                                     }
                                     className="text-left px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors flex items-center gap-2"
@@ -351,7 +353,7 @@ const ChatBot: React.FC = () => {
                                     }
                                     className="text-left px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors flex items-center gap-2"
                                   >
-                                    <span className="text-white text-xs">Heatmap</span>
+                                    <span className="text-white text-xs">Heatmap Chart</span>
                                   </button>
                                   <button
                                     onClick={() =>
@@ -359,7 +361,7 @@ const ChatBot: React.FC = () => {
                                     }
                                     className="text-left px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors flex items-center gap-2"
                                   >
-                                    <span className="text-white text-xs">Scatter</span>
+                                    <span className="text-white text-xs">Scatter Chart</span>
                                   </button>
                                   <button
                                     onClick={() =>
@@ -367,7 +369,7 @@ const ChatBot: React.FC = () => {
                                     }
                                     className="text-left px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors flex items-center gap-2"
                                   >
-                                    <span className="text-white text-xs">Histogram</span>
+                                    <span className="text-white text-xs">Histogram Chart</span>
                                   </button>
                                   <button
                                     onClick={() =>
@@ -375,7 +377,7 @@ const ChatBot: React.FC = () => {
                                     }
                                     className="text-left px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors flex items-center gap-2"
                                   >
-                                    <span className="text-white text-xs">Cycle Plot</span>
+                                    <span className="text-white text-xs">Cycle Plot Chart</span>
                                   </button>
                                 </div>
                               </div>
@@ -415,7 +417,7 @@ const ChatBot: React.FC = () => {
                               <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-green-500/30 rounded-lg p-4 space-y-3 shadow-lg">
                                 <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
                                   <Database size={16} />
-                                  <span>{t('chat_dataset_created_title', 'Dataset Created')}</span>
+                                  <span>{t('chat_dataset_created_title')}</span>
                                 </div>
                                 <div>
                                   <h4 className="text-white font-semibold text-sm">

@@ -297,10 +297,10 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
     // Check if pivot is active
     const hasPivot = Boolean(
       datasetConfig?.pivot &&
-      ((datasetConfig.pivot.rows?.length ?? 0) > 0 ||
-        (datasetConfig.pivot.columns?.length ?? 0) > 0 ||
-        (datasetConfig.pivot.values?.length ?? 0) > 0 ||
-        (datasetConfig.pivot.filters?.length ?? 0) > 0)
+        ((datasetConfig.pivot.rows?.length ?? 0) > 0 ||
+          (datasetConfig.pivot.columns?.length ?? 0) > 0 ||
+          (datasetConfig.pivot.values?.length ?? 0) > 0 ||
+          (datasetConfig.pivot.filters?.length ?? 0) > 0)
     );
 
     if (!hasPivot) {
@@ -325,15 +325,15 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
   // Check if aggregation or pivot is active
   const hasAggregation = Boolean(
     datasetConfig?.aggregation &&
-    ((datasetConfig.aggregation.groupBy?.length ?? 0) > 0 ||
-      (datasetConfig.aggregation.metrics?.length ?? 0) > 0)
+      ((datasetConfig.aggregation.groupBy?.length ?? 0) > 0 ||
+        (datasetConfig.aggregation.metrics?.length ?? 0) > 0)
   );
   const hasPivot = Boolean(
     datasetConfig?.pivot &&
-    ((datasetConfig.pivot.rows?.length ?? 0) > 0 ||
-      (datasetConfig.pivot.columns?.length ?? 0) > 0 ||
-      (datasetConfig.pivot.values?.length ?? 0) > 0 ||
-      (datasetConfig.pivot.filters?.length ?? 0) > 0)
+      ((datasetConfig.pivot.rows?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.columns?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.values?.length ?? 0) > 0 ||
+        (datasetConfig.pivot.filters?.length ?? 0) > 0)
   );
 
   // Determine disabled tabs
@@ -504,15 +504,15 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
       const currentConfig = (chartConfig as any)?.datasetConfig;
       const hasAgg = Boolean(
         currentConfig?.aggregation &&
-        ((currentConfig.aggregation.groupBy?.length ?? 0) > 0 ||
-          (currentConfig.aggregation.metrics?.length ?? 0) > 0)
+          ((currentConfig.aggregation.groupBy?.length ?? 0) > 0 ||
+            (currentConfig.aggregation.metrics?.length ?? 0) > 0)
       );
       const hasPiv = Boolean(
         currentConfig?.pivot &&
-        ((currentConfig.pivot.rows?.length ?? 0) > 0 ||
-          (currentConfig.pivot.columns?.length ?? 0) > 0 ||
-          (currentConfig.pivot.values?.length ?? 0) > 0 ||
-          (currentConfig.pivot.filters?.length ?? 0) > 0)
+          ((currentConfig.pivot.rows?.length ?? 0) > 0 ||
+            (currentConfig.pivot.columns?.length ?? 0) > 0 ||
+            (currentConfig.pivot.values?.length ?? 0) > 0 ||
+            (currentConfig.pivot.filters?.length ?? 0) > 0)
       );
 
       switch (zone) {
@@ -875,7 +875,7 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
           <div className="flex items-center justify-between w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <Database className="h-5 w-5 text-blue-500" />
-              {t('chart_editor_dataset_operation', 'Dataset Operation')}
+              {t('chart_editor_dataset_operation')}
             </h3>
             <motion.div
               className="flex items-center gap-2"
@@ -899,10 +899,7 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
               <CardContent className="space-y-4 mt-4">
                 {!hasDataset ? (
                   <div className="text-sm text-gray-600 dark:text-gray-400 text-center py-8">
-                    {t(
-                      'chart_editor_dataset_operation_no_dataset',
-                      'Select a dataset to enable filter operations.'
-                    )}
+                    {t('chart_editor_dataset_operation_no_dataset')}
                   </div>
                 ) : (
                   <DndContext
@@ -959,8 +956,8 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
                                   )}
                                 >
                                   {hasAggregation
-                                    ? 'Aggregation Mode Active'
-                                    : 'Pivot Table Mode Active'}
+                                    ? t('chart_editor_mutual_exclusive_title_aggregation')
+                                    : t('chart_editor_mutual_exclusive_title_pivot')}
                                 </p>
                                 <p
                                   className={cn(
@@ -971,8 +968,8 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
                                   )}
                                 >
                                   {hasAggregation
-                                    ? 'You can only use either Aggregation or Pivot Table at a time. Pivot Table is a more advanced version of aggregation. Switch to Pivot Table tab to use it instead.'
-                                    : 'You can only use either Aggregation or Pivot Table at a time. Pivot Table provides more flexibility with rows, columns, values, and filters.'}
+                                    ? t('chart_editor_mutual_exclusive_desc_aggregation')
+                                    : t('chart_editor_mutual_exclusive_desc_pivot')}
                                 </p>
                               </div>
                               <button
@@ -985,7 +982,7 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
                                     ? 'text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300'
                                     : 'text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300'
                                 )}
-                                title="Close banner"
+                                title={t('chart_editor_mutual_exclusive_close')}
                               >
                                 <X className="w-4 h-4" />
                               </button>
@@ -1129,7 +1126,7 @@ const DragDropDatasetOperation: React.FC<DragDropDatasetOperationProps> = ({
                           {/* Operations Preview - Fixed height at bottom */}
                           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                             <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                              Applied Operations Preview
+                              {t('chart_editor_operations_preview')}
                             </div>
                             <div className="max-h-[280px] overflow-y-auto preview-scrollbar bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
                               <style>{`

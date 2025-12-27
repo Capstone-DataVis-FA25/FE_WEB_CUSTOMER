@@ -12,7 +12,6 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Settings,
   Brain,
   MessageSquare,
   TrendingUp,
@@ -31,7 +30,6 @@ export const AcademicUsingChart = () => {
     { id: 'introduction', title: t('docs_introduction'), icon: BookOpen },
     { id: 'quick-start', title: t('docs_quick_start'), icon: Rocket },
     { id: 'first-chart', title: t('docs_first_chart'), icon: BarChart3 },
-    { id: 'chart-editor', title: t('docs_chart_editor'), icon: Settings },
     {
       id: 'ai-chart-analysis',
       title: t('docs_ai_chart_analysis'),
@@ -74,7 +72,6 @@ export const AcademicUsingChart = () => {
       id: 'core-concepts',
       title: t('docs_core_concepts'),
       items: [
-        { id: 'chart-editor', title: t('docs_chart_editor') },
         { id: 'chart-types', title: t('docs_chart_types') },
         { id: 'data-sources', title: t('docs_data_sources') },
       ],
@@ -159,6 +156,30 @@ export const AcademicUsingChart = () => {
     const Icon = allSections[currentIndex]?.icon || BookOpen;
 
     switch (activeSection) {
+      case 'quick-start':
+        return (
+          <DocSection id="quick-start" title={t('docs_quick_start')} icon={Icon}>
+            <p className="text-gray-700 dark:text-gray-300 mb-6">{t('quick_start_desc')}</p>
+            <ol className="list-decimal list-inside space-y-2 text-gray-700 dark:text-gray-300">
+              <li>{t('quick_start_step1')}</li>
+              <li>{t('quick_start_step2')}</li>
+              <li>{t('quick_start_step3')}</li>
+              <li>{t('quick_start_step4')}</li>
+            </ol>
+          </DocSection>
+        );
+      case 'first-chart':
+        return (
+          <DocSection id="first-chart" title={t('docs_first_chart')} icon={Icon}>
+            <p className="text-gray-700 dark:text-gray-300 mb-6">{t('your_first_chart_desc')}</p>
+            <ol className="list-decimal list-inside space-y-2 text-gray-700 dark:text-gray-300">
+              <li>{t('your_first_chart_step1')}</li>
+              <li>{t('your_first_chart_step2')}</li>
+              <li>{t('your_first_chart_step3')}</li>
+              <li>{t('your_first_chart_step4')}</li>
+            </ol>
+          </DocSection>
+        );
       case 'introduction':
         return (
           <DocSection id="introduction" title={t('docs_introduction')} icon={Icon}>
@@ -168,7 +189,6 @@ export const AcademicUsingChart = () => {
                 "DataVis is a powerful data visualization platform that helps you create stunning charts and graphs from your data. Whether you're a student, researcher, or professional, DataVis makes it easy to transform raw data into meaningful insights."
               )}
             </p>
-
             <DocsCard type="tip" title={t('docs_why_datavis')}>
               <ul className="list-disc list-inside space-y-1">
                 <li>{t('docs_benefit_1')}</li>
@@ -180,634 +200,72 @@ export const AcademicUsingChart = () => {
                   )}
                 </li>
                 <li>{t('docs_benefit_4')}</li>
-                <li>{t('docs_benefit_5')}</li>
               </ul>
             </DocsCard>
           </DocSection>
         );
-
-      case 'quick-start':
+      case 'ai-chart-analysis':
         return (
-          <DocSection id="quick-start" title={t('docs_quick_start')} icon={Icon}>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">{t('docs_quick_start_intro')}</p>
-
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
-                  {t('docs_step_1')}
-                </h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-2">{t('docs_step_1_desc')}</p>
-                <DocsCard type="info">
-                  {t(
-                    'docs_free_tier',
-                    'The free tier includes unlimited charts and 5GB of storage.'
-                  )}
-                </DocsCard>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
-                  {t('docs_step_2')}
-                </h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-2">
-                  {t(
-                    'docs_step_2_desc',
-                    'Upload your data in CSV, Excel, or JSON format. You can also paste data directly.'
-                  )}
-                </p>
-                <CodeBlock
-                  language="csv"
-                  code={`Month,Sales,Expenses
-January,12000,8000
-February,15000,9000
-March,18000,10000`}
-                />
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
-                  {t('docs_step_3')}
-                </h3>
-                <p className="text-gray-700 dark:text-gray-300">
-                  {t(
-                    'docs_step_3_desc',
-                    'Select from our library of chart types including line, bar, pie, scatter, and more.'
-                  )}
-                </p>
-              </div>
-            </div>
-          </DocSection>
-        );
-
-      case 'first-chart':
-        return (
-          <DocSection id="first-chart" title={t('docs_first_chart')} icon={Icon}>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
-              {t('docs_first_chart_intro', "Let's create your first chart step by step:")}
-            </p>
-
-            <div className="space-y-4">
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  1. {t('docs_navigate_charts')}
-                </h4>
-                <p className="text-gray-700 dark:text-gray-300">{t('docs_navigate_charts_desc')}</p>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  2. {t('docs_click_new_chart')}
-                </h4>
-                <p className="text-gray-700 dark:text-gray-300">{t('docs_click_new_chart_desc')}</p>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  3. {t('docs_select_dataset')}
-                </h4>
-                <p className="text-gray-700 dark:text-gray-300">{t('docs_select_dataset_desc')}</p>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                  4. {t('docs_configure_chart')}
-                </h4>
-                <p className="text-gray-700 dark:text-gray-300">
-                  {t(
-                    'docs_configure_chart_desc',
-                    'Select chart type, axes, and customize appearance.'
-                  )}
-                </p>
-              </div>
-            </div>
-
-            <DocsCard type="tip" title={t('docs_tip_preview')} className="mt-6">
-              {t(
-                'docs_tip_preview_desc',
-                'Use the preview panel to see your chart update in real-time as you make changes.'
-              )}
-            </DocsCard>
-          </DocSection>
-        );
-
-      case 'chart-editor':
-        return (
-          <DocSection id="chart-editor" title={t('docs_chart_editor')} icon={Icon}>
+          <DocSection id="ai-chart-analysis" title={t('docs_ai_chart_analysis_title')} icon={Icon}>
             <p className="text-gray-700 dark:text-gray-300 mb-6">
-              {t(
-                'docs_chart_editor_intro',
-                'The Chart Editor is the central workspace where you create and customize your visualizations. It is divided into two main areas: the Settings Panel on the left and the Chart Preview on the right.'
-              )}
+              {t('docs_ai_chart_analysis_intro')}
             </p>
-
             <div className="space-y-8">
-              {/* Interface Overview */}
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  {t('docs_interface_overview')}
+                  {t('docs_ai_chart_analysis_how_to')}
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <h4 className="font-semibold text-blue-600 dark:text-blue-400 mb-2">
-                      {t('docs_settings_panel')}
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t(
-                        'docs_settings_panel_desc',
-                        'Contains all configuration options: Chart Type, Data Selection, Axes, Appearance, and Export settings.'
-                      )}
-                    </p>
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <h4 className="font-semibold text-purple-600 dark:text-purple-400 mb-2">
-                      {t('docs_preview_panel')}
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t(
-                        'docs_preview_panel_desc',
-                        'Shows real-time updates of your chart. You can interact with the chart here (zoom, pan, hover).'
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chart Types */}
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  {t('docs_selecting_chart_type')}
-                </h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-3">
-                  {t(
-                    'docs_selecting_chart_type_desc',
-                    'The first step is choosing the right visualization for your data. You can switch chart types at any time to see how your data looks in different formats.'
-                  )}
-                </p>
-                <DocsCard type="info">
-                  {t(
-                    'docs_chart_type_tip',
-                    'Available types: Line, Bar, Pie, Doughnut, Scatter, Area, Heatmap, Cycle Plot (for seasonal data), and Histogram.'
-                  )}
-                </DocsCard>
-              </div>
-
-              {/* Basic Settings */}
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  {t('docs_basic_settings')}
-                </h3>
-                <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
-                  <li>
-                    <strong>{t('docs_chart_title')}:</strong> {t('docs_chart_title_desc')}
-                  </li>
-                  <li>
-                    <strong>{t('docs_chart_subtitle')}:</strong>{' '}
-                    {t(
-                      'docs_chart_subtitle_desc',
-                      'A subtitle or brief explanation of the data context.'
-                    )}
-                  </li>
+                <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                  <li>{t('docs_ai_chart_analysis_step1')}</li>
+                  <li>{t('docs_ai_chart_analysis_step2')}</li>
+                  <li>{t('docs_ai_chart_analysis_step3')}</li>
+                  <li>{t('docs_ai_chart_analysis_step4')}</li>
                 </ul>
               </div>
-
-              {/* Data Configuration */}
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  {t('docs_data_config')}
+                  {t('docs_ai_chart_analysis_tips')}
                 </h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-3">
-                  {t(
-                    'docs_data_config_intro',
-                    'Map your dataset columns to the chart axes. This is the most critical step.'
-                  )}
-                </p>
-                <div className="space-y-3">
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                    <h5 className="font-medium text-gray-900 dark:text-white mb-1">
-                      {t('docs_x_axis_config')}
-                    </h5>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t(
-                        'docs_x_axis_config_desc',
-                        'Select the column for the horizontal axis. For time-series data, ensure you select a Date column.'
-                      )}
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                    <h5 className="font-medium text-gray-900 dark:text-white mb-1">
-                      {t('docs_y_axis_config')}
-                    </h5>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t(
-                        'docs_y_axis_config_desc',
-                        'Select one or more numerical columns to plot. You can add multiple series to compare different metrics.'
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Axis Configuration */}
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  {t('docs_axis_config')}
-                </h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-3">
-                  {t('docs_axis_config_intro')}
-                </p>
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <li className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span>{t('docs_axis_labels')}</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span>{t('docs_axis_titles')}</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span>{t('docs_grid_lines')}</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span>{t('docs_axis_scale')}</span>
-                  </li>
+                <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                  <li>{t('docs_ai_chart_analysis_tip1')}</li>
+                  <li>{t('docs_ai_chart_analysis_tip2')}</li>
+                  <li>{t('docs_ai_chart_analysis_tip3')}</li>
                 </ul>
               </div>
-
-              {/* Appearance */}
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  {t('docs_appearance')}
+                  {t('docs_ai_chart_analysis_use_cases')}
                 </h3>
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
-                  <div className="p-4">
-                    <h5 className="font-medium text-gray-900 dark:text-white mb-1">
-                      {t('docs_colors')}
-                    </h5>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t(
-                        'docs_colors_desc',
-                        'Customize the color of each data series. You can use predefined themes or pick specific colors.'
-                      )}
-                    </p>
-                  </div>
-                  <div className="p-4">
-                    <h5 className="font-medium text-gray-900 dark:text-white mb-1">
-                      {t('docs_legend')}
-                    </h5>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t(
-                        'docs_legend_desc',
-                        'Control the position (Top, Bottom, Left, Right) and visibility of the chart legend.'
-                      )}
-                    </p>
-                  </div>
-                  <div className="p-4">
-                    <h5 className="font-medium text-gray-900 dark:text-white mb-1">
-                      {t('docs_tooltips')}
-                    </h5>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t(
-                        'docs_tooltips_desc',
-                        'Enable tooltips to show precise values when hovering over data points.'
-                      )}
-                    </p>
-                  </div>
-                </div>
+                <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                  <li>{t('docs_ai_chart_analysis_use_case1')}</li>
+                  <li>{t('docs_ai_chart_analysis_use_case2')}</li>
+                  <li>{t('docs_ai_chart_analysis_use_case3')}</li>
+                </ul>
               </div>
-
-              {/* Dataset Operations */}
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  {t('docs_dataset_ops')}
+                  {t('docs_ai_chart_analysis_can_detect')}
                 </h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-4">
-                  {t(
-                    'docs_dataset_ops_intro',
-                    'Transform and refine your data before visualization using powerful operations:'
-                  )}
-                </p>
-
-                <div className="space-y-4">
-                  {/* Filter */}
-                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-blue-500" />
-                      {t('docs_filter_data')}
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      {t(
-                        'docs_filter_data_desc',
-                        'Remove unwanted rows based on conditions. Drag columns to the filter area and set criteria.'
-                      )}
-                    </p>
-                    <DocsCard type="tip">
-                      <span className="text-sm">
-                        {t(
-                          'docs_filter_example',
-                          'Example: Show only posts with engagement_rate > 10'
-                        )}
-                      </span>
-                    </DocsCard>
-                  </div>
-
-                  {/* Sort */}
-                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                      {t('docs_sort_data')}
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t(
-                        'docs_sort_data_desc',
-                        'Order your data by one or more columns in ascending or descending order.'
-                      )}
-                    </p>
-                  </div>
-
-                  {/* Group By / Aggregation */}
-                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-purple-500" />
-                      {t('docs_group_by')}
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      {t(
-                        'docs_group_by_desc',
-                        'Summarize data by grouping rows and applying aggregation functions.'
-                      )}
-                    </p>
-                    <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>{t('docs_agg_sum')}</li>
-                      <li>{t('docs_agg_avg')}</li>
-                      <li>{t('docs_agg_count')}</li>
-                      <li>{t('docs_agg_min')}</li>
-                      <li>{t('docs_agg_max')}</li>
-                    </ul>
-                  </div>
-
-                  {/* Pivot Table */}
-                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl border-2 border-amber-200 dark:border-amber-700 p-5">
-                    <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2 text-lg">
-                      <div className="w-3 h-3 rounded-full bg-amber-500" />
-                      {t('docs_pivot_table')}
-                    </h4>
-                    <p className="text-sm text-amber-800 dark:text-amber-200 mb-4">
-                      {t(
-                        'docs_pivot_intro',
-                        'Create powerful cross-tabulations to analyze data from multiple dimensions. Perfect for summarizing large datasets.'
-                      )}
-                    </p>
-
-                    <div className="space-y-3">
-                      {/* Rows */}
-                      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-amber-200 dark:border-amber-700">
-                        <h5 className="font-medium text-gray-900 dark:text-white mb-1 text-sm">
-                          {t('docs_pivot_rows')}
-                        </h5>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {t(
-                            'docs_pivot_rows_desc',
-                            'Drag columns here to create row headers. Data will be grouped by these dimensions.'
-                          )}
-                        </p>
-                        <div className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-                          {t('docs_pivot_rows_example')}
-                        </div>
-                      </div>
-
-                      {/* Columns */}
-                      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-amber-200 dark:border-amber-700">
-                        <h5 className="font-medium text-gray-900 dark:text-white mb-1 text-sm">
-                          {t('docs_pivot_columns')}
-                        </h5>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {t(
-                            'docs_pivot_columns_desc',
-                            'Drag columns here to create column headers. Creates a cross-tabulation.'
-                          )}
-                        </p>
-                        <div className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-                          {t('docs_pivot_columns_example')}
-                        </div>
-                      </div>
-
-                      {/* Values */}
-                      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-amber-200 dark:border-amber-700">
-                        <h5 className="font-medium text-gray-900 dark:text-white mb-1 text-sm">
-                          {t('docs_pivot_values')}
-                        </h5>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                          {t(
-                            'docs_pivot_values_desc',
-                            'Drag numerical columns here and choose aggregation type (Sum, Average, Count, Min, Max).'
-                          )}
-                        </p>
-                        <div className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-                          {t(
-                            'docs_pivot_values_example',
-                            'Example: Sum of likes, Average of engagement_rate'
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Filters */}
-                      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-amber-200 dark:border-amber-700">
-                        <h5 className="font-medium text-gray-900 dark:text-white mb-1 text-sm">
-                          {t('docs_pivot_filters')}
-                        </h5>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {t(
-                            'docs_pivot_filters_desc',
-                            'Apply filters to limit which data appears in the pivot table.'
-                          )}
-                        </p>
-                      </div>
-                    </div>
-
-                    <DocsCard type="info" className="mt-4">
-                      <p className="text-sm">
-                        {t(
-                          'docs_pivot_use_case',
-                          'Use Case: Analyze total engagement by platform and post type, or compare average likes across different content categories.'
-                        )}
-                      </p>
-                    </DocsCard>
-                  </div>
-                </div>
+                <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                  <li>{t('docs_ai_chart_analysis_detect1')}</li>
+                  <li>{t('docs_ai_chart_analysis_detect2')}</li>
+                  <li>{t('docs_ai_chart_analysis_detect3')}</li>
+                  <li>{t('docs_ai_chart_analysis_detect4')}</li>
+                </ul>
               </div>
-
-              {/* Series Management */}
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  {t('docs_series_management')}
+                  {t('docs_ai_chart_analysis_examples')}
                 </h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-3">
-                  {t(
-                    'docs_series_intro',
-                    'For Line, Bar, Area, and Scatter charts, you can add multiple data series to compare different metrics:'
-                  )}
-                </p>
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
-                  <div className="p-4">
-                    <h5 className="font-medium text-gray-900 dark:text-white mb-1">
-                      {t('docs_add_series')}
-                    </h5>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t(
-                        'docs_add_series_desc',
-                        'Click the + button to add more Y-axis columns. Each series can represent a different metric.'
-                      )}
-                    </p>
-                  </div>
-                  <div className="p-4">
-                    <h5 className="font-medium text-gray-900 dark:text-white mb-1">
-                      {t('docs_series_colors')}
-                    </h5>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t(
-                        'docs_series_colors_desc',
-                        'Each series can have its own color. Click the color picker to customize.'
-                      )}
-                    </p>
-                  </div>
-                  <div className="p-4">
-                    <h5 className="font-medium text-gray-900 dark:text-white mb-1">
-                      {t('docs_line_styles')}
-                    </h5>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t(
-                        'docs_line_styles_desc',
-                        'For line charts, customize line style (solid, dashed) and show/hide data point markers.'
-                      )}
-                    </p>
-                  </div>
-                </div>
+                <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
+                  <li>{t('docs_ai_chart_analysis_example1')}</li>
+                  <li>{t('docs_ai_chart_analysis_example2')}</li>
+                  <li>{t('docs_ai_chart_analysis_example3')}</li>
+                </ul>
               </div>
-
-              {/* Chart-Specific Settings */}
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  {t('docs_chart_specific')}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Pie/Donut */}
-                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                      {t('docs_pie_settings')}
-                    </h4>
-                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>• {t('docs_pie_label')}</li>
-                      <li>• {t('docs_pie_donut_size')}</li>
-                      <li>• {t('docs_pie_start_angle')}</li>
-                    </ul>
-                  </div>
-
-                  {/* Heatmap */}
-                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                      {t('docs_heatmap_settings')}
-                    </h4>
-                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>• {t('docs_heatmap_color_scheme')}</li>
-                      <li>• {t('docs_heatmap_cell_labels')}</li>
-                      <li>• {t('docs_heatmap_interpolation')}</li>
-                    </ul>
-                  </div>
-
-                  {/* Histogram */}
-                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                      {t('docs_histogram_settings')}
-                    </h4>
-                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>• {t('docs_histogram_bins')}</li>
-                      <li>• {t('docs_histogram_bin_size')}</li>
-                      <li>• {t('docs_histogram_cumulative')}</li>
-                    </ul>
-                  </div>
-
-                  {/* Cycle Plot */}
-                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                      {t('docs_cycle_settings')}
-                    </h4>
-                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>• {t('docs_cycle_period')}</li>
-                      <li>• {t('docs_cycle_baseline')}</li>
-                      <li>• {t('docs_cycle_highlight')}</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chart Formatter */}
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  {t('docs_formatter')}
-                </h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-3">
-                  {t(
-                    'docs_formatter_intro',
-                    'Control how numbers and dates are displayed on your chart:'
-                  )}
-                </p>
-                <div className="space-y-3">
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                    <h5 className="font-medium text-gray-900 dark:text-white mb-2">
-                      {t('docs_number_format')}
-                    </h5>
-                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>• {t('docs_format_decimal')}</li>
-                      <li>• {t('docs_format_percentage')}</li>
-                      <li>• {t('docs_format_currency')}</li>
-                      <li>• {t('docs_format_compact')}</li>
-                    </ul>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                    <h5 className="font-medium text-gray-900 dark:text-white mb-2">
-                      {t('docs_date_format')}
-                    </h5>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t(
-                        'docs_date_format_desc',
-                        'Choose from various date formats: YYYY-MM-DD, MM/DD/YYYY, DD MMM YYYY, etc.'
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Export */}
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  {t('docs_export')}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                      {t('docs_export_chart')}
-                    </h4>
-                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>• {t('docs_export_png')}</li>
-                      <li>• {t('docs_export_svg')}</li>
-                      <li>• {t('docs_export_pdf')}</li>
-                    </ul>
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                      {t('docs_import_config')}
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t(
-                        'docs_import_config_desc',
-                        'Save and load chart configurations to reuse settings across different datasets.'
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <DocsCard type="warning" title={t('docs_ai_chart_analysis_warning')}>
+                <p>{t('docs_ai_chart_analysis_note')}</p>
+              </DocsCard>
             </div>
           </DocSection>
         );

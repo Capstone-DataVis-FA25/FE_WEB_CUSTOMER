@@ -24,6 +24,8 @@ export interface CleanCsvRequest {
   schemaExample?: string;
   notes?: string;
   userId?: string;
+  missingStrategy?: 'auto' | 'remove' | 'fill_mean' | 'fill_mode';
+  outlierStrategy?: 'auto' | 'remove' | 'fill_mean' | 'fill_mode';
 }
 
 export interface CleanCsvApiResponse {

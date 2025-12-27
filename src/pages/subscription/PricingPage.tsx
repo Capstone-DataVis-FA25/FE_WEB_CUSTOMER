@@ -15,14 +15,14 @@ import 'driver.js/dist/driver.css';
 import { HelpCircle } from 'lucide-react';
 import { useAuth } from '@/features/auth/useAuth';
 import { ModalConfirm } from '@/components/ui/modal-confirm';
-import { pricingSteps } from '@/config/driver-steps/pricing-steps';
-import { useOnboarding } from '@/hooks/useOnboarding';
-import { Link } from 'react-router-dom';
+import { getPricingSteps } from '@/config/driver-steps/pricing-steps';
+import { Link, useNavigate } from 'react-router-dom';
 import Routers from '@/router/routers';
 
 const PricingPage: React.FC = () => {
   const user = useSelector(selectUser);
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { isAuthenticated, refreshUser } = useAuth();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(false);
@@ -30,31 +30,32 @@ const PricingPage: React.FC = () => {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const { showError, showSuccess } = useToast();
-  const { shouldShowTour, markTourAsShown } = useOnboarding();
 
   // Auto-show tour on first visit - integrated with useOnboarding hook
   useEffect(() => {
     if (isAuthenticated && user?.id) {
-      // Check if tour should be shown based on user's experience level
-      if (shouldShowTour('pricing')) {
+      const storageKey = `hasShownPricingTour_${user.id}`;
+      const hasShownTour = localStorage.getItem(storageKey);
+
+      if (hasShownTour !== 'true') {
         const driverObj = driver({
-          steps: pricingSteps,
+          steps: getPricingSteps(),
           showProgress: true,
           showButtons: ['next', 'previous', 'close'],
-          nextBtnText: 'Next →',
-          prevBtnText: '← Previous',
-          doneBtnText: 'Done ✓',
+          nextBtnText: t('driver_next'),
+          prevBtnText: t('driver_prev'),
+          doneBtnText: t('driver_done'),
           popoverClass: 'driverjs-theme',
-          overlayOpacity: 0.6,
+          overlayOpacity: 0,
         });
 
         setTimeout(() => {
           driverObj.drive();
-          markTourAsShown('pricing');
+          localStorage.setItem(storageKey, 'true');
         }, 1000);
       }
     }
-  }, [isAuthenticated, user, shouldShowTour, markTourAsShown]);
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     const load = async () => {
@@ -91,7 +92,8 @@ const PricingPage: React.FC = () => {
   };
 
   const onSubscribe = async (plan: SubscriptionPlan) => {
-    setSelectedPlan(plan);
+    if (isAuthenticated) setSelectedPlan(plan);
+    else navigate(Routers.AUTH, { state: { from: window.location.pathname } });
   };
 
   const confirmSubscribe = async () => {
@@ -128,12 +130,12 @@ const PricingPage: React.FC = () => {
 
   const startTour = () => {
     const driverObj = driver({
-      steps: pricingSteps,
+      steps: getPricingSteps(),
       showProgress: true,
       showButtons: ['next', 'previous', 'close'],
-      nextBtnText: 'Next →',
-      prevBtnText: '← Previous',
-      doneBtnText: 'Done ✓',
+      nextBtnText: t('driver_next'),
+      prevBtnText: t('driver_prev'),
+      doneBtnText: t('driver_done'),
       popoverClass: 'driverjs-theme',
       overlayOpacity: 0.6,
     });

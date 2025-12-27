@@ -30,11 +30,9 @@ const DatasetActionsCard: React.FC<Props> = ({
           <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
             <Settings className="w-4 h-4" />
           </div>
-          <span className="font-semibold">Actions</span>
+          <span className="font-semibold">{t('actions')}</span>
           {hasChanges && (
-            <Badge className="bg-yellow-500 text-white ml-auto">
-              {t('unsaved_changes', 'Unsaved changes')}
-            </Badge>
+            <Badge className="bg-yellow-500 text-white ml-auto">{t('unsaved_changes')}</Badge>
           )}
         </CardTitle>
       </div>
@@ -46,7 +44,7 @@ const DatasetActionsCard: React.FC<Props> = ({
           >
             <Save className="w-5 h-5 text-green-700 dark:text-green-300 group-hover:text-white transition-colors flex-shrink-0" />
             <span className="text-green-800 dark:text-green-200 font-medium text-left group-hover:text-white">
-              {t('save', 'Save')}
+              {t('dataset_saveConfirmTitle')}
             </span>
           </Button>
         )}
@@ -58,7 +56,7 @@ const DatasetActionsCard: React.FC<Props> = ({
           >
             <RotateCcw className="w-5 h-5 text-orange-600 dark:text-orange-400 group-hover:text-orange-700 dark:group-hover:text-orange-300 transition-colors flex-shrink-0" />
             <span className="text-orange-700 dark:text-orange-300 font-medium text-left">
-              {t('reset', 'Reset')}
+              {t('chart_editor_transparent')}
             </span>
           </Button>
         )}
@@ -69,7 +67,7 @@ const DatasetActionsCard: React.FC<Props> = ({
         >
           <ArrowLeft className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors flex-shrink-0" />
           <span className="text-blue-700 dark:text-blue-300 font-medium text-left">
-            {t('back', 'Back')}
+            {t('common_back')}
           </span>
         </Button>
         <Button
@@ -80,7 +78,7 @@ const DatasetActionsCard: React.FC<Props> = ({
         >
           <Trash2 className="w-5 h-5 text-red-600 dark:text-white group-hover:text-white transition-colors flex-shrink-0" />
           <span className="text-red-700 dark:text-white font-medium group-hover:text-white text-left">
-            {deleting ? 'Deleting...' : t('dataset_delete', 'Delete')}
+            {deleting ? 'Deleting...' : t('delete')}
           </span>
         </Button>
       </CardContent>
