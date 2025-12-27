@@ -39,7 +39,6 @@ import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { chartGallerySteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
-import { useOnboarding } from '@/hooks/useOnboarding';
 
 export default function ChooseTemplateTab() {
   const { t } = useTranslation();
@@ -47,7 +46,6 @@ export default function ChooseTemplateTab() {
   const { showError, showSuccess } = useToastContext();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const { shouldShowTour, markTourAsShown } = useOnboarding();
 
   // Extract data from both location state AND query parameters
   const locationState = location.state as {
@@ -115,12 +113,9 @@ export default function ChooseTemplateTab() {
       if (selectedDatasetId) {
         try {
           await getDatasetById(selectedDatasetId);
-        } catch (e) {
-          // ignore - getDatasetById will set errors in store if necessary
-        }
+        } catch (e) {}
       }
 
-      // If we have a template selected, continue with it
       if (selectedTemplate) {
         continueWithTemplate(selectedTemplate, selectedDatasetId);
       }
@@ -216,25 +211,26 @@ export default function ChooseTemplateTab() {
     loadChartTemplates();
   }, [t, showError]);
 
-  // Tour logic - integrated with useOnboarding hook
   useEffect(() => {
     if (isAuthenticated && user?.id && categories.length > 0 && !isLoading) {
-      // Check if tour should be shown based on user's experience level
-      if (shouldShowTour('chart-gallery')) {
+      const storageKey = `hasShownChartGalleryTour_${user.id}`;
+      const hasShownTour = localStorage.getItem(storageKey);
+
+      if (hasShownTour !== 'true') {
         const driverObj = driver({
           showProgress: true,
           steps: chartGallerySteps,
           popoverClass: 'driverjs-theme',
-          overlayOpacity: 0.6,
+          overlayOpacity: 0.2,
         });
 
         setTimeout(() => {
           driverObj.drive();
-          markTourAsShown('chart-gallery');
+          localStorage.setItem(storageKey, 'true');
         }, 1000);
       }
     }
-  }, [isAuthenticated, user, categories.length, isLoading, shouldShowTour, markTourAsShown]);
+  }, [isAuthenticated, user, categories.length, isLoading]);
 
   // Calculate chart counts for filters
   const allTemplates = useMemo(() => {

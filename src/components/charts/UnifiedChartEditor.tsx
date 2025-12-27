@@ -36,9 +36,21 @@ const UnifiedChartEditor: React.FC<UnifiedChartEditorProps> = ({
   // Prevent Ctrl+A (Select All)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-        e.preventDefault();
-      }
+      if (!(e.ctrlKey || e.metaKey)) return;
+
+      const key = e.key?.toLowerCase?.() ?? '';
+      if (key !== 'a') return;
+
+      const target = e.target as HTMLElement | null;
+      const isEditableTarget =
+        !!target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          (target as any).isContentEditable);
+
+      if (isEditableTarget) return;
+
+      e.preventDefault();
     };
 
     window.addEventListener('keydown', handleKeyDown);

@@ -65,7 +65,7 @@ const DatasetInfoCard: React.FC<Props> = ({
         <div className="space-y-3">
           <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-xl">
             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              {t('dataset_name', 'Name')}
+              {t('dataset_name')}
             </label>
             {isEditingName ? (
               <div className="space-y-2 mt-2">
@@ -76,7 +76,7 @@ const DatasetInfoCard: React.FC<Props> = ({
                   onKeyDown={handleNameKeyDown}
                   autoFocus
                   className={nameInputClass}
-                  placeholder={t('dataset_namePlaceholder', 'Enter dataset name')}
+                  placeholder={t('dataset_namePlaceholder')}
                 />
                 {validationErrors.name && (
                   <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
@@ -89,16 +89,16 @@ const DatasetInfoCard: React.FC<Props> = ({
               <p
                 className="text-gray-900 dark:text-white font-medium mt-1 cursor-pointer hover:bg-gray-200/50 dark:hover:bg-gray-700/50 p-2 rounded transition-colors"
                 onClick={() => setIsEditingName(true)}
-                title={t('dataset_clickToEdit', 'Click to edit')}
+                title={t('dataset_clickToEdit')}
               >
-                {editableName || t('dataset_noName', 'No name')}
+                {editableName || t('dataset_noName')}
               </p>
             )}
           </div>
 
           <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl">
             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              {t('dataset_description', 'Description')}
+              {t('dataset_description')}
             </label>
             {isEditingDescription ? (
               <div className="space-y-2 mt-2">
@@ -115,7 +115,7 @@ const DatasetInfoCard: React.FC<Props> = ({
                   }}
                   autoFocus
                   className={`font-medium min-h-[100px] bg-transparent dark:bg-transparent border-blue-200/50 dark:border-blue-800/50 focus-visible:ring-blue-400/50 dark:focus-visible:ring-blue-500/50 ${validationErrors.description ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder={t('dataset_descriptionPlaceholder', 'Enter dataset description')}
+                  placeholder={t('dataset_descriptionPlaceholder')}
                 />
                 {validationErrors.description && (
                   <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
@@ -128,9 +128,9 @@ const DatasetInfoCard: React.FC<Props> = ({
               <p
                 className="text-gray-900 dark:text-white font-medium mt-1 leading-relaxed cursor-pointer hover:bg-blue-100/50 dark:hover:bg-blue-900/30 p-2 rounded transition-colors whitespace-pre-wrap"
                 onClick={() => setIsEditingDescription(true)}
-                title={t('dataset_clickToEdit', 'Click to edit')}
+                title={t('dataset_clickToEdit')}
               >
-                {editableDescription || t('dataset_noDescription', 'No description')}
+                {editableDescription || t('dataset_noDescription')}
               </p>
             )}
           </div>
@@ -139,7 +139,7 @@ const DatasetInfoCard: React.FC<Props> = ({
             <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200/30 dark:border-green-800/30">
               <label className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                {t('dataset_createdAt', 'Created')}
+                {t('dataset_createdAt')}
               </label>
               <p className="text-gray-900 dark:text-white font-medium mt-2">
                 {formatDate(createdAt)}
@@ -148,7 +148,7 @@ const DatasetInfoCard: React.FC<Props> = ({
             <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-100 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl border border-blue-200/30 dark:border-blue-800/30">
               <label className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                {t('dataset_updatedAt', 'Last Updated')}
+                {t('dataset_updatedAt')}
               </label>
               <p className="text-gray-900 dark:text-white font-medium mt-2">
                 {formatDate(updatedAt)}
