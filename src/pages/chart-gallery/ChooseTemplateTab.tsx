@@ -37,7 +37,7 @@ import { isSupportedChartType } from '@/constants/chart-types';
 import DatasetSelectionDialog from '../chart/components/DatasetSelectionDialog';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { chartGallerySteps } from '@/config/driver-steps/index';
+import { getChartGallerySteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
 
 export default function ChooseTemplateTab() {
@@ -81,7 +81,11 @@ export default function ChooseTemplateTab() {
   const startTour = () => {
     const driverObj = driver({
       showProgress: true,
-      steps: chartGallerySteps,
+      steps: getChartGallerySteps(),
+      showButtons: ['next', 'previous', 'close'],
+      nextBtnText: t('driver_next'),
+      prevBtnText: t('driver_prev'),
+      doneBtnText: t('driver_done'),
       popoverClass: 'driverjs-theme',
       overlayOpacity: 0.6,
     });
@@ -219,7 +223,11 @@ export default function ChooseTemplateTab() {
       if (hasShownTour !== 'true') {
         const driverObj = driver({
           showProgress: true,
-          steps: chartGallerySteps,
+          steps: getChartGallerySteps(),
+          showButtons: ['next', 'previous', 'close'],
+          nextBtnText: t('driver_next'),
+          prevBtnText: t('driver_prev'),
+          doneBtnText: t('driver_done'),
           popoverClass: 'driverjs-theme',
           overlayOpacity: 0.2,
         });

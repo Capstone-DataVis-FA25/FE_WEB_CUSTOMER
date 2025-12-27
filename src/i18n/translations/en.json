@@ -2089,7 +2089,7 @@
   "dataset_list_search_placeholder": "Search datasets by name or description...",
   "dataset_list_no_datasets_title": "No datasets available",
   "dataset_not_found": "No datasets found",
-  "dataset_not_yet": "No have any datasets",
+  "dataset_not_yet": "No datasets found",
   "dataset_list_no_datasets_desc": "You need to create a dataset first before creating a chart. Click \"New Dataset\" to get started.",
   "dataset_list_refresh": "Refresh List",
   "dataset_list_filter_all": "All",
@@ -2101,6 +2101,9 @@
   "dataset_deleteConfirmation": "Are you sure you want to delete this dataset? This action cannot be undone.",
   "dataset_deleteErrorMessage": "Failed to delete dataset",
   "dataset_selection_title": "Select a Dataset",
+  "driver_next": "Next",
+  "driver_prev": "Previous",
+  "driver_done": "Done",
   "expectedFormat": {
     "number": "number (e.g. {{example}})",
     "date": "date (format: {{format}})",

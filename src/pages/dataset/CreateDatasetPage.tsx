@@ -34,7 +34,7 @@ import {
 import CleanDatasetWithAI from '@/components/dataset/CleanDatasetWithAi';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { createDatasetSteps } from '@/config/driver-steps/index';
+import { getCreateDatasetSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
 import Routers from '@/router/routers';
 import { useAiCleaningProgress } from '@/features/ai/useAiCleaningProgress';
@@ -57,7 +57,11 @@ function CreateDatasetPageContent() {
   const startTour = () => {
     const driverObj = driver({
       showProgress: true,
-      steps: createDatasetSteps,
+      steps: getCreateDatasetSteps(),
+      showButtons: ['next', 'previous', 'close'],
+      nextBtnText: t('driver_next'),
+      prevBtnText: t('driver_prev'),
+      doneBtnText: t('driver_done'),
       popoverClass: 'driverjs-theme driver-theme-datasets',
       overlayOpacity: 0.6,
     });

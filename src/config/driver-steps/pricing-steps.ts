@@ -2,7 +2,7 @@ import type { DriveStep } from 'driver.js';
 import { Icons } from './icons';
 import { t } from './i18n-helper';
 
-export const pricingSteps: DriveStep[] = [
+export const getPricingSteps = (): DriveStep[] => [
   {
     popover: {
       title: `${Icons.CreditCard} ${t('tour_pricing_welcome_title')}`,
