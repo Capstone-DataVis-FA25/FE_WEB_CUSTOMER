@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { chartEditorSteps } from '@/config/driver-steps';
+import { getChartEditorSteps } from '@/config/driver-steps';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,10 +85,10 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
   const startTour = () => {
     const driverObj = driver({
       showProgress: true,
-      steps: chartEditorSteps,
-      nextBtnText: t('driver_next', 'Next'),
-      prevBtnText: t('driver_prev', 'Previous'),
-      doneBtnText: t('driver_done', 'Done'),
+      steps: getChartEditorSteps(),
+      nextBtnText: t('driver_next'),
+      prevBtnText: t('driver_prev'),
+      doneBtnText: t('driver_done'),
       popoverClass: 'driverjs-theme',
       overlayOpacity: 0.6,
     });
@@ -472,7 +472,9 @@ const ChartEditorHeader: React.FC<ChartEditorHeaderProps> = ({
                 id="btn-save-chart"
                 size="sm"
                 onClick={onSave}
-                disabled={mode === 'create' ? creating || !isFormValid : !combinedHasChanges}
+                disabled={
+                  mode === 'create' ? creating || !isFormValid : !combinedHasChanges || !isFormValid
+                }
                 className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creating ? (

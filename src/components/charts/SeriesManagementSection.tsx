@@ -3,8 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardHeader, CardContent } from '../ui/card';
 import { ChevronDown, Layers, Eye, EyeOff, ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useChartEditorRead, useChartEditorActions } from '@/features/chartEditor';
-import { useAppSelector } from '@/store/hooks';
+import {
+  useChartEditorRead,
+  useChartEditorActions,
+  setSeriesValidationError,
+  clearValidationError,
+} from '@/features/chartEditor';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
@@ -104,6 +109,7 @@ interface SeriesManagementSectionProps {
 const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ processedHeaders }) => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const dispatch = useAppDispatch();
   const { chartConfig } = useChartEditorRead();
   const { handleConfigChange } = useChartEditorActions();
   // Only subscribe to currentDataset to avoid re-renders when datasets list is refreshed
@@ -186,7 +192,7 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
           ...prev,
           [seriesId]: t('chart_editor_series_name_required', 'Series name is required'),
         }));
-        return; // Don't update if validation fails
+        dispatch(setSeriesValidationError({ seriesId, error: true }));
       } else {
         // Clear error if name is valid
         setSeriesNameErrors(prev => {
@@ -194,6 +200,7 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
           delete newErrors[seriesId];
           return newErrors;
         });
+        dispatch(setSeriesValidationError({ seriesId, error: false }));
       }
     }
 
@@ -343,6 +350,12 @@ const SeriesManagementSection: React.FC<SeriesManagementSectionProps> = ({ proce
 
   const onRemoveSeries = (seriesId: string) => {
     const newSeries = series.filter((s: SeriesItem) => s.id !== seriesId);
+    dispatch(clearValidationError({ field: 'seriesNames', seriesId }));
+    setSeriesNameErrors(prev => {
+      const next = { ...prev };
+      delete next[seriesId];
+      return next;
+    });
     // Update at root level: axisConfigs
     if (hasAxisConfigs(chartConfig)) {
       handleConfigChange({

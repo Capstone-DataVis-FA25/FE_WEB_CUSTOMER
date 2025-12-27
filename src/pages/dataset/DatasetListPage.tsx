@@ -20,9 +20,8 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { datasetListSteps } from '@/config/driver-steps/index';
+import { getDatasetListSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
-import { useOnboarding } from '@/hooks/useOnboarding';
 import DatasetTab from './components/DatasetTab';
 
 const DatasetListPage: React.FC = () => {
@@ -42,7 +41,6 @@ const DatasetListPage: React.FC = () => {
     clearDatasetError,
   } = useDataset();
   const { user, isAuthenticated } = useAuth();
-  const { shouldShowTour, markTourAsShown } = useOnboarding();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -126,25 +124,30 @@ const DatasetListPage: React.FC = () => {
     getDatasets();
   }, [getDatasets]);
 
-  // Tour logic - integrated with useOnboarding hook
   useEffect(() => {
-    if (isAuthenticated && user?.id && datasets.length > 0 && !loading) {
-      // Check if tour should be shown based on user's experience level
-      if (shouldShowTour('dataset-list')) {
+    if (isAuthenticated && user?.id && !loading) {
+      const storageKey = `hasShownDatasetListTour_${user.id}`;
+      const hasShownTour = localStorage.getItem(storageKey);
+
+      if (hasShownTour !== 'true') {
         const driverObj = driver({
           showProgress: true,
-          steps: datasetListSteps,
+          steps: getDatasetListSteps(),
+          showButtons: ['next', 'previous', 'close'],
+          nextBtnText: t('driver_next'),
+          prevBtnText: t('driver_prev'),
+          doneBtnText: t('driver_done'),
           popoverClass: 'driverjs-theme driver-theme-datasets',
-          overlayOpacity: 0.6,
+          overlayOpacity: 0.2,
         });
 
         setTimeout(() => {
           driverObj.drive();
-          markTourAsShown('dataset-list');
+          localStorage.setItem(storageKey, 'true');
         }, 1000);
       }
     }
-  }, [isAuthenticated, user, datasets.length, loading, shouldShowTour, markTourAsShown]);
+  }, [isAuthenticated, user, datasets.length, loading]);
 
   // Show error toast when error occurs
   useEffect(() => {
@@ -289,7 +292,11 @@ const DatasetListPage: React.FC = () => {
   const startTour = () => {
     const driverObj = driver({
       showProgress: true,
-      steps: datasetListSteps,
+      steps: getDatasetListSteps(),
+      showButtons: ['next', 'previous', 'close'],
+      nextBtnText: t('driver_next'),
+      prevBtnText: t('driver_prev'),
+      doneBtnText: t('driver_done'),
       popoverClass: 'driverjs-theme driver-theme-datasets',
       overlayOpacity: 0.6,
     });

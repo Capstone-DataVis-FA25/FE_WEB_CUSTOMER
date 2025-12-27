@@ -2,7 +2,7 @@ import type { DriveStep } from 'driver.js';
 import { Icons } from './icons';
 import { t } from './i18n-helper';
 
-export const datasetListSteps: DriveStep[] = [
+export const getDatasetListSteps = (): DriveStep[] => [
   {
     popover: {
       title: `${Icons.Database} ${t('tour_dataset_welcome_title')}`,
@@ -39,7 +39,7 @@ export const datasetListSteps: DriveStep[] = [
   },
 ];
 
-export const createDatasetSteps: DriveStep[] = [
+export const getCreateDatasetSteps = (): DriveStep[] => [
   {
     popover: {
       title: `${Icons.Upload} ${t('tour_dataset_import_title')}`,

@@ -41,20 +41,61 @@ import ChartPreview from '@/components/charts/gallery-chart-preview/ChartPreview
 import Routers from '@/router/routers';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { homeSteps } from '@/config/driver-steps/index';
+import { getHomeSteps } from '@/config/driver-steps/index';
 import { useAuth } from '@/features/auth/useAuth';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useNavigate } from 'react-router-dom';
+import GuidanceConfirmModal from '@/components/onboarding/GuidanceConfirmModal';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ChartDataPoint = any;
 
 const HomePage: React.FC = () => {
   const [selectedChart, setSelectedChart] = useState<string>('bar');
   const { t } = useTranslation();
   const { user, isAuthenticated } = useAuth();
-  const { experienceLevel, isFirstVisit, shouldShowTour, markTourAsShown } = useOnboarding();
+  const { experienceLevel, isFirstVisit, shouldShowTour, markTourAsShown, setWantsGuidance } =
+    useOnboarding();
 
   const navigate = useNavigate();
+  const [showGuidanceModal, setShowGuidanceModal] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      const storageKey = `hasShownHomeTour_${user.id}`;
+      const hasShownTour = localStorage.getItem(storageKey);
+
+      if (hasShownTour !== 'true') {
+        const driverObj = driver({
+          showProgress: true,
+          steps: getHomeSteps(),
+          showButtons: ['next', 'previous', 'close'],
+          nextBtnText: t('driver_next'),
+          prevBtnText: t('driver_prev'),
+          doneBtnText: t('driver_done'),
+          popoverClass: 'driverjs-theme',
+          overlayOpacity: 0,
+        });
+
+        setTimeout(() => {
+          driverObj.drive();
+          localStorage.setItem(storageKey, 'true');
+        }, 1500);
+      }
+    }
+  }, [isAuthenticated, user]);
+
+  // Handle guidance confirmation for experienced users
+  const handleGuidanceConfirm = (wantsGuidance: boolean) => {
+    setWantsGuidance(wantsGuidance);
+    setShowGuidanceModal(false);
+
+    if (wantsGuidance) {
+      setTimeout(() => {
+        startTour();
+      }, 500);
+    }
+  };
 
   // Start tour function
   const startTour = () => {
@@ -62,7 +103,11 @@ const HomePage: React.FC = () => {
 
     const driverObj = driver({
       showProgress: true,
-      steps: homeSteps,
+      steps: getHomeSteps(),
+      showButtons: ['next', 'previous', 'close'],
+      nextBtnText: t('driver_next'),
+      prevBtnText: t('driver_prev'),
+      doneBtnText: t('driver_done'),
       popoverClass: 'driverjs-theme',
       overlayOpacity: 0.6,
     });
@@ -161,6 +206,9 @@ const HomePage: React.FC = () => {
     navigate(Routers.CHART_GALLERY);
   };
 
+  const handleGoToExamples = () => {
+    navigate(Routers.BAR_CHART_DEMO); // Or a landing page for examples
+  };
   const handleGoToStory = () => {
     navigate(Routers.CHART_GALLERY);
   };
@@ -293,6 +341,15 @@ const HomePage: React.FC = () => {
                   <Play className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
                   {t('home_hero_cta_build')}
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="text-lg px-8 py-6 rounded-xl"
+                  onClick={handleGoToExamples}
+                >
+                  <BookOpen className="w-5 h-5 mr-2" />
+                  {t('home_hero_cta_examples')}
                 </Button>
               </motion.div>
             </motion.div>
@@ -761,6 +818,9 @@ const HomePage: React.FC = () => {
           </motion.div>
         </div>
       </motion.section>
+
+      {/* Onboarding Modals */}
+      <GuidanceConfirmModal isOpen={showGuidanceModal} onConfirm={handleGuidanceConfirm} />
     </div>
   );
 };
